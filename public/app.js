@@ -37,8 +37,26 @@ const fmt = n => Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
 const money = n => fmt(n) + ' OMR';
 const today = () => new Date().toISOString().slice(0,10);
 const byId = (table,id) => (Jawdah.data[table]||[]).find(x=>x.id===id) || {};
-const roleName = r => ({admin:'مدير النظام',accountant:'محاسب',operations:'تشغيل',maintenance:'صيانة',viewer:'مشاهد'}[r]||r);
-function toast(msg, err=false){ const t=document.createElement('div'); t.className='toast'+(err?' err':''); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
+const roleName = r => ({owner:'مالك المؤسسة',admin:'مدير النظام',accountant:'محاسب',operations:'تشغيل',maintenance:'صيانة',viewer:'مشاهد'}[r]||r);
+const isSuperUser = () => Jawdah.user && ['owner','admin'].includes(Jawdah.user.role);
+const isOwnerUser = () => Jawdah.user && (Jawdah.user.username==='owner' || Jawdah.user.role==='owner');
+const ownerWelcomeText = () => isOwnerUser() ? 'أهلاً وسهلاً بك أستاذ يعقوب الخصيبي، مالك المؤسسة' : '';
+function toast(msg, err=false, ms=3200){ const t=document.createElement('div'); t.className='toast'+(err?' err':'')+(isOwnerUser()&&!err&&msg===ownerWelcomeText()?' owner-welcome-toast':''); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),ms); }
+function showLoginWelcome(){ const msg=ownerWelcomeText(); toast(msg||'تم تسجيل الدخول', false, msg?6000:3200); }
+function renderOwnerWelcomeSurfaces(){
+  const msg=ownerWelcomeText();
+  const sub=$('#dashSubtitle');
+  if(sub && msg) sub.innerHTML=`<span class="owner-welcome-line">${msg}</span>`;
+  const title=$('.dash-title');
+  if(title && msg) title.textContent='مرحباً بك، أستاذ يعقوب';
+  const banner=document.getElementById('launchBanner');
+  if(banner && msg){
+    banner.classList.remove('hidden');
+    banner.innerHTML=`<div class="launch-card owner-welcome-banner">${ic('crown','title-ic')}<div><b>${msg}</b><br><span class="mini">لوحة القيادة التنفيذية — جودة الانطلاقة للخدمات</span></div></div>`;
+    paintIcons(banner);
+  }
+  if(Jawdah.user?.name) $('#avatar').textContent='ي';
+}
 function ensureEnglishDigits(root=document.body){
   const rx=/[\u0660-\u0669\u06F0-\u06F9]/g;
   const convert=s=>String(s).replace(rx,ch=>String(ch.charCodeAt(0)-((ch.charCodeAt(0)>=0x06F0)?0x06F0:0x0660)));
@@ -52,7 +70,7 @@ async function login(){
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
     setUiShellMode('app');
-    $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); toast('تم تسجيل الدخول');
+    $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); showLoginWelcome();
   }catch(e){toast(e.message,true)}
 }
 async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); setUiShellMode('login'); location.reload(); }
@@ -67,8 +85,8 @@ function setUiShellMode(mode){
 async function loadAll(){
   const res=await api('bootstrap'); Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;
   if(res.company_settings) CompanyProfile.apply(res.company_settings);
-  $('#userName').textContent=Jawdah.user.name; $('#userRole').textContent=roleName(Jawdah.user.role); $('#avatar').textContent=(Jawdah.user.name||'J').slice(0,1).toUpperCase();
-  buildNav(); renderAll(); renderBrandSurfaces(); populateCompanySettingsForm(); showSection(Jawdah.activeSection||'dashboard'); ensureEnglishDigits(); paintIcons();
+  $('#userName').textContent=Jawdah.user.name; $('#userRole').textContent=roleName(Jawdah.user.role); $('#avatar').textContent=isOwnerUser()?'ي':(Jawdah.user.name||'J').slice(0,1).toUpperCase();
+  buildNav(); renderAll(); renderBrandSurfaces(); populateCompanySettingsForm(); renderOwnerWelcomeSurfaces(); showSection(Jawdah.activeSection||'dashboard'); ensureEnglishDigits(); paintIcons();
 }
 function renderBrandSurfaces(){
   const logo = CompanyProfile.logoUrl();
@@ -80,7 +98,7 @@ function renderBrandSurfaces(){
   document.querySelectorAll('.brand-main').forEach(el=>{ el.textContent='Quality of Launch'; });
 }
 function populateCompanySettingsForm(){
-  if(Jawdah.user?.role!=='admin') return;
+  if(!isSuperUser()) return;
   const s=CompanyProfile.settings;
   const set=(id,v)=>{ const el=$('#'+id); if(el) el.value=v??''; };
   set('csNameAr',s.name_ar); set('csNameEn',s.name_en); set('csCr',s.cr_no); set('csPostal',s.postal_code); set('csPoBox',s.po_box);
@@ -91,7 +109,7 @@ function populateCompanySettingsForm(){
   set('csAcc2Name',s.bank?.accounts?.[1]?.name); set('csAcc2No',s.bank?.accounts?.[1]?.number); set('csAcc2Phone',s.bank?.accounts?.[1]?.phone);
 }
 async function saveCompanySettings(){
-  if(Jawdah.user?.role!=='admin') return toast('هذا القسم للمدير فقط', true);
+  if(!isSuperUser()) return toast('هذا القسم للمدير فقط', true);
   try{
     const payload={
       name_ar:val('csNameAr'), name_en:val('csNameEn'), cr_no:val('csCr'), postal_code:val('csPostal'), po_box:val('csPoBox'),
@@ -144,8 +162,8 @@ function buildNav(){
   ];
   const nav=$('#nav'); nav.innerHTML='';
   items.forEach(([id,label,icon])=>{
-    if(id==='users' && Jawdah.user.role!=='admin') return;
-    if(id==='company-settings' && Jawdah.user.role!=='admin') return;
+    if(id==='users' && !isSuperUser()) return;
+    if(id==='company-settings' && !isSuperUser()) return;
     nav.appendChild(navItem(id,label,icon));
   });
   paintIcons(nav);
@@ -268,7 +286,7 @@ function renderDashboardCockpit(snap,k,data){
   const collectionRate=snap.collectionRate;
   const nextRentForecast=Number(k.paid||0)+Math.max(0,Number(k.overdue||0)*.35);
   const sub=$('#dashSubtitle');
-  if(sub) sub.textContent=`${CompanyProfile.settings.name_ar} · ${fmt(snap.aptTotal)} شقة · ${fmt(snap.activeContracts)} عقد نشط · تحديث ${new Date().toLocaleDateString('ar-OM')}`;
+  if(sub && !isOwnerUser()) sub.textContent=`${CompanyProfile.settings.name_ar} · ${fmt(snap.aptTotal)} شقة · ${fmt(snap.activeContracts)} عقد نشط · تحديث ${new Date().toLocaleDateString('ar-OM')}`;
   const stats=$('#dashHeroStats');
   if(stats) stats.innerHTML=`<span class="dash-chip paid">جاهزية ${fmt(k.health)}%</span><span class="dash-chip">إشغال ${fmt(snap.aptOcc)}%</span><span class="dash-chip">تحصيل ${fmt(collectionRate)}%</span><span class="dash-chip ${snap.criticalCount?'chip-alert':''}">أولويات ${fmt(snap.criticalCount)}</span><span class="dash-chip">توقع ${money(nextRentForecast)}</span>`;
   const orb=$('#dashPortfolioOrb');
@@ -457,8 +475,8 @@ function renderDashboard(){
   if(window.NizwaGIS) NizwaGIS.renderMini('gisPins'); else $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
   $('#quickActions').innerHTML=[['إضافة عقار','properties','building-2'],['إضافة عميل','clients','user-plus'],['إنشاء عقد','contracts','file-plus-2'],['تجديد عقد','contracts','refresh-cw'],['فاتورة من عقد','invoices','receipt'],['تحصيل دفعة','invoices','wallet'],['Backup فوري','backup','archive'],['تقرير مالي','reports','chart-pie'],['اختبار التشغيل','qa','badge-check']].map((q,i)=>`<button class="ghost quick-pro dash-action-tile" style="--tile-i:${i}" onclick="showSection('${q[1]}')"><span class="quick-head">${ic(q[2],'quick-ic')}<b>${q[0]}</b></span><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
   paintIcons($('#sec-dashboard'));
+  if(isOwnerUser()) renderOwnerWelcomeSurfaces();
 }
-function tableHtml(cols, rows, actions, rowClassFn){
   return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}${actions?'<th>إجراء</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr class="${rowClassFn?rowClassFn(r):''}">${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??'')}</td>`).join('')}${actions?`<td>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
 }
 function renderProperties(){
@@ -587,7 +605,7 @@ function renderContracts(){
     return `${renewBtn}<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button> <button class="ghost" onclick="contractDocument('${r.id}')">عرض</button> <button class="ghost" onclick="downloadContractPdf('${r.id}')">PDF</button> <button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> <button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
   });
 }
-function canWriteInvoices(){ return Jawdah.user && ['admin','accountant','operations'].includes(Jawdah.user.role); }
+function canWriteInvoices(){ return Jawdah.user && ['owner','admin','accountant','operations'].includes(Jawdah.user.role); }
 function contractLabel(c){
   const prop=byId('properties',c.property_id), client=byId('clients',c.client_id);
   return `${c.contract_no||c.id} · ${client.name||'—'} · ${prop.name||'—'}`;
@@ -793,7 +811,7 @@ function editOptions(field, row, table=''){
   const opts = {
     status: ['Rented','Vacant','Maintenance','Active','Closed','Renewed','Expired','Draft','Open','In Progress','Completed','Pending'],
     type: ['Villa','Apartment','Office','Compound','income','expense'],
-    role: ['admin','accountant','operations','maintenance','viewer'],
+    role: ['owner','admin','accountant','operations','maintenance','viewer'],
     priority: ['Low','Medium','High','Urgent'],
     payment_cycle: ['monthly','quarterly','yearly'],
     active: ['1','0']
@@ -968,7 +986,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
       const collection = billed ? Math.round((paid/billed)*100) : 0;
       const readiness = Math.min(100, Math.round(((properties>0)+(clients>0)+(contracts>0)+(invoices>0)+(collection>0))*20));
       const banner = document.getElementById('launchBanner');
-      if(banner){
+      if(banner && !isOwnerUser()){
         banner.classList.remove('hidden');
         banner.innerHTML = `<div class="launch-card">${ic('gauge','title-ic')}<div><b>جاهزية التشغيل</b><br><span class="mini">جاهزية التشغيل والربط المالي الحالي: ${fmt(readiness)}%.</span></div></div>`;
         paintIcons(banner);
@@ -1136,7 +1154,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
     ['backup','التخزين والنسخ','hard-drive'],
     ['qa','اختبار التشغيل','circle-check-big'],
   ];
-  buildNav=function(){ const nav=$('#nav'); nav.innerHTML=''; baseSections.forEach(([id,label,icon])=>{ if(id==='users'&&Jawdah.user.role!=='admin')return; if(id==='company-settings'&&Jawdah.user.role!=='admin')return; nav.appendChild(navItem(id,label,icon)); }); paintIcons(nav); };
+  buildNav=function(){ const nav=$('#nav'); nav.innerHTML=''; baseSections.forEach(([id,label,icon])=>{ if(id==='users'&&!isSuperUser())return; if(id==='company-settings'&&!isSuperUser())return; nav.appendChild(navItem(id,label,icon)); }); paintIcons(nav); };
   const oldPopulate=populateSelects;
   populateSelects=function(){ oldPopulate(); const propOpts='<option value="">بدون عقار</option>'+(Jawdah.data.properties||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); ['#piProperty','#revProperty','#gaProperty'].forEach(s=>{if($(s))$(s).innerHTML=propOpts}); const clientOpts='<option value="">بدون عميل</option>'+(Jawdah.data.clients||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join(''); if($('#revClient'))$('#revClient').innerHTML=clientOpts; const itemOpts=(Jawdah.data.inventory_items||[]).map(i=>`<option value="${i.id}">${i.sku} - ${i.name}</option>`).join(''); if($('#stockItem'))$('#stockItem').innerHTML=itemOpts; const accOpts='<option value="">غير مطابق</option>'+(Jawdah.data.accounts||[]).map(a=>`<option value="${a.id}">${a.entry_date} - ${a.category} - ${money(a.amount)}</option>`).join(''); if($('#bankMatch'))$('#bankMatch').innerHTML=accOpts; const coaParentOpts='<option value="">بدون حساب أب</option>'+(Jawdah.data.chart_accounts||[]).map(a=>`<option value="${a.code}">${a.code} - ${a.name}</option>`).join(''); if($('#coaParent'))$('#coaParent').innerHTML=coaParentOpts; const periodOpts=(Jawdah.data.financial_periods||[]).filter(p=>String(p.status||'').toLowerCase()==='open').map(p=>`<option value="${p.period_name}">${p.period_name}</option>`).join(''); if($('#recPeriod')&&$('#recPeriod').tagName==='SELECT') $('#recPeriod').innerHTML=periodOpts||'<option value="">لا توجد فترة مفتوحة</option>'; ['piDate','revDate','salDate','gaDate','stockDate','bankDate','fpStart','fpEnd'].forEach(id=>{if($('#'+id)&&!$('#'+id).value)$('#'+id).value=today()}); if($('#salMonth')&&!$('#salMonth').value)$('#salMonth').value=today().slice(0,7); if($('#recPeriod')&&$('#recPeriod').tagName==='INPUT'&&!$('#recPeriod').value)$('#recPeriod').value=today().slice(0,7); };
   const oldRenderAll=renderAll;
@@ -1198,7 +1216,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
     const rows=safe(Jawdah.data.financial_periods);
     if($('#financialPeriodsTable')) $('#financialPeriodsTable').innerHTML=tableHtml([['الفترة','period_name'],['البداية','start_date'],['النهاية','end_date'],['الحالة','status',v=>badge(v)],['أغلق بواسطة','closed_by'],['تاريخ الإغلاق','closed_at'],['ملاحظات','notes']],rows,r=>canWriteFinance()?`<button class="ghost" onclick="editRecord('financial_periods','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('financial_periods','${r.id}')">حذف</button>`:'');
   };
-  function canWriteFinance(){ return Jawdah.user && ['admin','accountant'].includes(Jawdah.user.role); }
+  function canWriteFinance(){ return Jawdah.user && ['owner','admin','accountant'].includes(Jawdah.user.role); }
   function updateRecDifference(){
     const book=num('recBookBalance'), bank=num('recBankBalance');
     const diff=book-bank;
@@ -1279,7 +1297,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
   renderAll=function(){ oldRenderAll2(); renderProductionUsers(); };
   window.renderProductionUsers=function(){
     const users=Jawdah.data.users||[];
-    const required=['admin','razan.accounting','operations','maintenance'];
+    const required=['owner','admin','razan.accounting','operations','maintenance'];
     const host=$('#productionUsersBox');
     if(!host) return;
     host.innerHTML=required.map(u=>{

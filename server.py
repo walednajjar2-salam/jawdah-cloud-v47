@@ -65,6 +65,7 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 
 
 ROLE_PERMISSIONS = {
+    "owner": {"all"},
     "admin": {"all"},
     "accountant": {"dashboard", "properties", "clients", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "employees", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
     "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "maintenance", "employees:read", "reports:read"},
@@ -99,7 +100,11 @@ TABLES = {
     "compliance_archives": ["id", "title", "summary_score", "payload_json", "created_at", "created_by"],
 }
 
-WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
+WRITE_ROLES = {"owner", "admin", "accountant", "operations", "maintenance"}
+
+
+def is_super_user(role: Optional[str]) -> bool:
+    return role in ("owner", "admin")
 
 
 def now_iso() -> str:
@@ -527,6 +532,7 @@ def init_db() -> None:
             reset_operational_data(db)
         seed_if_empty(db)
         seed_chart_accounts(db)
+        ensure_user(db, "owner", "أستاذ يعقوب الخصيبي", "owner", "owner2015", sync_password=True)
         ensure_user(db, "admin", "مدير النظام", "admin", "admin123")
         ensure_user(db, "razan.accounting", "Razan — المحاسبة", "accountant", "Jawdeh123")
         ensure_user(db, "operations", "تشغيل العقارات", "operations", "LaunchOps2026")
@@ -705,10 +711,12 @@ def ensure_column(db: sqlite3.Connection, table: str, column: str, definition: s
         db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
-def ensure_user(db: sqlite3.Connection, username: str, name: str, role: str, password: str) -> None:
+def ensure_user(db: sqlite3.Connection, username: str, name: str, role: str, password: str, sync_password: bool = False) -> None:
     row = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
     if row:
         db.execute("UPDATE users SET name=?, role=?, active=1 WHERE username=?", (name, role, username))
+        if sync_password:
+            db.execute("UPDATE users SET password_hash=? WHERE username=?", (password_hash(password), username))
         return
     insert(db, "users", {"id": uid("USR"), "username": username, "name": name, "role": role, "active": 1, "password_hash": password_hash(password), "created_at": now_iso(), "last_login": None})
 
@@ -1031,7 +1039,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_bootstrap(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = {}
         for table, cols in TABLES.items():
-            if table == "users" and user["role"] != "admin":
+            if table == "users" and not is_super_user(user.get("role")):
                 continue
             visible_cols = ",".join(cols)
             data[table] = rows_to_dicts(db.execute(f"SELECT {visible_cols} FROM {table} ORDER BY rowid DESC").fetchall())

@@ -210,7 +210,7 @@ window.DataExport = {
     list.push('apartments', 'reports');
     if (Jawdah?.lastStatements) list.push('statements');
     return list.filter(t => {
-      if (t === 'users' || t === 'audit_log') return Jawdah?.user?.role === 'admin';
+      if (t === 'users' || t === 'audit_log') return Jawdah?.user?.role === 'admin' || Jawdah?.user?.role === 'owner';
       if (t === 'apartments') return true;
       return (Jawdah?.data?.[t] || []).length >= 0;
     });
