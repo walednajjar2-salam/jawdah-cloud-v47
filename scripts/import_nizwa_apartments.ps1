@@ -15,6 +15,13 @@ function To-Status($code) {
   return "Maintenance"
 }
 
+function Apt-No-From-Name($name) {
+  foreach ($part in ($name -split '\s+')) {
+    if ($part -match '^\d+$') { return $part }
+  }
+  return $null
+}
+
 function Post-Json($Url, $Headers, $BodyObj) {
   $body = $BodyObj | ConvertTo-Json -Depth 6 -Compress
   return Invoke-RestMethod -Uri $Url -Method POST -Headers $Headers -Body $body -ContentType "application/json; charset=utf-8"
@@ -29,7 +36,8 @@ $existingProps = @{}
 try {
   $propResp = Invoke-RestMethod -Uri "$BaseUrl/api/properties" -Headers $h
   foreach ($p in @($propResp.items)) {
-    if ($p.name -match 'شقة\s*(\d+)') { $existingProps[$Matches[1]] = $p.id }
+    $no = Apt-No-From-Name $p.name
+    if ($no) { $existingProps[$no] = $p.id }
   }
 } catch { Write-Host "Note: could not prefetch properties" }
 
@@ -54,11 +62,11 @@ foreach ($apt in $payload.apartments) {
     status = (To-Status $apt.status)
     price = $rent
     location = $payload.building.location
-    image = "🏢"
+    image = "building"
     last_update = $today
-    notes = "رقم $($apt.no) | $($apt.unit_type) | $($apt.rooms) غرف | $($apt.notes)"
+    notes = "no $($apt.no) | $($apt.unit_type) | $($apt.rooms) rooms | $($apt.notes)"
   }
-  $prop = $null
+
   if ($existingProps.ContainsKey([string]$apt.no)) {
     $propId = $existingProps[[string]$apt.no]
     Write-Host "  skip apt $($apt.no) property exists"
@@ -78,7 +86,7 @@ foreach ($apt in $payload.apartments) {
         email = ""
         national_id = ""
         balance = 0
-        notes = "مستأجر - $($payload.building.location)"
+        notes = $payload.building.location
       }
       $cl = Post-Json "$BaseUrl/api/clients" $h $clientBody
       $clientMap[$tKey] = $cl.item.id
@@ -99,7 +107,7 @@ foreach ($apt in $payload.apartments) {
         client_id = $clientId
         tenant_nationality = "Omani"
         tenant_id_no = ""
-        unit_details = "شقة $($apt.no) - $($apt.unit_type) - $($apt.rooms) غرف"
+        unit_details = "apt $($apt.no) - $($apt.unit_type) - $($apt.rooms) rooms"
         start_date = $start
         end_date = $end
         rent_amount = $rent
@@ -118,7 +126,7 @@ foreach ($apt in $payload.apartments) {
       $invBody = @{
         contract_id = $contractId
         due_date = $end
-        description = "فاتورة إيجار شقة $($apt.no)"
+        description = "Rent invoice apt $($apt.no)"
         amount = $rent
       }
       $inv = Post-Json "$BaseUrl/api/invoice_from_contract" $h $invBody

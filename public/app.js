@@ -189,7 +189,7 @@ function renderProperties(){
   fillSelect('#propStatusFilter',['','Rented','Vacant','Maintenance'],false);
 }
 function aptNoFromProperty(p){
-  const m=String(p.name||'').match(/شقة\s*(\d+)/);
+  const m=String(p.name||'').match(/شقة\s*(\d+)/)||String(p.notes||'').match(/no\s*(\d+)/i);
   return m?m[1]:'—';
 }
 function aptRowFromProperty(p){
@@ -198,7 +198,7 @@ function aptRowFromProperty(p){
   const client=contract?byId('clients',contract.client_id):{};
   const statusAr=String(p.status||'').toLowerCase().includes('rented')?'مستأجرة':String(p.status||'').toLowerCase().includes('vacant')?'شاغرة':p.status;
   const unitType=(p.notes||'').match(/\|\s*(مشترك|مستقل|سكن)/)?.[1]||'—';
-  const rooms=(p.notes||'').match(/(\d+)\s*غرف/)?.[1]||'1';
+  const rooms=(p.notes||'').match(/(\d+)\s*غرف/)?.[1]||(p.notes||'').match(/(\d+)\s*rooms/)?.[1]||'1';
   return {no:aptNoFromProperty(p),statusAr,unitType,rooms,tenant:client.name||'—',phone:client.phone||'—',avgRent:p.price,rent:contract?contract.rent_amount:p.price,start:contract?.start_date||'—',end:contract?.end_date||'—',property:p,contract,client};
 }
 function renderApartments(){
