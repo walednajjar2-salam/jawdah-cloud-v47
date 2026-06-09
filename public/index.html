@@ -17,17 +17,11 @@
   </div>
   <div id="uiWatermark" class="ui-watermark" aria-hidden="true"></div>
   <main id="loginScreen" class="login">
-    <section class="login-card">
-      <div class="login-brand-wrap">
-        <img src="assets/logo-primary.png" alt="Quality of Launch Services LLC">
-        <h1 class="brand-title"><span class="brand-main">Quality of Launch</span><span class="brand-sub">Services LLC</span></h1>
-        <p class="brand-tagline">جودة الانطلاقة للخدمات ل.ل.س · Real Estate &amp; Hospitality</p>
-      </div>
+    <form id="loginForm" class="login-card login-minimal" autocomplete="on">
       <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
       <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
-      <button id="loginBtn" class="gold-btn login-btn" style="width:100%;margin-top:10px"><i data-lucide="log-in" class="lucide-icon"></i> تسجيل الدخول</button>
       <p id="loginStatus" class="mini login-status hidden"></p>
-    </section>
+    </form>
   </main>
 
   <main id="app" class="app hidden">

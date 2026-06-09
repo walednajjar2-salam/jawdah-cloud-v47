@@ -616,3 +616,7 @@ body.dash-view .content{padding-top:8px}
 @media(max-width:650px){.owner-pack-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .login-status{margin-top:10px;text-align:center;color:var(--gold2)}
 .login-status.err{color:#ff8a8a}
+.login-minimal{width:min(360px,100%);padding:24px;text-align:stretch}
+.login-minimal input{width:100%;margin:0 0 12px;display:block}
+.login-minimal .login-btn{width:100%;margin-top:4px}
+body.login-mode .ambient-orbs,body.login-mode #uiWatermark{display:none}
