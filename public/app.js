@@ -48,14 +48,18 @@ async function login(){
     const username=$('#loginUser').value.trim(); const password=$('#loginPass').value;
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
+    setUiShellMode('app');
     $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); toast('تم تسجيل الدخول');
   }catch(e){toast(e.message,true)}
 }
-async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); location.reload(); }
+async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); setUiShellMode('login'); location.reload(); }
 async function checkSession(){
-  if(!Jawdah.token){ $('#loginScreen').classList.remove('hidden'); return; }
-  try{ const me=await api('me'); Jawdah.user=me.user; $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); }
-  catch(e){ localStorage.removeItem('jawdah_cloud_token'); $('#loginScreen').classList.remove('hidden'); }
+  if(!Jawdah.token){ setUiShellMode('login'); $('#loginScreen').classList.remove('hidden'); return; }
+  try{ const me=await api('me'); Jawdah.user=me.user; setUiShellMode('app'); $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); }
+  catch(e){ localStorage.removeItem('jawdah_cloud_token'); setUiShellMode('login'); $('#loginScreen').classList.remove('hidden'); }
+}
+function setUiShellMode(mode){
+  document.body.classList.toggle('login-mode', mode === 'login');
 }
 async function loadAll(){
   const res=await api('bootstrap'); Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;
@@ -64,9 +68,11 @@ async function loadAll(){
   buildNav(); renderAll(); renderBrandSurfaces(); populateCompanySettingsForm(); showSection(Jawdah.activeSection||'dashboard'); ensureEnglishDigits(); paintIcons();
 }
 function renderBrandSurfaces(){
+  const logo = CompanyProfile.logoUrl();
+  document.documentElement.style.setProperty('--brand-logo-url', `url('${logo}')`);
   const hero=$('#dashboardBrandHero'); if(hero) hero.innerHTML=CompanyProfile.dashboardIntroHtml();
   const strip=$('#invoiceBrandStrip'); if(strip) strip.innerHTML=`<div class="invoice-brand-strip">${CompanyProfile.dashboardIntroHtml()}</div>`;
-  document.querySelectorAll('.brand img, .login-brand-wrap img').forEach(img=>{ img.src=CompanyProfile.settings.logo_url||'assets/logo-primary.png'; });
+  document.querySelectorAll('.brand img, .login-brand-wrap img').forEach(img=>{ img.src=logo; });
   document.querySelectorAll('.brand-main').forEach(el=>{ el.textContent='Quality of Launch'; });
 }
 function populateCompanySettingsForm(){
@@ -172,14 +178,14 @@ function renderContracts(){
   $('#contractsTable').innerHTML=tableHtml([['رقم العقد','contract_no',(v,r)=>v||r.id],['النوع','contract_type'],['العقار','property_id',(v)=>byId('properties',v).name||v],['العميل','client_id',(v)=>byId('clients',v).name||v],['البداية','start_date'],['النهاية','end_date'],['التجديد','id',(_,r)=>{const m=contractRenewalMeta(r); return m.label?`<span class="badge ${m.tone}">${m.label}</span>`:'—';}],['الإيجار','rent_amount',(v)=>money(v)],['التأمين','deposit_amount',(v)=>money(v)],['الحالة','status',(v)=>badge(v)]],rows,r=>{
     const meta = contractRenewalMeta(r);
     const renewBtn = meta.renewable ? `<button class="gold-btn" onclick="renewContract('${r.id}')">تجديد</button> ` : '';
-    return `${renewBtn}<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button> <button class="ghost" onclick="contractDocument('${r.id}')">العقد</button> <button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> <button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
+    return `${renewBtn}<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button> <button class="ghost" onclick="contractDocument('${r.id}')">عرض</button> <button class="ghost" onclick="downloadContractPdf('${r.id}')">PDF</button> <button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> <button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
   });
 }
 function renderInvoices(){
   const rows=filterRows('invoices',['invoice_no','description','status']);
   const vatCell=(v,r)=>{ const b=CompanyProfile.vatBreakdown(r.amount); return money(b.vat); };
   const totalCell=(v,r)=> money(r.amount);
-  $('#invoicesTable').innerHTML=tableHtml([['رقم','invoice_no'],['العميل','client_id',(v)=>byId('clients',v).name||v],['العقار','property_id',(v)=>byId('properties',v).name||v],['الإصدار','issue_date'],['الاستحقاق','due_date'],['أساسي','amount',(v,r)=>money(CompanyProfile.vatBreakdown(r.amount).subtotal)],['ض.ق.م','amount',vatCell],['الإجمالي','amount',totalCell],['المدفوع','paid_amount',(v)=>money(v)],['المتبقي','amount',(v,r)=>money(Number(r.amount)-Number(r.paid_amount))],['الحالة','status',(v)=>badge(v)]],rows,r=>`<button class="gold-btn" onclick="openPayment('${r.id}')">تحصيل</button> <button class="ghost" onclick="printInvoice('${r.id}')">طباعة ضريبية</button> <button class="danger" onclick="delRecord('invoices','${r.id}')">حذف</button>`);
+  $('#invoicesTable').innerHTML=tableHtml([['رقم','invoice_no'],['العميل','client_id',(v)=>byId('clients',v).name||v],['العقار','property_id',(v)=>byId('properties',v).name||v],['الإصدار','issue_date'],['الاستحقاق','due_date'],['أساسي','amount',(v,r)=>money(CompanyProfile.vatBreakdown(r.amount).subtotal)],['ض.ق.م','amount',vatCell],['الإجمالي','amount',totalCell],['المدفوع','paid_amount',(v)=>money(v)],['المتبقي','amount',(v,r)=>money(Number(r.amount)-Number(r.paid_amount))],['الحالة','status',(v)=>badge(v)]],rows,r=>`<button class="gold-btn" onclick="openPayment('${r.id}')">تحصيل</button> <button class="ghost" onclick="printInvoice('${r.id}')">معاينة</button> <button class="ghost" onclick="downloadInvoicePdfById('${r.id}')">PDF</button> <button class="danger" onclick="delRecord('invoices','${r.id}')">حذف</button>`);
   const billed=rows.reduce((s,x)=>s+Number(x.amount||0),0), paid=rows.reduce((s,x)=>s+Number(x.paid_amount||0),0);
   if($('#invKpiBilled')) $('#invKpiBilled').textContent=money(billed);
   if($('#invKpiPaid')) $('#invKpiPaid').textContent=money(paid);
@@ -339,6 +345,27 @@ async function renewContract(contractId){
   }catch(e){ toast(e.message, true); }
 }
 async function contractDocument(contractId){ try{ const res=await api('contract_template',{method:'POST',body:JSON.stringify({contract_id:contractId})}); const w=window.open('', '_blank'); w.document.write(res.html); w.document.close(); }catch(e){toast(e.message,true)} }
+async function downloadContractPdf(contractId){
+  try{
+    const c=byId('contracts', contractId);
+    const res=await api('contract_template',{method:'POST',body:JSON.stringify({contract_id:contractId})});
+    await downloadHtmlAsPdf(res.html, `contract-${c.contract_no||c.id||contractId}.pdf`);
+  }catch(e){ toast(e.message,true); }
+}
+function invoiceDocumentHtml(id){
+  const inv=byId('invoices',id), client=byId('clients',inv.client_id), prop=byId('properties',inv.property_id), contract=byId('contracts',inv.contract_id);
+  return CompanyProfile.invoiceHtml(inv, client, prop, contract);
+}
+async function downloadInvoicePdfById(id){
+  const inv=byId('invoices', id);
+  if(!inv?.id) return toast('لم يتم العثور على الفاتورة', true);
+  await downloadHtmlAsPdf(invoiceDocumentHtml(id), `tax-invoice-${inv.invoice_no||id}.pdf`);
+}
+async function downloadInvoicePdf(){
+  const inv=Jawdah.invoiceForPrint;
+  if(!inv?.id) return;
+  await downloadHtmlAsPdf(invoiceDocumentHtml(inv.id), `tax-invoice-${inv.invoice_no||inv.id}.pdf`);
+}
 
 function openPayment(id){ const inv=byId('invoices',id); const remaining=Number(inv.amount)-Number(inv.paid_amount); $('#payInvoiceId').value=id; $('#payAmount').value=remaining.toFixed(2); $('#payInfo').textContent=`${inv.invoice_no} - المتبقي ${money(remaining)}`; openModal('paymentModal'); }
 async function submitPayment(){ try{ await api('pay_invoice',{method:'POST',body:JSON.stringify({invoice_id:val('payInvoiceId'),amount:num('payAmount'),method:val('payMethod'),note:val('payNote')})}); closeModal('paymentModal'); toast('تم التحصيل وتحديث الحسابات'); await loadAll(); }catch(e){toast(e.message,true)} }
@@ -395,7 +422,7 @@ function bind(){
   document.addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key.toLowerCase()==='k'){ e.preventDefault(); $('#globalSearch').focus(); } if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#globalSearch').focus();} });
 }
 window.LAUNCH_QUALITY_CHECK=()=>({system:COMPANY,user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});
-window.addEventListener('load',()=>{ bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
+window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'login'); bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
 
 
 /* Quality Launch Services LLC - production experience layer */

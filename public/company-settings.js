@@ -33,6 +33,15 @@ window.CompanyProfile = {
     return this.settings;
   },
 
+  logoUrl() {
+    const p = this.settings.logo_url || 'assets/logo-primary.png';
+    if (/^https?:\/\//i.test(p)) return p;
+    if (typeof window !== 'undefined' && window.location?.href) {
+      try { return new URL(p, window.location.href).href; } catch (e) { /* fall through */ }
+    }
+    return p;
+  },
+
   vatBreakdown(grossAmount) {
     const rate = Number(this.settings.vat_rate ?? 0.05);
     const gross = Number(grossAmount || 0);
@@ -52,7 +61,7 @@ window.CompanyProfile = {
 *{box-sizing:border-box}
 body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);background:#fff}
 .qls-doc{position:relative;background:var(--paper);padding:32px;max-width:920px;margin:0 auto;overflow:hidden}
-.qls-doc:before{content:"";position:absolute;inset:0;background:url('${this.settings.logo_url}') center 42% / 58% no-repeat;opacity:.045;pointer-events:none;z-index:0}
+.qls-doc:before{content:"";position:absolute;inset:0;background:url('${this.logoUrl()}') center 42% / 58% no-repeat;opacity:.045;pointer-events:none;z-index:0}
 .qls-doc>*{position:relative;z-index:1}
 .qls-doc-header{text-align:center;margin-bottom:22px;padding-bottom:18px;border-bottom:2px solid var(--gold-light)}
 .qls-logo{width:min(220px,72vw);height:auto;object-fit:contain;filter:drop-shadow(0 8px 18px rgba(184,137,47,.18));margin:0 auto 12px;display:block}
@@ -96,7 +105,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
     `).join('');
     return `
       <header class="qls-doc-header">
-        <img class="qls-logo" src="${this.escapeHtml(s.logo_url)}" alt="${this.escapeHtml(s.name_en)}">
+        <img class="qls-logo" src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(s.name_en)}">
         <div class="qls-names">
           <p class="ar">${this.escapeHtml(s.name_ar)}</p>
           <p class="en">${this.escapeHtml(s.name_en)}</p>
@@ -186,7 +195,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
     const s = this.settings;
     return `
       <div class="brand-hero">
-        <img class="brand-hero-logo" src="${this.escapeHtml(s.logo_url)}" alt="${this.escapeHtml(s.name_en)}">
+        <img class="brand-hero-logo" src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(s.name_en)}">
         <div class="brand-hero-copy">
           <h2 class="brand-hero-ar">${this.escapeHtml(s.name_ar)}</h2>
           <h3 class="brand-hero-en">${this.escapeHtml(s.name_en)}</h3>

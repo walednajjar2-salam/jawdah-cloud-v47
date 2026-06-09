@@ -675,7 +675,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "Content-Security-Policy",
             "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
+            "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
         )
         if os.environ.get("JAWDAH_HSTS", "1").strip().lower() in ("1", "true", "yes"):
             self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
