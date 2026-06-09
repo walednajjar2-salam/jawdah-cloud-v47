@@ -48,6 +48,35 @@
 
       <section id="sec-dashboard" class="section active">
         <div id="dashboardBrandHero"></div>
+        <section id="executiveCommandCenter" class="executive-command-center card">
+          <div class="ecc-header">
+            <div>
+              <h3><i data-lucide="radar" class="lucide-icon title-ic"></i> مركز القرار التنفيذي</h3>
+              <p class="mini">قائمة الأولويات، الرادار المالي، ومؤشر المحفظة — محدّث لحظياً من بيانات الشقق والعقود والفواتير</p>
+            </div>
+            <div class="ecc-actions">
+              <button class="gold-btn" onclick="downloadExecutiveReportPdf()"><i data-lucide="file-down" class="lucide-icon"></i> تقرير PDF للإدارة</button>
+              <button class="ghost" onclick="showSection('apartments')"><i data-lucide="layout-grid" class="lucide-icon"></i> إدارة الشقق</button>
+            </div>
+          </div>
+          <div id="eccRadar" class="ecc-radar-grid"></div>
+          <div class="ecc-layout">
+            <div class="ecc-panel">
+              <h3><i data-lucide="list-ordered" class="lucide-icon title-ic"></i> افعل الآن — قائمة الأولويات</h3>
+              <div id="eccPriorityQueue"></div>
+            </div>
+            <div class="ecc-side">
+              <div class="ecc-panel">
+                <h3><i data-lucide="activity" class="lucide-icon title-ic"></i> الرادار المالي</h3>
+                <div id="eccFinancialRadar"></div>
+              </div>
+              <div class="ecc-panel">
+                <h3><i data-lucide="gauge" class="lucide-icon title-ic"></i> مؤشر المحفظة</h3>
+                <div id="eccPortfolio"></div>
+              </div>
+            </div>
+          </div>
+        </section>
         <div class="hero"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id="heroStats" class="status-line" style="margin-top:14px"></div></div>
         <div id="kpiGrid" class="grid kpis"></div>
         <div class="layout">

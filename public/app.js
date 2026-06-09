@@ -149,6 +149,163 @@ function showSection(id){
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
 function renderAll(){ renderDashboard(); renderProperties(); renderApartments(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }
+function collectApartmentRows(){
+  const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
+  const byNo=new Map();
+  props.forEach(p=>{
+    const row=aptRowFromProperty(p);
+    if(row.no==='—') return;
+    const prev=byNo.get(row.no);
+    if(!prev){ byNo.set(row.no,row); return; }
+    const score=r=>(r.contract?2:0)+(r.statusAr==='مستأجرة'?1:0)+(r.shortContract?1:0);
+    if(score(row)>score(prev)) byNo.set(row.no,row);
+  });
+  return [...byNo.values()].sort((a,b)=>String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+}
+function buildExecutiveSnapshot(){
+  const k=Jawdah.dashboard?.kpis||{};
+  const data=Jawdah.data||{};
+  const aptRows=collectApartmentRows();
+  const aptTotal=aptRows.length;
+  const aptRented=aptRows.filter(r=>r.statusAr==='مستأجرة').length;
+  const aptVacant=aptRows.filter(r=>r.statusAr==='شاغرة').length;
+  const aptOcc=aptTotal?Math.round(aptRented/aptTotal*100):Number(k.occupancy||0);
+  const collectionRate=k.billed?Math.round(Number(k.paid||0)/Number(k.billed||1)*100):0;
+  const openInvoices=(data.invoices||[]).filter(x=>Number(x.amount||0)>Number(x.paid_amount||0));
+  const overdueInvoices=openInvoices.filter(x=>{
+    const left=contractDaysLeft(x.due_date);
+    return left!==null && left<0;
+  });
+  const activeContracts=(data.contracts||[]).filter(c=>String(c.status||'').toLowerCase().includes('active'));
+  const monthlyRentForecast=activeContracts.reduce((s,c)=>s+Number(c.rent_amount||0),0);
+  const openMaint=(data.maintenance||[]).filter(m=>String(m.status||'').toLowerCase().includes('open'));
+  const priorities=[];
+  aptRows.filter(r=>r.shortContract).forEach(r=>{
+    priorities.push({severity:1,tone:'critical',icon:'triangle-alert',title:`شقة ${r.no} — عقد قصير`,detail:`${r.tenant} · ${r.shortLabel||'مدة 30 يوم أو أقل'} · ينتهي ${r.end}`,section:'apartments',label:'عرض'});
+  });
+  overdueInvoices.forEach(inv=>{
+    const client=byId('clients',inv.client_id);
+    const prop=byId('properties',inv.property_id);
+    const left=Math.abs(contractDaysLeft(inv.due_date)||0);
+    priorities.push({severity:2,tone:'high',icon:'alarm-clock',title:`فاتورة متأخرة ${inv.invoice_no||inv.id}`,detail:`${client.name||'—'} · متبقي ${money(Number(inv.amount||0)-Number(inv.paid_amount||0))} · ${left} يوم تأخير`,section:'invoices',label:'تحصيل'});
+  });
+  renewalQueue().forEach(({contract:c,meta})=>{
+    const prop=byId('properties',c.property_id);
+    const no=prop?.name?aptNoFromProperty(prop):'—';
+    const client=byId('clients',c.client_id).name||'—';
+    if(meta.days<0){
+      priorities.push({severity:2,tone:'high',icon:'timer-off',title:`عقد منتهٍ — شقة ${no}`,detail:`${client} · ${c.contract_no||c.id} · منتهٍ منذ ${Math.abs(meta.days)} يوم`,section:'contracts',label:'تجديد',contractId:c.id});
+    }else{
+      priorities.push({severity:4,tone:'medium',icon:'refresh-cw',title:`تجديد قريب — شقة ${no}`,detail:`${client} · ينتهي ${c.end_date} · ${meta.days} يوم`,section:'contracts',label:'تجديد',contractId:c.id});
+    }
+  });
+  aptRows.filter(r=>r.statusAr==='شاغرة').forEach(r=>{
+    priorities.push({severity:5,tone:'medium',icon:'home',title:`شقة ${r.no} شاغرة`,detail:`${r.unitType} · متوسط الإيجار ${money(r.avgRent)}`,section:'apartments',label:'عرض'});
+  });
+  openMaint.forEach(m=>{
+    const prop=byId('properties',m.property_id);
+    priorities.push({severity:6,tone:'medium',icon:'wrench',title:`صيانة: ${m.title||'طلب'}`,detail:`${prop.name||'—'} · ${m.priority||'Normal'}`,section:'maintenance',label:'متابعة'});
+  });
+  priorities.sort((a,b)=>a.severity-b.severity);
+  const criticalCount=priorities.filter(p=>p.severity<=2).length;
+  let portfolioScore=Math.round(aptOcc*0.4+collectionRate*0.35+Math.min(100,Number(k.health||0))*0.25);
+  portfolioScore=Math.max(0,Math.min(100,portfolioScore-criticalCount*6));
+  const riskScore=Math.max(0,Math.min(100,100-(openInvoices.length*7)-(openMaint.length*6)+(collectionRate*.2)));
+  return {k,data,aptRows,aptTotal,aptRented,aptVacant,aptOcc,collectionRate,openInvoices,overdueInvoices,monthlyRentForecast,priorities,portfolioScore,riskScore,criticalCount,activeContracts:activeContracts.length};
+}
+function renderExecutiveCommandCenter(){
+  const snap=buildExecutiveSnapshot();
+  Jawdah.executiveSnapshot=snap;
+  const radar=$('#eccRadar');
+  if(radar){
+    radar.innerHTML=[
+      ['gauge','مؤشر المحفظة',fmt(snap.portfolioScore)+'%',snap.portfolioScore>=70?'good':''],
+      ['percent','نسبة الإشغال',fmt(snap.aptOcc||snap.k.occupancy||0)+'%',snap.aptOcc>=60?'good':''],
+      ['wallet','مؤشر التحصيل',fmt(snap.collectionRate)+'%',snap.collectionRate>=80?'good':''],
+      ['triangle-alert','أولويات حرجة',fmt(snap.criticalCount),snap.criticalCount?'critical':'good'],
+    ].map(x=>`<div class="ecc-radar-item ${x[3]||''}"><span>${x[1]}</span><strong>${x[2]}</strong></div>`).join('');
+  }
+  const queue=$('#eccPriorityQueue');
+  if(queue){
+    queue.innerHTML=snap.priorities.length?`<div class="ecc-priority">${snap.priorities.slice(0,12).map(p=>{
+      const act=p.contractId?`<button class="ghost" onclick="renewContract('${p.contractId}')">${p.label}</button>`:`<button class="ghost" onclick="showSection('${p.section}')">${p.label}</button>`;
+      return `<div class="ecc-priority-row ${p.tone}"><div class="ecc-priority-icon">${ic(p.icon)}</div><div><b>${p.title}</b><div class="mini">${p.detail}</div></div>${act}</div>`;
+    }).join('')}</div>`:`<div class="ecc-empty">${ic('circle-check-big','title-ic')} لا توجد مهام عاجلة — التشغيل مستقر</div>`;
+  }
+  const fin=$('#eccFinancialRadar');
+  if(fin){
+    fin.innerHTML=`<div class="ecc-fin-grid">
+      <div class="ecc-fin-item"><span>إجمالي الفوترة</span><strong>${money(snap.k.billed)}</strong></div>
+      <div class="ecc-fin-item"><span>التحصيل الفعلي</span><strong>${money(snap.k.paid)}</strong></div>
+      <div class="ecc-fin-item"><span>المتأخرات</span><strong>${money(snap.k.overdue)}</strong></div>
+      <div class="ecc-fin-item"><span>إيجار شهري متوقع</span><strong>${money(snap.monthlyRentForecast)}</strong></div>
+      <div class="ecc-fin-item"><span>فواتير مفتوحة</span><strong>${fmt(snap.openInvoices.length)}</strong></div>
+      <div class="ecc-fin-item"><span>صافي الحسابات</span><strong>${money(snap.k.net)}</strong></div>
+    </div>`;
+  }
+  const port=$('#eccPortfolio');
+  if(port){
+    const occBar=snap.aptOcc||0;
+    const colBar=snap.collectionRate||0;
+    port.innerHTML=`<div class="ecc-score-ring">
+      <div class="ecc-score-donut" style="--score:${snap.portfolioScore}">${fmt(snap.portfolioScore)}%</div>
+      <div class="ecc-score-meta">
+        <div><span class="mini">الشقق (${fmt(snap.aptTotal)})</span><div class="ecc-score-bar"><i style="width:${occBar}%"></i></div><span class="mini">مستأجرة ${fmt(snap.aptRented)} · شاغرة ${fmt(snap.aptVacant)}</span></div>
+        <div><span class="mini">التحصيل</span><div class="ecc-score-bar"><i style="width:${colBar}%"></i></div></div>
+        <div><span class="mini">مؤشر المخاطر ${fmt(snap.riskScore)}% · عقود نشطة ${fmt(snap.activeContracts)}</span></div>
+      </div>
+    </div>`;
+  }
+  paintIcons($('#executiveCommandCenter'));
+}
+function executiveReportHtml(snap){
+  const s=CompanyProfile.settings;
+  const esc=CompanyProfile.escapeHtml.bind(CompanyProfile);
+  const priRows=snap.priorities.slice(0,15).map(p=>`<tr><td>${esc(p.title)}</td><td>${esc(p.detail)}</td><td>${esc(p.label)}</td></tr>`).join('')||'<tr><td colspan="3">لا توجد مهام عاجلة</td></tr>';
+  const aptRows=snap.aptRows.map(r=>`<tr class="${r.shortContract?'short':''}"><td>${esc(r.no)}</td><td>${esc(r.statusAr)}</td><td>${esc(r.tenant)}</td><td>${esc(money(r.rent))}</td><td>${esc(r.end)}</td></tr>`).join('');
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
+    body{font-family:Tajawal,Arial,sans-serif;margin:0;padding:24px;background:#fdfbf7;color:#1a1a1a}
+    .qls-doc{max-width:800px;margin:0 auto}
+    h1{margin:0 0 6px;font-size:22px} h2{font-size:16px;margin:22px 0 10px;color:#92400e}
+    .meta{color:#555;font-size:13px;margin-bottom:18px}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+    .kpi{padding:12px;border:1px solid #ddd;border-radius:10px;background:#fff}
+    .kpi span{font-size:12px;color:#666}.kpi b{display:block;font-size:18px;margin-top:4px}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+    th,td{border:1px solid #ddd;padding:8px;text-align:right}
+    th{background:#f5efe6}
+    tr.short{background:#fee2e2}
+    footer{margin-top:24px;font-size:12px;color:#666;border-top:1px solid #ddd;padding-top:12px}
+  </style></head><body><article class="qls-doc">
+    <img src="${esc(CompanyProfile.logoUrl())}" alt="logo" style="height:56px">
+    <h1>${esc(s.name_ar)}</h1>
+    <div class="meta">تقرير مركز القرار التنفيذي · ${esc(new Date().toLocaleString('ar-OM'))}</div>
+    <div class="kpis">
+      <div class="kpi"><span>مؤشر المحفظة</span><b>${fmt(snap.portfolioScore)}%</b></div>
+      <div class="kpi"><span>الإشغال</span><b>${fmt(snap.aptOcc)}%</b></div>
+      <div class="kpi"><span>التحصيل</span><b>${fmt(snap.collectionRate)}%</b></div>
+      <div class="kpi"><span>أولويات حرجة</span><b>${fmt(snap.criticalCount)}</b></div>
+    </div>
+    <h2>الرادار المالي</h2>
+    <div class="kpis">
+      <div class="kpi"><span>الفوترة</span><b>${money(snap.k.billed)}</b></div>
+      <div class="kpi"><span>التحصيل</span><b>${money(snap.k.paid)}</b></div>
+      <div class="kpi"><span>المتأخرات</span><b>${money(snap.k.overdue)}</b></div>
+      <div class="kpi"><span>إيجار شهري</span><b>${money(snap.monthlyRentForecast)}</b></div>
+    </div>
+    <h2>قائمة الأولويات</h2>
+    <table><thead><tr><th>المهمة</th><th>التفاصيل</th><th>الإجراء</th></tr></thead><tbody>${priRows}</tbody></table>
+    <h2>كشف الشقق — نزوى حي التراث</h2>
+    <table><thead><tr><th>الشقة</th><th>الحالة</th><th>المستأجر</th><th>الإيجار</th><th>نهاية العقد</th></tr></thead><tbody>${aptRows}</tbody></table>
+    <footer>${esc(s.name_en)} · CR ${esc(s.cr_no)} · ${esc(s.contacts?.customer_service||'')}</footer>
+  </article></body></html>`;
+}
+async function downloadExecutiveReportPdf(){
+  try{
+    const snap=Jawdah.executiveSnapshot||buildExecutiveSnapshot();
+    await downloadHtmlAsPdf(executiveReportHtml(snap), `executive-report-${today()}.pdf`);
+  }catch(e){ toast(e.message||'تعذر إنشاء التقرير',true); }
+}
 function renderDashboard(){
   const k=Jawdah.dashboard.kpis;
   const data=Jawdah.data || {};
@@ -164,6 +321,7 @@ function renderDashboard(){
     ['wrench','الصيانة المفتوحة',k.maintenance,'maintenance',''],['users-round','العملاء',(data.clients||[]).length,'clients',''],['shield-check','جودة البيانات',k.health,'reports','percent'],['sparkles','توقع الشهر',nextRentForecast,'reports','money']
   ];
   $('#kpiGrid').innerHTML=kpis.map(x=>`<div class="kpi kpi-pro" onclick="showSection('${x[3]}')">${kpiIcon(x[0])}<span>${x[1]}</span><strong>${x[4]==='money'?money(x[2]):x[4]==='percent'?fmt(x[2])+'%':fmt(x[2])}</strong><small class="mini">فتح التفاصيل والتحليل</small></div>`).join('');
+  renderExecutiveCommandCenter();
   const executiveMatrix=`
     <div class="command-panel">
       <div class="ai-orb">${ic('sparkles')}</div>
@@ -174,14 +332,7 @@ function renderDashboard(){
       <div><b>العقار</b><span>${fmt(k.properties)}</span></div><div><b>العميل</b><span>${fmt((data.clients||[]).length)}</span></div><div><b>العقد</b><span>${fmt((data.contracts||[]).length)}</span></div><div><b>الفاتورة</b><span>${fmt((data.invoices||[]).length)}</span></div><div><b>التحصيل</b><span>${money(k.paid)}</span></div><div><b>الحسابات</b><span>${money(k.net)}</span></div>
     </div>
     <div class="executive-strip"><div class="executive-chip"><b>مؤشر التحصيل</b><br><span class="mini">${fmt(collectionRate)}% من إجمالي الفواتير</span></div><div class="executive-chip"><b>مؤشر الإشغال</b><br><span class="mini">${fmt(k.occupancy)}% من الوحدات</span></div><div class="executive-chip"><b>مؤشر السلامة</b><br><span class="mini">${fmt(riskScore)}% تشغيل مستقر</span></div></div>`;
-  const shortContracts=(Jawdah.data.contracts||[]).filter(c=>isShortContract(c));
-  const shortAlerts=shortContracts.map(c=>{
-    const prop=byId('properties',c.property_id);
-    const meta=shortContractMeta(c);
-    const no=prop?.name?aptNoFromProperty(prop):'—';
-    return `<div class="decision-card decision-short"><span class="badge short-contract">عقد قصير</span><p>شقة ${no} — ${byId('clients',c.client_id).name||'—'} — ${meta.label||'مدة 30 يوم أو أقل'}</p></div>`;
-  }).join('');
-  $('#decisionList').innerHTML=executiveMatrix + shortAlerts + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
+  $('#decisionList').innerHTML=executiveMatrix + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
   const props=Jawdah.data.properties||[];
   $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
   $('#quickActions').innerHTML=[['إضافة عقار','properties','building-2'],['إضافة عميل','clients','user-plus'],['إنشاء عقد','contracts','file-plus-2'],['تجديد عقد','contracts','refresh-cw'],['فاتورة من عقد','invoices','receipt'],['تحصيل دفعة','invoices','wallet'],['Backup فوري','backup','archive'],['تقرير مالي','reports','chart-pie'],['اختبار التشغيل','qa','badge-check']].map(q=>`<button class="ghost quick-pro" onclick="showSection('${q[1]}')"><span class="quick-head">${ic(q[2],'quick-ic')}<b>${q[0]}</b></span><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
@@ -212,17 +363,7 @@ function aptRowFromProperty(p){
 function renderApartments(){
   const strip=$('#apartmentBrandStrip');
   if(strip) strip.innerHTML=`<div class="invoice-brand-strip">${CompanyProfile.dashboardIntroHtml()}</div>`;
-  const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
-  const byNo=new Map();
-  props.forEach(p=>{
-    const row=aptRowFromProperty(p);
-    if(row.no==='—') return;
-    const prev=byNo.get(row.no);
-    if(!prev){ byNo.set(row.no,row); return; }
-    const score=r=>(r.contract?2:0)+(r.statusAr==='مستأجرة'?1:0)+(r.shortContract?1:0);
-    if(score(row)>score(prev)) byNo.set(row.no,row);
-  });
-  const rows=[...byNo.values()].sort((a,b)=>String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+  const rows=collectApartmentRows();
   const rented=rows.filter(r=>r.statusAr==='مستأجرة').length;
   const vacant=rows.filter(r=>r.statusAr==='شاغرة').length;
   const total=rows.length;
