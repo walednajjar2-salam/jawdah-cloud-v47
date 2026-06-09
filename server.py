@@ -25,7 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from company_branding import DEFAULT_COMPANY_SETTINGS, build_contract_html, load_company_settings, save_company_settings
+from company_branding import DEFAULT_COMPANY_SETTINGS, build_contract_html, default_legal_terms, load_company_settings, save_company_settings
 
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
@@ -66,8 +66,8 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 
 ROLE_PERMISSIONS = {
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "employees", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices:read", "maintenance", "employees:read", "reports:read"},
+    "accountant": {"dashboard", "properties", "clients", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "employees", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "maintenance", "employees:read", "reports:read"},
     "maintenance": {"dashboard", "properties:read", "maintenance", "reports:read"},
     "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "employees:read", "admin_expenses:read", "inventory_items:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export"},
 }
@@ -630,16 +630,6 @@ def contract_renewal_stats(db: sqlite3.Connection) -> Dict[str, int]:
     return {"expiring": expiring, "expired": expired}
 
 
-def default_legal_terms() -> str:
-    return (
-        "The tenant shall pay rent on or before the due date. The company may apply late fees after the grace period. "
-        "The tenant is responsible for damages caused by misuse, unauthorized alterations, lost keys, and violations of building rules. "
-        "The unit must be returned in good condition, excluding normal wear. Subleasing is not allowed without written approval. "
-        "Utilities, services, and maintenance responsibilities follow the signed contract and applicable laws in the Sultanate of Oman. "
-        "This contract protects Quality Launch Services LLC as the property management and leasing company while preserving the tenant's lawful rights."
-    )
-
-
 def ensure_column(db: sqlite3.Connection, table: str, column: str, definition: str) -> None:
     cols = [r[1] for r in db.execute(f"PRAGMA table_info({table})").fetchall()]
     if column not in cols:
@@ -734,7 +724,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": False, "error": "Authentication required"}, 401)
             return None
         if permission and not has_permission(user, permission):
-            self.send_json({"ok": False, "error": "Permission denied"}, 403)
+            self.send_json({"ok": False, "error": "لا تملك صلاحية تنفيذ هذا الإجراء"}, 403)
             return None
         return user
 
@@ -1054,6 +1044,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def save_generic(self, db: sqlite3.Connection, user: Dict[str, Any], table: str, data: Dict[str, Any], item_id: Optional[str], method: str) -> None:
         row_id = item_id or data.get("id") or uid(table[:3].upper())
         data["id"] = row_id
+        if table == "properties":
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم العقار مطلوب"}, 400)
+            data.setdefault("status", "Vacant")
+            data.setdefault("type", "Villa")
+            data.setdefault("price", 0)
+            data.setdefault("location", "")
+            data.setdefault("image", "🏠")
+            data.setdefault("last_update", today())
+        if table == "clients":
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم العميل مطلوب"}, 400)
         if table == "contracts":
             if not data.get("property_id") or not data.get("client_id") or float(data.get("rent_amount") or 0) <= 0:
                 return self.send_json({"ok": False, "error": "Contract requires property, client, and valid rent amount"}, 400)
@@ -1064,7 +1066,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data.setdefault("deposit_amount", 0)
             data.setdefault("late_fee", 0)
             data.setdefault("grace_days", 5)
-            data.setdefault("renewal_notice_days", 30)
+            data.setdefault("renewal_notice_days", 90)
             data.setdefault("payment_cycle", "monthly")
             data.setdefault("status", "Draft")
             data.setdefault("legal_terms", default_legal_terms())
@@ -1163,8 +1165,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract_id = data.get("contract_id")
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
-            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
-        amount = float(data.get("amount") or contract["rent_amount"])
+            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+        if not contract["property_id"] or not contract["client_id"]:
+            return self.send_json({"ok": False, "error": "يجب ربط العقد بعقار وعميل قبل إنشاء الفاتورة"}, 400)
+        if not exists(db, "properties", contract["property_id"]) or not exists(db, "clients", contract["client_id"]):
+            return self.send_json({"ok": False, "error": "رابط العقد غير صالح — تحقق من العقار والعميل"}, 400)
+        amount = float(data.get("amount") or contract["rent_amount"] or 0)
+        if amount <= 0:
+            return self.send_json({"ok": False, "error": "مبلغ الفاتورة يجب أن يكون أكبر من صفر"}, 400)
         invoice = {
             "id": uid("INV"),
             "invoice_no": next_invoice_no(db),

@@ -188,3 +188,44 @@ body{font-family:"Outfit","Tajawal","Segoe UI",Arial,sans-serif}
 .topbar{border-color:rgba(64,224,208,.18)!important}
 .sidebar{border-left-color:rgba(64,224,208,.22)!important}
 @media(max-width:650px){.brand-main{font-size:1.05rem}.brand-sub{font-size:.78rem;letter-spacing:.12em}.login-brand .brand-main{font-size:1.55rem}}
+
+/* UI clarity — spacing, icons, sharper panels */
+:root{--wm-opacity-app:.07;--wm-opacity-login:.15}
+body{font-size:16px;line-height:1.65}
+.content{padding:26px 28px 38px!important}
+.card,.hero,.kpi,.renewal-panel,.command-panel{padding:22px!important;margin-bottom:18px}
+.card h3,.hero h2{font-size:19px!important}
+.content>h2{font-size:28px!important;margin-bottom:22px!important}
+table{min-width:980px;border-spacing:0}
+th,td{padding:17px 20px!important;font-size:15px!important;letter-spacing:.025em;line-height:1.55}
+th{font-size:14px!important;font-weight:700;padding-top:18px!important;padding-bottom:18px!important}
+.kpi strong{font-size:34px!important;letter-spacing:.04em;margin:12px 0 6px!important;display:block}
+.kpi span{font-size:14px!important;font-weight:600}
+.kpi .mini{font-size:12px!important;margin-top:6px}
+.invoice-kpi-card strong{font-size:26px!important;letter-spacing:.03em}
+.invoice-kpi-card span{font-size:14px!important}
+.badge{padding:8px 12px!important;font-size:13px!important;gap:8px!important}
+.icon-chip{width:48px!important;height:48px!important;border-radius:16px!important;border:1.5px solid rgba(64,224,208,.45)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 26px rgba(64,224,208,.16)!important}
+.icon-chip .lucide-icon{width:23px!important;height:23px!important;stroke-width:2!important}
+.nav-icon{width:44px!important;height:44px!important}
+.nav-text{font-size:15px!important}
+.nav button{padding:13px 14px!important;gap:10px!important;margin-bottom:2px}
+.lucide-icon.quick-ic,.title-ic{width:22px!important;height:22px!important}
+.quick-head b{font-size:16px!important}
+.form{gap:16px!important}
+.form input,.form select,.form textarea,.toolbar input,.toolbar select,.search input{padding:13px 15px!important;font-size:15px!important}
+.card,.hero,.topbar,.sidebar,.kpi,.login-card{backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important}
+body{background:radial-gradient(circle at 16% 0%,rgba(64,224,208,.09),transparent 40%),radial-gradient(circle at 84% 6%,rgba(255,255,255,.06),transparent 44%),linear-gradient(165deg,#000 0%,#080808 40%,#121212 100%)!important}
+.card,.hero,.kpi{background:linear-gradient(160deg,rgba(16,16,16,.94),rgba(6,6,6,.97))!important;border-color:rgba(64,224,208,.22)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.45)!important}
+.topbar{background:rgba(6,6,6,.92)!important}
+.sidebar{background:linear-gradient(180deg,rgba(4,4,4,.99),rgba(0,0,0,1))!important}
+.invoice-create-card{border-color:rgba(64,224,208,.32)!important;margin-bottom:18px}
+.invoice-create-form{align-items:stretch}
+.link-preview{margin-top:4px;padding:14px 16px;border:1px dashed rgba(64,224,208,.28);border-radius:16px;background:rgba(64,224,208,.05);grid-column:1/-1}
+.link-preview-grid{display:flex;flex-wrap:wrap;gap:10px}
+.link-preview .badge .lucide-icon{width:15px;height:15px;margin-left:4px}
+.table-wrap{border-radius:18px;padding:2px}
+td strong,td b{font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.ops-matrix span{font-size:17px!important;font-weight:700;letter-spacing:.03em;margin-top:6px;display:block}
+.executive-chip{font-size:14px;line-height:1.7;padding:16px!important}
+@media(max-width:900px){th,td{padding:14px 12px!important;font-size:14px!important}.kpi strong{font-size:28px!important}}

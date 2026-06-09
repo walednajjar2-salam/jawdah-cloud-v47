@@ -23,6 +23,38 @@ window.DEFAULT_COMPANY_SETTINGS = {
   },
 };
 
+window.DEFAULT_LEGAL_TERMS = `الشروط القانونية:
+
+1. يقر المؤجر بأنه المالك الشرعي للعقار أو مخول قانوناً بتأجيره.
+2. يقر المستأجر بأهليته القانونية للتعاقد والتزامه بجميع أحكام هذا العقد.
+3. يقتصر استخدام العين المؤجرة على الغرض السكني فقط، ولا يجوز تغيير الاستعمال إلا بموافقة خطية من المؤجر والجهات المختصة.
+4. يلتزم المستأجر بالمحافظة على العين المؤجرة وملحقاتها واستعمالها بعناية الشخص المعتاد.
+5. لا يجوز للمستأجر إجراء أي تعديلات أو إضافات أو إنشاءات في العين المؤجرة إلا بعد موافقة خطية من المؤجر.
+6. لا يجوز للمستأجر التنازل عن العقد أو التأجير من الباطن للغير إلا بموافقة خطية مسبقة من المؤجر.
+7. يلتزم المستأجر بسداد الأجرة والمبالغ المستحقة في المواعيد المحددة بالعقد.
+8. يلتزم المؤجر بتسليم العين المؤجرة صالحة للانتفاع المتفق عليه طوال مدة العقد.
+9. عند انتهاء العقد يلتزم المستأجر بإخلاء العين المؤجرة وتسليمها للمؤجر بالحالة التي تسلمها بها مع مراعاة الاستهلاك الناتج عن الاستعمال المعتاد.
+10. يخضع هذا العقد لأحكام القوانين واللوائح النافذة في سلطنة عُمان، ويختص القضاء العُماني بالفصل في أي نزاع ينشأ عنه.
+11. يعتبر هذا العقد ملزماً للطرفين من تاريخ توقيعه، وتكون أحكامه مكملة لأحكام قانون تنظيم العلاقة بين ملاك ومستأجري المساكن والمحلات التجارية والصناعية في سلطنة عُمان.
+
+ملاحظات التسليم:
+
+1. أقر المستأجر بأنه عاين العين المؤجرة وملحقاتها معاينة تامة نافية للجهالة وقبل استلامها بحالتها الراهنة الصالحة للانتفاع.
+2. يلتزم المستأجر بالمحافظة على العين المؤجرة وجميع محتوياتها وملحقاتها، ويتحمل قيمة أي تلف أو ضرر ناتج عن سوء الاستخدام أو الإهمال.
+3. عند انتهاء العقد أو فسخه لأي سبب، يلتزم المستأجر بتسليم العين المؤجرة خالية من الأشخاص والممتلكات وبنفس الحالة التي استلمها بها، مع مراعاة الاستهلاك الطبيعي الناتج عن الاستعمال المعتاد.
+4. يتم تسليم المفاتيح وجميع الملحقات التابعة للعقار للمؤجر عند الإخلاء، ولا تعتبر العين المؤجرة مسلمة إلا بعد المعاينة والاستلام الفعلي من قبل المؤجر.
+
+إنهاء العقد:
+
+1. ينتهي العقد بانتهاء مدته المحددة ما لم يتفق الطرفان كتابةً على تجديده.
+2. يجوز لأي من الطرفين إنهاء العقد قبل انتهاء مدته بموافقة الطرف الآخر كتابةً.
+3. يحق للمؤجر فسخ العقد في حال تأخر المستأجر عن سداد الأجرة أو إخلاله بأي من التزاماته الجوهرية الواردة في العقد أو القانون.
+4. يلتزم الطرف الراغب في عدم تجديد العقد بإخطار الطرف الآخر كتابياً قبل انتهاء مدة العقد بمدة لا تقل عن (90) يوماً ما لم ينص القانون أو العقد على خلاف ذلك.
+5. في حال عدم إخلاء العين المؤجرة بعد انتهاء العقد، يلتزم المستأجر بدفع أجرة المثل عن فترة الإشغال الفعلية دون أن يعتبر ذلك تجديداً للعقد.
+
+ملاحظة:
+أي خلاف ينشأ بين الطرفين بشأن تنفيذ أو تفسير هذا العقد يخضع للقوانين النافذة في سلطنة عُمان ويكون الاختصاص للمحاكم العُمانية المختصة.`;
+
 window.CompanyProfile = {
   settings: { ...DEFAULT_COMPANY_SETTINGS },
 
@@ -55,6 +87,35 @@ window.CompanyProfile = {
     return String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   },
 
+  defaultLegalTerms() {
+    return window.DEFAULT_LEGAL_TERMS;
+  },
+
+  formatLegalTermsHtml(text) {
+    const src = String(text || this.defaultLegalTerms()).trim();
+    const sectionTitles = new Set(['الشروط القانونية:', 'ملاحظات التسليم:', 'إنهاء العقد:', 'ملاحظة:']);
+    const blocks = [];
+    let title = 'الشروط القانونية';
+    let lines = [];
+    const flush = () => {
+      if (!lines.length) return;
+      blocks.push(`<div class="qls-card qls-legal-section"><h4>${this.escapeHtml(title)}</h4><p>${lines.map(x => this.escapeHtml(x)).join('<br>')}</p></div>`);
+      lines = [];
+    };
+    src.split('\n').forEach(raw => {
+      const line = raw.trim();
+      if (!line) return;
+      if (sectionTitles.has(line)) {
+        flush();
+        title = line.slice(0, -1);
+        return;
+      }
+      lines.push(line);
+    });
+    flush();
+    return blocks.join('');
+  },
+
   documentStyles() {
     return `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 :root{--gold:#b8892f;--gold-light:#d4af37;--ink:#1a1a1a;--muted:#5c5348;--line:#e8dcc8;--paper:#fdfbf7;--accent:#8b6914}
@@ -79,6 +140,8 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
 .qls-card ul{margin:0;padding:0 0 0 18px}
 .qls-card .label{color:var(--muted);font-size:11px;display:block}
 .qls-card .value{font-weight:600}
+.qls-legal-section{margin-top:14px}
+.qls-legal-section p{line-height:1.85}
 .qls-vat-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#fff8e8,#f5ecd6);border:1px solid var(--gold-light);color:var(--gold);font-size:11px;font-weight:700;margin-top:10px}
 .qls-title-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:16px;margin:22px 0 18px}
 .qls-title-row h1{margin:0;font-size:1.6rem;color:var(--ink)}
@@ -185,7 +248,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
           <tr><td>الإيجار</td><td>${Number(c.rent_amount || 0).toFixed(3)} OMR</td><td>Rent</td><td>${Number(c.rent_amount || 0).toFixed(3)} OMR</td></tr>
           <tr><td>التأمين</td><td>${Number(c.deposit_amount || 0).toFixed(3)} OMR</td><td>Deposit</td><td>${Number(c.deposit_amount || 0).toFixed(3)} OMR</td></tr>
         </tbody></table>
-        <div class="qls-card" style="margin-top:18px"><h4>Protection Terms · الشروط القانونية</h4><p>${this.escapeHtml(c.legal_terms || '')}</p></div>
+        ${this.formatLegalTermsHtml(c.legal_terms)}
         <div class="qls-signatures"><div class="sig">Tenant Signature · توقيع المستأجر</div><div class="sig">${this.escapeHtml(c.company_signatory || this.settings.name_en)}</div><div class="sig">Company Stamp · ختم المؤسسة</div></div>
         <footer class="qls-footer">${this.escapeHtml(this.settings.name_en)} · Bank: ${this.escapeHtml(this.settings.bank?.name)}</footer>
       </article></body></html>`;

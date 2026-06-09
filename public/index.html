@@ -73,7 +73,7 @@
 
       <section id="sec-contracts" class="section">
         <div id="renewalQueueBox"></div>
-        <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة: رقم الشقة، المبنى، الطابق، المواقف"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractDeposit" placeholder="التأمين OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="30"><textarea id="contractLegalTerms" placeholder="الشروط القانونية وحماية الشركة"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
+        <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة: رقم الشقة، المبنى، الطابق، المواقف"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractDeposit" placeholder="التأمين OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="90"><textarea id="contractLegalTerms" rows="14" placeholder="الشروط القانونية وحماية الشركة — تُعبأ تلقائياً"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('contracts')">تصدير CSV</button></div><div id="contractsTable"></div></div>
       </section>
 
@@ -84,6 +84,18 @@
           <div class="card invoice-kpi-card"><span>المحصّل</span><strong id="invKpiPaid">0 OMR</strong></div>
           <div class="card invoice-kpi-card"><span>المتبقي</span><strong id="invKpiDue">0 OMR</strong></div>
           <div class="card invoice-kpi-card"><span>فواتير ضريبية</span><strong id="invKpiCount">0</strong></div>
+        </div>
+        <div class="card invoice-create-card">
+          <h3><i data-lucide="link-2" class="lucide-icon title-ic"></i> إنشاء فاتورة مربوطة بعقد</h3>
+          <p class="mini">الربط الإلزامي: <b>العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات</b></p>
+          <div class="form invoice-create-form">
+            <select id="invContractPick" onchange="syncInvoiceContractPreview()"><option value="">— اختر العقد —</option></select>
+            <input id="invDueDate" type="date" placeholder="تاريخ الاستحقاق">
+            <input id="invAmount" type="number" step="0.001" placeholder="المبلغ شامل ض.ق.م OMR">
+            <input id="invDescription" placeholder="وصف الفاتورة" value="فاتورة إيجار">
+            <div id="invLinkPreview" class="link-preview"></div>
+          </div>
+          <button id="invCreateBtn" class="gold-btn" onclick="submitCreateInvoice()"><i data-lucide="receipt" class="lucide-icon"></i> إنشاء وربط الفاتورة</button>
         </div>
         <div class="card invoice-hub-card">
           <div class="toolbar invoice-hub-toolbar">
