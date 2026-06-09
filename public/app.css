@@ -618,7 +618,8 @@ body.dash-view .content{padding-top:8px}
 .login-status.err{color:#ff8a8a}
 .login-minimal{width:min(360px,100%);padding:24px;text-align:stretch}
 .login-minimal input{width:100%;margin:0 0 12px;display:block}
-.login-minimal .login-btn{width:100%!important;margin-top:12px;display:flex!important;visibility:visible!important;opacity:1!important;min-height:50px;font-size:16px}
-#loginScreen{display:grid;place-items:center;min-height:100vh;position:relative;z-index:5}
-#loginBtn{display:flex!important;visibility:visible!important;opacity:1!important}
+.login-minimal .login-btn{width:100%!important;margin-top:12px;display:block!important;visibility:visible!important;opacity:1!important;min-height:52px!important;font-size:17px!important;background:#d8b15b!important;color:#111!important;border:2px solid #d8b15b!important;box-shadow:0 8px 24px rgba(216,177,91,.35)!important}
+#loginScreen{display:grid;place-items:center;min-height:100vh;position:relative;z-index:9999}
+#loginBtn,#loginForm button#loginBtn{display:block!important;visibility:visible!important;opacity:1!important;width:100%!important;min-height:52px!important;background:#d8b15b!important;color:#111!important;border:2px solid #d8b15b!important;font-weight:800!important;font-size:17px!important;box-shadow:0 8px 24px rgba(216,177,91,.35)!important}
+.login-minimal .gold-btn{background:#d8b15b!important;color:#111!important;border:2px solid #d8b15b!important}
 body.login-mode .ambient-orbs,body.login-mode #uiWatermark{display:none}

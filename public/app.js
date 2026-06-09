@@ -100,22 +100,23 @@ async function login(){
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
     setLoginStatus('جاري تحميل النظام...');
-    showAppShell();
     await loadAll();
     setLoginStatus('');
+    showAppShell();
     showLoginWelcome();
   }catch(e){ showLoginShell(); setLoginStatus(e.message||'تعذر تسجيل الدخول', true); toast(e.message,true); }
 }
 async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; showLoginShell(); location.reload(); }
 async function checkSession(){
   if(!Jawdah.token){ showLoginShell(); setLoginStatus(''); return; }
+  showLoginShell();
   setLoginStatus('جاري استعادة الجلسة...');
   try{
     const me=await api('me');
     Jawdah.user=me.user;
-    showAppShell();
     await loadAll();
     setLoginStatus('');
+    showAppShell();
   }catch(e){
     localStorage.removeItem('jawdah_cloud_token');
     Jawdah.token='';
@@ -1020,7 +1021,7 @@ function bind(){
   document.addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key.toLowerCase()==='k'){ e.preventDefault(); $('#globalSearch').focus(); } if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#globalSearch').focus();} });
 }
 window.LAUNCH_QUALITY_CHECK=()=>({system:COMPANY,user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});
-window.addEventListener('load',()=>{ if(!Jawdah.token) showLoginShell(); else document.body.classList.remove('login-mode'); bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
+window.addEventListener('load',()=>{ showLoginShell(); bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
 
 
 /* Quality Launch Services LLC - production experience layer */

@@ -8,15 +8,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=20260609b">
+  <link rel="stylesheet" href="app.css?v=20260609c">
   <style>
     body.login-mode{margin:0;min-height:100vh;background:#0a0a0a}
     #loginScreen{display:grid!important;place-items:center;min-height:100vh;padding:20px;position:relative;z-index:5}
     #loginScreen.hidden{display:none!important}
     .login-minimal{width:min(380px,100%);padding:28px 24px;border-radius:24px;border:1px solid rgba(216,177,91,.35);background:rgba(18,18,18,.95);box-shadow:0 24px 60px rgba(0,0,0,.55)}
     .login-minimal input{width:100%;margin:0 0 14px;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;display:block;box-sizing:border-box}
-    .login-minimal #loginBtn{width:100%!important;display:flex!important;visibility:visible!important;opacity:1!important;min-height:50px;margin-top:6px;padding:14px 18px;border:0;border-radius:14px;background:linear-gradient(135deg,#b8892f,#d8b15b);color:#1a1208;font-weight:800;font-size:16px;cursor:pointer;justify-content:center;align-items:center}
-    .login-minimal #loginBtn:hover{filter:brightness(1.06)}
+    .login-minimal #loginBtn{
+      width:100%!important;display:block!important;visibility:visible!important;opacity:1!important;
+      min-height:52px!important;margin-top:10px!important;padding:14px 18px!important;
+      border:2px solid #d8b15b!important;border-radius:14px!important;
+      background:#d8b15b!important;color:#111!important;
+      font-weight:800!important;font-size:17px!important;cursor:pointer!important;
+      box-shadow:0 8px 24px rgba(216,177,91,.35)!important;
+    }
   </style>
 </head>
 <body class="login-mode">
@@ -30,7 +36,7 @@
     <form id="loginForm" class="login-card login-minimal" autocomplete="on">
       <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
       <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
-      <button id="loginBtn" class="gold-btn login-btn" type="submit">تسجيل الدخول</button>
+      <button id="loginBtn" type="button">تسجيل الدخول</button>
       <p id="loginStatus" class="mini login-status hidden"></p>
     </form>
   </main>
@@ -403,6 +409,6 @@
       }
     })();
   </script>
-  <script src="app.js?v=20260609b"></script>
+  <script src="app.js?v=20260609c"></script>
 </body>
 </html>
