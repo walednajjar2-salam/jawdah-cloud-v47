@@ -1,4 +1,4 @@
-# Quality of Launch Services LLC — production bootstrap (company settings + users check)
+# Quality of Launch Services LLC - production bootstrap
 param(
   [string]$BaseUrl = "https://web-production-08d73.up.railway.app",
   [string]$AdminUser = "admin",
@@ -42,7 +42,7 @@ foreach ($req in $requiredUsers) {
 Write-Host "Current users:"
 $boot2 = Invoke-RestMethod -Uri "$BaseUrl/api/bootstrap" -Headers $headers
 foreach ($u in $boot2.data.users) {
-  Write-Host "  - $($u.username) ($($u.role)) — $($u.name)"
+  Write-Host ("  - {0} ({1}) name={2}" -f $u.username, $u.role, $u.name)
 }
 
 Write-Host "Verifying backup export..."
@@ -50,4 +50,4 @@ $backup = Invoke-RestMethod -Uri "$BaseUrl/api/backup" -Headers $headers
 $tables = $backup.backup.data.PSObject.Properties.Name
 Write-Host "Backup tables: $($tables.Count)"
 
-Write-Host "DONE — open $BaseUrl and sign in to add properties, clients, and contracts."
+Write-Host "DONE - open $BaseUrl and add properties, clients, and contracts."
