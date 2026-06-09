@@ -205,7 +205,16 @@ function renderApartments(){
   const strip=$('#apartmentBrandStrip');
   if(strip) strip.innerHTML=`<div class="invoice-brand-strip">${CompanyProfile.dashboardIntroHtml()}</div>`;
   const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
-  const rows=props.map(aptRowFromProperty).sort((a,b)=>String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+  const byNo=new Map();
+  props.forEach(p=>{
+    const row=aptRowFromProperty(p);
+    if(row.no==='—') return;
+    const prev=byNo.get(row.no);
+    if(!prev){ byNo.set(row.no,row); return; }
+    const score=r=>(r.contract?2:0)+(r.statusAr==='مستأجرة'?1:0);
+    if(score(row)>score(prev)) byNo.set(row.no,row);
+  });
+  const rows=[...byNo.values()].sort((a,b)=>String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
   const rented=rows.filter(r=>r.statusAr==='مستأجرة').length;
   const vacant=rows.filter(r=>r.statusAr==='شاغرة').length;
   const total=rows.length;
