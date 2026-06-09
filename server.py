@@ -25,10 +25,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from company_branding import DEFAULT_COMPANY_SETTINGS, build_contract_html, load_company_settings, save_company_settings
+
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
 DATA_DIR = Path(os.environ.get("JAWDAH_DATA_DIR", str(BASE_DIR / "data"))).resolve()
 DB_PATH = Path(os.environ.get("JAWDAH_DB_PATH", str(DATA_DIR / "jawdah.sqlite3"))).resolve()
+COMPANY_SETTINGS_PATH = Path(os.environ.get("JAWDAH_COMPANY_SETTINGS", str(DATA_DIR / "company_settings.json"))).resolve()
 HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
@@ -855,6 +858,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "financial_statements" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_financial_statements(db)
+                if parts[0] == "company_settings" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.send_json({"ok": True, "settings": load_company_settings(COMPANY_SETTINGS_PATH)})
+                if parts[0] == "company_settings" and method == "PUT":
+                    user = self.require_user(db, "admin")
+                    if not user:
+                        return
+                    data = self.read_json()
+                    saved = save_company_settings(COMPANY_SETTINGS_PATH, data)
+                    audit(db, user, "update", "company_settings", "company", "Updated company branding settings")
+                    db.commit()
+                    return self.send_json({"ok": True, "settings": saved})
                 if parts[0] == "employee_roster" and method == "GET":
                     user = self.require_user(db, "employees:read")
                     return None if not user else self.api_employee_roster(db, query)
@@ -959,7 +974,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 continue
             visible_cols = ",".join(cols)
             data[table] = rows_to_dicts(db.execute(f"SELECT {visible_cols} FROM {table} ORDER BY rowid DESC").fetchall())
-        self.send_json({"ok": True, "data": data, "dashboard": build_dashboard(db), "user": user})
+        self.send_json({"ok": True, "data": data, "dashboard": build_dashboard(db), "user": user, "company_settings": load_company_settings(COMPANY_SETTINGS_PATH)})
 
     def api_dashboard(self, db: sqlite3.Connection) -> None:
         self.send_json({"ok": True, "dashboard": build_dashboard(db)})
@@ -1312,7 +1327,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": False, "error": "Contract not found"}, 404)
         client = db.execute("SELECT * FROM clients WHERE id=?", (c["client_id"],)).fetchone()
         prop = db.execute("SELECT * FROM properties WHERE id=?", (c["property_id"],)).fetchone()
-        html = f"""<!doctype html><html lang='en' dir='ltr'><head><meta charset='utf-8'><title>{c['contract_no'] or c['id']}</title><style>body{{font-family:Arial; color:#111827; margin:35px}} h1{{color:#091627}} .gold{{color:#b8892f}} .box{{border:1px solid #d7c38a;padding:14px;border-radius:10px;margin:12px 0}} table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #ddd;padding:8px}}</style></head><body><h1>Launch Quality LLC Lease Contract</h1><h2 class='gold'>{c['contract_no'] or c['id']}</h2><div class='box'><b>Company:</b> Launch Quality LLC - Real Estate & Hospitality Management<br><b>Jurisdiction:</b> Sultanate of Oman</div><table><tr><th>Tenant</th><td>{client['name'] if client else ''}</td><th>ID/CR</th><td>{c['tenant_id_no'] or (client['national_id'] if client else '')}</td></tr><tr><th>Property</th><td>{prop['name'] if prop else ''}</td><th>Unit</th><td>{c['unit_details'] or (prop['location'] if prop else '')}</td></tr><tr><th>Start</th><td>{c['start_date']}</td><th>End</th><td>{c['end_date']}</td></tr><tr><th>Rent</th><td>{c['rent_amount']} OMR</td><th>Deposit</th><td>{c['deposit_amount']} OMR</td></tr><tr><th>Late Fee</th><td>{c['late_fee']} OMR</td><th>Grace Days</th><td>{c['grace_days']}</td></tr></table><div class='box'><h3>Protection Terms</h3><p>{c['legal_terms'] or default_legal_terms()}</p></div><br><table><tr><th>Tenant Signature</th><th>Company Signature</th><th>Company Stamp</th></tr><tr><td style='height:90px'></td><td>{c['company_signatory'] or 'Launch Quality LLC'}</td><td></td></tr></table></body></html>"""
+        settings = load_company_settings(COMPANY_SETTINGS_PATH)
+        html = build_contract_html(settings, dict(c), dict(client) if client else None, dict(prop) if prop else None)
         self.send_json({"ok": True, "html": html})
 
     def api_bank_reconciliation_preview(self, db: sqlite3.Connection, query: str) -> None:

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Quality Launch Services LLC</title>
+  <title>Quality of Launch Services LLC</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -13,9 +13,9 @@
   <main id="loginScreen" class="login hidden">
     <section class="login-card">
       <div class="login-brand-wrap">
-        <img src="assets/logo.svg" alt="Quality Launch Services LLC">
-        <h1 class="brand-title"><span class="brand-main">Quality Launch</span><span class="brand-sub">Services LLC</span></h1>
-        <p class="brand-tagline">Real Estate &amp; Hospitality Management</p>
+        <img src="assets/logo-primary.png" alt="Quality of Launch Services LLC">
+        <h1 class="brand-title"><span class="brand-main">Quality of Launch</span><span class="brand-sub">Services LLC</span></h1>
+        <p class="brand-tagline">جودة الانطلاقة للخدمات ل.ل.س · Real Estate &amp; Hospitality</p>
       </div>
       <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
       <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
@@ -26,9 +26,9 @@
   <main id="app" class="app hidden">
     <aside id="sidebar" class="sidebar">
       <div class="brand">
-        <img src="assets/logo.svg" alt="Quality Launch Services LLC">
+        <img src="assets/logo-primary.png" alt="Quality of Launch Services LLC">
         <div class="brand-copy">
-          <h1 class="brand-title"><span class="brand-main">Quality Launch</span><span class="brand-sub">Services LLC</span></h1>
+          <h1 class="brand-title"><span class="brand-main">Quality of Launch</span><span class="brand-sub">Services LLC</span></h1>
           <small class="brand-tagline">Real Estate &amp; Hospitality Management</small>
         </div>
       </div>
@@ -46,6 +46,7 @@
       <h2 id="sectionTitle">لوحة التحكم التنفيذية</h2><div id="launchBanner" class="launch-banner hidden"></div>
 
       <section id="sec-dashboard" class="section active">
+        <div id="dashboardBrandHero"></div>
         <div class="hero"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id="heroStats" class="status-line" style="margin-top:14px"></div></div>
         <div id="kpiGrid" class="grid kpis"></div>
         <div class="layout">
@@ -76,7 +77,20 @@
       </section>
 
       <section id="sec-invoices" class="section">
-        <div class="card"><h3>الفواتير والتحصيل</h3><p class="mini">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id="invoicesTable"></div></div>
+        <div id="invoiceBrandStrip"></div>
+        <div class="invoice-hub-grid">
+          <div class="card invoice-kpi-card"><span>إجمالي الفوترة</span><strong id="invKpiBilled">0 OMR</strong></div>
+          <div class="card invoice-kpi-card"><span>المحصّل</span><strong id="invKpiPaid">0 OMR</strong></div>
+          <div class="card invoice-kpi-card"><span>المتبقي</span><strong id="invKpiDue">0 OMR</strong></div>
+          <div class="card invoice-kpi-card"><span>فواتير ضريبية</span><strong id="invKpiCount">0</strong></div>
+        </div>
+        <div class="card invoice-hub-card">
+          <div class="toolbar invoice-hub-toolbar">
+            <div><h3>الفواتير الضريبية والتحصيل</h3><p class="mini">فاتورة ضريبية خاضعة لضريبة القيمة المضافة — مع شعار المؤسسة وبيانات البنك في رأس كل مستند.</p></div>
+            <button class="ghost" onclick="exportCsv('invoices')">تصدير CSV</button>
+          </div>
+          <div id="invoicesTable"></div>
+        </div>
       </section>
 
       <section id="sec-accounts" class="section">
@@ -155,6 +169,13 @@
         <div class="card"><button class="gold-btn" onclick="renderReports()">تحديث التقرير</button> <button class="ghost" onclick="downloadBackup()">تنزيل Backup</button></div>
       </section>
 
+      <section id="sec-company-settings" class="section">
+        <div class="card accounting-hero"><h3>إعدادات المؤسسة والهوية</h3><p class="mini">عدّل بيانات المؤسسة، الوصف، البنك، وضريبة القيمة المضافة — تنعكس مباشرة على الفواتير والعقود والمستندات.</p></div>
+        <div class="card"><div class="form"><input id="csNameAr" placeholder="اسم المؤسسة بالعربي"><input id="csNameEn" placeholder="Company Name"><input id="csCr" placeholder="C.R. No."><input id="csPostal" placeholder="Postal Code"><input id="csPoBox" placeholder="P.O. Box"><input id="csVatRate" placeholder="VAT Rate (0.05)"><input id="csVatReg" placeholder="VAT Registration No."><input id="csLogo" placeholder="Logo path"><input id="csBankName" placeholder="Bank Name"><input id="csCsPhone" placeholder="Customer Service"><input id="csHospPhone" placeholder="Hospitality Phone"><textarea id="csDescAr" placeholder="الوصف بالعربي"></textarea><textarea id="csDescEn" placeholder="Description in English"></textarea></div>
+        <div class="card inner-card"><h3>حسابات البنك</h3><div class="form"><input id="csAcc1Name" placeholder="Account 1 Name"><input id="csAcc1No" placeholder="Account 1 Number"><input id="csAcc2Name" placeholder="Account 2 Name"><input id="csAcc2No" placeholder="Account 2 Number"><input id="csAcc2Phone" placeholder="Account 2 Phone"></div></div>
+        <button class="gold-btn" onclick="saveCompanySettings()">حفظ إعدادات المؤسسة</button></div>
+      </section>
+
       <section id="sec-users" class="section">
         <div class="card"><h3>إضافة مستخدم</h3><div class="form"><input id="uUsername" placeholder="اسم المستخدم"><input id="uName" placeholder="الاسم"><select id="uRole"><option value="admin">admin</option><option value="accountant">accountant</option><option value="operations">operations</option><option value="maintenance">maintenance</option><option value="viewer">viewer</option></select><input id="uPassword" placeholder="كلمة المرور"></div><button class="gold-btn" onclick="createUser()">حفظ المستخدم</button></div>
         <div class="card"><div id="usersTable"></div></div>
@@ -184,9 +205,10 @@
   </main>
 
   <div id="paymentModal" class="modal"><div class="modal-box"><h2>تحصيل فاتورة</h2><p id="payInfo"></p><input id="payInvoiceId" type="hidden"><div class="form"><input id="payAmount" placeholder="المبلغ"><select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id="payNote" placeholder="ملاحظة"></div><button class="gold-btn" onclick="submitPayment()">تأكيد التحصيل</button> <button class="ghost" onclick="closeModal('paymentModal')">إغلاق</button></div></div>
-  <div id="invoiceModal" class="modal"><div class="modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="window.print()">طباعة A4</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
+  <div id="invoiceModal" class="modal"><div class="modal-box invoice-modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="printInvoiceDocument()">طباعة A4 / PDF</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
   <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
   <script src="https://unpkg.com/lucide@0.511.0/dist/umd/lucide.min.js"></script>
+  <script src="company-settings.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
