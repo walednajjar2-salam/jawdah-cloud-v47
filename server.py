@@ -33,6 +33,12 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 APP_VERSION = "Launch-Quality-LLC-v47-railway"
+MAX_JSON_BYTES = int(os.environ.get("JAWDAH_MAX_JSON_BYTES", "1048576"))
+LOGIN_RATE_LIMIT = int(os.environ.get("JAWDAH_LOGIN_RATE_LIMIT", "8"))
+LOGIN_WINDOW_SEC = int(os.environ.get("JAWDAH_LOGIN_WINDOW_SEC", "300"))
+SESSION_HOURS = int(os.environ.get("JAWDAH_SESSION_HOURS", "12"))
+DEBUG_ERRORS = os.environ.get("JAWDAH_DEBUG", "").strip().lower() in ("1", "true", "yes")
+_LOGIN_ATTEMPTS: Dict[str, List[float]] = {}
 
 # Fallback assets: Railway can still open the app even if the public folder is misplaced.
 FALLBACK_INDEX_HTML = "<!doctype html>\n<html lang=\"ar\" dir=\"rtl\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Launch Quality LLC</title>\n  <link rel=\"stylesheet\" href=\"app.css\">\n</head>\n<body>\n  <main id=\"loginScreen\" class=\"login hidden\">\n    <section class=\"login-card\">\n      <img src=\"assets/logo.png\" alt=\"Jawdah logo\">\n      <h1>Launch Quality LLC</h1>\n      <p class=\"mini\">Real Estate & Hospitality Management System</p>\n      <input id=\"loginUser\" placeholder=\"اسم المستخدم\" autocomplete=\"username\" value=\"admin\">\n      <input id=\"loginPass\" placeholder=\"كلمة المرور\" type=\"password\" autocomplete=\"current-password\" value=\"admin123\">\n      <button id=\"loginBtn\" class=\"gold-btn\" style=\"width:100%;margin-top:10px\">تسجيل الدخول</button>\n      <p class=\"mini\">admin / admin123</p>\n    </section>\n  </main>\n\n  <main id=\"app\" class=\"app hidden\">\n    <aside id=\"sidebar\" class=\"sidebar\">\n      <div class=\"brand\">\n        <img src=\"assets/logo.png\" alt=\"logo\">\n        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>\n      </div>\n      <nav id=\"nav\" class=\"nav\"></nav>\n    </aside>\n    <section class=\"content\">\n      <header class=\"topbar\">\n        <button id=\"menuBtn\" class=\"ghost mobile-nav\">☰</button>\n        <div class=\"search\"><input id=\"globalSearch\" placeholder=\"بحث سريع Ctrl + K\"></div>\n        <button class=\"gold-btn\" onclick=\"showSection('properties')\">+ إضافة</button>\n        <div id=\"clock\" class=\"top-pill\">00:00:00</div>\n        <div class=\"userbox\"><div id=\"avatar\" class=\"avatar\">J</div><div><b id=\"userName\">User</b><br><small id=\"userRole\" class=\"mini\">Role</small></div></div>\n        <button id=\"logoutBtn\" class=\"ghost\">خروج</button>\n      </header>\n      <h2 id=\"sectionTitle\">لوحة التحكم التنفيذية</h2>\n\n      <section id=\"sec-dashboard\" class=\"section active\">\n        <div class=\"hero\"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id=\"heroStats\" class=\"status-line\" style=\"margin-top:14px\"></div></div>\n        <div id=\"kpiGrid\" class=\"grid kpis\"></div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>الإيرادات والمصروفات</h3><div class=\"canvas-wrap\"><canvas id=\"incomeChart\"></canvas></div></div>\n          <div class=\"card\"><h3>خريطة GIS تشغيلية</h3><div class=\"gis\"><div id=\"gisPins\"></div></div></div>\n        </div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>قرارات الآن</h3><div id=\"decisionList\"></div></div>\n          <div class=\"card\"><h3>الإشغال</h3><div class=\"canvas-wrap\"><canvas id=\"occupancyChart\"></canvas></div></div>\n        </div>\n        <div class=\"card\"><h3>إجراءات سريعة</h3><div id=\"quickActions\" class=\"quick\"></div></div>\n      </section>\n\n      <section id=\"sec-properties\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عقار</h3><div class=\"form\"><input id=\"pImage\" placeholder=\"إيموجي/رمز\" value=\"🏠\"><input id=\"pName\" placeholder=\"اسم العقار\"><input id=\"pType\" placeholder=\"النوع\"><select id=\"pStatus\"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id=\"pPrice\" placeholder=\"السعر\"><input id=\"pLocation\" placeholder=\"الموقع\"><textarea id=\"pNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createProperty()\">حفظ العقار</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><select id=\"propStatusFilter\" onchange=\"renderProperties()\"></select><button class=\"ghost\" onclick=\"exportCsv('properties')\">تصدير CSV</button></div><div id=\"propertiesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-clients\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عميل</h3><div class=\"form\"><input id=\"cName\" placeholder=\"اسم العميل\"><input id=\"cPhone\" placeholder=\"الهاتف\"><input id=\"cEmail\" placeholder=\"البريد\"><input id=\"cNational\" placeholder=\"الهوية/السجل\"><textarea id=\"cNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createClient()\">حفظ العميل</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('clients')\">تصدير CSV</button></div><div id=\"clientsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-contracts\" class=\"section\">\n        <div class=\"card\"><h3>إنشاء عقد</h3><div class=\"form\"><select id=\"contractProperty\"></select><select id=\"contractClient\"></select><input id=\"contractStart\" type=\"date\"><input id=\"contractEnd\" type=\"date\"><input id=\"contractRent\" placeholder=\"قيمة الإيجار\"><textarea id=\"contractNotes\" placeholder=\"ملاحظات العقد\"></textarea></div><button class=\"gold-btn\" onclick=\"createContract()\">حفظ العقد</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('contracts')\">تصدير CSV</button></div><div id=\"contractsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-invoices\" class=\"section\">\n        <div class=\"card\"><h3>الفواتير والتحصيل</h3><p class=\"mini\">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id=\"invoicesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-accounts\" class=\"section\">\n        <div class=\"card\"><h3>إضافة حركة مالية</h3><div class=\"form\"><input id=\"accDate\" type=\"date\"><select id=\"accType\"><option value=\"income\">income</option><option value=\"expense\">expense</option></select><input id=\"accCategory\" placeholder=\"التصنيف\"><input id=\"accDesc\" placeholder=\"الوصف\"><input id=\"accAmount\" placeholder=\"المبلغ\"></div><button class=\"gold-btn\" onclick=\"createAccount()\">حفظ الحركة</button></div>\n        <div class=\"card\"><h3>ملخص الحسابات</h3><div id=\"accountSummary\" class=\"status-line\"></div><div class=\"canvas-wrap\"><canvas id=\"expenseChart\"></canvas></div></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('accounts')\">تصدير CSV</button></div><div id=\"accountsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-maintenance\" class=\"section\">\n        <div class=\"card\"><h3>طلب صيانة</h3><div class=\"form\"><select id=\"maintProperty\"></select><input id=\"maintTitle\" placeholder=\"عنوان الطلب\"><select id=\"maintPriority\"><option>High</option><option>Medium</option><option>Low</option></select><input id=\"maintCost\" placeholder=\"التكلفة المتوقعة\"><textarea id=\"maintNotes\" placeholder=\"تفاصيل\"></textarea></div><button class=\"gold-btn\" onclick=\"createMaintenance()\">حفظ الطلب</button></div>\n        <div class=\"grid\" id=\"maintenanceGrid\" style=\"grid-template-columns:repeat(auto-fit,minmax(260px,1fr))\"></div>\n      </section>\n\n      <section id=\"sec-reports\" class=\"section\">\n        <div id=\"reportsBox\"></div>\n        <div class=\"card\"><button class=\"gold-btn\" onclick=\"renderReports()\">تحديث التقرير</button> <button class=\"ghost\" onclick=\"downloadBackup()\">تنزيل Backup</button></div>\n      </section>\n\n      <section id=\"sec-users\" class=\"section\">\n        <div class=\"card\"><h3>إضافة مستخدم</h3><div class=\"form\"><input id=\"uUsername\" placeholder=\"اسم المستخدم\"><input id=\"uName\" placeholder=\"الاسم\"><select id=\"uRole\"><option value=\"admin\">admin</option><option value=\"accountant\">accountant</option><option value=\"operations\">operations</option><option value=\"maintenance\">maintenance</option><option value=\"viewer\">viewer</option></select><input id=\"uPassword\" placeholder=\"كلمة المرور\"></div><button class=\"gold-btn\" onclick=\"createUser()\">حفظ المستخدم</button></div>\n        <div class=\"card\"><div id=\"usersTable\"></div></div>\n      </section>\n\n      <section id=\"sec-backup\" class=\"section\">\n        <div class=\"card\"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id=\"backupStatus\" class=\"status-line\"></div><div class=\"toolbar\" style=\"margin-top:16px\"><button class=\"gold-btn\" onclick=\"downloadBackup()\">تنزيل Backup JSON</button><button class=\"ghost\" onclick=\"exportCsv('properties')\">عقارات CSV</button><button class=\"ghost\" onclick=\"exportCsv('clients')\">عملاء CSV</button><button class=\"ghost\" onclick=\"exportCsv('contracts')\">عقود CSV</button><button class=\"ghost\" onclick=\"exportCsv('invoices')\">فواتير CSV</button><button class=\"ghost\" onclick=\"exportCsv('accounts')\">حسابات CSV</button></div></div>\n      </section>\n\n      <section id=\"sec-qa\" class=\"section\">\n        <div class=\"card\"><h3>اختبار التشغيل</h3><button class=\"gold-btn\" onclick=\"runQA()\">تشغيل الاختبار الآن</button><div id=\"qaBox\" style=\"margin-top:15px\"></div></div>\n      </section>\n    </section>\n  </main>\n\n  <div id=\"paymentModal\" class=\"modal\"><div class=\"modal-box\"><h2>تحصيل فاتورة</h2><p id=\"payInfo\"></p><input id=\"payInvoiceId\" type=\"hidden\"><div class=\"form\"><input id=\"payAmount\" placeholder=\"المبلغ\"><select id=\"payMethod\"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id=\"payNote\" placeholder=\"ملاحظة\"></div><button class=\"gold-btn\" onclick=\"submitPayment()\">تأكيد التحصيل</button> <button class=\"ghost\" onclick=\"closeModal('paymentModal')\">إغلاق</button></div></div>\n  <div id=\"invoiceModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"invoicePreview\"></div><div class=\"toolbar\"><button class=\"gold-btn\" onclick=\"window.print()\">طباعة A4</button><button class=\"ghost\" onclick=\"downloadInvoice()\">تنزيل HTML</button><button class=\"ghost\" onclick=\"closeModal('invoiceModal')\">إغلاق</button></div></div></div>\n  <div id=\"genericModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"genericModalBody\"></div><button class=\"ghost\" onclick=\"closeModal('genericModal')\">إغلاق</button></div></div>\n  <script src=\"app.js\"></script>\n</body>\n</html>\n"
@@ -57,10 +63,10 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 
 ROLE_PERMISSIONS = {
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices:read", "maintenance", "reports:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "employees", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices:read", "maintenance", "employees:read", "reports:read"},
     "maintenance": {"dashboard", "properties:read", "maintenance", "reports:read"},
-    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export"},
+    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "employees:read", "admin_expenses:read", "inventory_items:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export"},
 }
 
 TABLES = {
@@ -72,7 +78,8 @@ TABLES = {
     "accounts": ["id", "entry_date", "type", "category", "description", "client_id", "property_id", "invoice_id", "amount"],
     "purchase_invoices": ["id", "purchase_no", "supplier", "invoice_date", "due_date", "category", "description", "amount", "paid_amount", "status", "property_id", "account_id"],
     "revenues": ["id", "revenue_no", "revenue_date", "source", "category", "description", "amount", "client_id", "property_id", "account_id"],
-    "salaries": ["id", "employee_name", "salary_month", "basic_salary", "allowances", "deductions", "net_salary", "status", "payment_date", "account_id"],
+    "salaries": ["id", "employee_name", "employee_id", "nationality_category", "id_number", "job_title", "department", "salary_month", "basic_salary", "allowances", "deductions", "net_salary", "status", "payment_date", "account_id"],
+    "employees": ["id", "employee_code", "name", "nationality_category", "nationality", "id_number", "job_title", "department", "hire_date", "phone", "status", "notes"],
     "admin_expenses": ["id", "expense_date", "category", "description", "amount", "supplier", "property_id", "account_id"],
     "inventory_items": ["id", "sku", "name", "category", "unit", "quantity", "min_quantity", "unit_cost", "location", "notes"],
     "inventory_transactions": ["id", "item_id", "tx_date", "tx_type", "quantity", "unit_cost", "reference", "notes"],
@@ -95,6 +102,41 @@ def now_iso() -> str:
 
 def today() -> str:
     return date.today().isoformat()
+
+
+def normalize_nationality_category(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    if raw in {"omani", "عماني", "om", "oman", "omanian", "local"}:
+        return "Omani"
+    return "Expat"
+
+
+def nationality_label(value: Any) -> str:
+    return "عماني" if normalize_nationality_category(value) == "Omani" else "أجنبي"
+
+
+def client_ip(handler: BaseHTTPRequestHandler) -> str:
+    forwarded = handler.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    return forwarded or handler.client_address[0]
+
+
+def login_rate_key(handler: BaseHTTPRequestHandler, username: str) -> str:
+    return f"{client_ip(handler)}:{username.lower()}"
+
+
+def login_rate_limited(key: str) -> bool:
+    now = time.time()
+    attempts = [t for t in _LOGIN_ATTEMPTS.get(key, []) if now - t < LOGIN_WINDOW_SEC]
+    _LOGIN_ATTEMPTS[key] = attempts
+    return len(attempts) >= LOGIN_RATE_LIMIT
+
+
+def register_login_failure(key: str) -> None:
+    _LOGIN_ATTEMPTS.setdefault(key, []).append(time.time())
+
+
+def clear_login_failures(key: str) -> None:
+    _LOGIN_ATTEMPTS.pop(key, None)
 
 
 def uid(prefix: str) -> str:
@@ -264,6 +306,11 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS salaries (
                 id TEXT PRIMARY KEY,
                 employee_name TEXT NOT NULL,
+                employee_id TEXT,
+                nationality_category TEXT NOT NULL DEFAULT 'Omani',
+                id_number TEXT,
+                job_title TEXT,
+                department TEXT,
                 salary_month TEXT NOT NULL,
                 basic_salary REAL NOT NULL DEFAULT 0,
                 allowances REAL NOT NULL DEFAULT 0,
@@ -272,7 +319,22 @@ def init_db() -> None:
                 status TEXT NOT NULL DEFAULT 'Pending',
                 payment_date TEXT,
                 account_id TEXT,
+                FOREIGN KEY(employee_id) REFERENCES employees(id),
                 FOREIGN KEY(account_id) REFERENCES accounts(id)
+            );
+            CREATE TABLE IF NOT EXISTS employees (
+                id TEXT PRIMARY KEY,
+                employee_code TEXT,
+                name TEXT NOT NULL,
+                nationality_category TEXT NOT NULL DEFAULT 'Omani',
+                nationality TEXT,
+                id_number TEXT,
+                job_title TEXT,
+                department TEXT,
+                hire_date TEXT,
+                phone TEXT,
+                status TEXT NOT NULL DEFAULT 'Active',
+                notes TEXT
             );
             CREATE TABLE IF NOT EXISTS admin_expenses (
                 id TEXT PRIMARY KEY,
@@ -401,6 +463,14 @@ def init_db() -> None:
             ("approved_at", "TEXT"),
         ]:
             ensure_column(db, "contracts", col, definition)
+        for col, definition in [
+            ("employee_id", "TEXT"),
+            ("nationality_category", "TEXT DEFAULT 'Omani'"),
+            ("id_number", "TEXT"),
+            ("job_title", "TEXT"),
+            ("department", "TEXT"),
+        ]:
+            ensure_column(db, "salaries", col, definition)
         if os.environ.get("JAWDAH_FRESH_START", "").strip().lower() in ("1", "true", "yes"):
             reset_operational_data(db)
         seed_if_empty(db)
@@ -419,7 +489,7 @@ def reset_operational_data(db: sqlite3.Connection) -> None:
     tables = [
         "payments", "inventory_transactions", "bank_reconciliations", "approvals",
         "audit_log", "maintenance", "accounts", "invoices", "contracts",
-        "purchase_invoices", "revenues", "salaries", "admin_expenses",
+        "purchase_invoices", "revenues", "salaries", "employees", "admin_expenses",
         "inventory_items", "bank_transactions", "financial_periods",
         "chart_accounts", "clients", "properties",
     ]
@@ -499,6 +569,14 @@ def next_revenue_no(db: sqlite3.Connection) -> str:
     year = date.today().year
     count = db.execute("SELECT COUNT(*) FROM revenues WHERE revenue_no LIKE ?", (f"REV-{year}-%",)).fetchone()[0]
     return f"REV-{year}-{count + 1:04d}"
+
+
+def next_employee_code(db: sqlite3.Connection, nationality_category: str = "Omani") -> str:
+    prefix = "OM" if normalize_nationality_category(nationality_category) == "Omani" else "EXP"
+    pattern = f"{prefix}-%"
+    count = db.execute("SELECT COUNT(*) FROM employees WHERE employee_code LIKE ?", (pattern,)).fetchone()[0]
+    return f"{prefix}-{count + 1:04d}"
+
 
 def next_contract_no(db: sqlite3.Connection, contract_type: str = "Residential") -> str:
     year = date.today().year
@@ -585,6 +663,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin", "").strip()
         return origin or "*"
 
+    def send_security_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
+        )
+        if os.environ.get("JAWDAH_HSTS", "1").strip().lower() in ("1", "true", "yes"):
+            self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
     def send_cors_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", self.cors_origin())
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -596,6 +688,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
+        self.send_security_headers()
         self.send_cors_headers()
         self.end_headers()
         self.wfile.write(raw)
@@ -604,6 +697,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", "0") or "0")
         if length <= 0:
             return {}
+        if length > MAX_JSON_BYTES:
+            raise ValueError("Payload too large")
         raw = self.rfile.read(length).decode("utf-8")
         return json.loads(raw or "{}")
 
@@ -649,6 +744,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self) -> None:
         self.send_response(204)
+        self.send_security_headers()
         self.send_cors_headers()
         self.end_headers()
 
@@ -682,6 +778,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(raw)))
+            self.send_security_headers()
             self.end_headers()
             self.wfile.write(raw)
             return
@@ -691,6 +788,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(raw)))
+            self.send_security_headers()
             self.end_headers()
             self.wfile.write(raw)
             return
@@ -724,7 +822,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "status": "healthy",
                         "service": "production",
                         "version": APP_VERSION,
-                        "database": str(DB_PATH),
+                        "database": "connected",
                     })
                 if parts[0] == "login" and method == "POST":
                     return self.api_login(db)
@@ -757,6 +855,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "financial_statements" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_financial_statements(db)
+                if parts[0] == "employee_roster" and method == "GET":
+                    user = self.require_user(db, "employees:read")
+                    return None if not user else self.api_employee_roster(db, query)
                 if parts[0] == "bank_reconciliation_preview" and method == "GET":
                     user = self.require_user(db, "bank_reconciliations:read")
                     return None if not user else self.api_bank_reconciliation_preview(db, query)
@@ -776,19 +877,62 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
         except sqlite3.IntegrityError as exc:
-            self.send_json({"ok": False, "error": "Database integrity error", "detail": str(exc)}, 400)
+            detail = str(exc) if DEBUG_ERRORS else None
+            self.send_json({"ok": False, "error": "Database integrity error", **({"detail": detail} if detail else {})}, 400)
+        except ValueError as exc:
+            self.send_json({"ok": False, "error": str(exc)}, 400)
+        except json.JSONDecodeError:
+            self.send_json({"ok": False, "error": "Invalid JSON body"}, 400)
         except Exception as exc:
-            self.send_json({"ok": False, "error": "Server error", "detail": str(exc)}, 500)
+            detail = str(exc) if DEBUG_ERRORS else None
+            self.send_json({"ok": False, "error": "Server error", **({"detail": detail} if detail else {})}, 500)
+
+    def api_employee_roster(self, db: sqlite3.Connection, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        month = (params.get("month") or [""])[0].strip()
+        employees = rows_to_dicts(db.execute("SELECT * FROM employees ORDER BY name COLLATE NOCASE").fetchall())
+        omani = [e for e in employees if normalize_nationality_category(e.get("nationality_category")) == "Omani"]
+        expat = [e for e in employees if normalize_nationality_category(e.get("nationality_category")) != "Omani"]
+        salary_sql = "SELECT * FROM salaries"
+        salary_args: Tuple[Any, ...] = ()
+        if month:
+            salary_sql += " WHERE salary_month=?"
+            salary_args = (month,)
+        salaries = rows_to_dicts(db.execute(salary_sql, salary_args).fetchall())
+        payroll_total = sum(float(s.get("net_salary") or 0) for s in salaries)
+        omani_payroll = sum(float(s.get("net_salary") or 0) for s in salaries if normalize_nationality_category(s.get("nationality_category")) == "Omani")
+        expat_payroll = payroll_total - omani_payroll
+        self.send_json({
+            "ok": True,
+            "month": month or None,
+            "summary": {
+                "total_employees": len(employees),
+                "omani_count": len(omani),
+                "expat_count": len(expat),
+                "active_employees": sum(1 for e in employees if str(e.get("status") or "").lower() == "active"),
+                "payroll_total": payroll_total,
+                "omani_payroll": omani_payroll,
+                "expat_payroll": expat_payroll,
+            },
+            "omani": omani,
+            "expat": expat,
+            "salaries": salaries,
+        })
 
     def api_login(self, db: sqlite3.Connection) -> None:
         data = self.read_json()
         username = str(data.get("username", "")).strip()
         password = str(data.get("password", ""))
+        rate_key = login_rate_key(self, username)
+        if login_rate_limited(rate_key):
+            return self.send_json({"ok": False, "error": "Too many login attempts. Try again later."}, 429)
         row = db.execute("SELECT * FROM users WHERE username=? AND active=1", (username,)).fetchone()
         if not row or not verify_password(password, row["password_hash"]):
+            register_login_failure(rate_key)
             return self.send_json({"ok": False, "error": "Invalid username or password"}, 401)
+        clear_login_failures(rate_key)
         token = secrets.token_urlsafe(32)
-        expires = (datetime.now() + timedelta(hours=12)).isoformat()
+        expires = (datetime.now() + timedelta(hours=SESSION_HOURS)).isoformat()
         db.execute("INSERT INTO sessions(token,user_id,created_at,expires_at) VALUES(?,?,?,?)", (token, row["id"], now_iso(), expires))
         db.execute("UPDATE users SET last_login=? WHERE id=?", (now_iso(), row["id"]))
         audit(db, dict(row), "login", "users", row["id"], "User login")
@@ -863,6 +1007,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
             missing = [k for k in required if not data.get(k)]
             if missing:
                 return self.send_json({"ok": False, "error": f"Missing: {', '.join(missing)}"}, 400)
+            pwd = str(data["password"])
+            if len(pwd) < 8:
+                return self.send_json({"ok": False, "error": "Password must be at least 8 characters"}, 400)
             row = {
                 "id": data.get("id") or uid("USR"), "username": data["username"].strip(), "name": data["name"].strip(),
                 "role": data["role"], "active": int(bool(data.get("active", True))), "password_hash": password_hash(str(data["password"])),
@@ -881,7 +1028,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
         fields = {"username": data.get("username", current["username"]), "name": data.get("name", current["name"]), "role": data.get("role", current["role"]), "active": int(bool(data.get("active", current["active"]))) }
         db.execute("UPDATE users SET username=?,name=?,role=?,active=? WHERE id=?", (fields["username"], fields["name"], fields["role"], fields["active"], item_id))
         if data.get("password"):
-            db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(str(data["password"])), item_id))
+            pwd = str(data["password"])
+            if len(pwd) < 8:
+                return self.send_json({"ok": False, "error": "Password must be at least 8 characters"}, 400)
+            db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(pwd), item_id))
         audit(db, user, "update", "users", item_id, f"Updated user {fields['username']}")
         db.commit()
         return self.send_json({"ok": True})
@@ -934,12 +1084,30 @@ class JawdahHandler(BaseHTTPRequestHandler):
             net = float(data.get("net_salary") or 0) or (float(data.get("basic_salary") or 0) + float(data.get("allowances") or 0) - float(data.get("deductions") or 0))
             data["net_salary"] = net
             data.setdefault("status", "Pending")
+            if data.get("employee_id"):
+                emp = db.execute("SELECT * FROM employees WHERE id=?", (data["employee_id"],)).fetchone()
+                if emp:
+                    data.setdefault("employee_name", emp["name"])
+                    data.setdefault("nationality_category", emp["nationality_category"])
+                    data.setdefault("id_number", emp["id_number"])
+                    data.setdefault("job_title", emp["job_title"])
+                    data.setdefault("department", emp["department"])
+            data["nationality_category"] = normalize_nationality_category(data.get("nationality_category"))
+            if not data.get("employee_name"):
+                return self.send_json({"ok": False, "error": "Salary requires employee name or linked employee"}, 400)
             if net <= 0:
                 return self.send_json({"ok": False, "error": "Salary net amount must be positive"}, 400)
             if method == "POST":
                 acc_id = uid("ACC")
                 insert(db, "accounts", {"id":acc_id,"entry_date":data.get("payment_date") or today(),"type":"expense","category":"Payroll","description":f"Salary {data.get('employee_name')} {data.get('salary_month')}","client_id":None,"property_id":None,"invoice_id":None,"amount":net})
                 data["account_id"] = acc_id
+        if table == "employees":
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "Employee name is required"}, 400)
+            data["nationality_category"] = normalize_nationality_category(data.get("nationality_category"))
+            data.setdefault("status", "Active")
+            if not data.get("employee_code"):
+                data["employee_code"] = next_employee_code(db, data["nationality_category"])
         if table == "admin_expenses":
             if float(data.get("amount") or 0) <= 0:
                 return self.send_json({"ok": False, "error": "Expense requires positive amount"}, 400)
@@ -1279,6 +1447,7 @@ def protected_delete_reason(db: sqlite3.Connection, table: str, row_id: str) -> 
         "clients": [("contracts", "client_id", "Client has contracts"), ("invoices", "client_id", "Client has invoices"), ("accounts", "client_id", "Client has accounts")],
         "contracts": [("invoices", "contract_id", "Contract has invoices")],
         "invoices": [("payments", "invoice_id", "Invoice has payments"), ("accounts", "invoice_id", "Invoice has accounts")],
+        "employees": [("salaries", "employee_id", "Employee has salary records")],
     }
     for child, col, msg in checks.get(table, []):
         if db.execute(f"SELECT 1 FROM {child} WHERE {col}=? LIMIT 1", (row_id,)).fetchone():

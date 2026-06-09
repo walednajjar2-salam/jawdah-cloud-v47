@@ -103,6 +103,9 @@ body:before{background:linear-gradient(180deg,rgba(255,255,255,.04),transparent 
 .statement-row{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid rgba(148,163,184,.08);padding:11px 0}
 .statement-row:last-child{border-bottom:0}
 .statement-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.roster-split{grid-template-columns:1fr 1fr}
+.roster-split h3{margin:0;color:var(--gold2)}
+@media(max-width:1100px){.roster-split{grid-template-columns:1fr}}
 .inner-card{margin-top:16px;background:rgba(255,255,255,.03)!important}
 .contract-engine-card h3:after{content:'Professional Contract Engine';display:block;font-size:12px;color:var(--muted);margin-top:4px;font-weight:500}
 .check-list{margin:12px 0 0;padding:0 22px;line-height:2;color:var(--muted)}

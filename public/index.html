@@ -108,8 +108,17 @@
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('revenues')">تصدير CSV</button></div><div id="revenuesTable"></div></div>
       </section>
       <section id="sec-payroll" class="section">
-        <div class="card"><h3>الرواتب</h3><div class="form"><input id="salEmployee" placeholder="اسم الموظف"><input id="salMonth" type="month"><input id="salBasic" placeholder="الراتب الأساسي"><input id="salAllow" placeholder="بدلات"><input id="salDeduct" placeholder="استقطاعات"><input id="salDate" type="date"><select id="salStatus"><option>Pending</option><option>Paid</option></select></div><button class="gold-btn" onclick="createSalary()">حفظ الراتب</button></div>
+        <div class="card accounting-hero"><h3>الرواتب</h3><p class="mini">ربط الرواتب بكشف الموظفين — عمانيون وأجانب — مع تسجيل تلقائي في الحسابات.</p></div>
+        <div class="card"><h3>إضافة راتب</h3><div class="form"><select id="salEmployeePick"><option value="">اختر من كشف الموظفين</option></select><input id="salEmployee" placeholder="اسم الموظف"><select id="salNationality"><option value="Omani">عماني</option><option value="Expat">أجنبي</option></select><input id="salMonth" type="month"><input id="salBasic" placeholder="الراتب الأساسي"><input id="salAllow" placeholder="بدلات"><input id="salDeduct" placeholder="استقطاعات"><input id="salDate" type="date"><select id="salStatus"><option>Pending</option><option>Paid</option></select></div><button class="gold-btn" onclick="createSalary()">حفظ الراتب</button></div>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('salaries')">تصدير CSV</button></div><div id="salariesTable"></div></div>
+      </section>
+      <section id="sec-employees" class="section">
+        <div class="card accounting-hero"><h3>كشف الموظفين</h3><p class="mini">قائمة الموظفين مقسمة إلى عمانيين وأجانب مع إجماليات الرواتب حسب الشهر.</p><div id="employeeRosterSummary" class="status-line"></div></div>
+        <div class="card"><h3>إضافة موظف</h3><div class="form"><select id="empNationalityCat"><option value="Omani">عماني</option><option value="Expat">أجنبي</option></select><input id="empCode" placeholder="رمز الموظف (اختياري)"><input id="empName" placeholder="اسم الموظف"><input id="empNationality" placeholder="الجنسية"><input id="empIdNo" placeholder="رقم الهوية/الإقامة"><input id="empJob" placeholder="المسمى الوظيفي"><input id="empDept" placeholder="القسم"><input id="empHire" type="date"><input id="empPhone" placeholder="الهاتف"><select id="empStatus"><option>Active</option><option>Inactive</option><option>On Leave</option></select><textarea id="empNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createEmployee()">حفظ الموظف</button></div>
+        <div class="layout roster-split">
+          <div class="card"><div class="toolbar"><h3>الموظفون العمانيون</h3><button class="ghost" onclick="exportCsv('employees')">تصدير CSV</button></div><div id="omaniEmployeesTable"></div></div>
+          <div class="card"><div class="toolbar"><h3>الموظفون الأجانب</h3></div><div id="expatEmployeesTable"></div></div>
+        </div>
       </section>
       <section id="sec-admin-expenses" class="section">
         <div class="card"><h3>المصاريف الإدارية والعمومية</h3><div class="form"><input id="gaDate" type="date"><input id="gaCategory" placeholder="التصنيف"><input id="gaDesc" placeholder="الوصف"><input id="gaSupplier" placeholder="المورد"><input id="gaAmount" placeholder="المبلغ"><select id="gaProperty"></select></div><button class="gold-btn" onclick="createAdminExpense()">حفظ المصروف</button></div>

@@ -220,9 +220,12 @@ function editOptions(field, row, table=''){
   if(field === 'property_id') return (Jawdah.data.properties||[]).map(x=>[x.id,x.name]);
   if(field === 'client_id') return (Jawdah.data.clients||[]).map(x=>[x.id,x.name]);
   if(field === 'invoice_id') return [['','بدون فاتورة'], ...(Jawdah.data.invoices||[]).map(x=>[x.id,x.invoice_no])];
+  if(field === 'employee_id') return [['','بدون ربط'], ...(Jawdah.data.employees||[]).map(x=>[x.id, `${x.employee_code||x.id} - ${x.name}`])];
+  if(field === 'nationality_category') return [['Omani','عماني'],['Expat','أجنبي']];
   if(field === 'parent_code') return [['','بدون حساب أب'], ...(Jawdah.data.chart_accounts||[]).map(x=>[x.code, `${x.code} - ${x.name}`])];
   if(table === 'chart_accounts' && field === 'type') return ['Asset','Liability','Equity','Revenue','Expense'].map(x=>[x,x]);
   if(table === 'financial_periods' && field === 'status') return ['Open','Closed'].map(x=>[x,x]);
+  if(table === 'employees' && field === 'status') return ['Active','Inactive','On Leave'].map(x=>[x,x]);
   if(table === 'bank_reconciliations' && field === 'status') return ['Pending','Reconciled','Variance'].map(x=>[x,x]);
   if(opts[field]) return opts[field].map(x=>[x, field==='role'?roleName(x):(x==='1'?'نعم':x==='0'?'لا':x)]);
   return null;
@@ -236,6 +239,8 @@ const EDIT_CONFIG = {
   chart_accounts: {title:'تعديل حساب في الدليل', fields:[['code','رمز الحساب','text'],['name','اسم الحساب','text'],['type','نوع الحساب','select'],['parent_code','الحساب الأب','select'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
   financial_periods: {title:'تعديل فترة مالية', fields:[['period_name','اسم الفترة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   bank_reconciliations: {title:'تعديل تسوية بنك', fields:[['bank_name','البنك','text'],['period_name','الفترة','text'],['book_balance','رصيد الدفاتر','number'],['bank_balance','رصيد كشف البنك','number'],['difference','الفرق','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
+  employees: {title:'تعديل موظف', fields:[['employee_code','رمز الموظف','text'],['name','اسم الموظف','text'],['nationality_category','التصنيف','select'],['nationality','الجنسية','text'],['id_number','رقم الهوية/الإقامة','text'],['job_title','المسمى الوظيفي','text'],['department','القسم','text'],['hire_date','تاريخ التعيين','date'],['phone','الهاتف','text'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
+  salaries: {title:'تعديل راتب', fields:[['employee_name','اسم الموظف','text'],['employee_id','ربط بكشف الموظفين','select'],['nationality_category','التصنيف','select'],['salary_month','الشهر','text'],['basic_salary','الأساسي','number'],['allowances','البدلات','number'],['deductions','الاستقطاعات','number'],['net_salary','الصافي','number'],['status','الحالة','select'],['payment_date','تاريخ الدفع','date']]},
   users: {title:'تعديل مستخدم', fields:[['username','اسم المستخدم','text'],['name','الاسم','text'],['role','الدور','select'],['active','نشط','select'],['password','كلمة مرور جديدة - اختياري','password']]}
 };
 function editRecord(table,id){
@@ -469,7 +474,7 @@ window.addEventListener('load',()=>{ bind(); initClock(); checkSession(); setInt
 
 
 (function(){
-  const financeItems=[['purchases','فواتير المشتريات','shopping-cart'],['revenues','الإيرادات','gem'],['statements','قائمة الدخل والميزانية','book-open-text'],['payroll','الرواتب','badge-dollar-sign'],['admin-expenses','مصاريف إدارية وعمومية','landmark'],['inventory','المخزن','package'],['bank','كشف البنك','landmark'],['chart-accounts','دليل الحسابات','book-text'],['bank-reconciliation','تسوية البنك','git-compare'],['financial-periods','الفترات المالية','calendar-range']];
+  const financeItems=[['purchases','فواتير المشتريات','shopping-cart'],['revenues','الإيرادات','gem'],['statements','قائمة الدخل والميزانية','book-open-text'],['employees','كشف الموظفين','users'],['payroll','الرواتب','badge-dollar-sign'],['admin-expenses','مصاريف إدارية وعمومية','landmark'],['inventory','المخزن','package'],['bank','كشف البنك','landmark'],['chart-accounts','دليل الحسابات','book-text'],['bank-reconciliation','تسوية البنك','git-compare'],['financial-periods','الفترات المالية','calendar-range']];
   const baseSections=[['dashboard','لوحة التحكم','layout-dashboard'],['properties','العقارات','building-2'],['clients','العملاء','users-round'],['contracts','العقود والتجديد','file-signature'],['invoices','الفواتير','receipt'],['accounts','الحسابات','wallet'],...financeItems,['maintenance','الصيانة','wrench'],['reports','التقارير','chart-column'],['users','المستخدمين','shield-check'],['backup','التخزين والنسخ','hard-drive'],['qa','اختبار التشغيل','circle-check-big']];
   buildNav=function(){ const nav=$('#nav'); nav.innerHTML=''; baseSections.forEach(([id,label,icon])=>{ if(id==='users'&&Jawdah.user.role!=='admin')return; nav.appendChild(navItem(id,label,icon)); }); paintIcons(nav); };
   const oldPopulate=populateSelects;
@@ -477,11 +482,39 @@ window.addEventListener('load',()=>{ bind(); initClock(); checkSession(); setInt
   const oldRenderAll=renderAll;
   renderAll=function(){ oldRenderAll(); populateSelects(); renderFinanceSuite(); };
   function safe(rows){return Array.isArray(rows)?rows:[]}
-  window.renderFinanceSuite=function(){ renderPurchaseInvoices(); renderRevenues(); renderSalaries(); renderAdminExpenses(); renderInventory(); renderBank(); renderChartAccounts(); renderBankReconciliations(); renderFinancialPeriods(); renderFinanceHero(); };
+  window.renderFinanceSuite=function(){ renderPurchaseInvoices(); renderRevenues(); renderEmployees(); renderSalaries(); renderAdminExpenses(); renderInventory(); renderBank(); renderChartAccounts(); renderBankReconciliations(); renderFinancialPeriods(); renderFinanceHero(); };
   window.renderFinanceHero=function(){ const k=Jawdah.dashboard?.kpis||{}; const host=$('#accountingExecutive'); if(host){ host.innerHTML=`<div class="kpi"><span>فواتير مشتريات مستحقة</span><strong>${money(k.purchases_due||0)}</strong></div><div class="kpi"><span>الرواتب</span><strong>${money(k.payroll||0)}</strong></div><div class="kpi"><span>قيمة المخزون</span><strong>${money(k.inventory_value||0)}</strong></div><div class="kpi"><span>رصيد البنك</span><strong>${money(k.bank_balance||0)}</strong></div>`; }};
   window.renderPurchaseInvoices=function(){ const rows=safe(Jawdah.data.purchase_invoices); if($('#purchaseInvoicesTable')) $('#purchaseInvoicesTable').innerHTML=tableHtml([['رقم','purchase_no'],['المورد','supplier'],['التاريخ','invoice_date'],['التصنيف','category'],['الإجمالي','amount',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],rows); };
   window.renderRevenues=function(){ const rows=safe(Jawdah.data.revenues); if($('#revenuesTable')) $('#revenuesTable').innerHTML=tableHtml([['رقم','revenue_no'],['التاريخ','revenue_date'],['المصدر','source'],['التصنيف','category'],['الوصف','description'],['المبلغ','amount',v=>money(v)]],rows); };
-  window.renderSalaries=function(){ const rows=safe(Jawdah.data.salaries); if($('#salariesTable')) $('#salariesTable').innerHTML=tableHtml([['الموظف','employee_name'],['الشهر','salary_month'],['أساسي','basic_salary',v=>money(v)],['بدلات','allowances',v=>money(v)],['استقطاعات','deductions',v=>money(v)],['الصافي','net_salary',v=>money(v)],['الحالة','status',v=>badge(v)]],rows); };
+  window.renderSalaries=function(){ const rows=safe(Jawdah.data.salaries); if($('#salariesTable')) $('#salariesTable').innerHTML=tableHtml([['الموظف','employee_name'],['التصنيف','nationality_category',v=>v==='Omani'?'عماني':'أجنبي'],['الشهر','salary_month'],['أساسي','basic_salary',v=>money(v)],['بدلات','allowances',v=>money(v)],['استقطاعات','deductions',v=>money(v)],['الصافي','net_salary',v=>money(v)],['الحالة','status',v=>badge(v)]],rows,r=>canWriteFinance()?`<button class="ghost" onclick="editRecord('salaries','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('salaries','${r.id}')">حذف</button>`:''); };
+  const empCols=[['الرمز','employee_code'],['الاسم','name'],['الجنسية','nationality'],['الهوية','id_number'],['المسمى','job_title'],['القسم','department'],['التعيين','hire_date'],['الحالة','status',v=>badge(v)]];
+  const empActions=r=>canWriteFinance()?`<button class="ghost" onclick="editRecord('employees','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('employees','${r.id}')">حذف</button>`:'';
+  window.renderEmployees=function(){
+    const all=safe(Jawdah.data.employees);
+    const omani=all.filter(e=>String(e.nationality_category||'').toLowerCase()==='omani');
+    const expat=all.filter(e=>String(e.nationality_category||'').toLowerCase()!=='omani');
+    if($('#omaniEmployeesTable')) $('#omaniEmployeesTable').innerHTML=tableHtml(empCols,omani,empActions);
+    if($('#expatEmployeesTable')) $('#expatEmployeesTable').innerHTML=tableHtml(empCols,expat,empActions);
+    const month=($('#salMonth')&&$('#salMonth').value)||today().slice(0,7);
+    const salaries=safe(Jawdah.data.salaries).filter(s=>!month||s.salary_month===month);
+    const omaniPay=salaries.filter(s=>String(s.nationality_category||'').toLowerCase()==='omani').reduce((a,s)=>a+Number(s.net_salary||0),0);
+    const expatPay=salaries.filter(s=>String(s.nationality_category||'').toLowerCase()!=='omani').reduce((a,s)=>a+Number(s.net_salary||0),0);
+    const host=$('#employeeRosterSummary');
+    if(host) host.innerHTML=`<span class="badge paid">عمانيون: ${fmt(omani.length)}</span><span class="badge">أجانب: ${fmt(expat.length)}</span><span class="badge">إجمالي: ${fmt(all.length)}</span><span class="badge">رواتب عمانيين ${month}: ${money(omaniPay)}</span><span class="badge">رواتب أجانب ${month}: ${money(expatPay)}</span>`;
+    const pick=$('#salEmployeePick');
+    if(pick){
+      const old=pick.value;
+      pick.innerHTML='<option value="">اختر من كشف الموظفين</option>'+all.map(e=>`<option value="${e.id}">${e.employee_code||e.id} - ${e.name} (${e.nationality_category==='Omani'?'عماني':'أجنبي'})</option>`).join('');
+      if([...pick.options].some(o=>o.value===old)) pick.value=old;
+      pick.onchange=()=>{
+        const emp=all.find(x=>x.id===pick.value);
+        if(!emp) return;
+        if($('#salEmployee')) $('#salEmployee').value=emp.name||'';
+        if($('#salNationality')) $('#salNationality').value=emp.nationality_category==='Expat'?'Expat':'Omani';
+      };
+    }
+  };
+  window.createEmployee=()=>postTable('employees',{employee_code:val('empCode')||null,name:val('empName'),nationality_category:val('empNationalityCat')||'Omani',nationality:val('empNationality'),id_number:val('empIdNo'),job_title:val('empJob'),department:val('empDept'),hire_date:val('empHire')||today(),phone:val('empPhone'),status:val('empStatus')||'Active',notes:val('empNotes')});
   window.renderAdminExpenses=function(){ const rows=safe(Jawdah.data.admin_expenses); if($('#adminExpensesTable')) $('#adminExpensesTable').innerHTML=tableHtml([['التاريخ','expense_date'],['التصنيف','category'],['الوصف','description'],['المورد','supplier'],['العقار','property_id',v=>byId('properties',v).name||''],['المبلغ','amount',v=>money(v)]],rows); };
   window.renderInventory=function(){ const rows=safe(Jawdah.data.inventory_items); if($('#inventoryTable')) $('#inventoryTable').innerHTML=tableHtml([['SKU','sku'],['الصنف','name'],['التصنيف','category'],['الكمية','quantity',v=>fmt(v)],['الحد الأدنى','min_quantity',v=>fmt(v)],['تكلفة الوحدة','unit_cost',v=>money(v)],['القيمة','id',(_,r)=>money(Number(r.quantity||0)*Number(r.unit_cost||0))],['الحالة','id',(_,r)=>Number(r.quantity||0)<=Number(r.min_quantity||0)?'<span class="low-stock">إعادة طلب</span>':'<span class="linked-ok">جيد</span>']],rows); };
   window.renderBank=function(){ const rows=safe(Jawdah.data.bank_transactions); if($('#bankTable')) $('#bankTable').innerHTML=tableHtml([['التاريخ','bank_date'],['البنك','bank_name'],['المرجع','reference'],['النوع','type'],['الوصف','description'],['المبلغ','amount',v=>money(v)],['المطابقة','status',v=>badge(v)]],rows); };
@@ -551,14 +584,14 @@ window.addEventListener('load',()=>{ bind(); initClock(); checkSession(); setInt
   async function postTable(table, data){ await api(table,{method:'POST',body:JSON.stringify(data)}); toast('تم الحفظ'); await loadAll(); }
   window.createPurchaseInvoice=()=>postTable('purchase_invoices',{supplier:val('piSupplier'),invoice_date:val('piDate')||today(),due_date:val('piDue'),category:val('piCategory')||'Purchases',description:val('piDesc'),amount:num('piAmount'),paid_amount:num('piPaid'),status:num('piPaid')>=num('piAmount')?'Paid':(num('piPaid')>0?'Partial':'Pending'),property_id:val('piProperty')||null});
   window.createRevenue=()=>postTable('revenues',{revenue_date:val('revDate')||today(),source:val('revSource')||'Other',category:val('revCategory')||'Other Revenue',description:val('revDesc'),amount:num('revAmount'),client_id:val('revClient')||null,property_id:val('revProperty')||null});
-  window.createSalary=()=>{const basic=num('salBasic'),allow=num('salAllow'),ded=num('salDeduct'); return postTable('salaries',{employee_name:val('salEmployee'),salary_month:val('salMonth')||today().slice(0,7),basic_salary:basic,allowances:allow,deductions:ded,net_salary:basic+allow-ded,status:val('salStatus'),payment_date:val('salDate')||today()});};
+  window.createSalary=()=>{const basic=num('salBasic'),allow=num('salAllow'),ded=num('salDeduct'); const empId=val('salEmployeePick')||null; return postTable('salaries',{employee_id:empId,employee_name:val('salEmployee'),nationality_category:val('salNationality')||'Omani',salary_month:val('salMonth')||today().slice(0,7),basic_salary:basic,allowances:allow,deductions:ded,net_salary:basic+allow-ded,status:val('salStatus'),payment_date:val('salDate')||today()});};
   window.createAdminExpense=()=>postTable('admin_expenses',{expense_date:val('gaDate')||today(),category:val('gaCategory')||'General & Administrative',description:val('gaDesc'),amount:num('gaAmount'),supplier:val('gaSupplier'),property_id:val('gaProperty')||null});
   window.createInventoryItem=()=>postTable('inventory_items',{sku:val('itemSku'),name:val('itemName'),category:val('itemCategory'),unit:val('itemUnit')||'pcs',quantity:num('itemQty'),min_quantity:num('itemMin'),unit_cost:num('itemCost'),location:val('itemLocation')});
   window.createInventoryTransaction=()=>postTable('inventory_transactions',{item_id:val('stockItem'),tx_date:val('stockDate')||today(),tx_type:val('stockType'),quantity:num('stockQty'),unit_cost:num('stockCost'),reference:val('stockRef')});
   window.createBankTransaction=()=>postTable('bank_transactions',{bank_date:val('bankDate')||today(),bank_name:val('bankName')||'Main Bank',reference:val('bankRef'),type:val('bankType'),description:val('bankDesc'),amount:num('bankAmount'),matched_account_id:val('bankMatch')||null,status:val('bankMatch')?'Matched':'Unmatched'});
   window.loadFinancialStatements=async function(){ try{ const res=await api('financial_statements'); const s=res.statements; $('#statementsBox').innerHTML=`<div class="statement-grid"><div class="statement-card"><h3>قائمة الدخل</h3><div class="statement-row"><span>الإيرادات</span><b>${money(s.income_statement.revenue)}</b></div><div class="statement-row"><span>المصروفات</span><b>${money(s.income_statement.expenses)}</b></div><div class="statement-row"><span>الرواتب</span><b>${money(s.income_statement.payroll)}</b></div><div class="statement-row"><span>إدارية وعمومية</span><b>${money(s.income_statement.general_admin)}</b></div><div class="statement-row"><span>صافي الدخل</span><b>${money(s.income_statement.net_income)}</b></div></div><div class="statement-card"><h3>الميزانية</h3><div class="statement-row"><span>البنك</span><b>${money(s.balance_sheet.assets.cash_bank)}</b></div><div class="statement-row"><span>الذمم المدينة</span><b>${money(s.balance_sheet.assets.accounts_receivable)}</b></div><div class="statement-row"><span>المخزون</span><b>${money(s.balance_sheet.assets.inventory)}</b></div><div class="statement-row"><span>الذمم الدائنة</span><b>${money(s.balance_sheet.liabilities.accounts_payable)}</b></div><div class="statement-row"><span>الأرباح المحتجزة</span><b>${money(s.balance_sheet.equity.retained_earnings)}</b></div></div><div class="statement-card"><h3>ربط التخزين</h3><p class="linked-ok">Backup / CSV / Restore يشمل الجداول المالية الجديدة.</p><p>${s.linked_storage.tables.join(' · ')}</p></div></div>`; ensureEnglishDigits($('#statementsBox')); }catch(e){toast(e.message,true)} };
   const oldBackup=renderBackup;
-  renderBackup=function(){ oldBackup(); const extra=['purchase_invoices','revenues','salaries','admin_expenses','inventory_items','inventory_transactions','bank_transactions','chart_accounts','bank_reconciliations','financial_periods']; const box=$('#backupStatus'); if(box) box.innerHTML += `<p class="mini">يشمل التخزين المالي: ${extra.join(', ')}</p>`; };
+  renderBackup=function(){ oldBackup(); const extra=['purchase_invoices','revenues','salaries','employees','admin_expenses','inventory_items','inventory_transactions','bank_transactions','chart_accounts','bank_reconciliations','financial_periods']; const box=$('#backupStatus'); if(box) box.innerHTML += `<p class="mini">يشمل التخزين المالي: ${extra.join(', ')}</p>`; };
   document.addEventListener('input', e=>{ if(e.target && e.target.id==='recBankBalance') updateRecDifference(); });
 })();
 
@@ -567,7 +600,7 @@ window.addEventListener('load',()=>{ bind(); initClock(); checkSession(); setInt
   const oldShow = showSection;
   showSection=function(id){
     oldShow(id);
-    const titles={production:'جاهزية التشغيل المؤسسي'};
+    const titles={production:'جاهزية التشغيل المؤسسي',employees:'كشف الموظفين',payroll:'الرواتب'};
     if(titles[id]) $('#sectionTitle').textContent=titles[id];
   };
   const oldBuild = buildNav;
