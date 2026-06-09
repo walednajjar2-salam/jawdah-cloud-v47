@@ -10,6 +10,11 @@
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
+  <div class="ambient-orbs" aria-hidden="true">
+    <span class="ambient-orb orb-a"></span>
+    <span class="ambient-orb orb-b"></span>
+    <span class="ambient-orb orb-c"></span>
+  </div>
   <div id="uiWatermark" class="ui-watermark" aria-hidden="true"></div>
   <main id="loginScreen" class="login hidden">
     <section class="login-card">
@@ -48,7 +53,7 @@
 
       <section id="sec-dashboard" class="section active">
         <div id="dashboardBrandHero"></div>
-        <section id="executiveCommandCenter" class="executive-command-center card">
+        <section id="executiveCommandCenter" class="executive-command-center glass-float-panel card">
           <div class="ecc-header">
             <div>
               <h3><i data-lucide="radar" class="lucide-icon title-ic"></i> مركز القرار التنفيذي</h3>
@@ -77,7 +82,17 @@
             </div>
           </div>
         </section>
-        <div class="hero"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id="heroStats" class="status-line" style="margin-top:14px"></div></div>
+        <section id="reminderHub" class="reminder-hub glass-float-panel card">
+          <div class="reminder-hub-head">
+            <div>
+              <h3><i data-lucide="message-circle" class="lucide-icon title-ic"></i> مركز التذكيرات — واتساب / SMS</h3>
+              <p class="mini">تذكير المستأجرين بالإيجار، انتهاء العقود، والفواتير المتأخرة بنقرة واحدة</p>
+            </div>
+            <button class="ghost glass-btn" onclick="showSection('reminders')"><i data-lucide="external-link" class="lucide-icon"></i> عرض الكل</button>
+          </div>
+          <div id="reminderHubPreview" class="reminder-preview"></div>
+        </section>
+        <div class="hero glass-float-panel"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id="heroStats" class="status-line" style="margin-top:14px"></div></div>
         <div id="kpiGrid" class="grid kpis"></div>
         <div class="layout">
           <div class="card"><h3>الإيرادات والمصروفات</h3><div class="canvas-wrap"><canvas id="incomeChart"></canvas></div></div>
@@ -88,6 +103,19 @@
           <div class="card"><h3>الإشغال</h3><div class="canvas-wrap"><canvas id="occupancyChart"></canvas></div></div>
         </div>
         <div class="card"><h3>إجراءات سريعة</h3><div id="quickActions" class="quick"></div></div>
+      </section>
+
+      <section id="sec-reminders" class="section">
+        <div class="card glass-float-panel reminder-full-card">
+          <div class="reminder-hub-head">
+            <div>
+              <h3><i data-lucide="message-circle" class="lucide-icon title-ic"></i> تذكيرات واتساب و SMS</h3>
+              <p class="mini">رسائل جاهزة بالعربية — تُفتح في واتساب أو تطبيق الرسائل مع رقم المستأجر</p>
+            </div>
+            <button class="ghost glass-btn" onclick="renderReminders(true)"><i data-lucide="refresh-cw" class="lucide-icon"></i> تحديث القائمة</button>
+          </div>
+          <div id="reminderHubFull"></div>
+        </div>
       </section>
 
       <section id="sec-properties" class="section">
@@ -267,6 +295,7 @@
   <script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script src="https://unpkg.com/lucide@0.511.0/dist/umd/lucide.min.js"></script>
   <script src="company-settings.js"></script>
+  <script src="reminders.js"></script>
   <script src="document-export.js"></script>
   <script src="app.js"></script>
 </body>

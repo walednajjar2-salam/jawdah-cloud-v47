@@ -115,6 +115,7 @@ function buildNav(){
     ['clients','العملاء','users-round'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
+    ['reminders','تذكيرات واتساب','message-circle'],
     ['admin-expenses','مصاريف إدارية','landmark'],
     ['purchases','فواتير المشتريات','shopping-cart'],
     ['revenues','الإيرادات','gem'],
@@ -145,10 +146,10 @@ function buildNav(){
 function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
-  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء',contracts:'العقود',invoices:'الفواتير الضريبية',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
-function renderAll(){ renderDashboard(); renderProperties(); renderApartments(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }
+function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }
 function collectApartmentRows(){
   const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
   const byNo=new Map();
@@ -305,6 +306,58 @@ async function downloadExecutiveReportPdf(){
     const snap=Jawdah.executiveSnapshot||buildExecutiveSnapshot();
     await downloadHtmlAsPdf(executiveReportHtml(snap), `executive-report-${today()}.pdf`);
   }catch(e){ toast(e.message||'تعذر إنشاء التقرير',true); }
+}
+function buildReminderQueue(){
+  const list=[];
+  const RH=window.ReminderHub;
+  if(!RH) return list;
+  (Jawdah.data.invoices||[]).forEach(inv=>{
+    const due=Number(inv.amount||0)-Number(inv.paid_amount||0);
+    if(due<=0) return;
+    const client=byId('clients',inv.client_id);
+    const prop=byId('properties',inv.property_id);
+    const left=contractDaysLeft(inv.due_date);
+    if(left!==null && left<=14){
+      const msg=RH.rentDueMessage({tenant:client.name,unit:prop.name,amount:money(due),dueDate:inv.due_date,invoiceNo:inv.invoice_no});
+      list.push({id:'inv-'+inv.id,type:'invoice',tone:left<0?'critical':'high',title:`فاتورة ${inv.invoice_no||inv.id}`,detail:`${client.name||'—'} · متبقي ${money(due)}`,phone:client.phone,message:msg,section:'invoices'});
+    }
+  });
+  renewalQueue().forEach(({contract:c,meta})=>{
+    if(meta.days===null || meta.days>30) return;
+    const client=byId('clients',c.client_id);
+    const prop=byId('properties',c.property_id);
+    const msg=RH.contractExpiryMessage({tenant:client.name,unit:prop.name,endDate:c.end_date,daysLeft:meta.days});
+    list.push({id:'con-'+c.id,type:'contract',tone:meta.days<0?'critical':'medium',title:`عقد ${c.contract_no||c.id}`,detail:`${client.name||'—'} · ${prop.name||''} · ينتهي ${c.end_date}`,phone:client.phone,message:msg,section:'contracts',contractId:c.id});
+  });
+  collectApartmentRows().filter(r=>r.shortContract).forEach(r=>{
+    if(!r.phone || r.phone==='—') return;
+    const msg=RH.contractExpiryMessage({tenant:r.tenant,unit:'شقة '+r.no,endDate:r.end,daysLeft:r.contractDaysLeft??0});
+    list.push({id:'apt-'+r.no,type:'short',tone:'critical',title:`شقة ${r.no} — عقد قصير`,detail:`${r.tenant} · ${r.shortLabel||''}`,phone:r.phone,message:msg,section:'apartments'});
+  });
+  const toneRank={critical:0,high:1,medium:2};
+  return list.sort((a,b)=>(toneRank[a.tone]??9)-(toneRank[b.tone]??9));
+}
+function reminderActionButtons(r){
+  const RH=ReminderHub;
+  const phone=RH.normalizePhone(r.phone);
+  if(!phone) return `<span class="mini">أضف رقم الهاتف في العميل</span>`;
+  const sent=RH.wasSentToday(r.id)?' reminder-sent':'';
+  const wa=RH.waUrl(r.phone,r.message);
+  const sms=RH.smsUrl(r.phone,r.message);
+  return `<div class="reminder-actions"><a class="glass-btn glass-btn-wa${sent}" href="${wa}" target="_blank" rel="noopener" onclick="ReminderHub.markSent('${r.id}')">${ic('message-circle')} واتساب</a><a class="glass-btn glass-btn-sms${sent}" href="${sms}" onclick="ReminderHub.markSent('${r.id}')">${ic('smartphone')} SMS</a></div>`;
+}
+function renderReminderRows(list,limit){
+  const rows=limit?list.slice(0,limit):list;
+  if(!rows.length) return `<div class="ecc-empty">${ic('circle-check-big','title-ic')} لا توجد تذكيرات مطلوبة الآن</div>`;
+  return `<div class="reminder-list">${rows.map(r=>`<div class="reminder-row ${r.tone}"><div class="reminder-main"><b>${r.title}</b><div class="mini">${r.detail}</div><div class="mini reminder-phone">${r.phone||'—'}</div></div>${reminderActionButtons(r)}</div>`).join('')}</div>`;
+}
+function renderReminders(refresh){
+  const list=buildReminderQueue();
+  Jawdah.reminderQueue=list;
+  if($('#reminderHubPreview')){ $('#reminderHubPreview').innerHTML=renderReminderRows(list,4); paintIcons($('#reminderHubPreview')); }
+  if($('#reminderHubFull')){ $('#reminderHubFull').innerHTML=renderReminderRows(list); paintIcons($('#reminderHubFull')); }
+  if(refresh) toast('تم تحديث قائمة التذكيرات');
+  paintIcons($('#reminderHub'));
 }
 function renderDashboard(){
   const k=Jawdah.dashboard.kpis;
@@ -936,6 +989,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
     ['clients','العملاء','users-round'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
+    ['reminders','تذكيرات واتساب','message-circle'],
     ['admin-expenses','مصاريف إدارية','landmark'],
     ['purchases','فواتير المشتريات','shopping-cart'],
     ['revenues','الإيرادات','gem'],
