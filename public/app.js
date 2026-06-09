@@ -140,7 +140,6 @@ async function checkSession(){
     Jawdah.token='';
     showLoginShell();
     setLoginStatus('');
-    toast(e.message||'تعذر الاتصال بالخادم', true);
   }
 }
 function setUiShellMode(mode){
@@ -1030,16 +1029,30 @@ function initClock(){
   setInterval(tick,1000);
 }
 function bind(){
-  const form=$('#loginForm');
-  const btn=$('#loginBtn');
-  if(form) form.onsubmit=e=>{ e.preventDefault(); login(); };
-  if(btn) btn.onclick=e=>{ e.preventDefault(); login(); };
   $('#logoutBtn').onclick=logout; $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open'); $('#globalSearch').oninput=()=>renderAll();
   document.addEventListener('input',e=>ensureEnglishDigits(e.target));
   document.addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key.toLowerCase()==='k'){ e.preventDefault(); $('#globalSearch').focus(); } if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#globalSearch').focus();} });
 }
 window.LAUNCH_QUALITY_CHECK=()=>({system:COMPANY,user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});
-window.addEventListener('load',()=>{ showLoginShell(); bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
+window.bootAppAfterLogin = async function(token, user){
+  Jawdah.token = token || localStorage.getItem('jawdah_cloud_token') || '';
+  if(user) Jawdah.user = user;
+  showAppShell();
+  showAppLoading('جاري تحميل النظام...');
+  try{
+    await loadAll();
+    hideAppLoading();
+    showLoginWelcome();
+  }catch(e){
+    hideAppLoading();
+    localStorage.removeItem('jawdah_cloud_token');
+    Jawdah.token = '';
+    showLoginShell();
+    setLoginStatus(e.message || 'تعذر تحميل النظام', true);
+    toast(e.message || 'تعذر تحميل النظام', true);
+  }
+};
+window.addEventListener('load',()=>{ bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
 
 
 /* Quality Launch Services LLC - production experience layer */
