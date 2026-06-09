@@ -174,14 +174,21 @@ function renderDashboard(){
       <div><b>العقار</b><span>${fmt(k.properties)}</span></div><div><b>العميل</b><span>${fmt((data.clients||[]).length)}</span></div><div><b>العقد</b><span>${fmt((data.contracts||[]).length)}</span></div><div><b>الفاتورة</b><span>${fmt((data.invoices||[]).length)}</span></div><div><b>التحصيل</b><span>${money(k.paid)}</span></div><div><b>الحسابات</b><span>${money(k.net)}</span></div>
     </div>
     <div class="executive-strip"><div class="executive-chip"><b>مؤشر التحصيل</b><br><span class="mini">${fmt(collectionRate)}% من إجمالي الفواتير</span></div><div class="executive-chip"><b>مؤشر الإشغال</b><br><span class="mini">${fmt(k.occupancy)}% من الوحدات</span></div><div class="executive-chip"><b>مؤشر السلامة</b><br><span class="mini">${fmt(riskScore)}% تشغيل مستقر</span></div></div>`;
-  $('#decisionList').innerHTML=executiveMatrix + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
+  const shortContracts=(Jawdah.data.contracts||[]).filter(c=>isShortContract(c));
+  const shortAlerts=shortContracts.map(c=>{
+    const prop=byId('properties',c.property_id);
+    const meta=shortContractMeta(c);
+    const no=prop?.name?aptNoFromProperty(prop):'—';
+    return `<div class="decision-card decision-short"><span class="badge short-contract">عقد قصير</span><p>شقة ${no} — ${byId('clients',c.client_id).name||'—'} — ${meta.label||'مدة 30 يوم أو أقل'}</p></div>`;
+  }).join('');
+  $('#decisionList').innerHTML=executiveMatrix + shortAlerts + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
   const props=Jawdah.data.properties||[];
   $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
   $('#quickActions').innerHTML=[['إضافة عقار','properties','building-2'],['إضافة عميل','clients','user-plus'],['إنشاء عقد','contracts','file-plus-2'],['تجديد عقد','contracts','refresh-cw'],['فاتورة من عقد','invoices','receipt'],['تحصيل دفعة','invoices','wallet'],['Backup فوري','backup','archive'],['تقرير مالي','reports','chart-pie'],['اختبار التشغيل','qa','badge-check']].map(q=>`<button class="ghost quick-pro" onclick="showSection('${q[1]}')"><span class="quick-head">${ic(q[2],'quick-ic')}<b>${q[0]}</b></span><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
   paintIcons($('#kpiGrid')); paintIcons($('#decisionList')); paintIcons($('#quickActions'));
 }
-function tableHtml(cols, rows, actions){
-  return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}${actions?'<th>إجراء</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??'')}</td>`).join('')}${actions?`<td>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
+function tableHtml(cols, rows, actions, rowClassFn){
+  return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}${actions?'<th>إجراء</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr class="${rowClassFn?rowClassFn(r):''}">${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??'')}</td>`).join('')}${actions?`<td>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
 }
 function renderProperties(){
   const rows=filterRows('properties',['name','type','status','location']);
@@ -199,7 +206,8 @@ function aptRowFromProperty(p){
   const statusAr=String(p.status||'').toLowerCase().includes('rented')?'مستأجرة':String(p.status||'').toLowerCase().includes('vacant')?'شاغرة':p.status;
   const unitType=(p.notes||'').match(/\|\s*(مشترك|مستقل|سكن)/)?.[1]||'—';
   const rooms=(p.notes||'').match(/(\d+)\s*غرف/)?.[1]||(p.notes||'').match(/(\d+)\s*rooms/)?.[1]||'1';
-  return {no:aptNoFromProperty(p),statusAr,unitType,rooms,tenant:client.name||'—',phone:client.phone||'—',avgRent:p.price,rent:contract?contract.rent_amount:p.price,start:contract?.start_date||'—',end:contract?.end_date||'—',property:p,contract,client};
+  const shortMeta=shortContractMeta(contract);
+  return {no:aptNoFromProperty(p),statusAr,unitType,rooms,tenant:client.name||'—',phone:client.phone||'—',avgRent:p.price,rent:contract?contract.rent_amount:p.price,start:contract?.start_date||'—',end:contract?.end_date||'—',shortContract:shortMeta.short,contractDays:shortMeta.days,contractDaysLeft:shortMeta.left,shortLabel:shortMeta.label,property:p,contract,client};
 }
 function renderApartments(){
   const strip=$('#apartmentBrandStrip');
@@ -211,7 +219,7 @@ function renderApartments(){
     if(row.no==='—') return;
     const prev=byNo.get(row.no);
     if(!prev){ byNo.set(row.no,row); return; }
-    const score=r=>(r.contract?2:0)+(r.statusAr==='مستأجرة'?1:0);
+    const score=r=>(r.contract?2:0)+(r.statusAr==='مستأجرة'?1:0)+(r.shortContract?1:0);
     if(score(row)>score(prev)) byNo.set(row.no,row);
   });
   const rows=[...byNo.values()].sort((a,b)=>String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
@@ -222,11 +230,23 @@ function renderApartments(){
   if($('#aptKpiRented')) $('#aptKpiRented').textContent=fmt(rented);
   if($('#aptKpiVacant')) $('#aptKpiVacant').textContent=fmt(vacant);
   if($('#aptKpiOcc')) $('#aptKpiOcc').textContent=total?fmt(Math.round(rented/total*100))+'%':'0%';
+  const shortRows=rows.filter(r=>r.shortContract);
+  const alertBox=$('#aptShortAlertBox');
+  if(alertBox){
+    if(shortRows.length){
+      alertBox.classList.remove('hidden');
+      alertBox.innerHTML=`<div class="apartment-short-alert-head">${ic('triangle-alert','title-ic')} تنبيه: ${fmt(shortRows.length)} شقة بعقد قصير المدة (30 يوم أو أقل)</div><ul class="apartment-short-alert-list">${shortRows.map(r=>`<li><b>شقة ${r.no}</b> — ${r.tenant} — ${r.shortLabel||'عقد قصير'} — ينتهي ${r.end}</li>`).join('')}</ul>`;
+      paintIcons(alertBox);
+    }else{
+      alertBox.classList.add('hidden');
+      alertBox.innerHTML='';
+    }
+  }
   const tbl=$('#apartmentsTable');
   if(!tbl) return;
   tbl.innerHTML=tableHtml([
-    ['رقم الشقة','no'],
-    ['حالة الشقة','statusAr',v=>`<span class="badge ${v==='مستأجرة'?'rented':'vacant'}">${v}</span>`],
+    ['رقم الشقة','no',(v,r)=>r.shortContract?`<span class="apt-no-short">${v}</span>`:v],
+    ['حالة الشقة','statusAr',(v,r)=>`<span class="badge ${r.shortContract?'short-contract':v==='مستأجرة'?'rented':'vacant'}">${r.shortContract?'عقد قصير':v}</span>`],
     ['نوع الوحدة','unitType'],
     ['عدد الغرف','rooms'],
     ['اسم المستأجر','tenant'],
@@ -234,11 +254,11 @@ function renderApartments(){
     ['متوسط الإيجار','avgRent',v=>money(v)],
     ['مبلغ الإيجار','rent',v=>money(v)],
     ['بداية العقد','start'],
-    ['نهاية العقد','end'],
+    ['نهاية العقد','end',(v,r)=>r.shortContract?`<span class="badge short-contract">${v}${r.contractDays?` · ${r.contractDays} يوم`:''}</span>`:v],
   ],rows,r=>{
     const pid=r.property?.id, cid=r.contract?.id;
     return `${pid?`<button class="ghost" onclick="showSection('properties')">العقار</button>`:''} ${cid?`<button class="ghost" onclick="invoiceFromContract('${cid}')">فاتورة</button>`:''}`;
-  });
+  }, r=>r.shortContract?'apt-row-short':'');
   paintIcons($('#sec-apartments'));
 }
 function renderClients(){
@@ -381,10 +401,40 @@ function filterRows(table, fields){
 }
 function badge(v){ const cls=String(v||'').toLowerCase(); return `<span class="badge ${cls}">${v||''}</span>`; }
 function contractDaysLeft(endDate){
-  if(!endDate) return null;
+  if(!endDate || endDate==='—') return null;
   const end = new Date(String(endDate)+'T00:00:00');
   const now = new Date(); now.setHours(0,0,0,0);
   return Math.floor((end - now) / 86400000);
+}
+function contractDurationDays(startDate, endDate){
+  if(!startDate || !endDate || startDate==='—' || endDate==='—') return null;
+  const start = new Date(String(startDate)+'T00:00:00');
+  const end = new Date(String(endDate)+'T00:00:00');
+  if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  return Math.max(0, Math.floor((end - start) / 86400000) + 1);
+}
+function isShortContract(contract, thresholdDays=30){
+  if(!contract) return false;
+  const type = String(contract.contract_type||'').toLowerCase();
+  if(type.includes('short')) return true;
+  const notes = String(contract.notes||'');
+  if(/10\s*أ?يام|قصير|short/i.test(notes)) return true;
+  const days = contractDurationDays(contract.start_date, contract.end_date);
+  return days !== null && days <= thresholdDays;
+}
+function shortContractMeta(contract){
+  if(!contract) return {short:false, days:null, left:null, label:''};
+  const days = contractDurationDays(contract.start_date, contract.end_date);
+  const left = contractDaysLeft(contract.end_date);
+  const short = isShortContract(contract);
+  let label = '';
+  if(short){
+    const dur = days !== null ? `${days} يوم` : 'قصير';
+    if(left !== null && left < 0) label = `عقد قصير منتهٍ (${dur})`;
+    else if(left !== null && left <= 7) label = `عقد قصير — ينتهي خلال ${left} يوم`;
+    else label = `عقد قصير (${dur})`;
+  }
+  return {short, days, left, label};
 }
 function contractRenewalMeta(c){
   const days = contractDaysLeft(c.end_date);

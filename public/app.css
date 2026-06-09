@@ -234,4 +234,14 @@ td strong,td b{font-variant-numeric:tabular-nums;letter-spacing:.03em}
 .apartment-sheet-card .table-wrap{border:0;border-radius:0;margin:0}
 .apartment-sheet-card th{background:rgba(64,224,208,.12)!important;font-size:14px!important}
 .apartment-sheet-card td{font-size:15px!important;font-variant-numeric:tabular-nums}
+.apartment-short-alert{margin:0 16px 12px;padding:14px 16px;border:1px solid rgba(220,38,38,.55);border-radius:12px;background:linear-gradient(135deg,rgba(220,38,38,.18),rgba(127,29,29,.12));color:#fecaca}
+.apartment-short-alert-head{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:#fca5a5;margin-bottom:8px}
+.apartment-short-alert-list{margin:0;padding-right:20px;font-size:14px;line-height:1.7}
+.apartment-short-alert-list li{margin-bottom:4px}
+.apartment-sheet-card tr.apt-row-short{background:rgba(220,38,38,.14)!important}
+.apartment-sheet-card tr.apt-row-short td{color:#fee2e2;border-color:rgba(220,38,38,.22)!important}
+.apartment-sheet-card tr.apt-row-short:hover{background:rgba(220,38,38,.22)!important}
+.apartment-sheet-card tr.apt-row-short .apt-no-short{color:#fca5a5;font-weight:700}
+.badge.short-contract{color:#fff!important;background:linear-gradient(135deg,#dc2626,#b91c1c)!important;border-color:#ef4444!important;font-weight:700}
+.decision-card.decision-short{border-color:rgba(220,38,38,.45)!important;background:rgba(220,38,38,.10)!important}
 @media(max-width:900px){.apartment-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
