@@ -116,6 +116,7 @@ function buildNav(){
     ['clients','العملاء','users-round'],
     ['tenant-portal','بوابة المستأجر','smartphone'],
     ['renewal-engine','محرك التجديد','git-compare'],
+    ['nizwa-gis','GIS نزوى','map-pin'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
     ['reminders','تذكيرات واتساب','message-circle'],
@@ -149,12 +150,13 @@ function buildNav(){
 function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
-  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء','tenant-portal':'بوابة المستأجر','renewal-engine':'محرك التجديد والتدفق النقدي',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء','tenant-portal':'بوابة المستأجر','renewal-engine':'محرك التجديد والتدفق النقدي','nizwa-gis':'GIS نزوى — حي التراث',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
   if(id==='renewal-engine') setTimeout(()=>{ if(window.RenewalEngine) RenewalEngine.drawChart('renewalForecastChart', Jawdah.renewalEngine || RenewalEngine.build()); }, 120);
+  if(id==='nizwa-gis') setTimeout(()=>{ if(window.NizwaGIS) NizwaGIS.render('nizwaGisHost'); }, 80);
   document.body.classList.toggle('dash-view', id==='dashboard');
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
-function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderTenantPortal(); renderRenewalEngine(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
+function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderTenantPortal(); renderRenewalEngine(); renderNizwaGis(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
 function collectApartmentRows(){
   const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
   const byNo=new Map();
@@ -266,7 +268,7 @@ function renderDashboardCockpit(snap,k,data){
   const orb=$('#dashPortfolioOrb');
   if(orb){ orb.innerHTML=portfolioOrbHtml(snap); animateDashCounts(orb); }
   const orbs=$('#dashQuickOrbs');
-  if(orbs) orbs.innerHTML=[['apartments','الشقق','layout-grid'],['renewal-engine','التجديد','git-compare'],['invoices','فاتورة','receipt'],['reminders','واتساب','message-circle'],['reports','PDF','file-down']].map(([sec,label,icon])=>`<button class="dash-orb-btn" onclick="${sec==='reports'?'downloadExecutiveReportPdf()':`showSection('${sec}')`}">${ic(icon)}<span>${label}</span></button>`).join('');
+  if(orbs) orbs.innerHTML=[['apartments','الشقق','layout-grid'],['nizwa-gis','GIS','map-pin'],['renewal-engine','التجديد','git-compare'],['invoices','فاتورة','receipt'],['reminders','واتساب','message-circle']].map(([sec,label,icon])=>`<button class="dash-orb-btn" onclick="showSection('${sec}')">${ic(icon)}<span>${label}</span></button>`).join('');
   paintIcons($('.dash-cockpit'));
 }
 function renderExecutiveCommandCenter(){
@@ -446,7 +448,7 @@ function renderDashboard(){
     <div class="executive-strip"><div class="executive-chip"><b>مؤشر التحصيل</b><br><span class="mini">${fmt(collectionRate)}% من إجمالي الفواتير</span></div><div class="executive-chip"><b>مؤشر الإشغال</b><br><span class="mini">${fmt(k.occupancy)}% من الوحدات</span></div><div class="executive-chip"><b>مؤشر السلامة</b><br><span class="mini">${fmt(riskScore)}% تشغيل مستقر</span></div></div>`;
   $('#decisionList').innerHTML=executiveMatrix + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
   const props=Jawdah.data.properties||[];
-  $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
+  if(window.NizwaGIS) NizwaGIS.renderMini('gisPins'); else $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
   $('#quickActions').innerHTML=[['إضافة عقار','properties','building-2'],['إضافة عميل','clients','user-plus'],['إنشاء عقد','contracts','file-plus-2'],['تجديد عقد','contracts','refresh-cw'],['فاتورة من عقد','invoices','receipt'],['تحصيل دفعة','invoices','wallet'],['Backup فوري','backup','archive'],['تقرير مالي','reports','chart-pie'],['اختبار التشغيل','qa','badge-check']].map((q,i)=>`<button class="ghost quick-pro dash-action-tile" style="--tile-i:${i}" onclick="showSection('${q[1]}')"><span class="quick-head">${ic(q[2],'quick-ic')}<b>${q[0]}</b></span><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
   paintIcons($('#sec-dashboard'));
 }
@@ -1088,6 +1090,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
     ['clients','العملاء','users-round'],
     ['tenant-portal','بوابة المستأجر','smartphone'],
     ['renewal-engine','محرك التجديد','git-compare'],
+    ['nizwa-gis','GIS نزوى','map-pin'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
     ['reminders','تذكيرات واتساب','message-circle'],

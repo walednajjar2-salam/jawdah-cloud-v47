@@ -117,7 +117,7 @@
           <div id="kpiGrid" class="dash-bento-kpis"></div>
           <div class="dash-bento-row layout dash-float-3">
             <div class="card dash-chart-card"><div class="dash-card-head"><h3><i data-lucide="trending-up" class="lucide-icon title-ic"></i> الإيرادات والمصروفات</h3></div><div class="canvas-wrap"><canvas id="incomeChart"></canvas></div></div>
-            <div class="card dash-gis-card"><div class="dash-card-head"><h3><i data-lucide="map" class="lucide-icon title-ic"></i> خريطة GIS تشغيلية</h3></div><div class="gis"><div id="gisPins"></div></div></div>
+            <div class="card dash-gis-card"><div class="dash-card-head"><h3><i data-lucide="map" class="lucide-icon title-ic"></i> GIS نزوى — حي التراث</h3><button class="ghost mini-btn" onclick="showSection('nizwa-gis')">عرض كامل</button></div><div class="gis nizwa-gis-mini-wrap"><div id="gisPins"></div></div></div>
           </div>
           <div class="dash-bento-row layout dash-float-4">
             <div class="card dash-decisions-card"><div class="dash-card-head"><h3><i data-lucide="zap" class="lucide-icon title-ic"></i> قرارات الآن</h3></div><div id="decisionList"></div></div>
@@ -191,6 +191,14 @@
           <p class="mini">توقعات 6 أشهر · سيناريوهات (متوقع / أفضل / حذر) · مقارنة أسعار التجديد · تذكيرات 90→7 أيام · PDF للإدارة</p>
         </div>
         <div id="renewalEngineBox"></div>
+      </section>
+
+      <section id="sec-nizwa-gis" class="section">
+        <div class="card accounting-hero nizwa-gis-hero">
+          <h3><i data-lucide="map-pin" class="lucide-icon title-ic"></i> GIS نزوى التفاعلي — المرحلة 3</h3>
+          <p class="mini">خريطة تشغيلية لحي التراث — شقق 101–105 و119–122 · ألوان الحالة · تفاصيل المستأجر · تجديد · فاتورة · واتساب</p>
+        </div>
+        <div id="nizwaGisHost" class="nizwa-gis-host"></div>
       </section>
 
       <section id="sec-contracts" class="section">
@@ -350,6 +358,7 @@
   <script src="document-export.js"></script>
   <script src="data-export.js"></script>
   <script src="renewal-engine.js"></script>
+  <script src="nizwa-gis.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

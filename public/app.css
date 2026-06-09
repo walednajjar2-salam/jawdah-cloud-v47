@@ -469,3 +469,58 @@ body.dash-view .content{padding-top:8px}
 .renewal-scenario-pick.active{border-color:rgba(64,224,208,.5);background:rgba(64,224,208,.12)}
 @media(max-width:1100px){.renewal-engine-kpis,.renewal-scenario-row{grid-template-columns:repeat(2,minmax(0,1fr))}.renewal-engine-layout{grid-template-columns:1fr}}
 @media(max-width:650px){.renewal-engine-kpis,.renewal-scenario-row,.renewal-modal-scenarios{grid-template-columns:1fr}}
+
+/* Phase 3 — Nizwa Heritage GIS */
+.nizwa-gis-hero{margin-bottom:16px}
+.nizwa-gis-host{display:flex;flex-direction:column;gap:16px}
+.nizwa-gis-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.nizwa-gis-stats>div{padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.nizwa-gis-stats span{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.nizwa-gis-stats strong{font-size:22px;color:var(--gold2)}
+.nizwa-gis-stats .c-rented{color:#34d399}
+.nizwa-gis-stats .c-vacant{color:#60a5fa}
+.nizwa-gis-stats .c-short{color:#f87171}
+.nizwa-gis-stats .c-occ{color:var(--gold2)}
+.nizwa-gis-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.nizwa-gis-filters{display:flex;flex-wrap:wrap;gap:8px;flex:1}
+.nizwa-filter.active{border-color:rgba(64,224,208,.5)!important;background:rgba(64,224,208,.12)!important;color:#ecfeff!important}
+.nizwa-gis-coords{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.nizwa-gis-layout{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;align-items:start}
+.nizwa-gis-map-wrap{position:relative;border-radius:20px;overflow:hidden;border:1px solid rgba(64,224,208,.2);box-shadow:inset 0 0 60px rgba(64,224,208,.06)}
+.nizwa-gis-map{position:relative;width:100%;overflow:hidden;background:#0f172a}
+.nizwa-gis-map.full{min-height:420px;aspect-ratio:5/3}
+.nizwa-gis-map.mini{height:100%;min-height:280px}
+.nizwa-map-svg{display:block;width:100%;height:100%;object-fit:cover}
+.nizwa-pins-layer{position:absolute;inset:0;z-index:2}
+.nizwa-pin{position:absolute;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:rgba(15,23,42,.75);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,box-shadow .15s;z-index:3;padding:0}
+.nizwa-gis-map.mini .nizwa-pin{width:28px;height:28px;font-size:10px}
+.nizwa-pin:hover,.nizwa-pin.selected{transform:translate(-50%,-50%) scale(1.12);z-index:5}
+.nizwa-pin.rented{background:linear-gradient(135deg,#059669,#34d399);box-shadow:0 0 16px rgba(52,211,153,.45)}
+.nizwa-pin.vacant{background:linear-gradient(135deg,#2563eb,#60a5fa);box-shadow:0 0 16px rgba(96,165,250,.4)}
+.nizwa-pin.short{background:linear-gradient(135deg,#dc2626,#f87171);box-shadow:0 0 16px rgba(248,113,113,.45)}
+.nizwa-pin.maintenance{background:linear-gradient(135deg,#d97706,#fbbf24);box-shadow:0 0 16px rgba(251,191,36,.4)}
+.nizwa-pin.selected{outline:3px solid rgba(64,224,208,.75);outline-offset:2px}
+.nizwa-pin-pulse{position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(248,113,113,.6);animation:nizwaPulse 1.6s ease-out infinite;pointer-events:none}
+@keyframes nizwaPulse{0%{transform:scale(.85);opacity:.9}100%{transform:scale(1.35);opacity:0}}
+.nizwa-expand-btn{position:absolute;bottom:12px;left:12px;z-index:4;font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(15,23,42,.75);color:#ecfeff}
+.nizwa-gis-legend{display:flex;flex-wrap:wrap;gap:12px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.25)}
+.nizwa-gis-legend .leg{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.nizwa-gis-legend .leg i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.nizwa-gis-legend .leg.rented i{background:#34d399}
+.nizwa-gis-legend .leg.vacant i{background:#60a5fa}
+.nizwa-gis-legend .leg.short i{background:#f87171}
+.nizwa-gis-legend .leg.maintenance i{background:#fbbf24}
+.nizwa-gis-detail{padding:18px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(36,48,68,.55),rgba(30,41,59,.85));min-height:280px}
+.nizwa-gis-detail.empty{display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted)}
+.nizwa-gis-detail header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.nizwa-gis-detail header h3{margin:0 0 6px;font-size:20px}
+.nizwa-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.nizwa-detail-grid>div{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.nizwa-detail-grid span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.nizwa-detail-grid b{font-size:14px}
+.nizwa-detail-actions{display:flex;flex-wrap:wrap;gap:8px}
+.nizwa-gis-mini-wrap{position:relative;height:100%}
+.nizwa-gis-mini-wrap .nizwa-gis-map{height:100%;border-radius:16px}
+.dashboard-neo .dash-gis-card .gis{height:300px;padding:0;overflow:hidden;border-radius:16px}
+@media(max-width:1100px){.nizwa-gis-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.nizwa-gis-layout{grid-template-columns:1fr}}
+@media(max-width:650px){.nizwa-gis-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.nizwa-detail-grid{grid-template-columns:1fr}}
