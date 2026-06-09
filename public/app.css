@@ -614,3 +614,5 @@ body.dash-view .content{padding-top:8px}
 .owner-pack-mod b{font-size:18px;color:var(--gold2)}
 @media(max-width:1100px){.owner-pack-kpis,.owner-pack-layout,.owner-pack-module-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.owner-pack-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.login-status{margin-top:10px;text-align:center;color:var(--gold2)}
+.login-status.err{color:#ff8a8a}

@@ -23,16 +23,43 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const api = async (path, opts={}) => {
   const headers = {'Content-Type':'application/json'};
   if(Jawdah.token) headers.Authorization = 'Bearer ' + Jawdah.token;
-  const res = await fetch('/api/' + path.replace(/^\//,''), {...opts, headers:{...headers, ...(opts.headers||{})}});
-  const text = await res.text();
-  let data;
-  try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false,error:text || 'Invalid response'}; }
-  if(!res.ok || data.ok === false){
-    const err = data.error || data.detail || 'Request failed';
-    throw new Error(err === 'Permission denied' ? 'لا تملك صلاحية تنفيذ هذا الإجراء' : err);
-  }
-  return data;
+  const timeoutMs = opts.timeout ?? 45000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try{
+    const res = await fetch('/api/' + path.replace(/^\//,''), {...opts, signal: controller.signal, headers:{...headers, ...(opts.headers||{})}});
+    const text = await res.text();
+    let data;
+    try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false,error:text || 'Invalid response'}; }
+    if(!res.ok || data.ok === false){
+      const err = data.error || data.detail || 'Request failed';
+      throw new Error(err === 'Permission denied' ? 'لا تملك صلاحية تنفيذ هذا الإجراء' : err);
+    }
+    return data;
+  }catch(e){
+    if(e?.name === 'AbortError') throw new Error('انتهت مهلة الاتصال — تحقق من الإنترنت وحاول مرة أخرى');
+    if(e instanceof TypeError) throw new Error('تعذر الاتصال بالخادم — قد يكون الموقع يعيد التشغيل');
+    throw e;
+  }finally{ clearTimeout(timer); }
 };
+function setLoginStatus(msg, err=false){
+  const el=$('#loginStatus');
+  if(!el) return;
+  if(!msg){ el.textContent=''; el.classList.add('hidden'); return; }
+  el.textContent=msg;
+  el.classList.remove('hidden');
+  el.classList.toggle('err', !!err);
+}
+function showLoginShell(){
+  setUiShellMode('login');
+  $('#loginScreen')?.classList.remove('hidden');
+  $('#app')?.classList.add('hidden');
+}
+function showAppShell(){
+  setUiShellMode('app');
+  $('#loginScreen')?.classList.add('hidden');
+  $('#app')?.classList.remove('hidden');
+}
 const fmt = n => Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
 const money = n => fmt(n) + ' OMR';
 const today = () => new Date().toISOString().slice(0,10);
@@ -66,27 +93,48 @@ function ensureEnglishDigits(root=document.body){
 }
 async function login(){
   try{
+    setLoginStatus('جاري تسجيل الدخول...');
     const username=$('#loginUser').value.trim(); const password=$('#loginPass').value;
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
-    setUiShellMode('app');
-    $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); showLoginWelcome();
-  }catch(e){toast(e.message,true)}
+    setLoginStatus('جاري تحميل النظام...');
+    showAppShell();
+    await loadAll();
+    setLoginStatus('');
+    showLoginWelcome();
+  }catch(e){ showLoginShell(); setLoginStatus(e.message||'تعذر تسجيل الدخول', true); toast(e.message,true); }
 }
-async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); setUiShellMode('login'); location.reload(); }
+async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; showLoginShell(); location.reload(); }
 async function checkSession(){
-  if(!Jawdah.token){ setUiShellMode('login'); $('#loginScreen').classList.remove('hidden'); return; }
-  try{ const me=await api('me'); Jawdah.user=me.user; setUiShellMode('app'); $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); }
-  catch(e){ localStorage.removeItem('jawdah_cloud_token'); setUiShellMode('login'); $('#loginScreen').classList.remove('hidden'); }
+  if(!Jawdah.token){ showLoginShell(); setLoginStatus(''); return; }
+  setLoginStatus('جاري استعادة الجلسة...');
+  try{
+    const me=await api('me');
+    Jawdah.user=me.user;
+    showAppShell();
+    await loadAll();
+    setLoginStatus('');
+  }catch(e){
+    localStorage.removeItem('jawdah_cloud_token');
+    Jawdah.token='';
+    showLoginShell();
+    setLoginStatus('');
+    toast(e.message||'تعذر الاتصال بالخادم', true);
+  }
 }
 function setUiShellMode(mode){
   document.body.classList.toggle('login-mode', mode === 'login');
 }
 async function loadAll(){
-  const res=await api('bootstrap'); Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;
-  if(res.company_settings) CompanyProfile.apply(res.company_settings);
-  $('#userName').textContent=Jawdah.user.name; $('#userRole').textContent=roleName(Jawdah.user.role); $('#avatar').textContent=isOwnerUser()?'ي':(Jawdah.user.name||'J').slice(0,1).toUpperCase();
-  buildNav(); renderAll(); renderBrandSurfaces(); populateCompanySettingsForm(); renderOwnerWelcomeSurfaces(); showSection(Jawdah.activeSection||'dashboard'); ensureEnglishDigits(); paintIcons();
+  try{
+    const res=await api('bootstrap');
+    Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;
+    if(res.company_settings) CompanyProfile.apply(res.company_settings);
+    $('#userName').textContent=Jawdah.user.name; $('#userRole').textContent=roleName(Jawdah.user.role); $('#avatar').textContent=isOwnerUser()?'ي':(Jawdah.user.name||'J').slice(0,1).toUpperCase();
+    buildNav(); renderAll(); renderBrandSurfaces(); populateCompanySettingsForm(); renderOwnerWelcomeSurfaces(); showSection(Jawdah.activeSection||'dashboard'); ensureEnglishDigits(); paintIcons();
+  }catch(e){
+    throw new Error(e.message||'تعذر تحميل بيانات النظام');
+  }
 }
 function renderBrandSurfaces(){
   const logo = CompanyProfile.logoUrl();
@@ -966,7 +1014,7 @@ function bind(){
   document.addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key.toLowerCase()==='k'){ e.preventDefault(); $('#globalSearch').focus(); } if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#globalSearch').focus();} });
 }
 window.LAUNCH_QUALITY_CHECK=()=>({system:COMPANY,user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});
-window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'login'); bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
+window.addEventListener('load',()=>{ if(!Jawdah.token) showLoginShell(); else document.body.classList.remove('login-mode'); bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
 
 
 /* Quality Launch Services LLC - production experience layer */
