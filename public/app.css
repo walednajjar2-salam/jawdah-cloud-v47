@@ -435,3 +435,37 @@ body.dash-view .content{padding-top:8px}
 .tenant-proof-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);margin-bottom:10px;flex-wrap:wrap}
 .tenant-proof-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .tenant-maint-card{border-color:rgba(64,224,208,.35)!important;box-shadow:0 0 24px rgba(64,224,208,.08)!important}
+.renewal-engine-hero{margin-bottom:16px}
+.renewal-engine-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.renewal-scenario-card{padding:18px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
+.renewal-scenario-card span{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+.renewal-scenario-card strong{font-size:24px;color:var(--gold2)}
+.renewal-scenario-card.optimistic{border-color:rgba(134,239,172,.35);background:rgba(52,211,153,.08)}
+.renewal-scenario-card.pessimistic{border-color:rgba(252,165,165,.35);background:rgba(220,38,38,.08)}
+.renewal-scenario-card.risk{border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+.renewal-engine-layout{display:grid;grid-template-columns:1.4fr .8fr;gap:16px;margin-bottom:16px}
+.renewal-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.renewal-card-head h3{margin:0!important}
+.renewal-canvas-wrap{height:260px}
+.renewal-legend{display:flex;gap:16px;margin-top:10px;font-size:13px;color:var(--muted)}
+.renewal-legend .optimistic{color:#86efac}.renewal-legend .baseline{color:#40e0d0}.renewal-legend .pessimistic{color:#fca5a5}
+.renewal-milestones{display:grid;gap:8px}
+.renewal-milestone{display:flex;justify-content:space-between;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03)}
+.renewal-milestone.expired{border-color:rgba(220,38,38,.45);background:rgba(220,38,38,.1)}
+.renewal-milestone b{font-size:14px}
+.renewal-decision-grid{display:grid;gap:14px}
+.renewal-decision{padding:18px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03)}
+.renewal-decision header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.renewal-scenario-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.renewal-scenario-pill{padding:10px;border-radius:14px;border:1px solid rgba(255,255,255,.1);text-align:center;background:rgba(0,0,0,.15)}
+.renewal-scenario-pill.rec{border-color:rgba(64,224,208,.5);box-shadow:0 0 20px rgba(64,224,208,.12)}
+.renewal-scenario-pill.vacate{border-color:rgba(248,113,113,.35);opacity:.85}
+.renewal-scenario-pill span{display:block;font-size:11px;color:var(--muted)}
+.renewal-scenario-pill strong{display:block;margin:6px 0;font-size:16px;color:var(--gold2)}
+.renewal-scenario-pill small{font-size:11px;color:var(--muted)}
+.renewal-decision-actions{display:flex;flex-wrap:wrap;gap:8px}
+.renewal-modal-scenarios{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+.renewal-scenario-pick{padding:12px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);cursor:pointer;color:inherit;font:inherit}
+.renewal-scenario-pick.active{border-color:rgba(64,224,208,.5);background:rgba(64,224,208,.12)}
+@media(max-width:1100px){.renewal-engine-kpis,.renewal-scenario-row{grid-template-columns:repeat(2,minmax(0,1fr))}.renewal-engine-layout{grid-template-columns:1fr}}
+@media(max-width:650px){.renewal-engine-kpis,.renewal-scenario-row,.renewal-modal-scenarios{grid-template-columns:1fr}}

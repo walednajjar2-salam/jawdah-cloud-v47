@@ -115,6 +115,7 @@ function buildNav(){
     ['apartments','إدارة الشقق','layout-grid'],
     ['clients','العملاء','users-round'],
     ['tenant-portal','بوابة المستأجر','smartphone'],
+    ['renewal-engine','محرك التجديد','git-compare'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
     ['reminders','تذكيرات واتساب','message-circle'],
@@ -148,11 +149,12 @@ function buildNav(){
 function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
-  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء','tenant-portal':'بوابة المستأجر',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء','tenant-portal':'بوابة المستأجر','renewal-engine':'محرك التجديد والتدفق النقدي',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  if(id==='renewal-engine') setTimeout(()=>{ if(window.RenewalEngine) RenewalEngine.drawChart('renewalForecastChart', Jawdah.renewalEngine || RenewalEngine.build()); }, 120);
   document.body.classList.toggle('dash-view', id==='dashboard');
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
-function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderTenantPortal(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
+function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderTenantPortal(); renderRenewalEngine(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
 function collectApartmentRows(){
   const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
   const byNo=new Map();
@@ -264,7 +266,7 @@ function renderDashboardCockpit(snap,k,data){
   const orb=$('#dashPortfolioOrb');
   if(orb){ orb.innerHTML=portfolioOrbHtml(snap); animateDashCounts(orb); }
   const orbs=$('#dashQuickOrbs');
-  if(orbs) orbs.innerHTML=[['apartments','الشقق','layout-grid'],['invoices','فاتورة','receipt'],['reminders','واتساب','message-circle'],['reports','PDF','file-down']].map(([sec,label,icon])=>`<button class="dash-orb-btn" onclick="${sec==='reports'?'downloadExecutiveReportPdf()':`showSection('${sec}')`}">${ic(icon)}<span>${label}</span></button>`).join('');
+  if(orbs) orbs.innerHTML=[['apartments','الشقق','layout-grid'],['renewal-engine','التجديد','git-compare'],['invoices','فاتورة','receipt'],['reminders','واتساب','message-circle'],['reports','PDF','file-down']].map(([sec,label,icon])=>`<button class="dash-orb-btn" onclick="${sec==='reports'?'downloadExecutiveReportPdf()':`showSection('${sec}')`}">${ic(icon)}<span>${label}</span></button>`).join('');
   paintIcons($('.dash-cockpit'));
 }
 function renderExecutiveCommandCenter(){
@@ -837,24 +839,6 @@ async function invoiceFromContract(contractId){
   toast('تم اختيار العقد — راجع البيانات ثم اضغط إنشاء وربط الفاتورة');
 }
 async function approveContract(contractId){ try{ if(!confirm('اعتماد العقد سيولد جدول الفواتير الشهرية حسب مدة العقد. هل تريد المتابعة؟')) return; const res=await api('approve_contract',{method:'POST',body:JSON.stringify({contract_id:contractId})}); toast('تم اعتماد العقد وتوليد '+(res.created_invoices||[]).length+' فاتورة'); await loadAll(); showSection('contracts'); }catch(e){toast(e.message,true)} }
-async function renewContract(contractId){
-  const c = byId('contracts', contractId);
-  if(!c.id) return toast('لم يتم العثور على العقد', true);
-  const oldStart = c.start_date || today();
-  const oldEnd = c.end_date || today();
-  const defaultMonths = Math.max(1, Math.round((new Date(oldEnd+'T00:00:00') - new Date(oldStart+'T00:00:00')) / (1000*60*60*24*30)));
-  const months = Number(prompt('مدة التجديد بالأشهر', String(defaultMonths)) || 0);
-  if(!months || months <= 0) return;
-  const newRentRaw = prompt('الإيجار الشهري الجديد OMR (اترك فارغاً للإبقاء على نفس القيمة)', String(c.rent_amount || ''));
-  const payload = {contract_id: contractId, months};
-  if(newRentRaw && String(newRentRaw).trim()) payload.rent_amount = Number(newRentRaw);
-  try{
-    const res = await api('renew_contract', {method:'POST', body:JSON.stringify(payload)});
-    toast('تم إنشاء عقد التجديد: ' + (res.contract?.contract_no || res.contract?.id));
-    await loadAll();
-    showSection('contracts');
-  }catch(e){ toast(e.message, true); }
-}
 async function contractDocument(contractId){ try{ const res=await api('contract_template',{method:'POST',body:JSON.stringify({contract_id:contractId})}); const w=window.open('', '_blank'); w.document.write(res.html); w.document.close(); }catch(e){toast(e.message,true)} }
 async function downloadContractPdf(contractId){
   try{
@@ -1103,6 +1087,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
     ['apartments','إدارة الشقق','layout-grid'],
     ['clients','العملاء','users-round'],
     ['tenant-portal','بوابة المستأجر','smartphone'],
+    ['renewal-engine','محرك التجديد','git-compare'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
     ['reminders','تذكيرات واتساب','message-circle'],

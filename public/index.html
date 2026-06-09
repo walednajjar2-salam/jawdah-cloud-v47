@@ -81,6 +81,7 @@
             </div>
             <div class="ecc-actions">
               <button class="gold-btn" onclick="downloadExecutiveReportPdf()"><i data-lucide="file-down" class="lucide-icon"></i> تقرير PDF للإدارة</button>
+              <button class="ghost" onclick="showSection('renewal-engine')"><i data-lucide="git-compare" class="lucide-icon"></i> محرك التجديد</button>
               <button class="ghost" onclick="showSection('apartments')"><i data-lucide="layout-grid" class="lucide-icon"></i> إدارة الشقق</button>
             </div>
           </div>
@@ -182,6 +183,14 @@
           <p class="mini">من قسم <b>العملاء</b> اضغط «رابط البوابة» لنسخ الرابط وإرساله عبر واتساب.</p>
           <div id="tenantPortalLinks"></div>
         </div>
+      </section>
+
+      <section id="sec-renewal-engine" class="section">
+        <div class="card accounting-hero renewal-engine-hero">
+          <h3><i data-lucide="git-compare" class="lucide-icon title-ic"></i> محرك التجديد والتدفق النقدي — المرحلة 2</h3>
+          <p class="mini">توقعات 6 أشهر · سيناريوهات (متوقع / أفضل / حذر) · مقارنة أسعار التجديد · تذكيرات 90→7 أيام · PDF للإدارة</p>
+        </div>
+        <div id="renewalEngineBox"></div>
       </section>
 
       <section id="sec-contracts" class="section">
@@ -340,6 +349,7 @@
   <script src="reminders.js"></script>
   <script src="document-export.js"></script>
   <script src="data-export.js"></script>
+  <script src="renewal-engine.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
