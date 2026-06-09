@@ -1,0 +1,16 @@
+Launch Quality LLC - Production Final (Railway Ready)
+
+1) Upload this folder to GitHub (root of the repo).
+2) Railway → New Project → Deploy from GitHub.
+3) Variables:
+   JAWDAH_HOST=0.0.0.0
+   JAWDAH_DATA_DIR=/app/data
+4) Generate public domain in Railway Networking.
+5) Health: https://YOUR-DOMAIN.up.railway.app/api/health
+6) App URL:  https://YOUR-DOMAIN.up.railway.app/
+
+Start command: python server.py
+See RAILWAY.md for full steps and volume setup.
+
+Default admin: admin / admin123
+Accountant: razan.accounting / Jawdeh123
