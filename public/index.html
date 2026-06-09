@@ -102,6 +102,23 @@
   </script>
 
   <div id="appLoader" class="hidden">جاري تحميل النظام...</div>
+  <script>
+  (function(){
+    if(localStorage.getItem('jawdah_cloud_token')){
+      var show=function(){
+        var l=document.getElementById('appLoader');
+        var app=document.getElementById('app');
+        var login=document.getElementById('loginScreen');
+        if(l) l.classList.remove('hidden');
+        if(app) app.classList.remove('hidden');
+        if(login) login.classList.add('hidden');
+        document.body.classList.remove('login-mode');
+      };
+      if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', show);
+      else show();
+    }
+  })();
+  </script>
 
   <main id="app" class="app hidden">
     <aside id="sidebar" class="sidebar">
@@ -450,8 +467,7 @@
   <div id="paymentModal" class="modal"><div class="modal-box"><h2>تحصيل فاتورة</h2><p id="payInfo"></p><input id="payInvoiceId" type="hidden"><div class="form"><input id="payAmount" placeholder="المبلغ"><select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id="payNote" placeholder="ملاحظة"></div><button class="gold-btn" onclick="submitPayment()">تأكيد التحصيل</button> <button class="ghost" onclick="closeModal('paymentModal')">إغلاق</button></div></div>
   <div id="invoiceModal" class="modal"><div class="modal-box invoice-modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="downloadInvoicePdf()"><i data-lucide="file-down" class="lucide-icon"></i> تنزيل PDF</button><button class="ghost" onclick="printInvoiceDocument()">طباعة A4</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
   <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
-  <script src="company-settings.js"></script>
-  <script src="app.js?v=20260610b"></script>
+  <script defer src="company-settings.js"></script>
   <script defer src="reminders.js"></script>
   <script defer src="document-export.js"></script>
   <script defer src="data-export.js"></script>
@@ -460,5 +476,6 @@
   <script defer src="compliance-layer.js"></script>
   <script defer src="vat-fta.js"></script>
   <script defer src="owner-monthly-pack.js"></script>
+  <script defer src="app.js?v=20260610c"></script>
 </body>
 </html>

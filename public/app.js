@@ -124,6 +124,7 @@ let sessionBootStarted=false;
 async function checkSession(){
   if(sessionBootStarted) return;
   sessionBootStarted=true;
+  Jawdah.token=localStorage.getItem('jawdah_cloud_token')||'';
   if(!Jawdah.token){ showLoginShell(); setLoginStatus(''); return; }
   try{
     showAppShell();
@@ -131,18 +132,18 @@ async function checkSession(){
     const me=await api('me');
     Jawdah.user=me.user;
     await loadAll();
-    hideAppLoading();
     if(new URLSearchParams(location.search).get('login')==='1'){
       history.replaceState({}, '', location.pathname);
       showLoginWelcome();
     }
   }catch(e){
-    hideAppLoading();
     localStorage.removeItem('jawdah_cloud_token');
     Jawdah.token='';
     sessionBootStarted=false;
     showLoginShell();
     setLoginStatus(e.message||'تعذر تحميل النظام', true);
+  }finally{
+    hideAppLoading();
   }
 }
 function setUiShellMode(mode){
@@ -173,21 +174,33 @@ function renderAll(){
   safeStep('exports', ()=>{ if(typeof initExportToolbars==='function') initExportToolbars(); });
 }
 async function loadAll(){
+  updateAppLoading('جاري جلب البيانات...');
   const res=await api('bootstrap',{timeout:90000});
   Jawdah.data=res.data||{}; Jawdah.dashboard=res.dashboard||{kpis:{},series:[],decisions:[]}; Jawdah.user=res.user;
   if(res.company_settings && window.CompanyProfile) CompanyProfile.apply(res.company_settings);
   if($('#userName')) $('#userName').textContent=Jawdah.user?.name||'';
   if($('#userRole')) $('#userRole').textContent=roleName(Jawdah.user?.role||'');
   if($('#avatar')) $('#avatar').textContent=isOwnerUser()?'ي':(Jawdah.user?.name||'J').slice(0,1).toUpperCase();
+  updateAppLoading('جاري بناء اللوحة...');
   buildNav();
-  renderAll();
-  renderBrandSurfaces();
-  populateCompanySettingsForm();
-  renderOwnerWelcomeSurfaces();
-  showSection(Jawdah.activeSection||'dashboard');
-  ensureEnglishDigits();
-  paintIcons();
-  loadVendorLibs().then(()=>paintIcons()).catch(()=>{});
+  hideAppLoading();
+  try{
+    renderAll();
+    renderBrandSurfaces();
+    populateCompanySettingsForm();
+    renderOwnerWelcomeSurfaces();
+    showSection(Jawdah.activeSection||'dashboard');
+    ensureEnglishDigits();
+    paintIcons();
+  }catch(e){
+    console.error('render failed', e);
+    toast('تم الدخول — بعض الأقسام تحتاج تحديث الصفحة', true);
+  }
+  setTimeout(()=>loadVendorLibs().then(()=>paintIcons()).catch(()=>{}), 100);
+}
+function updateAppLoading(msg){
+  const el=$('#appLoader');
+  if(el){ el.textContent=msg; el.classList.remove('hidden'); }
 }
 function loadScript(src){
   return new Promise((resolve,reject)=>{
@@ -1087,8 +1100,11 @@ function bootApp(){
   setInterval(()=>ensureEnglishDigits(),3000);
   paintIcons();
 }
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bootApp);
-else bootApp();
+function scheduleBoot(){
+  const run=()=>setTimeout(bootApp,0);
+  document.addEventListener('DOMContentLoaded', run);
+}
+scheduleBoot();
 
 
 /* Quality Launch Services LLC - production experience layer */
@@ -1243,6 +1259,7 @@ else bootApp();
 
 
 (function(){
+  function populateSelects(){}
   const baseSections=[
     ['dashboard','لوحة التحكم','layout-dashboard'],
     ['properties','العقارات','building-2'],
@@ -1277,7 +1294,7 @@ else bootApp();
     ['qa','اختبار التشغيل','circle-check-big'],
   ];
   buildNav=function(){ const nav=$('#nav'); nav.innerHTML=''; baseSections.forEach(([id,label,icon])=>{ if(id==='users'&&!isSuperUser())return; if(id==='company-settings'&&!isSuperUser())return; nav.appendChild(navItem(id,label,icon)); }); paintIcons(nav); };
-  const oldPopulate=populateSelects;
+  const oldPopulate=typeof populateSelects==='function'?populateSelects:function(){};
   populateSelects=function(){ oldPopulate(); const propOpts='<option value="">بدون عقار</option>'+(Jawdah.data.properties||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); ['#piProperty','#revProperty','#gaProperty'].forEach(s=>{if($(s))$(s).innerHTML=propOpts}); const clientOpts='<option value="">بدون عميل</option>'+(Jawdah.data.clients||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join(''); if($('#revClient'))$('#revClient').innerHTML=clientOpts; const itemOpts=(Jawdah.data.inventory_items||[]).map(i=>`<option value="${i.id}">${i.sku} - ${i.name}</option>`).join(''); if($('#stockItem'))$('#stockItem').innerHTML=itemOpts; const accOpts='<option value="">غير مطابق</option>'+(Jawdah.data.accounts||[]).map(a=>`<option value="${a.id}">${a.entry_date} - ${a.category} - ${money(a.amount)}</option>`).join(''); if($('#bankMatch'))$('#bankMatch').innerHTML=accOpts; const coaParentOpts='<option value="">بدون حساب أب</option>'+(Jawdah.data.chart_accounts||[]).map(a=>`<option value="${a.code}">${a.code} - ${a.name}</option>`).join(''); if($('#coaParent'))$('#coaParent').innerHTML=coaParentOpts; const periodOpts=(Jawdah.data.financial_periods||[]).filter(p=>String(p.status||'').toLowerCase()==='open').map(p=>`<option value="${p.period_name}">${p.period_name}</option>`).join(''); if($('#recPeriod')&&$('#recPeriod').tagName==='SELECT') $('#recPeriod').innerHTML=periodOpts||'<option value="">لا توجد فترة مفتوحة</option>'; ['piDate','revDate','salDate','gaDate','stockDate','bankDate','fpStart','fpEnd'].forEach(id=>{if($('#'+id)&&!$('#'+id).value)$('#'+id).value=today()}); if($('#salMonth')&&!$('#salMonth').value)$('#salMonth').value=today().slice(0,7); if($('#recPeriod')&&$('#recPeriod').tagName==='INPUT'&&!$('#recPeriod').value)$('#recPeriod').value=today().slice(0,7); };
   const oldRenderAll=renderAll;
   renderAll=function(){ oldRenderAll(); populateSelects(); renderFinanceSuite(); };
