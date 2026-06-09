@@ -477,7 +477,11 @@ def init_db() -> None:
         if os.environ.get("JAWDAH_FRESH_START", "").strip().lower() in ("1", "true", "yes"):
             reset_operational_data(db)
         seed_if_empty(db)
-        ensure_user(db, "razan.accounting", "Razan", "accountant", "Jawdeh123")
+        seed_chart_accounts(db)
+        ensure_user(db, "admin", "مدير النظام", "admin", "admin123")
+        ensure_user(db, "razan.accounting", "Razan — المحاسبة", "accountant", "Jawdeh123")
+        ensure_user(db, "operations", "تشغيل العقارات", "operations", "LaunchOps2026")
+        ensure_user(db, "maintenance", "فريق الصيانة", "maintenance", "LaunchMaint2026")
         db.commit()
 
 
