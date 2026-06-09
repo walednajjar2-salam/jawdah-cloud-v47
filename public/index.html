@@ -51,9 +51,29 @@
       </header>
       <h2 id="sectionTitle">لوحة التحكم التنفيذية</h2><div id="launchBanner" class="launch-banner hidden"></div>
 
-      <section id="sec-dashboard" class="section active">
-        <div id="dashboardBrandHero"></div>
-        <section id="executiveCommandCenter" class="executive-command-center glass-float-panel card">
+      <section id="sec-dashboard" class="section active dashboard-neo">
+        <div class="dash-mesh-bg" aria-hidden="true"></div>
+        <div class="dash-scanlines" aria-hidden="true"></div>
+        <div class="dash-particles" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+        <header class="dash-cockpit glass-float-panel">
+          <div class="dash-cockpit-glow" aria-hidden="true"></div>
+          <div class="dash-cockpit-left">
+            <div class="dash-live-pill"><span class="pulse-dot"></span> تشغيل مباشر</div>
+            <h1 class="dash-title">مركز القيادة التنفيذي</h1>
+            <p class="dash-subtitle" id="dashSubtitle">جودة الانطلاقة للخدمات — Real Estate Command Deck</p>
+            <div id="dashHeroStats" class="dash-stat-chips"></div>
+          </div>
+          <div class="dash-cockpit-center" id="dashPortfolioOrb"></div>
+          <div class="dash-cockpit-right">
+            <div class="dash-clock-block" id="dashClockBlock"></div>
+            <div class="dash-quick-orbs" id="dashQuickOrbs"></div>
+          </div>
+        </header>
+
+        <div id="dashboardBrandHero" class="dash-brand-strip"></div>
+
+        <section id="executiveCommandCenter" class="executive-command-center glass-float-panel card dash-float-1">
           <div class="ecc-header">
             <div>
               <h3><i data-lucide="radar" class="lucide-icon title-ic"></i> مركز القرار التنفيذي</h3>
@@ -82,7 +102,7 @@
             </div>
           </div>
         </section>
-        <section id="reminderHub" class="reminder-hub glass-float-panel card">
+        <section id="reminderHub" class="reminder-hub glass-float-panel card dash-float-2">
           <div class="reminder-hub-head">
             <div>
               <h3><i data-lucide="message-circle" class="lucide-icon title-ic"></i> مركز التذكيرات — واتساب / SMS</h3>
@@ -92,17 +112,18 @@
           </div>
           <div id="reminderHubPreview" class="reminder-preview"></div>
         </section>
-        <div class="hero glass-float-panel"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id="heroStats" class="status-line" style="margin-top:14px"></div></div>
-        <div id="kpiGrid" class="grid kpis"></div>
-        <div class="layout">
-          <div class="card"><h3>الإيرادات والمصروفات</h3><div class="canvas-wrap"><canvas id="incomeChart"></canvas></div></div>
-          <div class="card"><h3>خريطة GIS تشغيلية</h3><div class="gis"><div id="gisPins"></div></div></div>
+        <div class="dash-bento">
+          <div id="kpiGrid" class="dash-bento-kpis"></div>
+          <div class="dash-bento-row layout dash-float-3">
+            <div class="card dash-chart-card"><div class="dash-card-head"><h3><i data-lucide="trending-up" class="lucide-icon title-ic"></i> الإيرادات والمصروفات</h3></div><div class="canvas-wrap"><canvas id="incomeChart"></canvas></div></div>
+            <div class="card dash-gis-card"><div class="dash-card-head"><h3><i data-lucide="map" class="lucide-icon title-ic"></i> خريطة GIS تشغيلية</h3></div><div class="gis"><div id="gisPins"></div></div></div>
+          </div>
+          <div class="dash-bento-row layout dash-float-4">
+            <div class="card dash-decisions-card"><div class="dash-card-head"><h3><i data-lucide="zap" class="lucide-icon title-ic"></i> قرارات الآن</h3></div><div id="decisionList"></div></div>
+            <div class="card dash-occ-card"><div class="dash-card-head"><h3><i data-lucide="pie-chart" class="lucide-icon title-ic"></i> الإشغال</h3></div><div class="canvas-wrap"><canvas id="occupancyChart"></canvas></div></div>
+          </div>
+          <div class="card dash-actions-card dash-float-5"><div class="dash-card-head"><h3><i data-lucide="rocket" class="lucide-icon title-ic"></i> إجراءات سريعة</h3></div><div id="quickActions" class="quick dash-quick-grid"></div></div>
         </div>
-        <div class="layout">
-          <div class="card"><h3>قرارات الآن</h3><div id="decisionList"></div></div>
-          <div class="card"><h3>الإشغال</h3><div class="canvas-wrap"><canvas id="occupancyChart"></canvas></div></div>
-        </div>
-        <div class="card"><h3>إجراءات سريعة</h3><div id="quickActions" class="quick"></div></div>
       </section>
 
       <section id="sec-reminders" class="section">

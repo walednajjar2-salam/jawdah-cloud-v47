@@ -73,7 +73,8 @@ async function loadAll(){
 function renderBrandSurfaces(){
   const logo = CompanyProfile.logoUrl();
   document.documentElement.style.setProperty('--brand-logo-url', `url('${logo}')`);
-  const hero=$('#dashboardBrandHero'); if(hero) hero.innerHTML=CompanyProfile.dashboardIntroHtml();
+  const hero=$('#dashboardBrandHero');
+  if(hero) hero.innerHTML=`<div class="dash-brand-compact">${CompanyProfile.dashboardIntroHtml()}</div>`;
   const strip=$('#invoiceBrandStrip'); if(strip) strip.innerHTML=`<div class="invoice-brand-strip">${CompanyProfile.dashboardIntroHtml()}</div>`;
   document.querySelectorAll('.brand img, .login-brand-wrap img').forEach(img=>{ img.src=logo; });
   document.querySelectorAll('.brand-main').forEach(el=>{ el.textContent='Quality of Launch'; });
@@ -147,6 +148,7 @@ function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
   $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  document.body.classList.toggle('dash-view', id==='dashboard');
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
 function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }
@@ -214,17 +216,68 @@ function buildExecutiveSnapshot(){
   const riskScore=Math.max(0,Math.min(100,100-(openInvoices.length*7)-(openMaint.length*6)+(collectionRate*.2)));
   return {k,data,aptRows,aptTotal,aptRented,aptVacant,aptOcc,collectionRate,openInvoices,overdueInvoices,monthlyRentForecast,priorities,portfolioScore,riskScore,criticalCount,activeContracts:activeContracts.length};
 }
+function dashRingSvg(pct,r=26){
+  const c=2*Math.PI*r;
+  const off=c-Math.max(0,Math.min(100,pct))/100*c;
+  return `<svg class="dash-ring-svg" viewBox="0 0 64 64" aria-hidden="true"><circle class="ring-track" cx="32" cy="32" r="${r}"/><circle class="ring-val" cx="32" cy="32" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg>`;
+}
+function portfolioOrbHtml(snap){
+  const score=snap.portfolioScore;
+  const r=68, c=2*Math.PI*r, off=c-(score/100)*c;
+  const logo=CompanyProfile.logoUrl();
+  return `<div class="portfolio-orb-wrap">
+    <div class="portfolio-orb-glow" aria-hidden="true"></div>
+    <svg class="portfolio-orb-svg" viewBox="0 0 160 160"><defs><linearGradient id="orbGradDash" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7fffd4"/><stop offset="50%" stop-color="#40e0d0"/><stop offset="100%" stop-color="#c9a66b"/></linearGradient></defs><circle cx="80" cy="80" r="${r}" class="orb-track"/><circle cx="80" cy="80" r="${r}" class="orb-progress" stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg>
+    <div class="portfolio-orb-core"><img src="${logo}" alt=""><strong class="dash-count" data-percent="1" data-value="${score}">0%</strong><span>مؤشر المحفظة</span></div>
+  </div>
+  <div class="orb-mini-stats">
+    <div>${dashRingSvg(snap.aptOcc,20)}<b class="dash-count" data-percent="1" data-value="${snap.aptOcc||0}">0%</b><span>إشغال</span></div>
+    <div>${dashRingSvg(snap.collectionRate,20)}<b class="dash-count" data-percent="1" data-value="${snap.collectionRate||0}">0%</b><span>تحصيل</span></div>
+    <div>${dashRingSvg(snap.riskScore,20)}<b class="dash-count" data-percent="1" data-value="${snap.riskScore||0}">0%</b><span>سلامة</span></div>
+  </div>`;
+}
+function animateDashCounts(root){
+  if(!root) return;
+  root.querySelectorAll('.dash-count').forEach(el=>{
+    const end=Number(el.dataset.value||0);
+    const isMoney=el.dataset.money==='1';
+    const isPercent=el.dataset.percent==='1';
+    const start=performance.now(), dur=1400;
+    const step=now=>{
+      const p=Math.min(1,(now-start)/dur);
+      const eased=1-Math.pow(1-p,3);
+      const val=end*eased;
+      el.textContent=isMoney?money(val):isPercent?fmt(Math.round(val))+'%':fmt(Math.round(val));
+      if(p<1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+function renderDashboardCockpit(snap,k,data){
+  const collectionRate=snap.collectionRate;
+  const nextRentForecast=Number(k.paid||0)+Math.max(0,Number(k.overdue||0)*.35);
+  const sub=$('#dashSubtitle');
+  if(sub) sub.textContent=`${CompanyProfile.settings.name_ar} · ${fmt(snap.aptTotal)} شقة · ${fmt(snap.activeContracts)} عقد نشط · تحديث ${new Date().toLocaleDateString('ar-OM')}`;
+  const stats=$('#dashHeroStats');
+  if(stats) stats.innerHTML=`<span class="dash-chip paid">جاهزية ${fmt(k.health)}%</span><span class="dash-chip">إشغال ${fmt(snap.aptOcc)}%</span><span class="dash-chip">تحصيل ${fmt(collectionRate)}%</span><span class="dash-chip ${snap.criticalCount?'chip-alert':''}">أولويات ${fmt(snap.criticalCount)}</span><span class="dash-chip">توقع ${money(nextRentForecast)}</span>`;
+  const orb=$('#dashPortfolioOrb');
+  if(orb){ orb.innerHTML=portfolioOrbHtml(snap); animateDashCounts(orb); }
+  const orbs=$('#dashQuickOrbs');
+  if(orbs) orbs.innerHTML=[['apartments','الشقق','layout-grid'],['invoices','فاتورة','receipt'],['reminders','واتساب','message-circle'],['reports','PDF','file-down']].map(([sec,label,icon])=>`<button class="dash-orb-btn" onclick="${sec==='reports'?'downloadExecutiveReportPdf()':`showSection('${sec}')`}">${ic(icon)}<span>${label}</span></button>`).join('');
+  paintIcons($('.dash-cockpit'));
+}
 function renderExecutiveCommandCenter(){
-  const snap=buildExecutiveSnapshot();
+  const snap=Jawdah.executiveSnapshot||buildExecutiveSnapshot();
   Jawdah.executiveSnapshot=snap;
   const radar=$('#eccRadar');
   if(radar){
     radar.innerHTML=[
-      ['gauge','مؤشر المحفظة',fmt(snap.portfolioScore)+'%',snap.portfolioScore>=70?'good':''],
-      ['percent','نسبة الإشغال',fmt(snap.aptOcc||snap.k.occupancy||0)+'%',snap.aptOcc>=60?'good':''],
-      ['wallet','مؤشر التحصيل',fmt(snap.collectionRate)+'%',snap.collectionRate>=80?'good':''],
-      ['triangle-alert','أولويات حرجة',fmt(snap.criticalCount),snap.criticalCount?'critical':'good'],
-    ].map(x=>`<div class="ecc-radar-item ${x[3]||''}"><span>${x[1]}</span><strong>${x[2]}</strong></div>`).join('');
+      ['gauge','مؤشر المحفظة',snap.portfolioScore,snap.portfolioScore+'%',snap.portfolioScore>=70?'good':''],
+      ['percent','نسبة الإشغال',snap.aptOcc||snap.k.occupancy||0,fmt(snap.aptOcc||snap.k.occupancy||0)+'%',snap.aptOcc>=60?'good':''],
+      ['wallet','مؤشر التحصيل',snap.collectionRate,snap.collectionRate+'%',snap.collectionRate>=80?'good':''],
+      ['triangle-alert','أولويات حرجة',snap.criticalCount,fmt(snap.criticalCount),snap.criticalCount?'critical':'good'],
+    ].map(x=>`<div class="ecc-radar-item dash-radar-tile ${x[4]||''}">${dashRingSvg(Number(x[2])||0,24)}<div class="dash-radar-meta"><span>${x[1]}</span><strong class="dash-count" data-value="${Number(x[2])||0}" ${String(x[3]).includes('%')?'data-percent="1"':''}>0</strong></div></div>`).join('');
+    animateDashCounts(radar);
   }
   const queue=$('#eccPriorityQueue');
   if(queue){
@@ -362,18 +415,21 @@ function renderReminders(refresh){
 function renderDashboard(){
   const k=Jawdah.dashboard.kpis;
   const data=Jawdah.data || {};
-  const collectionRate = k.billed ? Math.round((Number(k.paid||0)/Number(k.billed||1))*100) : 0;
-  const openInvoices=(data.invoices||[]).filter(x=>Number(x.amount||0)>Number(x.paid_amount||0));
-  const nextRentForecast = Number(k.paid||0) + Math.max(0, Number(k.overdue||0) * .35);
-  const riskScore = Math.max(0, Math.min(100, 100 - (openInvoices.length*7) - (Number(k.maintenance||0)*6) + (collectionRate*.2)));
-  $('#heroStats').innerHTML=`<span class="badge paid">جاهزية ${fmt(k.health)}%</span><span class="badge">الإشغال ${fmt(k.occupancy)}%</span><span class="badge">التحصيل ${fmt(collectionRate)}%</span><span class="badge">مؤشر المخاطر ${fmt(riskScore)}%</span><span class="badge">توقع النقد ${money(nextRentForecast)}</span>`;
+  const snap=buildExecutiveSnapshot();
+  Jawdah.executiveSnapshot=snap;
+  const collectionRate=snap.collectionRate;
+  const openInvoices=snap.openInvoices;
+  const nextRentForecast=Number(k.paid||0)+Math.max(0,Number(k.overdue||0)*.35);
+  const riskScore=snap.riskScore;
+  renderDashboardCockpit(snap,k,data);
   const kpis=[
-    ['building-2','إجمالي العقارات',k.properties,'properties',''],['key-round','العقارات المؤجرة',k.rented,'properties',''],['home','العقارات الشاغرة',k.vacant,'properties',''],['file-check','العقود النشطة',(data.contracts||[]).filter(x=>String(x.status||'').toLowerCase().includes('active')).length,'contracts',''],
+    ['building-2','إجمالي العقارات',k.properties,'properties',''],['key-round','العقارات المؤجرة',k.rented,'properties',''],['home','العقارات الشاغرة',k.vacant,'properties',''],['file-check','العقود النشطة',snap.activeContracts,'contracts',''],
     ['refresh-cw','عقود تحتاج تجديد',k.expiring||0,'contracts',''],['timer','عقود منتهية',k.expired||0,'contracts',''],
     ['receipt','إجمالي الفوترة',k.billed,'invoices','money'],['credit-card','إجمالي التحصيل',k.paid,'accounts','money'],['alarm-clock','المبالغ المتأخرة',k.overdue,'invoices','money'],['trending-up','صافي الربح',k.net,'accounts','money'],
     ['wrench','الصيانة المفتوحة',k.maintenance,'maintenance',''],['users-round','العملاء',(data.clients||[]).length,'clients',''],['shield-check','جودة البيانات',k.health,'reports','percent'],['sparkles','توقع الشهر',nextRentForecast,'reports','money']
   ];
-  $('#kpiGrid').innerHTML=kpis.map(x=>`<div class="kpi kpi-pro" onclick="showSection('${x[3]}')">${kpiIcon(x[0])}<span>${x[1]}</span><strong>${x[4]==='money'?money(x[2]):x[4]==='percent'?fmt(x[2])+'%':fmt(x[2])}</strong><small class="mini">فتح التفاصيل والتحليل</small></div>`).join('');
+  $('#kpiGrid').innerHTML=kpis.map((x,i)=>`<div class="dash-kpi-tile kpi-pro" onclick="showSection('${x[3]}')" style="--tile-i:${i}"><div class="dash-kpi-shine"></div>${kpiIcon(x[0])}<span>${x[1]}</span><strong class="dash-count" data-value="${Number(x[2])||0}" ${x[4]==='money'?'data-money="1"':''} ${x[4]==='percent'?'data-percent="1"':''}>0</strong><small class="mini">فتح التفاصيل والتحليل</small></div>`).join('');
+  animateDashCounts($('#kpiGrid'));
   renderExecutiveCommandCenter();
   const executiveMatrix=`
     <div class="command-panel">
@@ -388,8 +444,8 @@ function renderDashboard(){
   $('#decisionList').innerHTML=executiveMatrix + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
   const props=Jawdah.data.properties||[];
   $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
-  $('#quickActions').innerHTML=[['إضافة عقار','properties','building-2'],['إضافة عميل','clients','user-plus'],['إنشاء عقد','contracts','file-plus-2'],['تجديد عقد','contracts','refresh-cw'],['فاتورة من عقد','invoices','receipt'],['تحصيل دفعة','invoices','wallet'],['Backup فوري','backup','archive'],['تقرير مالي','reports','chart-pie'],['اختبار التشغيل','qa','badge-check']].map(q=>`<button class="ghost quick-pro" onclick="showSection('${q[1]}')"><span class="quick-head">${ic(q[2],'quick-ic')}<b>${q[0]}</b></span><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
-  paintIcons($('#kpiGrid')); paintIcons($('#decisionList')); paintIcons($('#quickActions'));
+  $('#quickActions').innerHTML=[['إضافة عقار','properties','building-2'],['إضافة عميل','clients','user-plus'],['إنشاء عقد','contracts','file-plus-2'],['تجديد عقد','contracts','refresh-cw'],['فاتورة من عقد','invoices','receipt'],['تحصيل دفعة','invoices','wallet'],['Backup فوري','backup','archive'],['تقرير مالي','reports','chart-pie'],['اختبار التشغيل','qa','badge-check']].map((q,i)=>`<button class="ghost quick-pro dash-action-tile" style="--tile-i:${i}" onclick="showSection('${q[1]}')"><span class="quick-head">${ic(q[2],'quick-ic')}<b>${q[0]}</b></span><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
+  paintIcons($('#sec-dashboard'));
 }
 function tableHtml(cols, rows, actions, rowClassFn){
   return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}${actions?'<th>إجراء</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr class="${rowClassFn?rowClassFn(r):''}">${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??'')}</td>`).join('')}${actions?`<td>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
@@ -830,7 +886,17 @@ function prepCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devic
 function drawLine(id,a,b){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...a,...b,1], max=Math.max(...vals)*1.22; const area=(arr,color1,color2)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.lineTo(w-32,h-34); g.lineTo(32,h-34); g.closePath(); const gr=g.createLinearGradient(0,28,0,h-34); gr.addColorStop(0,color1); gr.addColorStop(1,color2); g.fillStyle=gr; g.fill(); }; const plot=(arr,color)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle=color; g.lineWidth=3; g.shadowBlur=0; g.stroke(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); g.beginPath(); g.fillStyle=color; g.arc(x,y,3.5,0,Math.PI*2); g.fill(); }); }; g.strokeStyle='rgba(148,163,184,.12)'; for(let i=0;i<5;i++){let y=24+i*(h-58)/4;g.beginPath();g.moveTo(24,y);g.lineTo(w-24,y);g.stroke();} area(a,'rgba(64,224,208,.16)','rgba(64,224,208,0)'); plot(a,'#40e0d0'); plot(b,'#2dd4bf'); }
 function drawDonut(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=22; g.lineCap='round'; g.strokeStyle='rgba(255,255,255,.08)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#7fffd4'); gr.addColorStop(.5,'#40e0d0'); gr.addColorStop(1,'#14b8a6'); g.strokeStyle=gr; g.shadowBlur=0; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.fillStyle='#f5f5f5'; g.font='700 28px Segoe UI'; g.textAlign='center'; g.fillText(fmt(p)+'%',x,y+6); g.font='13px Segoe UI'; g.fillStyle='rgba(163,163,163,.9)'; g.fillText('Occupancy',x,y+28); }
 function drawBar(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,'#7fffd4'); grd.addColorStop(1,'#14b8a6'); g.fillStyle=grd; g.shadowBlur=0; g.fillRect(x,h-25-bh,bw,bh);}); }
-function initClock(){ setInterval(()=>{ const d=new Date(); $('#clock').textContent=d.toLocaleTimeString('en-US',{hour12:false}); },1000); }
+function initClock(){
+  const tick=()=>{
+    const d=new Date();
+    const t=d.toLocaleTimeString('en-US',{hour12:false});
+    if($('#clock')) $('#clock').textContent=t;
+    const block=$('#dashClockBlock');
+    if(block) block.innerHTML=`<div class="dash-clock-time">${t}</div><div class="dash-clock-date">${d.toLocaleDateString('ar-OM',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>`;
+  };
+  tick();
+  setInterval(tick,1000);
+}
 function bind(){
   $('#loginBtn').onclick=login; $('#logoutBtn').onclick=logout; $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open'); $('#globalSearch').oninput=()=>renderAll();
   document.addEventListener('input',e=>ensureEnglishDigits(e.target));
