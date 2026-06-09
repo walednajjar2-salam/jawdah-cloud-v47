@@ -209,6 +209,14 @@
         <div id="complianceLayerBox"></div>
       </section>
 
+      <section id="sec-vat-fta" class="section">
+        <div class="card accounting-hero vat-fta-hero">
+          <h3><i data-lucide="qr-code" class="lucide-icon title-ic"></i> FTA — الفوترة الإلكترونية · المرحلة 5</h3>
+          <p class="mini">QR على كل فاتورة ضريبية · تقرير VAT شهري للمحاسب · جاهزية هيئة الضريبة</p>
+        </div>
+        <div id="vatFtaBox"></div>
+      </section>
+
       <section id="sec-contracts" class="section">
         <div id="renewalQueueBox"></div>
         <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة: رقم الشقة، المبنى، الطابق، المواقف"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractDeposit" placeholder="التأمين OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="90"><textarea id="contractLegalTerms" rows="14" placeholder="الشروط القانونية وحماية الشركة — تُعبأ تلقائياً"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
@@ -369,6 +377,7 @@
   <script src="renewal-engine.js"></script>
   <script src="nizwa-gis.js"></script>
   <script src="compliance-layer.js"></script>
+  <script src="vat-fta.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

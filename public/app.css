@@ -565,3 +565,21 @@ body.dash-view .content{padding-top:8px}
 .compliance-contract-actions{display:flex;flex-wrap:wrap;gap:8px}
 @media(max-width:1100px){.compliance-kpis,.compliance-contract-grid,.compliance-layout{grid-template-columns:1fr}}
 @media(max-width:650px){.compliance-auto-list{grid-template-columns:1fr}}
+
+/* Phase 5 — FTA / VAT e-invoicing */
+.vat-fta-hero{margin-bottom:16px}
+.vat-fta-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.vat-fta-kpi{padding:16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
+.vat-fta-kpi span{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
+.vat-fta-kpi strong{font-size:24px;color:var(--gold2)}
+.vat-fta-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:16px;padding:14px}
+.vat-fta-month{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.vat-fta-month input{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:inherit}
+.vat-fta-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.vat-fta-checks{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.vat-fta-check{display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.vat-fta-check.ok{border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.08)}
+.vat-fta-check.warn{border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)}
+.vat-fta-check strong{display:block;margin-bottom:4px}
+.vat-fta-qr-demo .qls-fta-qr{margin:12px auto 0;border:none;background:transparent}
+@media(max-width:1100px){.vat-fta-kpis,.vat-fta-layout{grid-template-columns:1fr}}

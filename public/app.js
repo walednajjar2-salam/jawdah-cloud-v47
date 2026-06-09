@@ -118,6 +118,7 @@ function buildNav(){
     ['renewal-engine','محرك التجديد','git-compare'],
     ['nizwa-gis','GIS نزوى','map-pin'],
     ['compliance','الامتثال','shield-check'],
+    ['vat-fta','FTA / VAT','qr-code'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
     ['reminders','تذكيرات واتساب','message-circle'],
@@ -151,14 +152,15 @@ function buildNav(){
 function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
-  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء','tenant-portal':'بوابة المستأجر','renewal-engine':'محرك التجديد والتدفق النقدي','nizwa-gis':'GIS نزوى — حي التراث',compliance:'طبقة الامتثال القانوني والضريبي',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء','tenant-portal':'بوابة المستأجر','renewal-engine':'محرك التجديد والتدفق النقدي','nizwa-gis':'GIS نزوى — حي التراث',compliance:'طبقة الامتثال القانوني والضريبي','vat-fta':'FTA — الفوترة الإلكترونية وتقارير VAT',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
   if(id==='renewal-engine') setTimeout(()=>{ if(window.RenewalEngine) RenewalEngine.drawChart('renewalForecastChart', Jawdah.renewalEngine || RenewalEngine.build()); }, 120);
   if(id==='nizwa-gis') setTimeout(()=>{ if(window.NizwaGIS) NizwaGIS.render('nizwaGisHost'); }, 80);
   if(id==='compliance') setTimeout(()=>{ if(window.ComplianceLayer) ComplianceLayer.render(); }, 80);
+  if(id==='vat-fta') setTimeout(()=>{ if(window.VatFTA) VatFTA.render(); }, 80);
   document.body.classList.toggle('dash-view', id==='dashboard');
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
-function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderTenantPortal(); renderRenewalEngine(); renderNizwaGis(); renderComplianceLayer(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
+function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderTenantPortal(); renderRenewalEngine(); renderNizwaGis(); renderComplianceLayer(); renderVatFta(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
 function collectApartmentRows(){
   const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
   const byNo=new Map();
@@ -1108,6 +1110,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
     ['renewal-engine','محرك التجديد','git-compare'],
     ['nizwa-gis','GIS نزوى','map-pin'],
     ['compliance','الامتثال','shield-check'],
+    ['vat-fta','FTA / VAT','qr-code'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
     ['reminders','تذكيرات واتساب','message-circle'],

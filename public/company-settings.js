@@ -255,6 +255,13 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
 .qls-signatures{display:flex;flex-direction:column;gap:18px;margin-top:8px;padding-top:14px;border-top:1px solid var(--line);width:100%}
 .qls-signatures .sig{min-height:52px;border-bottom:1px solid #bbb;font-size:10px;color:var(--muted);padding:8px 0 28px}
 .qls-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);font-size:9px;color:var(--muted);text-align:center;line-height:1.65}
+.qls-fta-qr{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px;border:1px dashed var(--gold-light);border-radius:16px;background:rgba(255,255,255,.92);margin-top:8px;text-align:center}
+.qls-fta-qr img{border-radius:12px;border:1px solid var(--line);background:#fff;padding:6px}
+.qls-fta-qr-meta strong{display:block;font-size:12px;color:var(--gold);margin-bottom:4px}
+.qls-fta-qr-meta .mini{display:block;font-size:10px;color:var(--muted);margin-bottom:6px}
+.qls-fta-qr-meta code{display:block;font-size:8px;color:var(--muted);word-break:break-all;direction:ltr;text-align:left;max-width:100%}
+.qls-fta-qr.demo{flex-direction:row;justify-content:center;flex-wrap:wrap}
+.qls-fta-foot{font-size:9px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.6}
 @media(max-width:520px){
   .qls-table thead{display:none}
   .qls-table tbody tr{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff}
@@ -336,6 +343,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
     const lineDesc = `${desc.ar.split('\n')[0]} / ${desc.en.split('\n')[0]}`;
     const bank = (this.settings.bank?.accounts || [])[0];
     const statusAr = { Paid: 'مدفوعة', Pending: 'مستحقة', Partial: 'جزئية', Overdue: 'متأخرة' }[inv.status] || inv.status;
+    const ftaQr = window.VatFTA ? VatFTA.invoiceQrHtml(inv, v) : '';
     return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${this.escapeHtml(inv.invoice_no)}</title><style>${this.invoiceDocumentStyles()}</style></head><body>
       <article class="qls-invoice">
         ${this.invoiceCompactHeaderHtml(inv.invoice_no)}
@@ -396,6 +404,8 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
             <div class="row balance"><span>المتبقي / Balance Due</span><span dir="ltr">${remVat.total.toFixed(3)} OMR</span></div>
           </div>
         </div>
+        ${ftaQr}
+        <p class="qls-fta-foot">فاتورة ضريبية إلكترونية · Sultanate of Oman · VAT ${Math.round(v.rate * 100)}% · ${this.escapeHtml(this.settings.vat_reg_no || 'VAT Reg pending')}</p>
         <div class="qls-signatures">
           <div class="sig">Prepared By · أعدّها</div>
           <div class="sig">Client Signature · توقيع العميل</div>
