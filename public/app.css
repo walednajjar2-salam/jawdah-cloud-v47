@@ -431,3 +431,7 @@ body.dash-view .content{padding-top:8px}
 .export-toolbar .export-pdf:hover{border-color:rgba(248,113,113,.4)!important}
 .export-all-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
 .export-all-bar .gold-btn,.export-all-bar .ghost{display:inline-flex;align-items:center;gap:6px}
+.tenant-portal-hero{margin-bottom:16px}
+.tenant-proof-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);margin-bottom:10px;flex-wrap:wrap}
+.tenant-proof-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tenant-maint-card{border-color:rgba(64,224,208,.35)!important;box-shadow:0 0 24px rgba(64,224,208,.08)!important}

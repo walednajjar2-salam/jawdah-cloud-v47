@@ -74,7 +74,7 @@ ROLE_PERMISSIONS = {
 
 TABLES = {
     "properties": ["id", "name", "type", "status", "price", "location", "image", "last_update", "notes"],
-    "clients": ["id", "name", "phone", "email", "national_id", "balance", "notes"],
+    "clients": ["id", "name", "phone", "email", "national_id", "balance", "notes", "portal_token", "portal_active"],
     "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "notes"],
     "invoices": ["id", "invoice_no", "contract_id", "client_id", "property_id", "issue_date", "due_date", "description", "amount", "paid_amount", "status"],
     "payments": ["id", "invoice_id", "client_id", "property_id", "contract_id", "payment_date", "amount", "method", "note"],
@@ -91,9 +91,10 @@ TABLES = {
     "financial_periods": ["id", "period_name", "start_date", "end_date", "status", "closed_by", "closed_at", "notes"],
     "approvals": ["id", "entity", "entity_id", "request_type", "status", "requested_by", "approved_by", "requested_at", "approved_at", "notes"],
     "bank_reconciliations": ["id", "bank_name", "period_name", "book_balance", "bank_balance", "difference", "status", "reconciled_by", "reconciled_at", "notes"],
-    "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
+    "maintenance": ["id", "property_id", "client_id", "source", "title", "priority", "status", "request_date", "cost", "notes"],
     "users": ["id", "username", "name", "role", "active", "created_at", "last_login"],
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
+    "payment_proofs": ["id", "client_id", "invoice_id", "amount", "transfer_ref", "proof_image", "note", "status", "submitted_at", "reviewed_at", "reviewed_by", "review_note"],
 }
 
 WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
@@ -449,8 +450,34 @@ def init_db() -> None:
                 entity_id TEXT,
                 details TEXT
             );
+            CREATE TABLE IF NOT EXISTS payment_proofs (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                invoice_id TEXT,
+                amount REAL NOT NULL DEFAULT 0,
+                transfer_ref TEXT,
+                proof_image TEXT,
+                note TEXT,
+                status TEXT NOT NULL DEFAULT 'pending',
+                submitted_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                reviewed_by TEXT,
+                review_note TEXT,
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(invoice_id) REFERENCES invoices(id)
+            );
             """
         )
+        for col, definition in [
+            ("portal_token", "TEXT"),
+            ("portal_active", "INTEGER NOT NULL DEFAULT 1"),
+        ]:
+            ensure_column(db, "clients", col, definition)
+        for col, definition in [
+            ("client_id", "TEXT"),
+            ("source", "TEXT DEFAULT 'staff'"),
+        ]:
+            ensure_column(db, "maintenance", col, definition)
         for col, definition in [
             ("contract_no", "TEXT"),
             ("contract_type", "TEXT DEFAULT 'Residential'"),
@@ -482,7 +509,22 @@ def init_db() -> None:
         ensure_user(db, "razan.accounting", "Razan — المحاسبة", "accountant", "Jawdeh123")
         ensure_user(db, "operations", "تشغيل العقارات", "operations", "LaunchOps2026")
         ensure_user(db, "maintenance", "فريق الصيانة", "maintenance", "LaunchMaint2026")
+        ensure_client_portal_tokens(db)
         db.commit()
+
+
+def ensure_client_portal_tokens(db: sqlite3.Connection) -> None:
+    rows = db.execute("SELECT id FROM clients WHERE portal_token IS NULL OR portal_token=''").fetchall()
+    for row in rows:
+        active = db.execute(
+            "SELECT 1 FROM contracts WHERE client_id=? AND lower(status) LIKE '%active%' LIMIT 1",
+            (row["id"],),
+        ).fetchone()
+        if active:
+            db.execute(
+                "UPDATE clients SET portal_token=?, portal_active=1 WHERE id=?",
+                (secrets.token_urlsafe(24), row["id"]),
+            )
 
 
 def insert(db: sqlite3.Connection, table: str, row: Dict[str, Any]) -> None:
@@ -882,6 +924,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "export" and method == "GET" and len(parts) >= 2:
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_export_csv(db, parts[1])
+                if parts[0] == "portal":
+                    return self.api_portal(db, method, parts[1:], query)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -1199,38 +1243,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
         data = self.read_json()
         invoice_id = data.get("invoice_id")
         amount = float(data.get("amount") or 0)
-        invoice = db.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
-        if not invoice:
-            return self.send_json({"ok": False, "error": "Invoice not found"}, 404)
-        if amount <= 0:
-            return self.send_json({"ok": False, "error": "Payment amount must be positive"}, 400)
-        remaining = float(invoice["amount"]) - float(invoice["paid_amount"])
-        if amount > remaining + 0.001:
-            return self.send_json({"ok": False, "error": "Payment exceeds remaining invoice balance"}, 400)
-        new_paid = float(invoice["paid_amount"]) + amount
-        status = "Paid" if new_paid >= float(invoice["amount"]) - 0.001 else "Partial"
-        payment = {
-            "id": uid("PAY"),
-            "invoice_id": invoice["id"],
-            "client_id": invoice["client_id"],
-            "property_id": invoice["property_id"],
-            "contract_id": invoice["contract_id"],
-            "payment_date": data.get("payment_date") or today(),
-            "amount": amount,
-            "method": data.get("method") or "Cash",
-            "note": data.get("note") or "Invoice payment",
-        }
-        account = {
-            "id": uid("ACC"), "entry_date": payment["payment_date"], "type": "income", "category": "Collection",
-            "description": f"Payment for {invoice['invoice_no']}", "client_id": invoice["client_id"], "property_id": invoice["property_id"],
-            "invoice_id": invoice["id"], "amount": amount,
-        }
-        insert(db, "payments", payment)
-        insert(db, "accounts", account)
-        db.execute("UPDATE invoices SET paid_amount=?, status=? WHERE id=?", (new_paid, status, invoice["id"]))
-        audit(db, user, "pay", "invoices", invoice["id"], f"Collected {amount} for {invoice['invoice_no']}")
+        try:
+            result = self.apply_invoice_payment(
+                db, user, invoice_id, amount,
+                method=data.get("method") or "Cash",
+                note=data.get("note") or "Invoice payment",
+                payment_date=data.get("payment_date"),
+            )
+        except ValueError as exc:
+            return self.send_json({"ok": False, "error": str(exc)}, 400)
         db.commit()
-        self.send_json({"ok": True, "payment": payment, "status": status, "paid_amount": new_paid})
+        self.send_json({"ok": True, **result})
 
     def api_approve_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -1447,6 +1470,268 @@ class JawdahHandler(BaseHTTPRequestHandler):
         audit(db, user, "restore", "database", None, f"Restore mode {mode}")
         db.commit()
         self.send_json({"ok": True})
+
+    def portal_client(self, db: sqlite3.Connection, token: str) -> Optional[Dict[str, Any]]:
+        token = (token or "").strip()
+        if not token:
+            return None
+        row = db.execute(
+            "SELECT * FROM clients WHERE portal_token=? AND COALESCE(portal_active,1)=1",
+            (token,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def portal_token_from_query(self, query: str) -> str:
+        params = urllib.parse.parse_qs(query or "")
+        return (params.get("token") or params.get("t") or [""])[0].strip()
+
+    def apply_invoice_payment(
+        self,
+        db: sqlite3.Connection,
+        user: Optional[Dict[str, Any]],
+        invoice_id: str,
+        amount: float,
+        method: str = "Bank Transfer",
+        note: str = "Invoice payment",
+        payment_date: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        invoice = db.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
+        if not invoice:
+            raise ValueError("Invoice not found")
+        if amount <= 0:
+            raise ValueError("Payment amount must be positive")
+        remaining = float(invoice["amount"]) - float(invoice["paid_amount"])
+        if amount > remaining + 0.001:
+            raise ValueError("Payment exceeds remaining invoice balance")
+        new_paid = float(invoice["paid_amount"]) + amount
+        status = "Paid" if new_paid >= float(invoice["amount"]) - 0.001 else "Partial"
+        payment = {
+            "id": uid("PAY"),
+            "invoice_id": invoice["id"],
+            "client_id": invoice["client_id"],
+            "property_id": invoice["property_id"],
+            "contract_id": invoice["contract_id"],
+            "payment_date": payment_date or today(),
+            "amount": amount,
+            "method": method,
+            "note": note,
+        }
+        account = {
+            "id": uid("ACC"),
+            "entry_date": payment["payment_date"],
+            "type": "income",
+            "category": "Collection",
+            "description": f"Payment for {invoice['invoice_no']}",
+            "client_id": invoice["client_id"],
+            "property_id": invoice["property_id"],
+            "invoice_id": invoice["id"],
+            "amount": amount,
+        }
+        insert(db, "payments", payment)
+        insert(db, "accounts", account)
+        db.execute("UPDATE invoices SET paid_amount=?, status=? WHERE id=?", (new_paid, status, invoice["id"]))
+        if user:
+            audit(db, user, "pay", "invoices", invoice["id"], f"Collected {amount} for {invoice['invoice_no']}")
+        return {"payment": payment, "status": status, "paid_amount": new_paid}
+
+    def api_portal(self, db: sqlite3.Connection, method: str, parts: List[str], query: str) -> None:
+        action = parts[0] if parts else ""
+        if action == "dashboard" and method == "GET":
+            client = self.portal_client(db, self.portal_token_from_query(query))
+            if not client:
+                return self.send_json({"ok": False, "error": "رابط البوابة غير صالح أو معطّل"}, 401)
+            cid = client["id"]
+            contracts = rows_to_dicts(
+                db.execute(
+                    "SELECT * FROM contracts WHERE client_id=? ORDER BY end_date DESC",
+                    (cid,),
+                ).fetchall()
+            )
+            invoices = rows_to_dicts(
+                db.execute(
+                    "SELECT * FROM invoices WHERE client_id=? ORDER BY due_date DESC",
+                    (cid,),
+                ).fetchall()
+            )
+            payments = rows_to_dicts(
+                db.execute(
+                    "SELECT * FROM payments WHERE client_id=? ORDER BY payment_date DESC LIMIT 50",
+                    (cid,),
+                ).fetchall()
+            )
+            maintenance = rows_to_dicts(
+                db.execute(
+                    "SELECT * FROM maintenance WHERE client_id=? OR property_id IN (SELECT property_id FROM contracts WHERE client_id=?) ORDER BY request_date DESC",
+                    (cid, cid),
+                ).fetchall()
+            )
+            proofs = rows_to_dicts(
+                db.execute(
+                    "SELECT id, invoice_id, amount, transfer_ref, status, submitted_at, review_note FROM payment_proofs WHERE client_id=? ORDER BY submitted_at DESC LIMIT 20",
+                    (cid,),
+                ).fetchall()
+            )
+            props = {}
+            for c in contracts:
+                p = db.execute("SELECT id, name, location, status FROM properties WHERE id=?", (c["property_id"],)).fetchone()
+                if p:
+                    props[c["property_id"]] = dict(p)
+            billed = sum(float(i["amount"] or 0) for i in invoices)
+            paid = sum(float(i["paid_amount"] or 0) for i in invoices)
+            open_count = sum(1 for i in invoices if i["status"] != "Paid")
+            return self.send_json({
+                "ok": True,
+                "client": {k: client[k] for k in ("id", "name", "phone", "email", "national_id") if k in client},
+                "company": load_company_settings(COMPANY_SETTINGS_PATH),
+                "contracts": contracts,
+                "invoices": invoices,
+                "payments": payments,
+                "maintenance": maintenance,
+                "proofs": proofs,
+                "properties": props,
+                "summary": {
+                    "billed": billed,
+                    "paid": paid,
+                    "balance": max(0, billed - paid),
+                    "open_invoices": open_count,
+                },
+            })
+        if action == "submit_proof" and method == "POST":
+            data = self.read_json()
+            client = self.portal_client(db, str(data.get("token") or ""))
+            if not client:
+                return self.send_json({"ok": False, "error": "رابط البوابة غير صالح"}, 401)
+            invoice_id = data.get("invoice_id")
+            amount = float(data.get("amount") or 0)
+            if not invoice_id or amount <= 0:
+                return self.send_json({"ok": False, "error": "اختر الفاتورة والمبلغ"}, 400)
+            invoice = db.execute("SELECT * FROM invoices WHERE id=? AND client_id=?", (invoice_id, client["id"])).fetchone()
+            if not invoice:
+                return self.send_json({"ok": False, "error": "الفاتورة غير موجودة"}, 404)
+            proof_image = str(data.get("proof_image") or "")[:500000]
+            proof = {
+                "id": uid("PRF"),
+                "client_id": client["id"],
+                "invoice_id": invoice_id,
+                "amount": amount,
+                "transfer_ref": str(data.get("transfer_ref") or "").strip()[:120],
+                "proof_image": proof_image,
+                "note": str(data.get("note") or "").strip()[:500],
+                "status": "pending",
+                "submitted_at": now_iso(),
+                "reviewed_at": None,
+                "reviewed_by": None,
+                "review_note": None,
+            }
+            insert(db, "payment_proofs", proof)
+            audit(db, {"username": client["name"], "id": client["id"]}, "portal_proof", "payment_proofs", proof["id"], f"Tenant submitted proof for {invoice['invoice_no']}")
+            db.commit()
+            return self.send_json({"ok": True, "proof": {k: proof[k] for k in ("id", "status", "submitted_at")}})
+        if action == "maintenance" and method == "POST":
+            data = self.read_json()
+            client = self.portal_client(db, str(data.get("token") or ""))
+            if not client:
+                return self.send_json({"ok": False, "error": "رابط البوابة غير صالح"}, 401)
+            title = str(data.get("title") or "").strip()
+            if not title:
+                return self.send_json({"ok": False, "error": "عنوان الطلب مطلوب"}, 400)
+            contract = db.execute(
+                "SELECT * FROM contracts WHERE client_id=? AND lower(status) LIKE '%active%' ORDER BY end_date DESC LIMIT 1",
+                (client["id"],),
+            ).fetchone()
+            if not contract:
+                return self.send_json({"ok": False, "error": "لا يوجد عقد نشط مرتبط بحسابك"}, 400)
+            maint = {
+                "id": uid("MNT"),
+                "property_id": contract["property_id"],
+                "client_id": client["id"],
+                "source": "tenant",
+                "title": title[:200],
+                "priority": str(data.get("priority") or "Medium")[:20],
+                "status": "Open",
+                "request_date": today(),
+                "cost": 0,
+                "notes": str(data.get("notes") or "طلب من بوابة المستأجر")[:1000],
+            }
+            insert(db, "maintenance", maint)
+            audit(db, {"username": client["name"], "id": client["id"]}, "portal_maint", "maintenance", maint["id"], title)
+            db.commit()
+            return self.send_json({"ok": True, "maintenance": maint})
+        if action == "generate_token" and method == "POST":
+            user = self.require_user(db, "clients")
+            if not user:
+                return
+            data = self.read_json()
+            client_id = data.get("client_id")
+            row = db.execute("SELECT id, portal_token FROM clients WHERE id=?", (client_id,)).fetchone()
+            if not row:
+                return self.send_json({"ok": False, "error": "Client not found"}, 404)
+            token = row["portal_token"] or secrets.token_urlsafe(24)
+            db.execute("UPDATE clients SET portal_token=?, portal_active=1 WHERE id=?", (token, client_id))
+            audit(db, user, "portal_token", "clients", client_id, "Generated tenant portal link")
+            db.commit()
+            return self.send_json({"ok": True, "token": token, "client_id": client_id})
+        if action == "toggle" and method == "POST":
+            user = self.require_user(db, "clients")
+            if not user:
+                return
+            data = self.read_json()
+            client_id = data.get("client_id")
+            active = 1 if data.get("active", True) else 0
+            db.execute("UPDATE clients SET portal_active=? WHERE id=?", (active, client_id))
+            audit(db, user, "portal_toggle", "clients", client_id, f"Portal active={active}")
+            db.commit()
+            return self.send_json({"ok": True, "active": bool(active)})
+        if action == "proofs" and method == "GET":
+            user = self.require_user(db, "invoices:read")
+            if not user:
+                return
+            params = urllib.parse.parse_qs(query or "")
+            st = (params.get("status") or [""])[0]
+            if st:
+                rows = rows_to_dicts(db.execute("SELECT * FROM payment_proofs WHERE status=? ORDER BY submitted_at DESC", (st,)).fetchall())
+            else:
+                rows = rows_to_dicts(db.execute("SELECT * FROM payment_proofs ORDER BY submitted_at DESC LIMIT 100").fetchall())
+            return self.send_json({"ok": True, "items": rows})
+        if action == "review_proof" and method == "POST":
+            user = self.require_user(db, "invoices")
+            if not user:
+                return
+            data = self.read_json()
+            proof_id = data.get("proof_id")
+            action_type = str(data.get("action") or "").lower()
+            proof = db.execute("SELECT * FROM payment_proofs WHERE id=?", (proof_id,)).fetchone()
+            if not proof:
+                return self.send_json({"ok": False, "error": "Proof not found"}, 404)
+            if proof["status"] != "pending":
+                return self.send_json({"ok": False, "error": "تمت مراجعة هذا الإثبات مسبقاً"}, 400)
+            review_note = str(data.get("review_note") or "").strip()[:500]
+            if action_type == "approve":
+                try:
+                    result = self.apply_invoice_payment(
+                        db, user, proof["invoice_id"], float(proof["amount"]),
+                        method="Bank Transfer",
+                        note=f"Approved tenant proof {proof_id}" + (f" — {review_note}" if review_note else ""),
+                    )
+                except ValueError as exc:
+                    return self.send_json({"ok": False, "error": str(exc)}, 400)
+                db.execute(
+                    "UPDATE payment_proofs SET status=?, reviewed_at=?, reviewed_by=?, review_note=? WHERE id=?",
+                    ("approved", now_iso(), user["username"], review_note, proof_id),
+                )
+                audit(db, user, "approve_proof", "payment_proofs", proof_id, f"Approved {proof['amount']} OMR")
+                db.commit()
+                return self.send_json({"ok": True, "status": "approved", "payment": result})
+            if action_type == "reject":
+                db.execute(
+                    "UPDATE payment_proofs SET status=?, reviewed_at=?, reviewed_by=?, review_note=? WHERE id=?",
+                    ("rejected", now_iso(), user["username"], review_note, proof_id),
+                )
+                audit(db, user, "reject_proof", "payment_proofs", proof_id, review_note or "Rejected")
+                db.commit()
+                return self.send_json({"ok": True, "status": "rejected"})
+            return self.send_json({"ok": False, "error": "action must be approve or reject"}, 400)
+        return self.send_json({"ok": False, "error": "Unknown portal endpoint"}, 404)
 
     def api_export_csv(self, db: sqlite3.Connection, table: str) -> None:
         if table not in TABLES:

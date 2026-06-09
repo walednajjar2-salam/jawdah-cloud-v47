@@ -114,6 +114,7 @@ function buildNav(){
     ['properties','العقارات','building-2'],
     ['apartments','إدارة الشقق','layout-grid'],
     ['clients','العملاء','users-round'],
+    ['tenant-portal','بوابة المستأجر','smartphone'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
     ['reminders','تذكيرات واتساب','message-circle'],
@@ -147,11 +148,11 @@ function buildNav(){
 function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
-  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء','tenant-portal':'بوابة المستأجر',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
   document.body.classList.toggle('dash-view', id==='dashboard');
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
-function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
+function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderTenantPortal(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
 function collectApartmentRows(){
   const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
   const byNo=new Map();
@@ -513,7 +514,46 @@ function renderApartments(){
 }
 function renderClients(){
   const rows=filterRows('clients',['name','phone','email','national_id']);
-  $('#clientsTable').innerHTML=tableHtml([['الاسم','name'],['الهاتف','phone'],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['ملاحظات','notes']],rows,r=>`<button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
+  $('#clientsTable').innerHTML=tableHtml([['الاسم','name'],['الهاتف','phone'],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['البوابة','portal_token',(_,r)=>r.portal_token?'<span class="badge paid">مفعّلة</span>':'<span class="badge vacant">—</span>'],['ملاحظات','notes']],rows,r=>`<button class="gold-btn" onclick="generatePortalLink('${r.id}')">${ic('smartphone','quick-ic')} بوابة</button> <button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
+  paintIcons($('#clientsTable'));
+}
+async function generatePortalLink(clientId){
+  try{
+    const res=await api('portal/generate_token',{method:'POST',body:JSON.stringify({client_id:clientId})});
+    const url=location.origin+'/portal.html?t='+encodeURIComponent(res.token);
+    const client=byId('clients',clientId);
+    if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(url);
+    $('#genericModalBody').innerHTML=`<h2>بوابة المستأجر — ${client.name||''}</h2><p class="mini">انسخ الرابط وأرسله للمستأجر عبر واتساب:</p><input readonly value="${url}" style="width:100%;padding:12px;border-radius:12px;margin:12px 0" onclick="this.select()"><div class="toolbar"><a class="gold-btn glass-btn-wa" href="${ReminderHub?.waUrl?.(client.phone,`مرحباً ${client.name||''}، رابط بوابة المستأجر لعرض الفواتير ورفع إثبات التحويل:\n${url}`)||'#'}" target="_blank" rel="noopener">${ic('message-circle')} واتساب</a><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div>`;
+    openModal('genericModal'); paintIcons($('#genericModalBody'));
+    await loadAll(); toast('تم إنشاء/تحديث رابط البوابة');
+  }catch(e){ toast(e.message,true); }
+}
+async function reviewPaymentProof(proofId, action){
+  const note=action==='reject'?prompt('سبب الرفض (اختياري):',''):'';
+  try{
+    await api('portal/review_proof',{method:'POST',body:JSON.stringify({proof_id:proofId,action,review_note:note||''})});
+    toast(action==='approve'?'تم اعتماد الإثبات وتحديث الفاتورة':'تم رفض الإثبات');
+    await loadAll(); renderTenantPortal();
+  }catch(e){ toast(e.message,true); }
+}
+function renderTenantPortal(refresh){
+  const proofs=(Jawdah.data.payment_proofs||[]).filter(p=>p.status==='pending');
+  const host=$('#tenantPortalProofs');
+  if(host){
+    host.innerHTML=proofs.length?proofs.map(p=>{
+      const client=byId('clients',p.client_id);
+      const inv=byId('invoices',p.invoice_id);
+      const img=p.proof_image?`<a class="ghost" href="${p.proof_image}" target="_blank" rel="noopener">عرض الصورة</a>`:'';
+      return `<div class="tenant-proof-row ${p.status}"><div><b>${client.name||p.client_id}</b> · فاتورة ${inv.invoice_no||p.invoice_id||'—'}<div class="mini">${money(p.amount)} · مرجع: ${p.transfer_ref||'—'} · ${p.submitted_at||''}</div>${p.note?`<div class="mini">${p.note}</div>`:''}</div><div class="tenant-proof-actions">${img}<button class="gold-btn" onclick="reviewPaymentProof('${p.id}','approve')">اعتماد</button><button class="ghost" onclick="reviewPaymentProof('${p.id}','reject')">رفض</button></div></div>`;
+    }).join(''):`<div class="ecc-empty">${ic('circle-check-big','title-ic')} لا توجد إثباتات بانتظار المراجعة</div>`;
+    paintIcons(host);
+  }
+  const links=$('#tenantPortalLinks');
+  if(links){
+    const clients=(Jawdah.data.clients||[]).filter(c=>c.portal_token);
+    links.innerHTML=clients.length?tableHtml([['العميل','name'],['الهاتف','phone'],['الحالة','portal_active',(_,r)=>r.portal_active?badge('Active'):badge('Inactive')]],clients,r=>`<button class="ghost" onclick="generatePortalLink('${r.id}')">نسخ الرابط</button>`):'<p class="mini">لا روابط بعد — اضغط «بوابة» من جدول العملاء.</p>';
+  }
+  if(refresh) toast('تم تحديث بوابة المستأجر');
 }
 function renderContracts(){
   fillSelect('#contractProperty',Jawdah.data.properties||[],true,'id','name'); fillSelect('#contractClient',Jawdah.data.clients||[],true,'id','name');
@@ -630,7 +670,7 @@ function renderAccounts(){
 function renderMaintenance(){
   fillSelect('#maintProperty',Jawdah.data.properties||[],true,'id','name');
   const rows=filterRows('maintenance',['title','priority','status','notes']);
-  $('#maintenanceGrid').innerHTML=rows.map(m=>`<div class="card"><h3>${m.title}</h3><p>${byId('properties',m.property_id).name||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord('maintenance','${m.id}')">متابعة</button> <button class="danger" onclick="delRecord('maintenance','${m.id}')">حذف</button></div>`).join('')||'<div class="card">لا توجد طلبات صيانة</div>';
+  $('#maintenanceGrid').innerHTML=rows.map(m=>`<div class="card ${m.source==='tenant'?'tenant-maint-card':''}"><h3>${m.title} ${m.source==='tenant'?'<span class="badge partial">من البوابة</span>':''}</h3><p>${byId('properties',m.property_id).name||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord('maintenance','${m.id}')">متابعة</button> <button class="danger" onclick="delRecord('maintenance','${m.id}')">حذف</button></div>`).join('')||'<div class="card">لا توجد طلبات صيانة</div>';
 }
 function renderUsers(){
   if(!Jawdah.data.users){ $('#usersTable').innerHTML='<div class="card">هذا القسم للمدير فقط</div>'; return; }
@@ -719,7 +759,7 @@ async function createClient(){
 }
 async function createContract(){ await saveNew('contracts',{contract_type:val('contractType')||'Residential',property_id:val('contractProperty'),client_id:val('contractClient'),tenant_nationality:val('tenantNationality'),tenant_id_no:val('tenantIdNo'),unit_details:val('unitDetails'),start_date:val('contractStart')||today(),end_date:val('contractEnd')||today(),rent_amount:num('contractRent'),deposit_amount:num('contractDeposit'),late_fee:num('contractLateFee'),grace_days:num('contractGraceDays')||5,renewal_notice_days:num('contractRenewalDays')||90,status:'Draft',payment_cycle:'monthly',legal_terms:val('contractLegalTerms')||CompanyProfile.defaultLegalTerms(),notes:val('contractNotes')}); }
 async function createAccount(){ await saveNew('accounts',{entry_date:val('accDate')||today(),type:val('accType'),category:val('accCategory'),description:val('accDesc'),client_id:val('accClient')||null,property_id:val('accProperty')||null,invoice_id:null,amount:num('accAmount')}); }
-async function createMaintenance(){ await saveNew('maintenance',{property_id:val('maintProperty'),title:val('maintTitle'),priority:val('maintPriority'),status:'Open',request_date:today(),cost:num('maintCost'),notes:val('maintNotes')}); }
+async function createMaintenance(){ await saveNew('maintenance',{property_id:val('maintProperty'),client_id:null,source:'staff',title:val('maintTitle'),priority:val('maintPriority'),status:'Open',request_date:today(),cost:num('maintCost'),notes:val('maintNotes')}); }
 async function createUser(){ await saveNew('users',{username:val('uUsername'),name:val('uName'),role:val('uRole'),password:val('uPassword'),active:true}); }
 async function saveNew(table,row){ try{ await api(table,{method:'POST',body:JSON.stringify(row)}); toast('تم الحفظ'); await loadAll(); }catch(e){toast(e.message,true)} }
 function val(id){ return ($('#'+id)?.value||'').trim(); } function num(id){ return Number(val(id)||0); }
@@ -1062,6 +1102,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
     ['properties','العقارات','building-2'],
     ['apartments','إدارة الشقق','layout-grid'],
     ['clients','العملاء','users-round'],
+    ['tenant-portal','بوابة المستأجر','smartphone'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
     ['reminders','تذكيرات واتساب','message-circle'],

@@ -164,6 +164,26 @@
         <div class="card"><div class="toolbar"><span class="export-slot" data-table="clients"></span></div><div id="clientsTable"></div></div>
       </section>
 
+      <section id="sec-tenant-portal" class="section">
+        <div class="card accounting-hero tenant-portal-hero">
+          <h3><i data-lucide="smartphone" class="lucide-icon title-ic"></i> بوابة المستأجر — المرحلة 1</h3>
+          <p class="mini">رابط خاص لكل مستأجر: عرض العقد والفواتير · رفع إثبات التحويل · طلب صيانة — بدون تسجيل دخول للموظفين.</p>
+        </div>
+        <div class="card glass-float-panel">
+          <div class="toolbar tenant-portal-toolbar">
+            <h3><i data-lucide="clipboard-check" class="lucide-icon title-ic"></i> إثباتات تحويل بانتظار المراجعة</h3>
+            <span class="export-slot" data-table="payment_proofs"></span>
+            <button class="ghost glass-btn" onclick="renderTenantPortal(true)"><i data-lucide="refresh-cw" class="lucide-icon"></i> تحديث</button>
+          </div>
+          <div id="tenantPortalProofs"></div>
+        </div>
+        <div class="card">
+          <h3>روابط البوابة للعملاء</h3>
+          <p class="mini">من قسم <b>العملاء</b> اضغط «رابط البوابة» لنسخ الرابط وإرساله عبر واتساب.</p>
+          <div id="tenantPortalLinks"></div>
+        </div>
+      </section>
+
       <section id="sec-contracts" class="section">
         <div id="renewalQueueBox"></div>
         <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة: رقم الشقة، المبنى، الطابق، المواقف"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractDeposit" placeholder="التأمين OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="90"><textarea id="contractLegalTerms" rows="14" placeholder="الشروط القانونية وحماية الشركة — تُعبأ تلقائياً"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>

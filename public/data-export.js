@@ -25,6 +25,7 @@ window.DataExport = {
     apartments: 'إدارة الشقق — نزوى حي التراث',
     reports: 'التقارير المالية التنفيذية',
     statements: 'القوائم المالية',
+    payment_proofs: 'إثباتات التحويل',
   },
 
   ALL_TABLES: [
