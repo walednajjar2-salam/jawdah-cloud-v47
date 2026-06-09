@@ -14,7 +14,7 @@ DEFAULT_COMPANY_SETTINGS: Dict[str, Any] = {
     "po_box": "320",
     "vat_rate": 0.05,
     "vat_reg_no": "",
-    "logo_url": "assets/logo-primary.png",
+    "logo_url": "assets/logo.svg",
     "description_ar": (
         "جودة الانطلاقة للخدمات ل.ل.س هي مؤسسة خدمية متخصصة في تقديم الخدمات المتعلقة بالعقارات، "
         "بالإضافة إلى خدمات الضيافة للمناسبات والعزاء، من خلال كادر وظيفي مترابط وذو خبرة طويلة في هذه المجالات، "
@@ -128,6 +128,24 @@ def merge_company_settings(raw: Dict[str, Any] | None) -> Dict[str, Any]:
         else:
             merged[key] = value
     return merged
+
+
+def build_invoice_description(
+    description: str,
+    *,
+    property_name: str = "",
+    property_location: str = "",
+    client_name: str = "",
+    unit_details: str = "",
+    due_date: str = "",
+) -> str:
+    custom = str(description or "").strip()
+    if custom and len(custom) > 24 and custom.lower() not in {"rent invoice", "فاتورة إيجار"}:
+        return custom
+    unit = property_name or unit_details or "الوحدة المؤجرة"
+    location = property_location or "نزوى — حي التراث"
+    tenant = client_name or "المستأجر"
+    return f"إيجار شهري — {unit} — {location} — المستأجر: {tenant} — استحقاق {due_date or '—'}"
 
 
 def load_company_settings(path: Path) -> Dict[str, Any]:

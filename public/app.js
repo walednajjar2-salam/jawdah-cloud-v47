@@ -602,7 +602,21 @@ function syncInvoiceContractPreview(){
   </div>`;
   if($('#invAmount') && Number(c.rent_amount)>0) $('#invAmount').value=Number(c.rent_amount).toFixed(3);
   if($('#invDueDate') && !$('#invDueDate').value) $('#invDueDate').value=today();
+  const descEl=$('#invDescription');
+  if(descEl && CompanyProfile?.buildInvoiceDescription){
+    const draft={due_date:val('invDueDate')||today(), issue_date:today(), description:''};
+    const built=CompanyProfile.buildInvoiceDescription(draft, client, prop, c);
+    descEl.value=built.ar.split('\n')[0];
+  }
   paintIcons(preview);
+}
+function previewInvoiceTemplate(){
+  const html=CompanyProfile.sampleInvoiceHtml();
+  $('#invoicePreview').innerHTML=`<iframe class="invoice-preview-frame" title="Invoice Template Preview"></iframe>`;
+  const frame=$('#invoicePreview iframe');
+  if(frame) frame.srcdoc=html;
+  Jawdah.invoiceForPrint=null;
+  openModal('invoiceModal');
 }
 async function submitCreateInvoice(){
   if(!canWriteInvoices()) return toast('لا تملك صلاحية إنشاء الفواتير', true);

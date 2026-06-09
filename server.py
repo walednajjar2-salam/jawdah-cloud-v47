@@ -25,7 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from company_branding import DEFAULT_COMPANY_SETTINGS, build_contract_html, default_legal_terms, load_company_settings, save_company_settings
+from company_branding import DEFAULT_COMPANY_SETTINGS, build_contract_html, build_invoice_description, default_legal_terms, load_company_settings, save_company_settings
 
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
@@ -1287,6 +1287,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
         amount = float(data.get("amount") or contract["rent_amount"] or 0)
         if amount <= 0:
             return self.send_json({"ok": False, "error": "مبلغ الفاتورة يجب أن يكون أكبر من صفر"}, 400)
+        prop = db.execute("SELECT name, location FROM properties WHERE id=?", (contract["property_id"],)).fetchone()
+        client = db.execute("SELECT name FROM clients WHERE id=?", (contract["client_id"],)).fetchone()
+        due_date = data.get("due_date") or (date.today() + timedelta(days=7)).isoformat()
+        description = build_invoice_description(
+            data.get("description") or "",
+            property_name=(prop["name"] if prop else ""),
+            property_location=(prop["location"] if prop else ""),
+            client_name=(client["name"] if client else ""),
+            unit_details=contract["unit_details"] or "",
+            due_date=due_date,
+        )
         invoice = {
             "id": uid("INV"),
             "invoice_no": next_invoice_no(db),
@@ -1294,8 +1305,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "client_id": contract["client_id"],
             "property_id": contract["property_id"],
             "issue_date": data.get("issue_date") or today(),
-            "due_date": data.get("due_date") or (date.today() + timedelta(days=7)).isoformat(),
-            "description": data.get("description") or "Rent invoice",
+            "due_date": due_date,
+            "description": description,
             "amount": amount,
             "paid_amount": 0,
             "status": "Pending",

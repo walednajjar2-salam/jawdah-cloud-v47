@@ -230,14 +230,15 @@
             <select id="invContractPick" onchange="syncInvoiceContractPreview()"><option value="">— اختر العقد —</option></select>
             <input id="invDueDate" type="date" placeholder="تاريخ الاستحقاق">
             <input id="invAmount" type="number" step="0.001" placeholder="المبلغ شامل ض.ق.م OMR">
-            <input id="invDescription" placeholder="وصف الفاتورة" value="فاتورة إيجار">
+            <textarea id="invDescription" rows="3" placeholder="وصف الفاتورة — يُعبّأ تلقائياً عند اختيار العقد">فاتورة إيجار</textarea>
             <div id="invLinkPreview" class="link-preview"></div>
           </div>
           <button id="invCreateBtn" class="gold-btn" onclick="submitCreateInvoice()"><i data-lucide="receipt" class="lucide-icon"></i> إنشاء وربط الفاتورة</button>
         </div>
         <div class="card invoice-hub-card">
           <div class="toolbar invoice-hub-toolbar">
-            <div><h3>الفواتير الضريبية والتحصيل</h3><p class="mini">فاتورة ضريبية خاضعة لضريبة القيمة المضافة — مع شعار المؤسسة وبيانات البنك في رأس كل مستند.</p></div>
+            <div><h3>الفواتير الضريبية والتحصيل</h3><p class="mini">الوصف التفصيلي · الشقة · الفترة · VAT — معاينة القالب قبل الطباعة أو PDF</p></div>
+            <button class="ghost" onclick="previewInvoiceTemplate()"><i data-lucide="eye" class="lucide-icon"></i> معاينة القالب الجديد</button>
             <span class="export-slot" data-table="invoices"></span>
           </div>
           <div id="invoicesTable"></div>

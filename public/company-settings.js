@@ -7,7 +7,7 @@ window.DEFAULT_COMPANY_SETTINGS = {
   po_box: '320',
   vat_rate: 0.05,
   vat_reg_no: '',
-  logo_url: 'assets/logo-primary.png',
+  logo_url: 'assets/logo.svg',
   description_ar: 'جودة الانطلاقة للخدمات ل.ل.س هي مؤسسة خدمية متخصصة في تقديم الخدمات المتعلقة بالعقارات، بالإضافة إلى خدمات الضيافة للمناسبات والعزاء، من خلال كادر وظيفي مترابط وذو خبرة طويلة في هذه المجالات، بما يضمن تقديم خدمات منظمة وموثوقة وبجودة عالية.',
   description_en: 'Quality of Launch Services LLC is a service-oriented company specializing in real estate-related services and hospitality services for various occasions, including events and condolence gatherings. The company operates with a well-coordinated professional team that has extensive experience in these fields, ensuring reliable, organized, and high-quality service delivery.',
   contacts: {
@@ -72,6 +72,51 @@ window.CompanyProfile = {
       try { return new URL(p, window.location.href).href; } catch (e) { /* fall through */ }
     }
     return p;
+  },
+
+  logoUrlWithFallback() {
+    return this.logoUrl();
+  },
+
+  /** Rich bilingual invoice description from contract + property context */
+  buildInvoiceDescription(inv, client, prop, contract) {
+    const custom = String(inv?.description || '').trim();
+    if (custom && custom.length > 24 && !/^rent invoice|فاتورة إيجار$/i.test(custom)) {
+      return { ar: custom, en: custom, period: this.invoicePeriodLabel(inv, contract) };
+    }
+    const aptMatch = String(prop?.name || '').match(/شقة\s*(\d+)/);
+    const aptNo = aptMatch ? aptMatch[1] : (String(contract?.unit_details || '').match(/\d+/) || [''])[0];
+    const unit = prop?.name || contract?.unit_details || 'الوحدة المؤجرة';
+    const location = prop?.location || 'نزوى — حي التراث';
+    const tenant = client?.name || 'المستأجر';
+    const period = this.invoicePeriodLabel(inv, contract);
+    const cycle = String(contract?.payment_cycle || 'monthly').toLowerCase();
+    const cycleAr = cycle.includes('year') ? 'سنوي' : cycle.includes('quarter') ? 'ربع سنوي' : 'شهري';
+    const cycleEn = cycle.includes('year') ? 'Annual' : cycle.includes('quarter') ? 'Quarterly' : 'Monthly';
+    return {
+      ar: `إيجار ${cycleAr} — ${unit}${aptNo ? ` (شقة ${aptNo})` : ''} — ${location}\nالمستأجر: ${tenant}\n${period.ar}`,
+      en: `${cycleEn} rent — ${unit}${aptNo ? ` (Apt ${aptNo})` : ''} — ${location}\nTenant: ${tenant}\n${period.en}`,
+      period,
+    };
+  },
+
+  invoicePeriodLabel(inv, contract) {
+    const todayIso = () => new Date().toISOString().slice(0, 10);
+    const due = inv?.due_date || inv?.issue_date || todayIso();
+    const d = new Date(String(due) + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) {
+      return { ar: 'الفترة: —', en: 'Period: —', from: due, to: due };
+    }
+    const from = new Date(d.getFullYear(), d.getMonth(), 1);
+    const to = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const fmt = x => x.toISOString().slice(0, 10);
+    const fmtAr = x => x.toLocaleDateString('ar-OM');
+    return {
+      from: fmt(from),
+      to: fmt(to),
+      ar: `فترة الفاتورة: ${fmtAr(from)} — ${fmtAr(to)}`,
+      en: `Billing period: ${fmt(from)} — ${fmt(to)}`,
+    };
   },
 
   vatBreakdown(grossAmount) {
@@ -159,6 +204,92 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
 .qls-footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);text-align:center;line-height:1.7}
 @media(max-width:720px){.qls-intro{grid-template-columns:1fr}.qls-meta-grid{grid-template-columns:1fr}.qls-signatures{grid-template-columns:1fr}}
 @media print{body{background:#fff}.qls-doc{padding:18px;max-width:none}.qls-doc:before{opacity:.035}}`;
+
+  invoiceDocumentStyles() {
+    return `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
+:root{--gold:#b8892f;--gold-light:#d4af37;--ink:#1a1a1a;--muted:#5c5348;--line:#e8dcc8;--paper:#fdfbf7;--accent:#8b6914}
+*{box-sizing:border-box}
+@page{size:A4 portrait;margin:12mm}
+body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.qls-invoice{position:relative;background:var(--paper);padding:24px 28px 28px;width:210mm;max-width:100%;min-height:297mm;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.qls-invoice:before{content:"";position:absolute;inset:0;background:url('${this.logoUrl()}') center 62% / 38% no-repeat;opacity:.022;pointer-events:none;z-index:0}
+.qls-invoice>*{position:relative;z-index:1}
+.qls-inv-top{display:flex;flex-direction:column;align-items:center;text-align:center;padding-bottom:14px;border-bottom:2px solid var(--gold-light);gap:10px}
+.qls-inv-logo{width:96px;height:auto;object-fit:contain;display:block;margin:0 auto}
+.qls-inv-brand{width:100%}
+.qls-inv-brand h1{margin:0 0 4px;font-family:"Tajawal",sans-serif;font-size:1.15rem;font-weight:800;color:var(--gold);line-height:1.4}
+.qls-inv-brand h2{margin:0 0 8px;font-family:"Cormorant Garamond",serif;font-size:1rem;font-weight:700;color:var(--ink)}
+.qls-inv-brand .meta{font-size:10px;line-height:1.8;color:var(--muted);display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px}
+.qls-inv-brand .meta span{display:inline-block}
+.qls-inv-title{text-align:center;direction:rtl;width:100%}
+.qls-inv-title .badge{display:inline-block;padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#fff8e8,#f5ecd6);border:1px solid var(--gold-light);color:var(--gold);font-size:10px;font-weight:700;margin-bottom:6px}
+.qls-inv-title h3{margin:0;font-size:1.45rem;color:var(--ink)}
+.qls-inv-title .no{margin:6px 0 0;font-size:14px;font-weight:700;color:var(--gold)}
+.qls-inv-meta-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qls-inv-meta-item{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.88);font-size:11px}
+.qls-inv-meta-item .label{display:block;color:var(--muted);font-size:10px;margin-bottom:4px}
+.qls-inv-meta-item .value{font-weight:700;color:var(--ink);display:block}
+.qls-inv-parties{display:flex;flex-direction:column;gap:10px}
+.qls-inv-party{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.9);width:100%}
+.qls-inv-party h4{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold)}
+.qls-inv-party p{margin:0 0 5px;font-size:12px;line-height:1.55}
+.qls-inv-party .name{font-size:15px;font-weight:700;color:var(--ink)}
+.qls-inv-description{padding:16px 18px;border:2px solid var(--gold-light);border-radius:16px;background:linear-gradient(135deg,#fffdf8,#faf6ee);box-shadow:0 4px 18px rgba(184,137,47,.08);width:100%}
+.qls-inv-description h4{margin:0 0 10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.qls-inv-description .desc-ar{margin:0 0 8px;font-family:"Tajawal",sans-serif;font-size:15px;font-weight:700;line-height:1.8;color:var(--ink);white-space:pre-line}
+.qls-inv-description .desc-en{margin:0 0 8px;font-family:"Outfit",sans-serif;font-size:12px;line-height:1.65;color:var(--muted);white-space:pre-line;direction:ltr;text-align:left}
+.qls-inv-description .period{display:block;margin-top:6px;padding:6px 12px;border-radius:10px;background:rgba(184,137,47,.12);font-size:11px;font-weight:600;color:var(--accent);line-height:1.6}
+.qls-table{width:100%;border-collapse:collapse;font-size:12px}
+.qls-table th,.qls-table td{border:1px solid var(--line);padding:10px 12px;text-align:right;vertical-align:top}
+.qls-table th{background:linear-gradient(180deg,#faf6ee,#f3ead8);color:var(--gold);font-weight:700;font-size:11px}
+.qls-table td.desc-cell{font-weight:600;line-height:1.55}
+.qls-table td.num{direction:ltr;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap}
+.qls-line-stack{display:none}
+.qls-inv-bottom{display:flex;flex-direction:column;gap:12px;width:100%}
+.qls-bank-box{padding:14px;border:1px dashed var(--line);border-radius:12px;font-size:11px;line-height:1.75;color:var(--muted);width:100%}
+.qls-bank-box strong{display:block;color:var(--ink);margin-bottom:6px;font-size:12px}
+.qls-totals{width:100%;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.92)}
+.qls-totals .row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.qls-totals .row.total{font-size:16px;font-weight:800;color:var(--gold);border-bottom:0;padding-top:10px}
+.qls-totals .row.balance{font-weight:700;color:#92400e;font-size:13px}
+.qls-signatures{display:flex;flex-direction:column;gap:18px;margin-top:8px;padding-top:14px;border-top:1px solid var(--line);width:100%}
+.qls-signatures .sig{min-height:52px;border-bottom:1px solid #bbb;font-size:10px;color:var(--muted);padding:8px 0 28px}
+.qls-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);font-size:9px;color:var(--muted);text-align:center;line-height:1.65}
+@media(max-width:520px){
+  .qls-table thead{display:none}
+  .qls-table tbody tr{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff}
+  .qls-table td{border:none;padding:0}
+  .qls-table td:before{content:attr(data-label);display:block;font-size:10px;color:var(--muted);margin-bottom:2px}
+}
+@media print{
+  body{background:#fff}
+  .qls-invoice{padding:10mm 12mm;width:100%;min-height:auto;gap:12px}
+  .qls-invoice:before{opacity:.018}
+}`;
+  },
+
+  invoiceCompactHeaderHtml(invNo) {
+    const s = this.settings;
+    return `
+      <header class="qls-inv-top">
+        <img class="qls-inv-logo" src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(s.name_en)}" onerror="this.src='assets/logo.svg'">
+        <div class="qls-inv-brand">
+          <h1>${this.escapeHtml(s.name_ar)}</h1>
+          <h2>${this.escapeHtml(s.name_en)}</h2>
+          <div class="meta">
+            <span>C.R. ${this.escapeHtml(s.cr_no)}</span>
+            <span>P.O. ${this.escapeHtml(s.po_box)}</span>
+            <span>Postal ${this.escapeHtml(s.postal_code)}</span>
+            ${s.vat_reg_no ? `<span>VAT ${this.escapeHtml(s.vat_reg_no)}</span>` : '<span>VAT Reg: —</span>'}
+            <span>Tel ${this.escapeHtml(s.contacts?.customer_service)}</span>
+          </div>
+        </div>
+        <div class="qls-inv-title">
+          <span class="badge">Tax Invoice · VAT ${Math.round((s.vat_rate || 0) * 100)}%</span>
+          <h3>فاتورة ضريبية</h3>
+          ${invNo ? `<p class="no">${this.escapeHtml(invNo)}</p>` : ''}
+        </div>
+      </header>`;
   },
 
   headerHtml() {
@@ -201,33 +332,85 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
     const rem = Math.max(0, Number(inv.amount) - Number(inv.paid_amount || 0));
     const paidVat = this.vatBreakdown(inv.paid_amount);
     const remVat = this.vatBreakdown(rem);
-    return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${this.escapeHtml(inv.invoice_no)}</title><style>${this.documentStyles()}</style></head><body>
-      <article class="qls-doc">
-        ${this.headerHtml()}
-        <div class="qls-title-row">
-          <div><h1>فاتورة ضريبية / Tax Invoice</h1><div class="meta">Sultanate of Oman · سلطنة عُمان</div></div>
-          <div class="meta" dir="ltr" style="text-align:left">
-            <div><b>${this.escapeHtml(inv.invoice_no)}</b></div>
-            Issue: ${this.escapeHtml(inv.issue_date)}<br>
-            Due: ${this.escapeHtml(inv.due_date)}<br>
-            Status: ${this.escapeHtml(inv.status)}
+    const desc = this.buildInvoiceDescription(inv, client, prop, contract);
+    const lineDesc = `${desc.ar.split('\n')[0]} / ${desc.en.split('\n')[0]}`;
+    const bank = (this.settings.bank?.accounts || [])[0];
+    const statusAr = { Paid: 'مدفوعة', Pending: 'مستحقة', Partial: 'جزئية', Overdue: 'متأخرة' }[inv.status] || inv.status;
+    return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${this.escapeHtml(inv.invoice_no)}</title><style>${this.invoiceDocumentStyles()}</style></head><body>
+      <article class="qls-invoice">
+        ${this.invoiceCompactHeaderHtml(inv.invoice_no)}
+        <div class="qls-inv-meta-row">
+          <div class="qls-inv-meta-item"><span class="label">تاريخ الإصدار / Issue</span><span class="value">${this.escapeHtml(inv.issue_date)}</span></div>
+          <div class="qls-inv-meta-item"><span class="label">تاريخ الاستحقاق / Due</span><span class="value">${this.escapeHtml(inv.due_date)}</span></div>
+          <div class="qls-inv-meta-item"><span class="label">الحالة / Status</span><span class="value">${this.escapeHtml(statusAr)} · ${this.escapeHtml(inv.status)}</span></div>
+          <div class="qls-inv-meta-item"><span class="label">رقم العقد / Contract</span><span class="value">${this.escapeHtml(contract?.contract_no || contract?.id || '—')}</span></div>
+        </div>
+        <div class="qls-inv-parties">
+          <div class="qls-inv-party">
+            <h4>Bill To · فاتورة إلى</h4>
+            <p class="name">${this.escapeHtml(client?.name || '—')}</p>
+            <p>${this.escapeHtml(client?.phone || '—')}${client?.email ? ` · ${this.escapeHtml(client.email)}` : ''}</p>
+            <p>هوية / سجل: ${this.escapeHtml(client?.national_id || contract?.tenant_id_no || '—')}</p>
+          </div>
+          <div class="qls-inv-party">
+            <h4>Contract & Property · العقد والعقار</h4>
+            <p class="name">${this.escapeHtml(prop?.name || '—')}</p>
+            <p>${this.escapeHtml(prop?.location || contract?.unit_details || '—')}</p>
+            <p>عقد: ${this.escapeHtml(contract?.contract_no || contract?.id || '—')} · ${this.escapeHtml(contract?.contract_type || '')}</p>
           </div>
         </div>
-        <div class="qls-meta-grid">
-          <div class="qls-card"><h4>Bill To · العميل</h4><p><span class="value">${this.escapeHtml(client?.name)}</span></p><p>${this.escapeHtml(client?.phone || '')}</p><p>${this.escapeHtml(client?.email || '')}</p><p>${this.escapeHtml(client?.national_id || '')}</p></div>
-          <div class="qls-card"><h4>Contract / Property · العقد والعقار</h4><p><span class="label">Contract</span> <span class="value">${this.escapeHtml(contract?.contract_no || contract?.id || '')}</span></p><p><span class="value">${this.escapeHtml(prop?.name || '')}</span></p><p>${this.escapeHtml(prop?.location || '')}</p></div>
+        <section class="qls-inv-description">
+          <h4>الوصف / Description — تفاصيل الخدمة</h4>
+          <p class="desc-ar">${this.escapeHtml(desc.ar)}</p>
+          <p class="desc-en">${this.escapeHtml(desc.en)}</p>
+          <span class="period">${this.escapeHtml(desc.period.ar)} · ${this.escapeHtml(desc.period.en)}</span>
+        </section>
+        <table class="qls-table">
+          <thead><tr>
+            <th>الوصف / Description</th>
+            <th>الفترة / Period</th>
+            <th>أساسي / Subtotal</th>
+            <th>ض.ق.م ${Math.round(v.rate * 100)}%</th>
+            <th>الإجمالي / Total</th>
+          </tr></thead>
+          <tbody><tr>
+            <td class="desc-cell" data-label="الوصف">${this.escapeHtml(lineDesc)}</td>
+            <td data-label="الفترة">${this.escapeHtml(desc.period.from)} — ${this.escapeHtml(desc.period.to)}</td>
+            <td class="num" data-label="أساسي">${v.subtotal.toFixed(3)}</td>
+            <td class="num" data-label="VAT">${v.vat.toFixed(3)}</td>
+            <td class="num" data-label="الإجمالي">${v.total.toFixed(3)}</td>
+          </tr></tbody>
+        </table>
+        <div class="qls-inv-bottom">
+          <div class="qls-bank-box">
+            <strong>بيانات التحويل / Bank Details</strong>
+            ${this.escapeHtml(this.settings.bank?.name || 'Bank Muscat')}<br>
+            ${bank ? `${this.escapeHtml(bank.name)}<br><span dir="ltr">${this.escapeHtml(bank.number)}</span>` : '—'}
+            <br>يرجى ذكر رقم الفاتورة ${this.escapeHtml(inv.invoice_no)} عند التحويل.
+          </div>
+          <div class="qls-totals">
+            <div class="row"><span>المبلغ الأساسي (بدون VAT)</span><span dir="ltr">${v.subtotal.toFixed(3)} OMR</span></div>
+            <div class="row"><span>ضريبة القيمة المضافة ${Math.round(v.rate * 100)}%</span><span dir="ltr">${v.vat.toFixed(3)} OMR</span></div>
+            <div class="row total"><span>الإجمالي (شامل VAT)</span><span dir="ltr">${v.total.toFixed(3)} OMR</span></div>
+            <div class="row"><span>المدفوع / Paid</span><span dir="ltr">${paidVat.total.toFixed(3)} OMR</span></div>
+            <div class="row balance"><span>المتبقي / Balance Due</span><span dir="ltr">${remVat.total.toFixed(3)} OMR</span></div>
+          </div>
         </div>
-        <table class="qls-table"><thead><tr><th>الوصف / Description</th><th>المبلغ الأساسي / Subtotal (OMR)</th><th>ض.ق.م / VAT (OMR)</th><th>الإجمالي / Total (OMR)</th></tr></thead><tbody><tr><td>${this.escapeHtml(inv.description || 'Service')}</td><td>${v.subtotal.toFixed(3)}</td><td>${v.vat.toFixed(3)}</td><td>${v.total.toFixed(3)}</td></tr></tbody></table>
-        <div class="qls-totals">
-          <div class="row"><span>Subtotal (Excl. VAT)</span><span>${v.subtotal.toFixed(3)} OMR</span></div>
-          <div class="row"><span>VAT ${Math.round(v.rate * 100)}%</span><span>${v.vat.toFixed(3)} OMR</span></div>
-          <div class="row total"><span>Total (Incl. VAT)</span><span>${v.total.toFixed(3)} OMR</span></div>
-          <div class="row"><span>Paid</span><span>${paidVat.total.toFixed(3)} OMR</span></div>
-          <div class="row"><span>Balance Due</span><span>${remVat.total.toFixed(3)} OMR</span></div>
+        <div class="qls-signatures">
+          <div class="sig">Prepared By · أعدّها</div>
+          <div class="sig">Client Signature · توقيع العميل</div>
+          <div class="sig">Company Stamp · ختم المؤسسة</div>
         </div>
-        <div class="qls-signatures"><div class="sig">Prepared By · أعدّها</div><div class="sig">Client Signature · توقيع العميل</div><div class="sig">Company Stamp · ختم المؤسسة</div></div>
-        <footer class="qls-footer">${this.escapeHtml(this.settings.name_en)} · ${this.escapeHtml(this.settings.name_ar)}<br>C.R. ${this.escapeHtml(this.settings.cr_no)} · P.O. Box ${this.escapeHtml(this.settings.po_box)} · Postal ${this.escapeHtml(this.settings.postal_code)}</footer>
+        <footer class="qls-footer">${this.escapeHtml(this.settings.name_en)} · ${this.escapeHtml(this.settings.name_ar)} · C.R. ${this.escapeHtml(this.settings.cr_no)} · Sultanate of Oman</footer>
       </article></body></html>`;
+  },
+
+  sampleInvoiceHtml() {
+    const sampleInv = { invoice_no: 'INV-2026-0042', issue_date: '2026-06-01', due_date: '2026-06-08', description: '', amount: 120, paid_amount: 0, status: 'Pending' };
+    const sampleClient = { name: 'أحمد بن سالم الهنائي', phone: '96891234567', email: '', national_id: '12345678' };
+    const sampleProp = { name: 'شقة 101 — حي التراث', location: 'نزوى — حي التراث' };
+    const sampleContract = { contract_no: 'CNT-2026-0101', contract_type: 'Residential', unit_details: 'شقة 101، الطابق 1', tenant_id_no: '12345678', payment_cycle: 'monthly' };
+    return this.invoiceHtml(sampleInv, sampleClient, sampleProp, sampleContract);
   },
 
   contractHtml(c, client, prop) {

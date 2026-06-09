@@ -24,14 +24,23 @@ window.DocumentExport = {
     try {
       await this.waitForFrame(iframe);
       const doc = iframe.contentDocument;
-      const element = doc.querySelector('.qls-doc') || doc.body;
+      const element = doc.querySelector('.qls-invoice') || doc.querySelector('.qls-doc') || doc.body;
       const opt = {
-        margin: [6, 6, 6, 6],
+        margin: [8, 8, 8, 8],
         filename: filename.endsWith('.pdf') ? filename : `${filename}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, backgroundColor: '#fdfbf7' },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#fdfbf7',
+          scrollY: 0,
+          windowHeight: element.scrollHeight + 40,
+          height: element.scrollHeight + 40,
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+        pagebreak: { mode: ['css', 'legacy'] },
       };
       await html2pdf().set(opt).from(element).save();
     } finally {

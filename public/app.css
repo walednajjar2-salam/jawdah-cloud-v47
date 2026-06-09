@@ -151,7 +151,7 @@ body{font-family:"Outfit","Tajawal","Segoe UI",Arial,sans-serif}
 .invoice-hub-toolbar{align-items:flex-start;justify-content:space-between}
 .invoice-hub-toolbar h3{margin:0 0 6px}
 .invoice-modal-box{width:min(980px,100%)!important;background:#111!important}
-.invoice-preview-frame{width:100%;min-height:72vh;border:0;border-radius:16px;background:#fff}
+.invoice-preview-frame{width:100%;min-height:80vh;max-width:220mm;margin:0 auto;border:0;border-radius:16px;background:#fff;display:block}
 @media(max-width:900px){.brand-hero,.brand-hero-desc,.invoice-hub-grid{grid-template-columns:1fr}}
 @media print{.invoice-modal-box .toolbar{display:none!important}.invoice-preview-frame{min-height:auto}}
 .login-brand .brand-main{font-size:2rem}
@@ -220,7 +220,7 @@ body{background:radial-gradient(circle at 16% 0%,rgba(64,224,208,.09),transparen
 .topbar{background:rgba(6,6,6,.92)!important}
 .sidebar{background:linear-gradient(180deg,rgba(4,4,4,.99),rgba(0,0,0,1))!important}
 .invoice-create-card{border-color:rgba(64,224,208,.32)!important;margin-bottom:18px}
-.invoice-create-form{align-items:stretch}
+.invoice-create-form textarea{min-height:72px;resize:vertical}
 .link-preview{margin-top:4px;padding:14px 16px;border:1px dashed rgba(64,224,208,.28);border-radius:16px;background:rgba(64,224,208,.05);grid-column:1/-1}
 .link-preview-grid{display:flex;flex-wrap:wrap;gap:10px}
 .link-preview .badge .lucide-icon{width:15px;height:15px;margin-left:4px}
