@@ -95,6 +95,8 @@ TABLES = {
     "users": ["id", "username", "name", "role", "active", "created_at", "last_login"],
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
     "payment_proofs": ["id", "client_id", "invoice_id", "amount", "transfer_ref", "proof_image", "note", "status", "submitted_at", "reviewed_at", "reviewed_by", "review_note"],
+    "compliance_records": ["id", "contract_id", "check_key", "status", "notes", "updated_at", "updated_by"],
+    "compliance_archives": ["id", "title", "summary_score", "payload_json", "created_at", "created_by"],
 }
 
 WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
@@ -466,6 +468,26 @@ def init_db() -> None:
                 FOREIGN KEY(client_id) REFERENCES clients(id),
                 FOREIGN KEY(invoice_id) REFERENCES invoices(id)
             );
+            CREATE TABLE IF NOT EXISTS compliance_records (
+                id TEXT PRIMARY KEY,
+                contract_id TEXT NOT NULL,
+                check_key TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                notes TEXT,
+                updated_at TEXT NOT NULL,
+                updated_by TEXT,
+                FOREIGN KEY(contract_id) REFERENCES contracts(id)
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_compliance_contract_check
+                ON compliance_records(contract_id, check_key);
+            CREATE TABLE IF NOT EXISTS compliance_archives (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                summary_score REAL NOT NULL DEFAULT 0,
+                payload_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                created_by TEXT
+            );
             """
         )
         for col, definition in [
@@ -538,6 +560,7 @@ def reset_operational_data(db: sqlite3.Connection) -> None:
     tables = [
         "payments", "inventory_transactions", "bank_reconciliations", "approvals",
         "audit_log", "maintenance", "accounts", "invoices", "contracts",
+        "compliance_records", "compliance_archives",
         "purchase_invoices", "revenues", "salaries", "employees", "admin_expenses",
         "inventory_items", "bank_transactions", "financial_periods",
         "chart_accounts", "clients", "properties",
@@ -1021,6 +1044,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         table = parts[0]
         item_id = parts[1] if len(parts) > 1 else None
         perm_base = table
+        if table in ("compliance_records", "compliance_archives"):
+            perm_base = "contracts"
         read_perm = f"{perm_base}:read"
         write_perm = perm_base
         delete_perm = f"{perm_base}:delete"
@@ -1189,11 +1214,49 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if method == "POST":
                 sign = 1 if str(data.get("tx_type", "in")).lower() in ("in","purchase","return") else -1
                 db.execute("UPDATE inventory_items SET quantity = quantity + ? WHERE id=?", (sign*qty, data.get("item_id")))
+        if table == "compliance_records":
+            contract_id = str(data.get("contract_id") or "").strip()
+            check_key = str(data.get("check_key") or "").strip()
+            if not contract_id or not check_key:
+                return self.send_json({"ok": False, "error": "contract_id and check_key are required"}, 400)
+            if not exists(db, "contracts", contract_id):
+                return self.send_json({"ok": False, "error": "Contract not found"}, 400)
+            data["updated_at"] = now_iso()
+            data["updated_by"] = user.get("username")
+            data.setdefault("status", "ok")
+            existing = db.execute(
+                "SELECT id FROM compliance_records WHERE contract_id=? AND check_key=?",
+                (contract_id, check_key),
+            ).fetchone()
+            if method == "POST" and existing:
+                item_id = existing["id"]
+                method = "PUT"
+            elif method == "POST":
+                data.setdefault("id", uid("CMP"))
+        if table == "compliance_archives":
+            if method == "POST":
+                data.setdefault("id", uid("ARC"))
+                data.setdefault("created_at", now_iso())
+                data.setdefault("created_by", user.get("username"))
+                data["summary_score"] = float(data.get("summary_score") or 0)
+                payload = data.get("payload_json")
+                if isinstance(payload, dict):
+                    data["payload_json"] = json.dumps(payload, ensure_ascii=False)
+                if not str(data.get("title") or "").strip():
+                    data["title"] = f"Compliance archive {today()}"
+                if not data.get("payload_json"):
+                    return self.send_json({"ok": False, "error": "payload_json is required"}, 400)
         cols = [c for c in TABLES[table] if c in data]
         clean = {c: data.get(c) for c in cols}
         if method == "POST":
             insert(db, table, clean)
-            audit(db, user, "create", table, row_id, "Created record")
+            if table == "compliance_records":
+                detail = f"{clean.get('check_key')}={clean.get('status')} · contract {clean.get('contract_id')}"
+                audit(db, user, "compliance_check", table, row_id, detail)
+            elif table == "compliance_archives":
+                audit(db, user, "compliance_archive", table, row_id, clean.get("title") or "Compliance archive")
+            else:
+                audit(db, user, "create", table, row_id, "Created record")
             db.commit()
             return self.send_json({"ok": True, "item": clean})
         else:
@@ -1204,7 +1267,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True})
             sql = f"UPDATE {table} SET {','.join([c+'=?' for c in update_cols])} WHERE id=?"
             db.execute(sql, [clean[c] for c in update_cols] + [item_id])
-            audit(db, user, "update", table, item_id, "Updated record")
+            if table == "compliance_records":
+                audit(db, user, "compliance_check", table, item_id, f"{clean.get('check_key')}={clean.get('status')} · contract {clean.get('contract_id')}")
+            else:
+                audit(db, user, "update", table, item_id, "Updated record")
             db.commit()
             return self.send_json({"ok": True})
 

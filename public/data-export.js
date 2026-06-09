@@ -26,6 +26,8 @@ window.DataExport = {
     reports: 'التقارير المالية التنفيذية',
     statements: 'القوائم المالية',
     payment_proofs: 'إثباتات التحويل',
+    compliance_records: 'سجل الامتثال',
+    compliance_archives: 'أرشيف الامتثال',
   },
 
   ALL_TABLES: [
@@ -33,7 +35,7 @@ window.DataExport = {
     'purchase_invoices', 'revenues', 'salaries', 'employees', 'admin_expenses',
     'inventory_items', 'inventory_transactions', 'bank_transactions',
     'chart_accounts', 'bank_reconciliations', 'financial_periods',
-    'maintenance', 'approvals', 'audit_log',
+    'maintenance', 'approvals', 'audit_log', 'compliance_records', 'compliance_archives',
   ],
 
   COL_AR: {
