@@ -51,9 +51,21 @@ function setLoginStatus(msg, err=false){
   el.classList.toggle('err', !!err);
 }
 function showLoginShell(){
+  hideAppLoading();
   setUiShellMode('login');
   $('#loginScreen')?.classList.remove('hidden');
   $('#app')?.classList.add('hidden');
+}
+function setLoginBusy(busy){
+  const btn=$('#loginBtn');
+  if(btn){ btn.disabled=!!busy; btn.textContent=busy?'جاري الدخول...':'تسجيل الدخول'; }
+}
+function showAppLoading(msg='جاري تحميل النظام...'){
+  const el=$('#appLoader');
+  if(el){ el.textContent=msg; el.classList.remove('hidden'); }
+}
+function hideAppLoading(){
+  $('#appLoader')?.classList.add('hidden');
 }
 function showAppShell(){
   setUiShellMode('app');
@@ -96,28 +108,34 @@ async function login(){
     const username=$('#loginUser')?.value.trim()||'';
     const password=$('#loginPass')?.value||'';
     if(!username||!password){ setLoginStatus('أدخل اسم المستخدم وكلمة المرور', true); return; }
-    setLoginStatus('جاري تسجيل الدخول...');
+    setLoginBusy(true);
+    setLoginStatus('');
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
-    setLoginStatus('جاري تحميل النظام...');
-    await loadAll();
-    setLoginStatus('');
     showAppShell();
+    showAppLoading('جاري تحميل النظام...');
+    await loadAll();
+    hideAppLoading();
     showLoginWelcome();
-  }catch(e){ showLoginShell(); setLoginStatus(e.message||'تعذر تسجيل الدخول', true); toast(e.message,true); }
+  }catch(e){
+    hideAppLoading();
+    showLoginShell();
+    setLoginStatus(e.message||'تعذر تسجيل الدخول', true);
+    toast(e.message,true);
+  }finally{ setLoginBusy(false); }
 }
-async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; showLoginShell(); location.reload(); }
+async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; hideAppLoading(); showLoginShell(); location.reload(); }
 async function checkSession(){
   if(!Jawdah.token){ showLoginShell(); setLoginStatus(''); return; }
-  showLoginShell();
-  setLoginStatus('جاري استعادة الجلسة...');
   try{
+    showAppShell();
+    showAppLoading('جاري استعادة الجلسة...');
     const me=await api('me');
     Jawdah.user=me.user;
     await loadAll();
-    setLoginStatus('');
-    showAppShell();
+    hideAppLoading();
   }catch(e){
+    hideAppLoading();
     localStorage.removeItem('jawdah_cloud_token');
     Jawdah.token='';
     showLoginShell();
@@ -130,7 +148,7 @@ function setUiShellMode(mode){
 }
 async function loadAll(){
   try{
-    const res=await api('bootstrap');
+    const res=await api('bootstrap',{timeout:90000});
     Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;
     if(res.company_settings) CompanyProfile.apply(res.company_settings);
     $('#userName').textContent=Jawdah.user.name; $('#userRole').textContent=roleName(Jawdah.user.role); $('#avatar').textContent=isOwnerUser()?'ي':(Jawdah.user.name||'J').slice(0,1).toUpperCase();

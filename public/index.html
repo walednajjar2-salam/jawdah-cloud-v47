@@ -8,21 +8,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=20260609c">
+  <link rel="stylesheet" href="app.css?v=20260609d">
   <style>
     body.login-mode{margin:0;min-height:100vh;background:#0a0a0a}
-    #loginScreen{display:grid!important;place-items:center;min-height:100vh;padding:20px;position:relative;z-index:5}
+    body.login-mode .ambient-orbs,body.login-mode #uiWatermark,body.login-mode #app{display:none!important}
+    #loginScreen{display:grid!important;place-items:center;min-height:100vh;padding:20px;position:fixed;inset:0;z-index:99999;background:#0a0a0a}
     #loginScreen.hidden{display:none!important}
-    .login-minimal{width:min(380px,100%);padding:28px 24px;border-radius:24px;border:1px solid rgba(216,177,91,.35);background:rgba(18,18,18,.95);box-shadow:0 24px 60px rgba(0,0,0,.55)}
-    .login-minimal input{width:100%;margin:0 0 14px;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;display:block;box-sizing:border-box}
-    .login-minimal #loginBtn{
-      width:100%!important;display:block!important;visibility:visible!important;opacity:1!important;
-      min-height:52px!important;margin-top:10px!important;padding:14px 18px!important;
-      border:2px solid #d8b15b!important;border-radius:14px!important;
-      background:#d8b15b!important;color:#111!important;
-      font-weight:800!important;font-size:17px!important;cursor:pointer!important;
-      box-shadow:0 8px 24px rgba(216,177,91,.35)!important;
+    .login-pro{width:min(400px,100%);padding:32px 28px;border-radius:24px;border:1px solid rgba(216,177,91,.4);background:#141414;box-shadow:0 24px 60px rgba(0,0,0,.6);text-align:center}
+    .login-pro .login-logo{width:100px;height:auto;margin:0 auto 16px;display:block;border-radius:16px}
+    .login-pro h1{margin:0 0 6px;font-size:1.35rem;color:#d8b15b;font-weight:800}
+    .login-pro .login-sub{margin:0 0 22px;color:#aaa;font-size:13px}
+    .login-pro input{width:100%;margin:0 0 14px;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;display:block;box-sizing:border-box;font-size:15px}
+    .login-pro #loginBtn{
+      width:100%!important;display:block!important;min-height:52px!important;margin-top:4px!important;padding:14px!important;
+      border:2px solid #d8b15b!important;border-radius:14px!important;background:#d8b15b!important;color:#111!important;
+      font-weight:800!important;font-size:17px!important;cursor:pointer!important;box-shadow:0 8px 24px rgba(216,177,91,.4)!important;
     }
+    .login-pro #loginBtn:disabled{opacity:.7;cursor:wait}
+    .login-status{margin-top:12px;font-size:13px;color:#d8b15b}
+    .login-status.err{color:#ff8a8a}
+    #appLoader{position:fixed;inset:0;z-index:99998;background:rgba(10,10,10,.92);display:grid;place-items:center;color:#d8b15b;font-size:18px;font-weight:700}
+    #appLoader.hidden{display:none!important}
   </style>
 </head>
 <body class="login-mode">
@@ -33,13 +39,18 @@
   </div>
   <div id="uiWatermark" class="ui-watermark" aria-hidden="true"></div>
   <main id="loginScreen" class="login">
-    <form id="loginForm" class="login-card login-minimal" autocomplete="on">
+    <form id="loginForm" class="login-pro" autocomplete="on">
+      <img class="login-logo" src="assets/logo-primary.png" alt="Quality of Launch">
+      <h1>Quality of Launch Services</h1>
+      <p class="login-sub">جودة الانطلاقة للخدمات</p>
       <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
       <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
       <button id="loginBtn" type="button">تسجيل الدخول</button>
-      <p id="loginStatus" class="mini login-status hidden"></p>
+      <p id="loginStatus" class="login-status hidden"></p>
     </form>
   </main>
+
+  <div id="appLoader" class="hidden">جاري تحميل النظام...</div>
 
   <main id="app" class="app hidden">
     <aside id="sidebar" class="sidebar">
@@ -409,6 +420,6 @@
       }
     })();
   </script>
-  <script src="app.js?v=20260609c"></script>
+  <script src="app.js?v=20260609d"></script>
 </body>
 </html>
