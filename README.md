@@ -1,18 +1,29 @@
-# Launch Quality LLC — Jawdah Cloud v47
+# Launch Quality LLC v47
 
-Real Estate & Hospitality Management (Python + SQLite).
+Real Estate & Hospitality Management System — production backend + Arabic RTL dashboard.
 
-## Railway deploy
+## Features
 
-- Start command: `python server.py`
-- Health: `/api/health`
-- Variables: `JAWDAH_HOST=0.0.0.0`, `JAWDAH_DATA_DIR=/app/data`
+- Properties, clients, contracts, invoices, accounts
+- Contract approval with auto invoice schedule
+- **Contract renewal** workflow (`POST /api/renew_contract`)
+- Financial modules: purchases, payroll, inventory, bank
+- Backup / CSV export / health check
 
-See [RAILWAY.md](./RAILWAY.md) for full instructions.
+## Run locally
 
-## Login (seed)
+```bash
+pip install -r requirements.txt
+python server.py
+```
+
+Open: http://localhost:8765
+
+## Deploy on Railway
+
+See [RAILWAY.md](RAILWAY.md) or `DEPLOYMENT.txt`.
+
+## Default users
 
 - `admin` / `admin123`
 - `razan.accounting` / `Jawdeh123`
-
-Change passwords after first login.

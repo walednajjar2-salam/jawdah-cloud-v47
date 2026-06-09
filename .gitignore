@@ -5,4 +5,6 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
-*.log
+jawdah-cloud-v47/
+lanch-qulaty/
+_zip-check/

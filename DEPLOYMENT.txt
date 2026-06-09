@@ -1,16 +1,17 @@
-Launch Quality LLC - Production Final (Railway Ready)
+Launch Quality LLC v47 — Railway Production
 
-1) Upload this folder to GitHub (root of the repo).
-2) Railway → New Project → Deploy from GitHub.
+Repo: https://github.com/walednajjar2-salam/jawdah-cloud-v47
+
+1) Upload ALL files in this folder to GitHub repo root (not inside a subfolder)
+2) Railway → New Project → Deploy from GitHub → select jawdah-cloud-v47
 3) Variables:
    JAWDAH_HOST=0.0.0.0
    JAWDAH_DATA_DIR=/app/data
-4) Generate public domain in Railway Networking.
-5) Health: https://YOUR-DOMAIN.up.railway.app/api/health
-6) App URL:  https://YOUR-DOMAIN.up.railway.app/
+4) Networking → Generate Domain
+5) Test: https://YOUR-APP.up.railway.app/api/health
+6) Login: admin / admin123
+
+Optional: add Volume mounted at /app/data for persistent SQLite.
 
 Start command: python server.py
-See RAILWAY.md for full steps and volume setup.
-
-Default admin: admin / admin123
-Accountant: razan.accounting / Jawdeh123
+Health check: /api/health

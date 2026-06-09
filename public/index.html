@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Launch Quality LLC</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <main id="loginScreen" class="login hidden">
+    <section class="login-card">
+      <img src="assets/logo.svg" alt="Jawdah logo">
+      <h1>Launch Quality LLC</h1>
+      <p class="mini">Real Estate & Hospitality Management</p>
+      <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
+      <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
+      <button id="loginBtn" class="gold-btn" style="width:100%;margin-top:10px">تسجيل الدخول</button>
+      <p class="mini">Real Estate & Hospitality Management</p>
+    </section>
+  </main>
+
+  <main id="app" class="app hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="brand">
+        <img src="assets/logo.png" alt="logo">
+        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>
+      </div>
+      <nav id="nav" class="nav"></nav>
+    </aside>
+    <section class="content">
+      <header class="topbar">
+        <button id="menuBtn" class="ghost mobile-nav">☰</button>
+        <div class="search"><input id="globalSearch" placeholder="بحث سريع Ctrl + K"></div>
+        <button class="gold-btn" onclick="showSection('properties')">+ إضافة</button>
+        <div id="clock" class="top-pill">00:00:00</div>
+        <div class="userbox"><div id="avatar" class="avatar">J</div><div><b id="userName">User</b><br><small id="userRole" class="mini">Role</small></div></div>
+        <button id="logoutBtn" class="ghost">خروج</button>
+      </header>
+      <h2 id="sectionTitle">لوحة التحكم التنفيذية</h2><div id="launchBanner" class="launch-banner hidden"></div>
+
+      <section id="sec-dashboard" class="section active">
+        <div class="hero"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id="heroStats" class="status-line" style="margin-top:14px"></div></div>
+        <div id="kpiGrid" class="grid kpis"></div>
+        <div class="layout">
+          <div class="card"><h3>الإيرادات والمصروفات</h3><div class="canvas-wrap"><canvas id="incomeChart"></canvas></div></div>
+          <div class="card"><h3>خريطة GIS تشغيلية</h3><div class="gis"><div id="gisPins"></div></div></div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>قرارات الآن</h3><div id="decisionList"></div></div>
+          <div class="card"><h3>الإشغال</h3><div class="canvas-wrap"><canvas id="occupancyChart"></canvas></div></div>
+        </div>
+        <div class="card"><h3>إجراءات سريعة</h3><div id="quickActions" class="quick"></div></div>
+      </section>
+
+      <section id="sec-properties" class="section">
+        <div class="card"><h3>إضافة عقار</h3><div class="form"><input id="pImage" placeholder="إيموجي/رمز" value="🏠"><input id="pName" placeholder="اسم العقار"><input id="pType" placeholder="النوع"><select id="pStatus"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id="pPrice" placeholder="السعر"><input id="pLocation" placeholder="الموقع"><textarea id="pNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createProperty()">حفظ العقار</button></div>
+        <div class="card"><div class="toolbar"><select id="propStatusFilter" onchange="renderProperties()"></select><button class="ghost" onclick="exportCsv('properties')">تصدير CSV</button></div><div id="propertiesTable"></div></div>
+      </section>
+
+      <section id="sec-clients" class="section">
+        <div class="card"><h3>إضافة عميل</h3><div class="form"><input id="cName" placeholder="اسم العميل"><input id="cPhone" placeholder="الهاتف"><input id="cEmail" placeholder="البريد"><input id="cNational" placeholder="الهوية/السجل"><textarea id="cNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createClient()">حفظ العميل</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('clients')">تصدير CSV</button></div><div id="clientsTable"></div></div>
+      </section>
+
+      <section id="sec-contracts" class="section">
+        <div id="renewalQueueBox"></div>
+        <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة: رقم الشقة، المبنى، الطابق، المواقف"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractDeposit" placeholder="التأمين OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="30"><textarea id="contractLegalTerms" placeholder="الشروط القانونية وحماية الشركة"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('contracts')">تصدير CSV</button></div><div id="contractsTable"></div></div>
+      </section>
+
+      <section id="sec-invoices" class="section">
+        <div class="card"><h3>الفواتير والتحصيل</h3><p class="mini">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id="invoicesTable"></div></div>
+      </section>
+
+      <section id="sec-accounts" class="section">
+        <div class="card accounting-hero"><h3>محرك المحاسبة العقارية</h3><p class="mini">إيرادات، مصروفات، ذمم مدينة، كشف مستأجر، ربحية عقار، وتدفق نقدي مرتبط بالعقد والفاتورة والتحصيل.</p><div id="accountingExecutive" class="grid kpis"></div></div>
+        <div class="card"><h3>إضافة حركة مالية</h3><div class="form"><input id="accDate" type="date"><select id="accType"><option value="income">income</option><option value="expense">expense</option></select><input id="accCategory" placeholder="التصنيف"><input id="accDesc" placeholder="الوصف"><select id="accClient"></select><select id="accProperty"></select><input id="accAmount" placeholder="المبلغ"></div><button class="gold-btn" onclick="createAccount()">حفظ الحركة</button></div>
+        <div class="layout">
+          <div class="card"><h3>الإيرادات والمصروفات</h3><div id="accountSummary" class="status-line"></div><div class="canvas-wrap"><canvas id="expenseChart"></canvas></div></div>
+          <div class="card"><h3>أعمار الذمم المدينة</h3><div id="agingBox"></div></div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>كشف أرصدة المستأجرين</h3><div id="tenantBalanceBox"></div></div>
+          <div class="card"><h3>ربحية العقارات</h3><div id="propertyProfitBox"></div></div>
+        </div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('accounts')">تصدير CSV</button><button class="ghost" onclick="downloadFinancialReport()">تنزيل تقرير مالي HTML</button></div><div id="accountsTable"></div></div>
+      </section>
+
+      <section id="sec-maintenance" class="section">
+        <div class="card"><h3>طلب صيانة</h3><div class="form"><select id="maintProperty"></select><input id="maintTitle" placeholder="عنوان الطلب"><select id="maintPriority"><option>High</option><option>Medium</option><option>Low</option></select><input id="maintCost" placeholder="التكلفة المتوقعة"><textarea id="maintNotes" placeholder="تفاصيل"></textarea></div><button class="gold-btn" onclick="createMaintenance()">حفظ الطلب</button></div>
+        <div class="grid" id="maintenanceGrid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))"></div>
+      </section>
+
+
+      <section id="sec-purchases" class="section">
+        <div class="card"><h3>فواتير المشتريات</h3><div class="form"><input id="piSupplier" placeholder="المورد"><input id="piDate" type="date"><input id="piDue" type="date"><input id="piCategory" placeholder="التصنيف"><input id="piDesc" placeholder="الوصف"><input id="piAmount" placeholder="المبلغ"><input id="piPaid" placeholder="المدفوع"><select id="piProperty"></select></div><button class="gold-btn" onclick="createPurchaseInvoice()">حفظ فاتورة مشتريات</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('purchase_invoices')">تصدير CSV</button></div><div id="purchaseInvoicesTable"></div></div>
+      </section>
+      <section id="sec-revenues" class="section">
+        <div class="card"><h3>الإيرادات الأخرى</h3><div class="form"><input id="revDate" type="date"><input id="revSource" placeholder="المصدر"><input id="revCategory" placeholder="التصنيف"><input id="revDesc" placeholder="الوصف"><input id="revAmount" placeholder="المبلغ"><select id="revClient"></select><select id="revProperty"></select></div><button class="gold-btn" onclick="createRevenue()">حفظ الإيراد</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('revenues')">تصدير CSV</button></div><div id="revenuesTable"></div></div>
+      </section>
+      <section id="sec-payroll" class="section">
+        <div class="card"><h3>الرواتب</h3><div class="form"><input id="salEmployee" placeholder="اسم الموظف"><input id="salMonth" type="month"><input id="salBasic" placeholder="الراتب الأساسي"><input id="salAllow" placeholder="بدلات"><input id="salDeduct" placeholder="استقطاعات"><input id="salDate" type="date"><select id="salStatus"><option>Pending</option><option>Paid</option></select></div><button class="gold-btn" onclick="createSalary()">حفظ الراتب</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('salaries')">تصدير CSV</button></div><div id="salariesTable"></div></div>
+      </section>
+      <section id="sec-admin-expenses" class="section">
+        <div class="card"><h3>المصاريف الإدارية والعمومية</h3><div class="form"><input id="gaDate" type="date"><input id="gaCategory" placeholder="التصنيف"><input id="gaDesc" placeholder="الوصف"><input id="gaSupplier" placeholder="المورد"><input id="gaAmount" placeholder="المبلغ"><select id="gaProperty"></select></div><button class="gold-btn" onclick="createAdminExpense()">حفظ المصروف</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('admin_expenses')">تصدير CSV</button></div><div id="adminExpensesTable"></div></div>
+      </section>
+      <section id="sec-inventory" class="section">
+        <div class="card"><h3>المخزن</h3><div class="form"><input id="itemSku" placeholder="SKU"><input id="itemName" placeholder="اسم الصنف"><input id="itemCategory" placeholder="التصنيف"><input id="itemUnit" placeholder="الوحدة" value="pcs"><input id="itemQty" placeholder="الكمية"><input id="itemMin" placeholder="الحد الأدنى"><input id="itemCost" placeholder="تكلفة الوحدة"><input id="itemLocation" placeholder="الموقع"></div><button class="gold-btn" onclick="createInventoryItem()">حفظ الصنف</button></div>
+        <div class="card"><h3>حركة مخزون</h3><div class="form"><select id="stockItem"></select><input id="stockDate" type="date"><select id="stockType"><option value="in">in</option><option value="out">out</option></select><input id="stockQty" placeholder="الكمية"><input id="stockCost" placeholder="تكلفة الوحدة"><input id="stockRef" placeholder="المرجع"></div><button class="gold-btn" onclick="createInventoryTransaction()">حفظ الحركة</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('inventory_items')">تصدير الأصناف</button><button class="ghost" onclick="exportCsv('inventory_transactions')">تصدير الحركات</button></div><div id="inventoryTable"></div></div>
+      </section>
+      <section id="sec-bank" class="section">
+        <div class="card"><h3>كشف البنك</h3><div class="form"><input id="bankDate" type="date"><input id="bankName" placeholder="البنك"><input id="bankRef" placeholder="المرجع"><select id="bankType"><option value="deposit">deposit</option><option value="withdrawal">withdrawal</option></select><input id="bankDesc" placeholder="الوصف"><input id="bankAmount" placeholder="المبلغ"><select id="bankMatch"></select></div><button class="gold-btn" onclick="createBankTransaction()">حفظ حركة البنك</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('bank_transactions')">تصدير CSV</button></div><div id="bankTable"></div></div>
+      </section>
+      <section id="sec-chart-accounts" class="section">
+        <div class="card accounting-hero"><h3>دليل الحسابات (COA)</h3><p class="mini">شجرة الحسابات المحاسبية: أصول، خصوم، حقوق ملكية، إيرادات، ومصروفات — أساس القوائم المالية والتصنيف.</p><div id="coaSummary" class="status-line"></div></div>
+        <div class="card"><h3>إضافة حساب</h3><div class="form"><input id="coaCode" placeholder="رمز الحساب 5100"><input id="coaName" placeholder="اسم الحساب"><select id="coaType"><option>Asset</option><option>Liability</option><option>Equity</option><option>Revenue</option><option>Expense</option></select><select id="coaParent"></select><input id="coaNotes" placeholder="ملاحظات"></div><button class="gold-btn" onclick="createChartAccount()">حفظ الحساب</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('chart_accounts')">تصدير CSV</button></div><div id="chartAccountsTable"></div></div>
+      </section>
+      <section id="sec-bank-reconciliation" class="section">
+        <div class="card accounting-hero"><h3>تسوية البنك</h3><p class="mini">مطابقة رصيد الدفاتر مع كشف البنك — اكتشاف الفروقات وتسجيل قرار التسوية.</p><div id="reconciliationPreview" class="status-line"></div></div>
+        <div class="card"><h3>تسوية جديدة</h3><div class="form"><input id="recBank" placeholder="اسم البنك"><input id="recPeriod" placeholder="الفترة 2026-06"><input id="recBookBalance" placeholder="رصيد الدفاتر" readonly><input id="recBankBalance" placeholder="رصيد كشف البنك"><input id="recDifference" placeholder="الفرق" readonly><textarea id="recNotes" placeholder="ملاحظات التسوية"></textarea></div><div class="toolbar"><button class="ghost" onclick="previewBankReconciliation()">احسب من الدفاتر</button><button class="gold-btn" onclick="createBankReconciliation()">حفظ التسوية</button></div></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('bank_reconciliations')">تصدير CSV</button></div><div id="bankReconciliationsTable"></div></div>
+      </section>
+      <section id="sec-financial-periods" class="section">
+        <div class="card"><h3>الفترات المالية</h3><p class="mini">فتح وإغلاق الفترات المحاسبية قبل إقفال الشهر أو السنة.</p><div class="form"><input id="fpName" placeholder="اسم الفترة 2026-Q2"><input id="fpStart" type="date"><input id="fpEnd" type="date"><select id="fpStatus"><option>Open</option><option>Closed</option></select><textarea id="fpNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createFinancialPeriod()">حفظ الفترة</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('financial_periods')">تصدير CSV</button></div><div id="financialPeriodsTable"></div></div>
+      </section>
+      <section id="sec-statements" class="section">
+        <div class="card"><h3>القوائم المالية التلقائية</h3><p class="mini">قائمة الدخل والميزانية تتولد مباشرة من الحسابات والفواتير والمشتريات والرواتب والمخزن وكشف البنك.</p><button class="gold-btn" onclick="loadFinancialStatements()">توليد القوائم الآن</button><div id="statementsBox" style="margin-top:16px"></div></div>
+      </section>
+      <section id="sec-reports" class="section">
+        <div id="reportsBox"></div>
+        <div class="card"><button class="gold-btn" onclick="renderReports()">تحديث التقرير</button> <button class="ghost" onclick="downloadBackup()">تنزيل Backup</button></div>
+      </section>
+
+      <section id="sec-users" class="section">
+        <div class="card"><h3>إضافة مستخدم</h3><div class="form"><input id="uUsername" placeholder="اسم المستخدم"><input id="uName" placeholder="الاسم"><select id="uRole"><option value="admin">admin</option><option value="accountant">accountant</option><option value="operations">operations</option><option value="maintenance">maintenance</option><option value="viewer">viewer</option></select><input id="uPassword" placeholder="كلمة المرور"></div><button class="gold-btn" onclick="createUser()">حفظ المستخدم</button></div>
+        <div class="card"><div id="usersTable"></div></div>
+      </section>
+
+      <section id="sec-backup" class="section">
+        <div class="card"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id="backupStatus" class="status-line"></div><div class="toolbar" style="margin-top:16px"><button class="gold-btn" onclick="downloadBackup()">تنزيل Backup JSON</button><button class="ghost" onclick="exportCsv('properties')">عقارات CSV</button><button class="ghost" onclick="exportCsv('clients')">عملاء CSV</button><button class="ghost" onclick="exportCsv('contracts')">عقود CSV</button><button class="ghost" onclick="exportCsv('invoices')">فواتير CSV</button><button class="ghost" onclick="exportCsv('accounts')">حسابات CSV</button></div></div>
+      </section>
+
+
+      <section id="sec-production" class="section">
+        <div class="card production-hero"><h3>جاهزية التشغيل المؤسسي</h3><p class="mini">مركز مراجعة داخلي للتأكد من سلامة العقود، التقارير المالية، المستخدمين، والبيانات قبل التشغيل الفعلي.</p><button class="gold-btn" onclick="loadProductionStatus()">تشغيل فحص الجاهزية</button><div id="productionStatusBox" style="margin-top:16px"></div></div>
+        <div class="layout">
+          <div class="card"><h3>مراجعة العقود القانونية</h3><p>العقود التشغيلية جاهزة داخل النظام، وتعتمد رسمياً بعد مراجعة مستشار قانوني عماني للبنود النهائية.</p><ul class="check-list"><li>بيانات المؤجر والمستأجر والوحدة.</li><li>الإيجار، التأمين، الغرامات، التجديد، الإخلاء.</li><li>التوقيع والختم وطباعة العقد.</li></ul></div>
+          <div class="card"><h3>مراجعة التقارير المالية</h3><p>القوائم المالية تولد تلقائياً من الحسابات والفواتير والمشتريات والرواتب والمخزون والبنك.</p><ul class="check-list"><li>قائمة دخل.</li><li>ميزانية.</li><li>كشف بنك.</li><li>ذمم مدينة ودائنة.</li></ul></div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>اختبار المستخدمين</h3><div id="productionUsersBox"></div></div>
+          <div class="card"><h3>البيانات الحقيقية المطلوبة</h3><ul class="check-list"><li>العقارات والوحدات.</li><li>المستأجرون.</li><li>العقود.</li><li>الحسابات البنكية.</li></ul></div>
+        </div>
+      </section>
+
+      <section id="sec-qa" class="section">
+        <div class="card"><h3>اختبار التشغيل</h3><button class="gold-btn" onclick="runQA()">تشغيل الاختبار الآن</button><div id="qaBox" style="margin-top:15px"></div></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="paymentModal" class="modal"><div class="modal-box"><h2>تحصيل فاتورة</h2><p id="payInfo"></p><input id="payInvoiceId" type="hidden"><div class="form"><input id="payAmount" placeholder="المبلغ"><select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id="payNote" placeholder="ملاحظة"></div><button class="gold-btn" onclick="submitPayment()">تأكيد التحصيل</button> <button class="ghost" onclick="closeModal('paymentModal')">إغلاق</button></div></div>
+  <div id="invoiceModal" class="modal"><div class="modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="window.print()">طباعة A4</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
+  <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
+  <script src="app.js"></script>
+</body>
+</html>

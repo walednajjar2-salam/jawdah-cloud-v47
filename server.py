@@ -57,7 +57,7 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 
 ROLE_PERMISSIONS = {
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
     "operations": {"dashboard", "properties", "clients", "contracts", "invoices:read", "maintenance", "reports:read"},
     "maintenance": {"dashboard", "properties:read", "maintenance", "reports:read"},
     "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export"},
@@ -740,7 +740,6 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "service": "production",
                         "version": APP_VERSION,
                         "database": str(DB_PATH),
-                        "port": PORT,
                     })
                 if parts[0] == "login" and method == "POST":
                     return self.api_login(db)
@@ -773,6 +772,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "financial_statements" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_financial_statements(db)
+                if parts[0] == "bank_reconciliation_preview" and method == "GET":
+                    user = self.require_user(db, "bank_reconciliations:read")
+                    return None if not user else self.api_bank_reconciliation_preview(db, query)
                 if parts[0] == "production_status" and method == "GET":
                     user = self.require_user(db, "reports:read")
                     return None if not user else self.api_production_status(db)
@@ -1160,6 +1162,31 @@ class JawdahHandler(BaseHTTPRequestHandler):
         html = f"""<!doctype html><html lang='en' dir='ltr'><head><meta charset='utf-8'><title>{c['contract_no'] or c['id']}</title><style>body{{font-family:Arial; color:#111827; margin:35px}} h1{{color:#091627}} .gold{{color:#b8892f}} .box{{border:1px solid #d7c38a;padding:14px;border-radius:10px;margin:12px 0}} table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #ddd;padding:8px}}</style></head><body><h1>Launch Quality LLC Lease Contract</h1><h2 class='gold'>{c['contract_no'] or c['id']}</h2><div class='box'><b>Company:</b> Launch Quality LLC - Real Estate & Hospitality Management<br><b>Jurisdiction:</b> Sultanate of Oman</div><table><tr><th>Tenant</th><td>{client['name'] if client else ''}</td><th>ID/CR</th><td>{c['tenant_id_no'] or (client['national_id'] if client else '')}</td></tr><tr><th>Property</th><td>{prop['name'] if prop else ''}</td><th>Unit</th><td>{c['unit_details'] or (prop['location'] if prop else '')}</td></tr><tr><th>Start</th><td>{c['start_date']}</td><th>End</th><td>{c['end_date']}</td></tr><tr><th>Rent</th><td>{c['rent_amount']} OMR</td><th>Deposit</th><td>{c['deposit_amount']} OMR</td></tr><tr><th>Late Fee</th><td>{c['late_fee']} OMR</td><th>Grace Days</th><td>{c['grace_days']}</td></tr></table><div class='box'><h3>Protection Terms</h3><p>{c['legal_terms'] or default_legal_terms()}</p></div><br><table><tr><th>Tenant Signature</th><th>Company Signature</th><th>Company Stamp</th></tr><tr><td style='height:90px'></td><td>{c['company_signatory'] or 'Launch Quality LLC'}</td><td></td></tr></table></body></html>"""
         self.send_json({"ok": True, "html": html})
 
+    def api_bank_reconciliation_preview(self, db: sqlite3.Connection, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        bank_name = (params.get("bank_name") or [""])[0].strip()
+        period_name = (params.get("period_name") or [""])[0].strip()
+        sql = "SELECT type, amount FROM bank_transactions WHERE 1=1"
+        args: List[Any] = []
+        if bank_name:
+            sql += " AND bank_name=?"
+            args.append(bank_name)
+        rows = db.execute(sql, args).fetchall()
+        book_balance = sum(
+            (1 if str(r["type"] or "").lower() in ("deposit", "in", "income") else -1) * float(r["amount"] or 0)
+            for r in rows
+        )
+        open_periods = db.execute(
+            "SELECT period_name, start_date, end_date FROM financial_periods WHERE lower(status)='open' ORDER BY start_date DESC"
+        ).fetchall()
+        self.send_json({
+            "ok": True,
+            "bank_name": bank_name or "All Banks",
+            "period_name": period_name,
+            "book_balance": round(book_balance, 3),
+            "transaction_count": len(rows),
+            "open_periods": [dict(p) for p in open_periods],
+        })
 
     def api_financial_statements(self, db: sqlite3.Connection) -> None:
         accounts = rows_to_dicts(db.execute("SELECT * FROM accounts").fetchall())
@@ -1342,10 +1369,7 @@ def main() -> None:
     init_db()
     print(f"Launch Quality LLC {APP_VERSION} running on http://{HOST}:{PORT}")
     print(f"Database: {DB_PATH}")
-    print(f"Health check: /api/health")
-    if os.environ.get("RAILWAY_ENVIRONMENT"):
-        print(f"Railway environment: {os.environ.get('RAILWAY_ENVIRONMENT')}")
-        print(f"Public domain: {os.environ.get('RAILWAY_PUBLIC_DOMAIN', '(generate in Railway settings)')}")
+    print("Health check: /api/health")
     ThreadingHTTPServer((HOST, PORT), JawdahHandler).serve_forever()
 
 
