@@ -9,9 +9,9 @@ $ErrorActionPreference = "Stop"
 $dataPath = Join-Path (Split-Path $PSScriptRoot -Parent) "data\nizwa_apartments.json"
 $payload = Get-Content $dataPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
-function To-Status($ar) {
-  if ($ar -eq "مستأجرة") { return "Rented" }
-  if ($ar -eq "شاغرة") { return "Vacant" }
+function To-Status($code) {
+  if ($code -eq "rented") { return "Rented" }
+  if ($code -eq "vacant") { return "Vacant" }
   return "Maintenance"
 }
 
@@ -25,7 +25,23 @@ $login = Invoke-RestMethod -Uri "$BaseUrl/api/login" -Method POST -Body (@{usern
 $h = @{ Authorization = "Bearer $($login.token)" }
 $today = (Get-Date).ToString("yyyy-MM-dd")
 
+$existingProps = @{}
+try {
+  $propResp = Invoke-RestMethod -Uri "$BaseUrl/api/properties" -Headers $h
+  foreach ($p in @($propResp.items)) {
+    if ($p.name -match 'شقة\s*(\d+)') { $existingProps[$Matches[1]] = $p.id }
+  }
+} catch { Write-Host "Note: could not prefetch properties" }
+
 $clientMap = @{}
+$existingContracts = @{}
+try {
+  $conResp = Invoke-RestMethod -Uri "$BaseUrl/api/contracts" -Headers $h
+  foreach ($c in @($conResp.items)) {
+    if ($c.property_id) { $existingContracts[$c.property_id] = $true }
+  }
+} catch { Write-Host "Note: could not prefetch contracts" }
+
 $created = @{ properties = 0; clients = 0; contracts = 0; invoices = 0 }
 
 foreach ($apt in $payload.apartments) {
@@ -35,18 +51,25 @@ foreach ($apt in $payload.apartments) {
   $propBody = @{
     name = $propName
     type = "Apartment"
-    status = (To-Status $apt.status_ar)
+    status = (To-Status $apt.status)
     price = $rent
     location = $payload.building.location
     image = "🏢"
     last_update = $today
     notes = "رقم $($apt.no) | $($apt.unit_type) | $($apt.rooms) غرف | $($apt.notes)"
   }
-  $prop = Post-Json "$BaseUrl/api/properties" $h $propBody
-  $created.properties++
-  $propId = $prop.item.id
+  $prop = $null
+  if ($existingProps.ContainsKey([string]$apt.no)) {
+    $propId = $existingProps[[string]$apt.no]
+    Write-Host "  skip apt $($apt.no) property exists"
+  } else {
+    $prop = Post-Json "$BaseUrl/api/properties" $h $propBody
+    $created.properties++
+    $propId = $prop.item.id
+    $existingProps[[string]$apt.no] = $propId
+  }
 
-  if ($apt.tenant -and $apt.tenant.Trim().Length -gt 0 -and $apt.status_ar -eq "مستأجرة") {
+  if ($apt.tenant -and $apt.tenant.Trim().Length -gt 0 -and $apt.status -eq "rented") {
     $tKey = $apt.tenant.Trim()
     if (-not $clientMap.ContainsKey($tKey)) {
       $clientBody = @{
@@ -63,7 +86,11 @@ foreach ($apt in $payload.apartments) {
     }
     $clientId = $clientMap[$tKey]
 
-    if ($apt.status_ar -eq "مستأجرة" -and $rent -gt 0) {
+    if ($apt.status -eq "rented" -and $rent -gt 0) {
+      if ($existingContracts.ContainsKey($propId)) {
+        Write-Host "  skip apt $($apt.no) contract exists"
+        continue
+      }
       $start = if ($apt.start) { $apt.start } else { $today }
       $end = if ($apt.end) { $apt.end } else { (Get-Date $start).AddMonths(12).ToString("yyyy-MM-dd") }
       $contractBody = @{
