@@ -93,8 +93,10 @@ function ensureEnglishDigits(root=document.body){
 }
 async function login(){
   try{
+    const username=$('#loginUser')?.value.trim()||'';
+    const password=$('#loginPass')?.value||'';
+    if(!username||!password){ setLoginStatus('أدخل اسم المستخدم وكلمة المرور', true); return; }
     setLoginStatus('جاري تسجيل الدخول...');
-    const username=$('#loginUser').value.trim(); const password=$('#loginPass').value;
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
     setLoginStatus('جاري تحميل النظام...');
@@ -1009,7 +1011,10 @@ function initClock(){
   setInterval(tick,1000);
 }
 function bind(){
-  $('#loginForm').onsubmit=e=>{ e.preventDefault(); login(); };
+  const form=$('#loginForm');
+  const btn=$('#loginBtn');
+  if(form) form.onsubmit=e=>{ e.preventDefault(); login(); };
+  if(btn) btn.onclick=e=>{ e.preventDefault(); login(); };
   $('#logoutBtn').onclick=logout; $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open'); $('#globalSearch').oninput=()=>renderAll();
   document.addEventListener('input',e=>ensureEnglishDigits(e.target));
   document.addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key.toLowerCase()==='k'){ e.preventDefault(); $('#globalSearch').focus(); } if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#globalSearch').focus();} });

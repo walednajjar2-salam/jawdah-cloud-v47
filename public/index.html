@@ -3,13 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Quality of Launch Services LLC</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="app.css?v=20260609b">
+  <style>
+    body.login-mode{margin:0;min-height:100vh;background:#0a0a0a}
+    #loginScreen{display:grid!important;place-items:center;min-height:100vh;padding:20px;position:relative;z-index:5}
+    #loginScreen.hidden{display:none!important}
+    .login-minimal{width:min(380px,100%);padding:28px 24px;border-radius:24px;border:1px solid rgba(216,177,91,.35);background:rgba(18,18,18,.95);box-shadow:0 24px 60px rgba(0,0,0,.55)}
+    .login-minimal input{width:100%;margin:0 0 14px;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;display:block;box-sizing:border-box}
+    .login-minimal #loginBtn{width:100%!important;display:flex!important;visibility:visible!important;opacity:1!important;min-height:50px;margin-top:6px;padding:14px 18px;border:0;border-radius:14px;background:linear-gradient(135deg,#b8892f,#d8b15b);color:#1a1208;font-weight:800;font-size:16px;cursor:pointer;justify-content:center;align-items:center}
+    .login-minimal #loginBtn:hover{filter:brightness(1.06)}
+  </style>
 </head>
-<body>
+<body class="login-mode">
   <div class="ambient-orbs" aria-hidden="true">
     <span class="ambient-orb orb-a"></span>
     <span class="ambient-orb orb-b"></span>
@@ -384,6 +394,15 @@
   <script src="compliance-layer.js"></script>
   <script src="vat-fta.js"></script>
   <script src="owner-monthly-pack.js"></script>
-  <script src="app.js"></script>
+  <script>
+    (function(){
+      if(!localStorage.getItem('jawdah_cloud_token')){
+        document.body.classList.add('login-mode');
+        var ls=document.getElementById('loginScreen'); if(ls) ls.classList.remove('hidden');
+        var app=document.getElementById('app'); if(app) app.classList.add('hidden');
+      }
+    })();
+  </script>
+  <script src="app.js?v=20260609b"></script>
 </body>
 </html>
