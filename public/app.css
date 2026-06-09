@@ -583,3 +583,31 @@ body.dash-view .content{padding-top:8px}
 .vat-fta-check strong{display:block;margin-bottom:4px}
 .vat-fta-qr-demo .qls-fta-qr{margin:12px auto 0;border:none;background:transparent}
 @media(max-width:1100px){.vat-fta-kpis,.vat-fta-layout{grid-template-columns:1fr}}
+
+/* Phase 6 — Owner Monthly Pack */
+.owner-pack-hero{margin-bottom:16px}
+.owner-pack-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.owner-pack-kpi{padding:16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
+.owner-pack-kpi span{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
+.owner-pack-kpi strong{font-size:22px;color:var(--gold2)}
+.owner-pack-kpi.health strong{color:#34d399}
+.owner-pack-kpi small{display:block;margin-top:6px}
+.owner-pack-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:16px;padding:14px}
+.owner-pack-toolbar label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.owner-pack-toolbar input{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:inherit}
+.owner-pack-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.owner-pack-actions{display:flex;flex-direction:column;gap:10px}
+.owner-pack-action{display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.owner-pack-action.critical{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.08)}
+.owner-pack-action.high{border-color:rgba(251,191,36,.35)}
+.owner-pack-rank{width:28px;height:28px;border-radius:50%;background:rgba(64,224,208,.15);color:var(--gold2);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.owner-pack-renewals{display:flex;flex-direction:column;gap:8px}
+.owner-pack-renewal{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.owner-pack-flow{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+.owner-pack-modules{margin-bottom:16px}
+.owner-pack-module-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.owner-pack-mod{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.04);cursor:pointer;color:inherit;font:inherit;transition:transform .15s,border-color .15s}
+.owner-pack-mod:hover{transform:translateY(-2px);border-color:rgba(64,224,208,.4)}
+.owner-pack-mod b{font-size:18px;color:var(--gold2)}
+@media(max-width:1100px){.owner-pack-kpis,.owner-pack-layout,.owner-pack-module-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.owner-pack-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}

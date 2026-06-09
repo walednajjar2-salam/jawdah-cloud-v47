@@ -80,7 +80,8 @@
               <p class="mini">قائمة الأولويات، الرادار المالي، ومؤشر المحفظة — محدّث لحظياً من بيانات الشقق والعقود والفواتير</p>
             </div>
             <div class="ecc-actions">
-              <button class="gold-btn" onclick="downloadExecutiveReportPdf()"><i data-lucide="file-down" class="lucide-icon"></i> تقرير PDF للإدارة</button>
+              <button class="gold-btn" onclick="downloadOwnerMonthlyPackPdf()"><i data-lucide="file-down" class="lucide-icon"></i> تقرير المالك الشهري</button>
+              <button class="ghost" onclick="downloadExecutiveReportPdf()"><i data-lucide="file-down" class="lucide-icon"></i> تقرير PDF للإدارة</button>
               <button class="ghost" onclick="showSection('renewal-engine')"><i data-lucide="git-compare" class="lucide-icon"></i> محرك التجديد</button>
               <button class="ghost" onclick="showSection('apartments')"><i data-lucide="layout-grid" class="lucide-icon"></i> إدارة الشقق</button>
             </div>
@@ -215,6 +216,14 @@
           <p class="mini">QR على كل فاتورة ضريبية · تقرير VAT شهري للمحاسب · جاهزية هيئة الضريبة</p>
         </div>
         <div id="vatFtaBox"></div>
+      </section>
+
+      <section id="sec-owner-pack" class="section">
+        <div class="card accounting-hero owner-pack-hero">
+          <h3><i data-lucide="briefcase" class="lucide-icon title-ic"></i> تقرير المالك الشهري — المرحلة 6</h3>
+          <p class="mini">PDF + Excel موحّد · إشغال · تحصيل · تجديد · امتثال · VAT · أهم 5 إجراءات</p>
+        </div>
+        <div id="ownerMonthlyPackBox"></div>
       </section>
 
       <section id="sec-contracts" class="section">
@@ -378,6 +387,7 @@
   <script src="nizwa-gis.js"></script>
   <script src="compliance-layer.js"></script>
   <script src="vat-fta.js"></script>
+  <script src="owner-monthly-pack.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
