@@ -1,14 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Launch Quality LLC">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Quality Launch Services LLC">
   <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f5e6b8"/>
-      <stop offset="45%" style="stop-color:#d4af37"/>
-      <stop offset="100%" style="stop-color:#8b6914"/>
+    <linearGradient id="turq" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7fffd4"/>
+      <stop offset="50%" style="stop-color:#40e0d0"/>
+      <stop offset="100%" style="stop-color:#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff" stop-opacity="0.22"/>
+      <stop offset="100%" style="stop-color:#ffffff" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <circle cx="60" cy="60" r="54" fill="#061120" stroke="url(#g)" stroke-width="3"/>
-  <path fill="url(#g)" d="M60 28 L88 48 V78 H32 V48 Z"/>
-  <rect x="44" y="58" width="14" height="20" rx="1" fill="#030712" opacity="0.5"/>
-  <rect x="62" y="58" width="14" height="20" rx="1" fill="#030712" opacity="0.5"/>
-  <circle cx="60" cy="22" r="5" fill="url(#g)"/>
+  <rect x="8" y="8" width="104" height="104" rx="28" fill="#050505" stroke="url(#turq)" stroke-width="2.5"/>
+  <rect x="8" y="8" width="104" height="52" rx="28" fill="url(#shine)"/>
+  <text x="60" y="52" text-anchor="middle" fill="url(#turq)" font-family="Cormorant Garamond, Georgia, serif" font-size="34" font-weight="700">QL</text>
+  <path d="M28 78 H92" stroke="url(#turq)" stroke-width="1.5" opacity="0.55"/>
+  <text x="60" y="96" text-anchor="middle" fill="#d4d4d4" font-family="Outfit, Arial, sans-serif" font-size="9.5" letter-spacing="1.2">SERVICES LLC</text>
 </svg>

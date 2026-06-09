@@ -3,38 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Launch Quality LLC</title>
+  <title>Quality Launch Services LLC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
   <main id="loginScreen" class="login hidden">
     <section class="login-card">
-      <img src="assets/logo.svg" alt="Jawdah logo">
-      <h1>Launch Quality LLC</h1>
-      <p class="mini">Real Estate & Hospitality Management</p>
+      <div class="login-brand-wrap">
+        <img src="assets/logo.svg" alt="Quality Launch Services LLC">
+        <h1 class="brand-title"><span class="brand-main">Quality Launch</span><span class="brand-sub">Services LLC</span></h1>
+        <p class="brand-tagline">Real Estate &amp; Hospitality Management</p>
+      </div>
       <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
       <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
-      <button id="loginBtn" class="gold-btn" style="width:100%;margin-top:10px">تسجيل الدخول</button>
-      <p class="mini">Real Estate & Hospitality Management</p>
+      <button id="loginBtn" class="gold-btn login-btn" style="width:100%;margin-top:10px"><i data-lucide="log-in" class="lucide-icon"></i> تسجيل الدخول</button>
     </section>
   </main>
 
   <main id="app" class="app hidden">
     <aside id="sidebar" class="sidebar">
       <div class="brand">
-        <img src="assets/logo.png" alt="logo">
-        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>
+        <img src="assets/logo.svg" alt="Quality Launch Services LLC">
+        <div class="brand-copy">
+          <h1 class="brand-title"><span class="brand-main">Quality Launch</span><span class="brand-sub">Services LLC</span></h1>
+          <small class="brand-tagline">Real Estate &amp; Hospitality Management</small>
+        </div>
       </div>
       <nav id="nav" class="nav"></nav>
     </aside>
     <section class="content">
       <header class="topbar">
-        <button id="menuBtn" class="ghost mobile-nav">☰</button>
-        <div class="search"><input id="globalSearch" placeholder="بحث سريع Ctrl + K"></div>
-        <button class="gold-btn" onclick="showSection('properties')">+ إضافة</button>
+        <button id="menuBtn" class="ghost mobile-nav icon-btn" aria-label="القائمة"><i data-lucide="menu" class="lucide-icon"></i></button>
+        <div class="search"><i data-lucide="search" class="lucide-icon search-icon"></i><input id="globalSearch" placeholder="بحث سريع Ctrl + K"></div>
+        <button class="gold-btn" onclick="showSection('properties')"><i data-lucide="plus" class="lucide-icon"></i> إضافة</button>
         <div id="clock" class="top-pill">00:00:00</div>
         <div class="userbox"><div id="avatar" class="avatar">J</div><div><b id="userName">User</b><br><small id="userRole" class="mini">Role</small></div></div>
-        <button id="logoutBtn" class="ghost">خروج</button>
+        <button id="logoutBtn" class="ghost icon-btn"><i data-lucide="log-out" class="lucide-icon"></i> خروج</button>
       </header>
       <h2 id="sectionTitle">لوحة التحكم التنفيذية</h2><div id="launchBanner" class="launch-banner hidden"></div>
 
@@ -53,7 +60,7 @@
       </section>
 
       <section id="sec-properties" class="section">
-        <div class="card"><h3>إضافة عقار</h3><div class="form"><input id="pImage" placeholder="إيموجي/رمز" value="🏠"><input id="pName" placeholder="اسم العقار"><input id="pType" placeholder="النوع"><select id="pStatus"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id="pPrice" placeholder="السعر"><input id="pLocation" placeholder="الموقع"><textarea id="pNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createProperty()">حفظ العقار</button></div>
+        <div class="card"><h3>إضافة عقار</h3><div class="form"><input id="pImage" placeholder="إيموجي/رمز"><input id="pName" placeholder="اسم العقار"><input id="pType" placeholder="النوع"><select id="pStatus"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id="pPrice" placeholder="السعر"><input id="pLocation" placeholder="الموقع"><textarea id="pNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createProperty()">حفظ العقار</button></div>
         <div class="card"><div class="toolbar"><select id="propStatusFilter" onchange="renderProperties()"></select><button class="ghost" onclick="exportCsv('properties')">تصدير CSV</button></div><div id="propertiesTable"></div></div>
       </section>
 
@@ -170,6 +177,7 @@
   <div id="paymentModal" class="modal"><div class="modal-box"><h2>تحصيل فاتورة</h2><p id="payInfo"></p><input id="payInvoiceId" type="hidden"><div class="form"><input id="payAmount" placeholder="المبلغ"><select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id="payNote" placeholder="ملاحظة"></div><button class="gold-btn" onclick="submitPayment()">تأكيد التحصيل</button> <button class="ghost" onclick="closeModal('paymentModal')">إغلاق</button></div></div>
   <div id="invoiceModal" class="modal"><div class="modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="window.print()">طباعة A4</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
   <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
+  <script src="https://unpkg.com/lucide@0.511.0/dist/umd/lucide.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

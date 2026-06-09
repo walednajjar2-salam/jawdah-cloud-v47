@@ -401,9 +401,10 @@ def init_db() -> None:
             ("approved_at", "TEXT"),
         ]:
             ensure_column(db, "contracts", col, definition)
+        if os.environ.get("JAWDAH_FRESH_START", "").strip().lower() in ("1", "true", "yes"):
+            reset_operational_data(db)
         seed_if_empty(db)
         ensure_user(db, "razan.accounting", "Razan", "accountant", "Jawdeh123")
-        seed_chart_accounts(db)
         db.commit()
 
 
@@ -412,6 +413,20 @@ def insert(db: sqlite3.Connection, table: str, row: Dict[str, Any]) -> None:
     placeholders = ",".join(["?"] * len(keys))
     sql = f"INSERT INTO {table} ({','.join(keys)}) VALUES ({placeholders})"
     db.execute(sql, [row[k] for k in keys])
+
+
+def reset_operational_data(db: sqlite3.Connection) -> None:
+    tables = [
+        "payments", "inventory_transactions", "bank_reconciliations", "approvals",
+        "audit_log", "maintenance", "accounts", "invoices", "contracts",
+        "purchase_invoices", "revenues", "salaries", "admin_expenses",
+        "inventory_items", "bank_transactions", "financial_periods",
+        "chart_accounts", "clients", "properties",
+    ]
+    db.execute("PRAGMA foreign_keys=OFF")
+    for table in tables:
+        db.execute(f"DELETE FROM {table}")
+    db.execute("PRAGMA foreign_keys=ON")
 
 
 def seed_if_empty(db: sqlite3.Connection) -> None:
@@ -428,36 +443,6 @@ def seed_if_empty(db: sqlite3.Connection) -> None:
                 "id": uid("USR"), "username": username, "name": name, "role": role,
                 "active": 1, "password_hash": password_hash(pwd), "created_at": now_iso(), "last_login": None
             })
-    if db.execute("SELECT COUNT(*) FROM properties").fetchone()[0] == 0:
-        props = [
-            {"id":"P-1001","name":"Jawdah Pearl Residence","type":"Apartment","status":"Rented","price":780,"location":"Muscat","image":"🏢","last_update":today(),"notes":"Premium building"},
-            {"id":"P-1002","name":"Al Noor Villa","type":"Villa","status":"Vacant","price":1250,"location":"Barka","image":"🏠","last_update":today(),"notes":"Ready for rent"},
-            {"id":"P-1003","name":"Hospitality Suite A","type":"Suite","status":"Maintenance","price":650,"location":"Seeb","image":"🏨","last_update":today(),"notes":"AC maintenance"},
-        ]
-        for p in props:
-            insert(db, "properties", p)
-        clients = [
-            {"id":"C-1001","name":"Oman Hospitality LLC","phone":"96203068","email":"ops@example.com","national_id":"CR-001","balance":0,"notes":"Corporate client"},
-            {"id":"C-1002","name":"Mohammed Al Balushi","phone":"92120205","email":"client@example.com","national_id":"ID-002","balance":0,"notes":"Individual client"},
-        ]
-        for c in clients:
-            insert(db, "clients", c)
-        contract = {"id":"CT-1001","contract_no":"LQL-RES-2026-0001","contract_type":"Residential","property_id":"P-1001","client_id":"C-1001","tenant_nationality":"Omani","tenant_id_no":"ID-001","unit_details":"Apartment 101, Jawdah Pearl Residence","start_date":today(),"end_date":(date.today()+timedelta(days=330)).isoformat(),"rent_amount":780,"deposit_amount":500,"late_fee":25,"grace_days":5,"renewal_notice_days":30,"status":"Active","payment_cycle":"monthly","legal_terms":default_legal_terms(),"company_signatory":"Launch Quality LLC","approved_at":now_iso(),"notes":"Standard residential lease"}
-        insert(db, "contracts", contract)
-        invoice = {"id":"INV-ID-1001","invoice_no":"INV-2026-0001","contract_id":"CT-1001","client_id":"C-1001","property_id":"P-1001","issue_date":today(),"due_date":(date.today()+timedelta(days=10)).isoformat(),"description":"Monthly rent","amount":780,"paid_amount":350,"status":"Partial"}
-        insert(db, "invoices", invoice)
-        insert(db, "accounts", {"id":"ACC-1001","entry_date":today(),"type":"income","category":"Rent","description":"Partial collection INV-2026-0001","client_id":"C-1001","property_id":"P-1001","invoice_id":"INV-ID-1001","amount":350})
-        insert(db, "accounts", {"id":"ACC-1002","entry_date":today(),"type":"expense","category":"Maintenance","description":"AC service","client_id":None,"property_id":"P-1003","invoice_id":None,"amount":80})
-        insert(db, "maintenance", {"id":"M-1001","property_id":"P-1003","title":"AC cooling issue","priority":"High","status":"Open","request_date":today(),"cost":80,"notes":"Technician assigned"})
-        insert(db, "purchase_invoices", {"id":"PINV-ID-1001","purchase_no":"PINV-2026-0001","supplier":"Oman Maintenance Supplies","invoice_date":today(),"due_date":(date.today()+timedelta(days=15)).isoformat(),"category":"Maintenance Materials","description":"AC filters and electrical consumables","amount":145,"paid_amount":0,"status":"Pending","property_id":"P-1003","account_id":None})
-        insert(db, "revenues", {"id":"REV-ID-1001","revenue_no":"REV-2026-0001","revenue_date":today(),"source":"Additional service","category":"Service Fee","description":"Tenant service fee","amount":45,"client_id":"C-1001","property_id":"P-1001","account_id":None})
-        insert(db, "salaries", {"id":"SAL-1001","employee_name":"Building Supervisor","salary_month":date.today().strftime('%Y-%m'),"basic_salary":350,"allowances":50,"deductions":0,"net_salary":400,"status":"Pending","payment_date":today(),"account_id":None})
-        insert(db, "admin_expenses", {"id":"GNA-1001","expense_date":today(),"category":"Office","description":"Office stationery and admin supplies","amount":35,"supplier":"Office Market","property_id":None,"account_id":None})
-        insert(db, "inventory_items", {"id":"ITEM-1001","sku":"AC-FILTER-01","name":"AC Filter","category":"Maintenance","unit":"pcs","quantity":12,"min_quantity":5,"unit_cost":4.5,"location":"Main Store","notes":"For apartment AC maintenance"})
-        insert(db, "inventory_transactions", {"id":"ITX-1001","item_id":"ITEM-1001","tx_date":today(),"tx_type":"in","quantity":12,"unit_cost":4.5,"reference":"Initial stock","notes":"Opening inventory"})
-        insert(db, "bank_transactions", {"id":"BNK-1001","bank_date":today(),"bank_name":"Main Bank","reference":"OPENING","type":"deposit","description":"Opening bank balance","amount":2500,"matched_account_id":None,"status":"Matched"})
-        insert(db, "audit_log", {"id":uid("LOG"),"created_at":now_iso(),"username":"system","action":"seed","entity":"database","entity_id":None,"details":"Initial sample data created"})
-    seed_chart_accounts(db)
 
 
 def seed_chart_accounts(db: sqlite3.Connection) -> None:
@@ -570,7 +555,7 @@ def default_legal_terms() -> str:
         "The tenant is responsible for damages caused by misuse, unauthorized alterations, lost keys, and violations of building rules. "
         "The unit must be returned in good condition, excluding normal wear. Subleasing is not allowed without written approval. "
         "Utilities, services, and maintenance responsibilities follow the signed contract and applicable laws in the Sultanate of Oman. "
-        "This contract protects Launch Quality LLC as the property management and leasing company while preserving the tenant's lawful rights."
+        "This contract protects Quality Launch Services LLC as the property management and leasing company while preserving the tenant's lawful rights."
     )
 
 
@@ -918,7 +903,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data.setdefault("payment_cycle", "monthly")
             data.setdefault("status", "Draft")
             data.setdefault("legal_terms", default_legal_terms())
-            data.setdefault("company_signatory", "Launch Quality LLC")
+            data.setdefault("company_signatory", "Quality Launch Services LLC")
         if table == "invoices":
             return self.send_json({"ok": False, "error": "Create invoices from a contract using the invoice action"}, 400)
         if table == "payments":
@@ -1303,6 +1288,9 @@ def protected_delete_reason(db: sqlite3.Connection, table: str, row_id: str) -> 
 
 def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
     prop_total = db.execute("SELECT COUNT(*) FROM properties").fetchone()[0]
+    client_total = db.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
+    contract_total = db.execute("SELECT COUNT(*) FROM contracts").fetchone()[0]
+    invoice_total = db.execute("SELECT COUNT(*) FROM invoices").fetchone()[0]
     rented = db.execute("SELECT COUNT(*) FROM properties WHERE lower(status) LIKE '%rented%' OR lower(status) LIKE '%leased%'").fetchone()[0]
     vacant = db.execute("SELECT COUNT(*) FROM properties WHERE lower(status) LIKE '%vacant%'").fetchone()[0]
     maintenance_count = db.execute("SELECT COUNT(*) FROM maintenance WHERE lower(status) NOT IN ('closed','done','completed')").fetchone()[0]
@@ -1322,19 +1310,20 @@ def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
         month_expense = sum(float(a["amount"] or 0) for a in accounts if a["type"] == "expense" and str(a["entry_date"]).startswith(key))
         months.append({"month": key, "income": month_income, "expense": month_expense})
     health = 100
-    if overdue > 0: health -= 15
-    if maintenance_count > 0: health -= min(20, maintenance_count * 5)
-    if occupancy < 70: health -= 15
-    health = max(0, min(100, health))
+    if prop_total:
+        if overdue > 0: health -= 15
+        if maintenance_count > 0: health -= min(20, maintenance_count * 5)
+        if occupancy < 70: health -= 15
     renewal = contract_renewal_stats(db)
     expiring = renewal["expiring"]
     expired = renewal["expired"]
-    if expiring > 0:
-        health -= min(20, expiring * 4)
-    if expired > 0:
-        health -= min(25, expired * 6)
+    if prop_total:
+        if expiring > 0: health -= min(20, expiring * 4)
+        if expired > 0: health -= min(25, expired * 6)
     health = max(0, min(100, health))
     decisions = []
+    if not prop_total and not client_total and not contract_total and not invoice_total:
+        decisions.append({"level":"Info","text":"النظام فارغ وجاهز — ابدأ بإضافة العقارات والعملاء والعقود"})
     if expired > 0:
         decisions.append({"level":"High","text":f"{expired} عقد منتهٍ يحتاج تجديد أو إغلاق فوري"})
     if expiring > 0:
