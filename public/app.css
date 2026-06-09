@@ -228,4 +228,10 @@ body{background:radial-gradient(circle at 16% 0%,rgba(64,224,208,.09),transparen
 td strong,td b{font-variant-numeric:tabular-nums;letter-spacing:.03em}
 .ops-matrix span{font-size:17px!important;font-weight:700;letter-spacing:.03em;margin-top:6px;display:block}
 .executive-chip{font-size:14px;line-height:1.7;padding:16px!important}
-@media(max-width:900px){th,td{padding:14px 12px!important;font-size:14px!important}.kpi strong{font-size:28px!important}}
+.apartment-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.apartment-sheet-card{border-color:rgba(64,224,208,.28)!important;padding:0!important;overflow:hidden}
+.apartment-sheet-title{padding:16px 20px;font-size:18px;font-weight:700;color:var(--gold2);background:linear-gradient(135deg,rgba(64,224,208,.18),rgba(8,8,8,.95));border-bottom:1px solid rgba(64,224,208,.22);display:flex;align-items:center;gap:10px}
+.apartment-sheet-card .table-wrap{border:0;border-radius:0;margin:0}
+.apartment-sheet-card th{background:rgba(64,224,208,.12)!important;font-size:14px!important}
+.apartment-sheet-card td{font-size:15px!important;font-variant-numeric:tabular-nums}
+@media(max-width:900px){.apartment-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -66,6 +66,20 @@
         <div class="card"><div class="toolbar"><select id="propStatusFilter" onchange="renderProperties()"></select><button class="ghost" onclick="exportCsv('properties')">تصدير CSV</button></div><div id="propertiesTable"></div></div>
       </section>
 
+      <section id="sec-apartments" class="section">
+        <div id="apartmentBrandStrip"></div>
+        <div class="apartment-kpi-grid">
+          <div class="card invoice-kpi-card"><span>إجمالي الشقق</span><strong id="aptKpiTotal">0</strong></div>
+          <div class="card invoice-kpi-card"><span>مستأجرة</span><strong id="aptKpiRented">0</strong></div>
+          <div class="card invoice-kpi-card"><span>شاغرة</span><strong id="aptKpiVacant">0</strong></div>
+          <div class="card invoice-kpi-card"><span>نسبة الإشغال</span><strong id="aptKpiOcc">0%</strong></div>
+        </div>
+        <div class="card apartment-sheet-card">
+          <div class="apartment-sheet-title"><i data-lucide="building-2" class="lucide-icon title-ic"></i> إدارة الشقق — نزوى حي التراث</div>
+          <div id="apartmentsTable"></div>
+        </div>
+      </section>
+
       <section id="sec-clients" class="section">
         <div class="card"><h3>إضافة عميل</h3><div class="form"><input id="cName" placeholder="اسم العميل"><input id="cPhone" placeholder="الهاتف"><input id="cEmail" placeholder="البريد"><input id="cNational" placeholder="الهوية/السجل"><textarea id="cNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createClient()">حفظ العميل</button></div>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('clients')">تصدير CSV</button></div><div id="clientsTable"></div></div>

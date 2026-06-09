@@ -111,6 +111,7 @@ function buildNav(){
   const items=[
     ['dashboard','لوحة التحكم','layout-dashboard'],
     ['properties','العقارات','building-2'],
+    ['apartments','إدارة الشقق','layout-grid'],
     ['clients','العملاء','users-round'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
@@ -144,10 +145,10 @@ function buildNav(){
 function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
-  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',clients:'العملاء',contracts:'العقود',invoices:'الفواتير الضريبية',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء',contracts:'العقود',invoices:'الفواتير الضريبية',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
-function renderAll(){ renderDashboard(); renderProperties(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }
+function renderAll(){ renderDashboard(); renderProperties(); renderApartments(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }
 function renderDashboard(){
   const k=Jawdah.dashboard.kpis;
   const data=Jawdah.data || {};
@@ -186,6 +187,50 @@ function renderProperties(){
   const rows=filterRows('properties',['name','type','status','location']);
   $('#propertiesTable').innerHTML=tableHtml([['الصورة','image'],['الاسم','name'],['النوع','type'],['الحالة','status',(v)=>badge(v)],['السعر','price',(v)=>money(v)],['الموقع','location'],['آخر تحديث','last_update']],rows,r=>`<button class="ghost" onclick="editRecord('properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('properties','${r.id}')">حذف</button>`);
   fillSelect('#propStatusFilter',['','Rented','Vacant','Maintenance'],false);
+}
+function aptNoFromProperty(p){
+  const m=String(p.name||'').match(/شقة\s*(\d+)/);
+  return m?m[1]:'—';
+}
+function aptRowFromProperty(p){
+  const contract=(Jawdah.data.contracts||[]).find(c=>c.property_id===p.id && String(c.status||'').toLowerCase().includes('active'))
+    || (Jawdah.data.contracts||[]).find(c=>c.property_id===p.id);
+  const client=contract?byId('clients',contract.client_id):{};
+  const statusAr=String(p.status||'').toLowerCase().includes('rented')?'مستأجرة':String(p.status||'').toLowerCase().includes('vacant')?'شاغرة':p.status;
+  const unitType=(p.notes||'').match(/\|\s*(مشترك|مستقل|سكن)/)?.[1]||'—';
+  const rooms=(p.notes||'').match(/(\d+)\s*غرف/)?.[1]||'1';
+  return {no:aptNoFromProperty(p),statusAr,unitType,rooms,tenant:client.name||'—',phone:client.phone||'—',avgRent:p.price,rent:contract?contract.rent_amount:p.price,start:contract?.start_date||'—',end:contract?.end_date||'—',property:p,contract,client};
+}
+function renderApartments(){
+  const strip=$('#apartmentBrandStrip');
+  if(strip) strip.innerHTML=`<div class="invoice-brand-strip">${CompanyProfile.dashboardIntroHtml()}</div>`;
+  const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
+  const rows=props.map(aptRowFromProperty).sort((a,b)=>String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+  const rented=rows.filter(r=>r.statusAr==='مستأجرة').length;
+  const vacant=rows.filter(r=>r.statusAr==='شاغرة').length;
+  const total=rows.length;
+  if($('#aptKpiTotal')) $('#aptKpiTotal').textContent=fmt(total);
+  if($('#aptKpiRented')) $('#aptKpiRented').textContent=fmt(rented);
+  if($('#aptKpiVacant')) $('#aptKpiVacant').textContent=fmt(vacant);
+  if($('#aptKpiOcc')) $('#aptKpiOcc').textContent=total?fmt(Math.round(rented/total*100))+'%':'0%';
+  const tbl=$('#apartmentsTable');
+  if(!tbl) return;
+  tbl.innerHTML=tableHtml([
+    ['رقم الشقة','no'],
+    ['حالة الشقة','statusAr',v=>`<span class="badge ${v==='مستأجرة'?'rented':'vacant'}">${v}</span>`],
+    ['نوع الوحدة','unitType'],
+    ['عدد الغرف','rooms'],
+    ['اسم المستأجر','tenant'],
+    ['رقم الهاتف','phone'],
+    ['متوسط الإيجار','avgRent',v=>money(v)],
+    ['مبلغ الإيجار','rent',v=>money(v)],
+    ['بداية العقد','start'],
+    ['نهاية العقد','end'],
+  ],rows,r=>{
+    const pid=r.property?.id, cid=r.contract?.id;
+    return `${pid?`<button class="ghost" onclick="showSection('properties')">العقار</button>`:''} ${cid?`<button class="ghost" onclick="invoiceFromContract('${cid}')">فاتورة</button>`:''}`;
+  });
+  paintIcons($('#sec-apartments'));
 }
 function renderClients(){
   const rows=filterRows('clients',['name','phone','email','national_id']);
@@ -687,6 +732,7 @@ window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'logi
   const baseSections=[
     ['dashboard','لوحة التحكم','layout-dashboard'],
     ['properties','العقارات','building-2'],
+    ['apartments','إدارة الشقق','layout-grid'],
     ['clients','العملاء','users-round'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
