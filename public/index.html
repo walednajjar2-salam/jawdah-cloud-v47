@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=20260610a">
+  <link rel="stylesheet" href="app.css?v=20260610b">
   <style>
     body.login-mode{margin:0;min-height:100vh;background:#0a0a0a}
     body.login-mode .ambient-orbs,body.login-mode #uiWatermark,body.login-mode #app{display:none!important}
@@ -83,18 +83,8 @@
         try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false, error:text}; }
         if(!res.ok || data.ok === false) throw new Error(data.error || 'تعذر تسجيل الدخول');
         localStorage.setItem('jawdah_cloud_token', data.token);
-        setStatus('تم الدخول — جاري تحميل النظام...');
-        var loader = el('appLoader');
-        if(loader){ loader.classList.remove('hidden'); loader.textContent = 'جاري تحميل النظام...'; }
-        el('loginScreen').classList.add('hidden');
-        el('app').classList.remove('hidden');
-        document.body.classList.remove('login-mode');
-        if(typeof window.bootAppAfterLogin === 'function'){
-          setBusy(false);
-          await window.bootAppAfterLogin(data.token, data.user);
-        }else{
-          location.reload();
-        }
+        setStatus('تم الدخول — جاري التحميل...');
+        location.replace(location.pathname + '?login=1');
       }catch(err){
         setBusy(false);
         setStatus(err.message || 'تعذر الاتصال بالخادم', true);
@@ -460,7 +450,8 @@
   <div id="paymentModal" class="modal"><div class="modal-box"><h2>تحصيل فاتورة</h2><p id="payInfo"></p><input id="payInvoiceId" type="hidden"><div class="form"><input id="payAmount" placeholder="المبلغ"><select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id="payNote" placeholder="ملاحظة"></div><button class="gold-btn" onclick="submitPayment()">تأكيد التحصيل</button> <button class="ghost" onclick="closeModal('paymentModal')">إغلاق</button></div></div>
   <div id="invoiceModal" class="modal"><div class="modal-box invoice-modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="downloadInvoicePdf()"><i data-lucide="file-down" class="lucide-icon"></i> تنزيل PDF</button><button class="ghost" onclick="printInvoiceDocument()">طباعة A4</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
   <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
-  <script defer src="company-settings.js"></script>
+  <script src="company-settings.js"></script>
+  <script src="app.js?v=20260610b"></script>
   <script defer src="reminders.js"></script>
   <script defer src="document-export.js"></script>
   <script defer src="data-export.js"></script>
@@ -469,9 +460,5 @@
   <script defer src="compliance-layer.js"></script>
   <script defer src="vat-fta.js"></script>
   <script defer src="owner-monthly-pack.js"></script>
-  <script defer src="app.js?v=20260610a"></script>
-  <script defer src="https://unpkg.com/lucide@0.511.0/dist/umd/lucide.min.js"></script>
-  <script defer src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </body>
 </html>

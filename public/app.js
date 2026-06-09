@@ -112,51 +112,98 @@ async function login(){
     setLoginStatus('');
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
-    showAppShell();
-    showAppLoading('جاري تحميل النظام...');
-    await loadAll();
-    hideAppLoading();
-    showLoginWelcome();
+    location.replace(location.pathname + '?login=1');
   }catch(e){
-    hideAppLoading();
     showLoginShell();
     setLoginStatus(e.message||'تعذر تسجيل الدخول', true);
     toast(e.message,true);
   }finally{ setLoginBusy(false); }
 }
 async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; hideAppLoading(); showLoginShell(); location.reload(); }
+let sessionBootStarted=false;
 async function checkSession(){
+  if(sessionBootStarted) return;
+  sessionBootStarted=true;
   if(!Jawdah.token){ showLoginShell(); setLoginStatus(''); return; }
   try{
     showAppShell();
-    showAppLoading('جاري استعادة الجلسة...');
+    showAppLoading('جاري تحميل النظام...');
     const me=await api('me');
     Jawdah.user=me.user;
     await loadAll();
     hideAppLoading();
+    if(new URLSearchParams(location.search).get('login')==='1'){
+      history.replaceState({}, '', location.pathname);
+      showLoginWelcome();
+    }
   }catch(e){
     hideAppLoading();
     localStorage.removeItem('jawdah_cloud_token');
     Jawdah.token='';
+    sessionBootStarted=false;
     showLoginShell();
-    setLoginStatus('');
+    setLoginStatus(e.message||'تعذر تحميل النظام', true);
   }
 }
 function setUiShellMode(mode){
   document.body.classList.toggle('login-mode', mode === 'login');
 }
+function safeStep(name, fn){
+  try{ fn(); }catch(e){ console.warn('render step failed:', name, e); }
+}
+function renderAll(){
+  safeStep('dashboard', renderDashboard);
+  safeStep('reminders', renderReminders);
+  safeStep('properties', renderProperties);
+  safeStep('apartments', renderApartments);
+  safeStep('clients', renderClients);
+  safeStep('tenant-portal', renderTenantPortal);
+  safeStep('renewal', renderRenewalEngine);
+  safeStep('gis', renderNizwaGis);
+  safeStep('compliance', renderComplianceLayer);
+  safeStep('vat', renderVatFta);
+  safeStep('owner-pack', renderOwnerMonthlyPack);
+  safeStep('contracts', renderContracts);
+  safeStep('invoices', renderInvoices);
+  safeStep('accounts', renderAccounts);
+  safeStep('maintenance', renderMaintenance);
+  safeStep('users', renderUsers);
+  safeStep('backup', renderBackup);
+  safeStep('qa', renderQA);
+  safeStep('exports', ()=>{ if(typeof initExportToolbars==='function') initExportToolbars(); });
+}
 async function loadAll(){
-  try{
-    const res=await api('bootstrap',{timeout:90000});
-    Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;
-    if(res.company_settings) CompanyProfile.apply(res.company_settings);
-    $('#userName').textContent=Jawdah.user.name; $('#userRole').textContent=roleName(Jawdah.user.role); $('#avatar').textContent=isOwnerUser()?'ي':(Jawdah.user.name||'J').slice(0,1).toUpperCase();
-    buildNav(); renderAll(); renderBrandSurfaces(); populateCompanySettingsForm(); renderOwnerWelcomeSurfaces(); showSection(Jawdah.activeSection||'dashboard'); ensureEnglishDigits(); paintIcons();
-  }catch(e){
-    throw new Error(e.message||'تعذر تحميل بيانات النظام');
-  }
+  const res=await api('bootstrap',{timeout:90000});
+  Jawdah.data=res.data||{}; Jawdah.dashboard=res.dashboard||{kpis:{},series:[],decisions:[]}; Jawdah.user=res.user;
+  if(res.company_settings && window.CompanyProfile) CompanyProfile.apply(res.company_settings);
+  if($('#userName')) $('#userName').textContent=Jawdah.user?.name||'';
+  if($('#userRole')) $('#userRole').textContent=roleName(Jawdah.user?.role||'');
+  if($('#avatar')) $('#avatar').textContent=isOwnerUser()?'ي':(Jawdah.user?.name||'J').slice(0,1).toUpperCase();
+  buildNav();
+  renderAll();
+  renderBrandSurfaces();
+  populateCompanySettingsForm();
+  renderOwnerWelcomeSurfaces();
+  showSection(Jawdah.activeSection||'dashboard');
+  ensureEnglishDigits();
+  paintIcons();
+  loadVendorLibs().then(()=>paintIcons()).catch(()=>{});
+}
+function loadScript(src){
+  return new Promise((resolve,reject)=>{
+    if([...document.scripts].some(s=>s.src===src)){ resolve(); return; }
+    const s=document.createElement('script');
+    s.src=src; s.async=true; s.onload=resolve; s.onerror=reject;
+    document.head.appendChild(s);
+  });
+}
+async function loadVendorLibs(){
+  await loadScript('https://unpkg.com/lucide@0.511.0/dist/umd/lucide.min.js').catch(()=>{});
+  await loadScript('https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js').catch(()=>{});
+  await loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js').catch(()=>{});
 }
 function renderBrandSurfaces(){
+  if(!window.CompanyProfile) return;
   const logo = CompanyProfile.logoUrl();
   document.documentElement.style.setProperty('--brand-logo-url', `url('${logo}')`);
   const hero=$('#dashboardBrandHero');
@@ -248,7 +295,6 @@ function showSection(id){
   document.body.classList.toggle('dash-view', id==='dashboard');
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
-function renderAll(){ renderDashboard(); renderReminders(); renderProperties(); renderApartments(); renderClients(); renderTenantPortal(); renderRenewalEngine(); renderNizwaGis(); renderComplianceLayer(); renderVatFta(); renderOwnerMonthlyPack(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); initExportToolbars(); }
 function collectApartmentRows(){
   const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
   const byNo=new Map();
@@ -1034,25 +1080,15 @@ function bind(){
   document.addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key.toLowerCase()==='k'){ e.preventDefault(); $('#globalSearch').focus(); } if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#globalSearch').focus();} });
 }
 window.LAUNCH_QUALITY_CHECK=()=>({system:COMPANY,user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});
-window.bootAppAfterLogin = async function(token, user){
-  Jawdah.token = token || localStorage.getItem('jawdah_cloud_token') || '';
-  if(user) Jawdah.user = user;
-  showAppShell();
-  showAppLoading('جاري تحميل النظام...');
-  try{
-    await loadAll();
-    hideAppLoading();
-    showLoginWelcome();
-  }catch(e){
-    hideAppLoading();
-    localStorage.removeItem('jawdah_cloud_token');
-    Jawdah.token = '';
-    showLoginShell();
-    setLoginStatus(e.message || 'تعذر تحميل النظام', true);
-    toast(e.message || 'تعذر تحميل النظام', true);
-  }
-};
-window.addEventListener('load',()=>{ bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
+function bootApp(){
+  bind();
+  initClock();
+  checkSession();
+  setInterval(()=>ensureEnglishDigits(),3000);
+  paintIcons();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bootApp);
+else bootApp();
 
 
 /* Quality Launch Services LLC - production experience layer */
