@@ -7,12 +7,13 @@ window.DEFAULT_COMPANY_SETTINGS = {
   po_box: '320',
   vat_rate: 0.05,
   vat_reg_no: '',
-  logo_url: 'assets/logo.svg',
+  logo_url: 'assets/logo-primary.png',
   description_ar: 'جودة الانطلاقة للخدمات ل.ل.س هي مؤسسة خدمية متخصصة في تقديم الخدمات المتعلقة بالعقارات، بالإضافة إلى خدمات الضيافة للمناسبات والعزاء، من خلال كادر وظيفي مترابط وذو خبرة طويلة في هذه المجالات، بما يضمن تقديم خدمات منظمة وموثوقة وبجودة عالية.',
   description_en: 'Quality of Launch Services LLC is a service-oriented company specializing in real estate-related services and hospitality services for various occasions, including events and condolence gatherings. The company operates with a well-coordinated professional team that has extensive experience in these fields, ensuring reliable, organized, and high-quality service delivery.',
   contacts: {
     customer_service: '25225026',
     hospitality_manager: '92204210',
+    email: 'QUALTYLANCH@pm.me',
   },
   bank: {
     name: 'Bank Muscat',
@@ -81,7 +82,8 @@ window.CompanyProfile = {
   /** Rich bilingual invoice description from contract + property context */
   buildInvoiceDescription(inv, client, prop, contract) {
     const custom = String(inv?.description || '').trim();
-    if (custom && custom.length > 24 && !/^rent invoice|فاتورة إيجار$/i.test(custom)) {
+    // Always honor custom invoice text (except generic defaults).
+    if (custom && !/^(rent invoice|فاتورة إيجار)$/i.test(custom)) {
       return { ar: custom, en: custom, period: this.invoicePeriodLabel(inv, contract) };
     }
     const aptMatch = String(prop?.name || '').match(/شقة\s*(\d+)/);
@@ -102,15 +104,32 @@ window.CompanyProfile = {
 
   invoicePeriodLabel(inv, contract) {
     const todayIso = () => new Date().toISOString().slice(0, 10);
-    const due = inv?.due_date || inv?.issue_date || todayIso();
-    const d = new Date(String(due) + 'T00:00:00');
-    if (Number.isNaN(d.getTime())) {
-      return { ar: 'الفترة: —', en: 'Period: —', from: due, to: due };
-    }
-    const from = new Date(d.getFullYear(), d.getMonth(), 1);
-    const to = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const parse = (s) => {
+      if (!s) return null;
+      const d = new Date(String(s) + 'T00:00:00');
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
     const fmt = x => x.toISOString().slice(0, 10);
     const fmtAr = x => x.toLocaleDateString('ar-OM');
+    const contractStart = parse(contract?.start_date);
+    const contractEnd = parse(contract?.end_date);
+    if (contractStart && contractEnd && contractStart <= contractEnd) {
+      const diffDays = Math.floor((contractEnd - contractStart) / 86400000) + 1;
+      // Short contracts should display their exact contractual period.
+      if (diffDays <= 35 || /short/i.test(String(contract?.contract_type || ''))) {
+        return {
+          from: fmt(contractStart),
+          to: fmt(contractEnd),
+          ar: `فترة الفاتورة: ${fmtAr(contractStart)} — ${fmtAr(contractEnd)}`,
+          en: `Billing period: ${fmt(contractStart)} — ${fmt(contractEnd)}`,
+        };
+      }
+    }
+    const due = inv?.due_date || inv?.issue_date || todayIso();
+    const d = parse(due);
+    if (!d) return { ar: 'الفترة: —', en: 'Period: —', from: due, to: due };
+    const from = new Date(d.getFullYear(), d.getMonth(), 1);
+    const to = new Date(d.getFullYear(), d.getMonth() + 1, 0);
     return {
       from: fmt(from),
       to: fmt(to),
@@ -167,7 +186,7 @@ window.CompanyProfile = {
 *{box-sizing:border-box}
 body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);background:#fff}
 .qls-doc{position:relative;background:var(--paper);padding:32px;max-width:920px;margin:0 auto;overflow:hidden}
-.qls-doc:before{content:"";position:absolute;inset:0;background:url('${this.logoUrl()}') center 42% / 58% no-repeat;opacity:.045;pointer-events:none;z-index:0}
+.qls-doc:before{content:"";position:absolute;inset:0;background:url('${this.logoUrl()}') center 42% / 58% no-repeat;opacity:.055;pointer-events:none;z-index:0;animation:qlsWatermarkFloat 24s ease-in-out infinite alternate;transform-origin:center}
 .qls-doc>*{position:relative;z-index:1}
 .qls-doc-header{text-align:center;margin-bottom:22px;padding-bottom:18px;border-bottom:2px solid var(--gold-light)}
 .qls-logo{width:min(220px,72vw);height:auto;object-fit:contain;filter:drop-shadow(0 8px 18px rgba(184,137,47,.18));margin:0 auto 12px;display:block}
@@ -202,8 +221,14 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
 .qls-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:36px;padding-top:18px;border-top:1px solid var(--line)}
 .qls-signatures .sig{min-height:72px;border-bottom:1px solid #bbb;font-size:11px;color:var(--muted);padding-top:8px}
 .qls-footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);text-align:center;line-height:1.7}
+@keyframes qlsWatermarkFloat{
+  0%{transform:translate3d(-1.5%,-1%,0) scale(1)}
+  50%{transform:translate3d(1.2%,1.1%,0) scale(1.03)}
+  100%{transform:translate3d(-1%,.8%,0) scale(1.015)}
+}
 @media(max-width:720px){.qls-intro{grid-template-columns:1fr}.qls-meta-grid{grid-template-columns:1fr}.qls-signatures{grid-template-columns:1fr}}
-@media print{body{background:#fff}.qls-doc{padding:18px;max-width:none}.qls-doc:before{opacity:.035}}`;
+@media print{body{background:#fff}.qls-doc{padding:18px;max-width:none}.qls-doc:before{opacity:.035;animation:none}}`;
+  },
 
   invoiceDocumentStyles() {
     return `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
@@ -212,7 +237,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
 @page{size:A4 portrait;margin:12mm}
 body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .qls-invoice{position:relative;background:var(--paper);padding:24px 28px 28px;width:210mm;max-width:100%;min-height:297mm;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-.qls-invoice:before{content:"";position:absolute;inset:0;background:url('${this.logoUrl()}') center 62% / 38% no-repeat;opacity:.022;pointer-events:none;z-index:0}
+.qls-invoice:before{content:"";position:absolute;inset:0;background:url('${this.logoUrl()}') center 62% / 38% no-repeat;opacity:.028;pointer-events:none;z-index:0;animation:qlsInvoiceFloat 22s ease-in-out infinite alternate;transform-origin:center}
 .qls-invoice>*{position:relative;z-index:1}
 .qls-inv-top{display:flex;flex-direction:column;align-items:center;text-align:center;padding-bottom:14px;border-bottom:2px solid var(--gold-light);gap:10px}
 .qls-inv-logo{width:96px;height:auto;object-fit:contain;display:block;margin:0 auto}
@@ -262,6 +287,11 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
 .qls-fta-qr-meta code{display:block;font-size:8px;color:var(--muted);word-break:break-all;direction:ltr;text-align:left;max-width:100%}
 .qls-fta-qr.demo{flex-direction:row;justify-content:center;flex-wrap:wrap}
 .qls-fta-foot{font-size:9px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.6}
+@keyframes qlsInvoiceFloat{
+  0%{transform:translate3d(-1%,-.8%,0) scale(1)}
+  50%{transform:translate3d(1%,1%,0) scale(1.02)}
+  100%{transform:translate3d(-.7%,.8%,0) scale(1.01)}
+}
 @media(max-width:520px){
   .qls-table thead{display:none}
   .qls-table tbody tr{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff}
@@ -271,7 +301,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
 @media print{
   body{background:#fff}
   .qls-invoice{padding:10mm 12mm;width:100%;min-height:auto;gap:12px}
-  .qls-invoice:before{opacity:.018}
+  .qls-invoice:before{opacity:.018;animation:none}
 }`;
   },
 
@@ -289,6 +319,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
             <span>Postal ${this.escapeHtml(s.postal_code)}</span>
             ${s.vat_reg_no ? `<span>VAT ${this.escapeHtml(s.vat_reg_no)}</span>` : '<span>VAT Reg: —</span>'}
             <span>Tel ${this.escapeHtml(s.contacts?.customer_service)}</span>
+            ${s.contacts?.email ? `<span>Email ${this.escapeHtml(s.contacts.email)}</span>` : ''}
           </div>
         </div>
         <div class="qls-inv-title">
@@ -326,6 +357,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
           ${s.vat_reg_no ? `<p><span class="label">VAT Reg.</span> <span class="value">${this.escapeHtml(s.vat_reg_no)}</span></p>` : ''}
           <p><span class="label">Customer Service</span> <span class="value">${this.escapeHtml(s.contacts?.customer_service)}</span></p>
           <p><span class="label">Hospitality</span> <span class="value">${this.escapeHtml(s.contacts?.hospitality_manager)}</span></p>
+          ${s.contacts?.email ? `<p><span class="label">Email</span> <span class="value">${this.escapeHtml(s.contacts.email)}</span></p>` : ''}
         </div>
         <div class="qls-card">
           <h4>${this.escapeHtml(s.bank?.name || 'Bank')} · البنك</h4>
@@ -411,7 +443,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
           <div class="sig">Client Signature · توقيع العميل</div>
           <div class="sig">Company Stamp · ختم المؤسسة</div>
         </div>
-        <footer class="qls-footer">${this.escapeHtml(this.settings.name_en)} · ${this.escapeHtml(this.settings.name_ar)} · C.R. ${this.escapeHtml(this.settings.cr_no)} · Sultanate of Oman</footer>
+        <footer class="qls-footer">${this.escapeHtml(this.settings.name_en)} · ${this.escapeHtml(this.settings.name_ar)} · C.R. ${this.escapeHtml(this.settings.cr_no)} · ${this.escapeHtml(this.settings.contacts?.email || '')} · Sultanate of Oman</footer>
       </article></body></html>`;
   },
 

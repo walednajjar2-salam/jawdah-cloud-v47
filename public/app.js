@@ -23,79 +23,22 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const api = async (path, opts={}) => {
   const headers = {'Content-Type':'application/json'};
   if(Jawdah.token) headers.Authorization = 'Bearer ' + Jawdah.token;
-  const timeoutMs = opts.timeout ?? 45000;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try{
-    const res = await fetch('/api/' + path.replace(/^\//,''), {...opts, signal: controller.signal, headers:{...headers, ...(opts.headers||{})}});
-    const text = await res.text();
-    let data;
-    try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false,error:text || 'Invalid response'}; }
-    if(!res.ok || data.ok === false){
-      const err = data.error || data.detail || 'Request failed';
-      throw new Error(err === 'Permission denied' ? 'لا تملك صلاحية تنفيذ هذا الإجراء' : err);
-    }
-    return data;
-  }catch(e){
-    if(e?.name === 'AbortError') throw new Error('انتهت مهلة الاتصال — تحقق من الإنترنت وحاول مرة أخرى');
-    if(e instanceof TypeError) throw new Error('تعذر الاتصال بالخادم — قد يكون الموقع يعيد التشغيل');
-    throw e;
-  }finally{ clearTimeout(timer); }
+  const res = await fetch('/api/' + path.replace(/^\//,''), {...opts, headers:{...headers, ...(opts.headers||{})}});
+  const text = await res.text();
+  let data;
+  try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false,error:text || 'Invalid response'}; }
+  if(!res.ok || data.ok === false){
+    const err = data.error || data.detail || 'Request failed';
+    throw new Error(err === 'Permission denied' ? 'لا تملك صلاحية تنفيذ هذا الإجراء' : err);
+  }
+  return data;
 };
-function setLoginStatus(msg, err=false){
-  const el=$('#loginStatus');
-  if(!el) return;
-  if(!msg){ el.textContent=''; el.classList.add('hidden'); return; }
-  el.textContent=msg;
-  el.classList.remove('hidden');
-  el.classList.toggle('err', !!err);
-}
-function showLoginShell(){
-  hideAppLoading();
-  setUiShellMode('login');
-  $('#loginScreen')?.classList.remove('hidden');
-  $('#app')?.classList.add('hidden');
-}
-function setLoginBusy(busy){
-  const btn=$('#loginBtn');
-  if(btn){ btn.disabled=!!busy; btn.textContent=busy?'جاري الدخول...':'تسجيل الدخول'; }
-}
-function showAppLoading(msg='جاري تحميل النظام...'){
-  const el=$('#appLoader');
-  if(el){ el.textContent=msg; el.classList.remove('hidden'); }
-}
-function hideAppLoading(){
-  $('#appLoader')?.classList.add('hidden');
-}
-function showAppShell(){
-  setUiShellMode('app');
-  $('#loginScreen')?.classList.add('hidden');
-  $('#app')?.classList.remove('hidden');
-}
 const fmt = n => Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
 const money = n => fmt(n) + ' OMR';
 const today = () => new Date().toISOString().slice(0,10);
 const byId = (table,id) => (Jawdah.data[table]||[]).find(x=>x.id===id) || {};
-const roleName = r => ({owner:'مالك المؤسسة',admin:'مدير النظام',accountant:'محاسب',operations:'تشغيل',maintenance:'صيانة',viewer:'مشاهد'}[r]||r);
-const isSuperUser = () => Jawdah.user && ['owner','admin'].includes(Jawdah.user.role);
-const isOwnerUser = () => Jawdah.user && (Jawdah.user.username==='owner' || Jawdah.user.role==='owner');
-const ownerWelcomeText = () => isOwnerUser() ? 'أهلاً وسهلاً بك أستاذ يعقوب الخصيبي، مالك المؤسسة' : '';
-function toast(msg, err=false, ms=3200){ const t=document.createElement('div'); t.className='toast'+(err?' err':'')+(isOwnerUser()&&!err&&msg===ownerWelcomeText()?' owner-welcome-toast':''); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),ms); }
-function showLoginWelcome(){ const msg=ownerWelcomeText(); toast(msg||'تم تسجيل الدخول', false, msg?6000:3200); }
-function renderOwnerWelcomeSurfaces(){
-  const msg=ownerWelcomeText();
-  const sub=$('#dashSubtitle');
-  if(sub && msg) sub.innerHTML=`<span class="owner-welcome-line">${msg}</span>`;
-  const title=$('.dash-title');
-  if(title && msg) title.textContent='مرحباً بك، أستاذ يعقوب';
-  const banner=document.getElementById('launchBanner');
-  if(banner && msg){
-    banner.classList.remove('hidden');
-    banner.innerHTML=`<div class="launch-card owner-welcome-banner">${ic('crown','title-ic')}<div><b>${msg}</b><br><span class="mini">لوحة القيادة التنفيذية — جودة الانطلاقة للخدمات</span></div></div>`;
-    paintIcons(banner);
-  }
-  if(Jawdah.user?.name) $('#avatar').textContent='ي';
-}
+const roleName = r => ({admin:'مدير النظام',accountant:'محاسب',operations:'تشغيل',maintenance:'صيانة',viewer:'مشاهد'}[r]||r);
+function toast(msg, err=false){ const t=document.createElement('div'); t.className='toast'+(err?' err':''); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
 function ensureEnglishDigits(root=document.body){
   const rx=/[\u0660-\u0669\u06F0-\u06F9]/g;
   const convert=s=>String(s).replace(rx,ch=>String(ch.charCodeAt(0)-((ch.charCodeAt(0)>=0x06F0)?0x06F0:0x0660)));
@@ -105,145 +48,66 @@ function ensureEnglishDigits(root=document.body){
 }
 async function login(){
   try{
-    const username=$('#loginUser')?.value.trim()||'';
-    const password=$('#loginPass')?.value||'';
-    if(!username||!password){ setLoginStatus('أدخل اسم المستخدم وكلمة المرور', true); return; }
-    setLoginBusy(true);
-    setLoginStatus('');
+    const username=$('#loginUser').value.trim(); const password=$('#loginPass').value;
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
-    location.replace(location.pathname + '?login=1');
-  }catch(e){
-    showLoginShell();
-    setLoginStatus(e.message||'تعذر تسجيل الدخول', true);
-    toast(e.message,true);
-  }finally{ setLoginBusy(false); }
+    setUiShellMode('app');
+    $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); toast('تم تسجيل الدخول');
+  }catch(e){toast(e.message,true)}
 }
-async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; hideAppLoading(); showLoginShell(); location.reload(); }
-let sessionBootStarted=false;
+async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); setUiShellMode('login'); location.reload(); }
 async function checkSession(){
-  if(sessionBootStarted) return;
-  sessionBootStarted=true;
-  Jawdah.token=localStorage.getItem('jawdah_cloud_token')||'';
-  if(!Jawdah.token){ showLoginShell(); setLoginStatus(''); return; }
-  try{
-    showAppShell();
-    showAppLoading('جاري تحميل النظام...');
-    const me=await api('me');
-    Jawdah.user=me.user;
-    await loadAll();
-    if(new URLSearchParams(location.search).get('login')==='1'){
-      history.replaceState({}, '', location.pathname);
-      showLoginWelcome();
-    }
-  }catch(e){
-    localStorage.removeItem('jawdah_cloud_token');
-    Jawdah.token='';
-    sessionBootStarted=false;
-    showLoginShell();
-    setLoginStatus(e.message||'تعذر تحميل النظام', true);
-  }finally{
-    hideAppLoading();
-  }
+  if(!Jawdah.token){ setUiShellMode('login'); $('#loginScreen').classList.remove('hidden'); return; }
+  try{ const me=await api('me'); Jawdah.user=me.user; setUiShellMode('app'); $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden'); await loadAll(); }
+  catch(e){ localStorage.removeItem('jawdah_cloud_token'); setUiShellMode('login'); $('#loginScreen').classList.remove('hidden'); }
 }
 function setUiShellMode(mode){
   document.body.classList.toggle('login-mode', mode === 'login');
 }
-function safeStep(name, fn){
-  try{ fn(); }catch(e){ console.warn('render step failed:', name, e); }
-}
-function renderAll(){
-  safeStep('dashboard', renderDashboard);
-  safeStep('reminders', renderReminders);
-  safeStep('properties', renderProperties);
-  safeStep('apartments', renderApartments);
-  safeStep('clients', renderClients);
-  safeStep('tenant-portal', renderTenantPortal);
-  safeStep('renewal', renderRenewalEngine);
-  safeStep('gis', renderNizwaGis);
-  safeStep('compliance', renderComplianceLayer);
-  safeStep('vat', renderVatFta);
-  safeStep('owner-pack', renderOwnerMonthlyPack);
-  safeStep('contracts', renderContracts);
-  safeStep('invoices', renderInvoices);
-  safeStep('accounts', renderAccounts);
-  safeStep('maintenance', renderMaintenance);
-  safeStep('users', renderUsers);
-  safeStep('backup', renderBackup);
-  safeStep('qa', renderQA);
-  safeStep('exports', ()=>{ if(typeof initExportToolbars==='function') initExportToolbars(); });
-}
 async function loadAll(){
-  updateAppLoading('جاري جلب البيانات...');
-  const res=await api('bootstrap',{timeout:90000});
-  Jawdah.data=res.data||{}; Jawdah.dashboard=res.dashboard||{kpis:{},series:[],decisions:[]}; Jawdah.user=res.user;
-  if(res.company_settings && window.CompanyProfile) CompanyProfile.apply(res.company_settings);
-  if($('#userName')) $('#userName').textContent=Jawdah.user?.name||'';
-  if($('#userRole')) $('#userRole').textContent=roleName(Jawdah.user?.role||'');
-  if($('#avatar')) $('#avatar').textContent=isOwnerUser()?'ي':(Jawdah.user?.name||'J').slice(0,1).toUpperCase();
-  updateAppLoading('جاري بناء اللوحة...');
-  buildNav();
-  hideAppLoading();
-  try{
-    renderAll();
-    renderBrandSurfaces();
-    populateCompanySettingsForm();
-    renderOwnerWelcomeSurfaces();
-    showSection(Jawdah.activeSection||'dashboard');
-    ensureEnglishDigits();
-    paintIcons();
-  }catch(e){
-    console.error('render failed', e);
-    toast('تم الدخول — بعض الأقسام تحتاج تحديث الصفحة', true);
-  }
-  setTimeout(()=>loadVendorLibs().then(()=>paintIcons()).catch(()=>{}), 100);
-}
-function updateAppLoading(msg){
-  const el=$('#appLoader');
-  if(el){ el.textContent=msg; el.classList.remove('hidden'); }
-}
-function loadScript(src){
-  return new Promise((resolve,reject)=>{
-    if([...document.scripts].some(s=>s.src===src)){ resolve(); return; }
-    const s=document.createElement('script');
-    s.src=src; s.async=true; s.onload=resolve; s.onerror=reject;
-    document.head.appendChild(s);
-  });
-}
-async function loadVendorLibs(){
-  await loadScript('https://unpkg.com/lucide@0.511.0/dist/umd/lucide.min.js').catch(()=>{});
-  await loadScript('https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js').catch(()=>{});
-  await loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js').catch(()=>{});
+  const res=await api('bootstrap'); Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;
+  if(res.company_settings) CompanyProfile.apply(res.company_settings);
+  $('#userName').textContent=Jawdah.user.name; $('#userRole').textContent=roleName(Jawdah.user.role); $('#avatar').textContent=(Jawdah.user.name||'J').slice(0,1).toUpperCase();
+  buildNav(); renderAll(); renderBrandSurfaces(); populateCompanySettingsForm(); showSection(Jawdah.activeSection||'dashboard'); ensureEnglishDigits(); paintIcons();
 }
 function renderBrandSurfaces(){
-  if(!window.CompanyProfile) return;
   const logo = CompanyProfile.logoUrl();
   document.documentElement.style.setProperty('--brand-logo-url', `url('${logo}')`);
-  const hero=$('#dashboardBrandHero');
-  if(hero) hero.innerHTML=`<div class="dash-brand-compact">${CompanyProfile.dashboardIntroHtml()}</div>`;
+  const hero=$('#dashboardBrandHero'); if(hero) hero.innerHTML=CompanyProfile.dashboardIntroHtml();
   const strip=$('#invoiceBrandStrip'); if(strip) strip.innerHTML=`<div class="invoice-brand-strip">${CompanyProfile.dashboardIntroHtml()}</div>`;
   document.querySelectorAll('.brand img, .login-brand-wrap img').forEach(img=>{ img.src=logo; });
   document.querySelectorAll('.brand-main').forEach(el=>{ el.textContent='Quality of Launch'; });
+  syncSectionHeadingBrand();
+}
+function syncSectionHeadingBrand(){
+  const logo = CompanyProfile.logoUrl();
+  const titleLogo = $('#sectionTitleLogo');
+  if(titleLogo) titleLogo.src = logo;
+  const company = $('#sectionCompanyName');
+  if(company){
+    company.textContent = CompanyProfile.settings?.name_ar || 'جودة الانطلاقة للخدمات ل.ل.س';
+    company.title = CompanyProfile.settings?.name_en || COMPANY;
+  }
 }
 function populateCompanySettingsForm(){
-  if(!isSuperUser()) return;
+  if(Jawdah.user?.role!=='admin') return;
   const s=CompanyProfile.settings;
   const set=(id,v)=>{ const el=$('#'+id); if(el) el.value=v??''; };
   set('csNameAr',s.name_ar); set('csNameEn',s.name_en); set('csCr',s.cr_no); set('csPostal',s.postal_code); set('csPoBox',s.po_box);
   set('csVatRate',s.vat_rate); set('csVatReg',s.vat_reg_no); set('csLogo',s.logo_url); set('csBankName',s.bank?.name);
-  set('csCsPhone',s.contacts?.customer_service); set('csHospPhone',s.contacts?.hospitality_manager);
+  set('csCsPhone',s.contacts?.customer_service); set('csHospPhone',s.contacts?.hospitality_manager); set('csEmail',s.contacts?.email);
   set('csDescAr',s.description_ar); set('csDescEn',s.description_en);
   set('csAcc1Name',s.bank?.accounts?.[0]?.name); set('csAcc1No',s.bank?.accounts?.[0]?.number);
   set('csAcc2Name',s.bank?.accounts?.[1]?.name); set('csAcc2No',s.bank?.accounts?.[1]?.number); set('csAcc2Phone',s.bank?.accounts?.[1]?.phone);
 }
 async function saveCompanySettings(){
-  if(!isSuperUser()) return toast('هذا القسم للمدير فقط', true);
+  if(Jawdah.user?.role!=='admin') return toast('هذا القسم للمدير فقط', true);
   try{
     const payload={
       name_ar:val('csNameAr'), name_en:val('csNameEn'), cr_no:val('csCr'), postal_code:val('csPostal'), po_box:val('csPoBox'),
       vat_rate:Number(val('csVatRate')||0.05), vat_reg_no:val('csVatReg'), logo_url:val('csLogo')||'assets/logo-primary.png',
       description_ar:val('csDescAr'), description_en:val('csDescEn'),
-      contacts:{customer_service:val('csCsPhone'), hospitality_manager:val('csHospPhone')},
+      contacts:{customer_service:val('csCsPhone'), hospitality_manager:val('csHospPhone'), email:val('csEmail')},
       bank:{name:val('csBankName')||'Bank Muscat', accounts:[
         {name:val('csAcc1Name'), number:val('csAcc1No'), phone:''},
         {name:val('csAcc2Name'), number:val('csAcc2No'), phone:val('csAcc2Phone')}
@@ -257,18 +121,11 @@ async function saveCompanySettings(){
 function buildNav(){
   const items=[
     ['dashboard','لوحة التحكم','layout-dashboard'],
+    ['clients','العملاء','users-round'],
     ['properties','العقارات','building-2'],
     ['apartments','إدارة الشقق','layout-grid'],
-    ['clients','العملاء','users-round'],
-    ['tenant-portal','بوابة المستأجر','smartphone'],
-    ['renewal-engine','محرك التجديد','git-compare'],
-    ['nizwa-gis','GIS نزوى','map-pin'],
-    ['compliance','الامتثال','shield-check'],
-    ['vat-fta','FTA / VAT','qr-code'],
-    ['owner-pack','تقرير المالك','briefcase'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
-    ['reminders','تذكيرات واتساب','message-circle'],
     ['admin-expenses','مصاريف إدارية','landmark'],
     ['purchases','فواتير المشتريات','shopping-cart'],
     ['revenues','الإيرادات','gem'],
@@ -290,8 +147,8 @@ function buildNav(){
   ];
   const nav=$('#nav'); nav.innerHTML='';
   items.forEach(([id,label,icon])=>{
-    if(id==='users' && !isSuperUser()) return;
-    if(id==='company-settings' && !isSuperUser()) return;
+    if(id==='users' && Jawdah.user.role!=='admin') return;
+    if(id==='company-settings' && Jawdah.user.role!=='admin') return;
     nav.appendChild(navItem(id,label,icon));
   });
   paintIcons(nav);
@@ -299,15 +156,11 @@ function buildNav(){
 function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
-  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء','tenant-portal':'بوابة المستأجر','renewal-engine':'محرك التجديد والتدفق النقدي','nizwa-gis':'GIS نزوى — حي التراث',compliance:'طبقة الامتثال القانوني والضريبي','vat-fta':'FTA — الفوترة الإلكترونية وتقارير VAT','owner-pack':'تقرير المالك الشهري',contracts:'العقود',invoices:'الفواتير الضريبية',reminders:'تذكيرات واتساب / SMS',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
-  if(id==='renewal-engine') setTimeout(()=>{ if(window.RenewalEngine) RenewalEngine.drawChart('renewalForecastChart', Jawdah.renewalEngine || RenewalEngine.build()); }, 120);
-  if(id==='nizwa-gis') setTimeout(()=>{ if(window.NizwaGIS) NizwaGIS.render('nizwaGisHost'); }, 80);
-  if(id==='compliance') setTimeout(()=>{ if(window.ComplianceLayer) ComplianceLayer.render(); }, 80);
-  if(id==='vat-fta') setTimeout(()=>{ if(window.VatFTA) VatFTA.render(); }, 80);
-  if(id==='owner-pack') setTimeout(()=>{ if(window.OwnerMonthlyPack) OwnerMonthlyPack.render(); }, 80);
-  document.body.classList.toggle('dash-view', id==='dashboard');
+  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',apartments:'إدارة الشقق',clients:'العملاء',contracts:'العقود',invoices:'الفواتير الضريبية',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية','company-settings':'إعدادات المؤسسة والهوية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل','admin-expenses':'مصاريف إدارية',purchases:'فواتير المشتريات',revenues:'الإيرادات',inventory:'المخزن',employees:'كشف الموظفين',payroll:'الرواتب',statements:'قائمة الدخل والميزانية',bank:'كشف البنك','chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية'}[id]||COMPANY);
+  syncSectionHeadingBrand();
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
+function renderAll(){ renderDashboard(); renderProperties(); renderApartments(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }
 function collectApartmentRows(){
   const props=(Jawdah.data.properties||[]).filter(p=>/شقة|حي التراث|نزوى/i.test(String(p.name||'')+String(p.location||'')));
   const byNo=new Map();
@@ -372,68 +225,30 @@ function buildExecutiveSnapshot(){
   const riskScore=Math.max(0,Math.min(100,100-(openInvoices.length*7)-(openMaint.length*6)+(collectionRate*.2)));
   return {k,data,aptRows,aptTotal,aptRented,aptVacant,aptOcc,collectionRate,openInvoices,overdueInvoices,monthlyRentForecast,priorities,portfolioScore,riskScore,criticalCount,activeContracts:activeContracts.length};
 }
-function dashRingSvg(pct,r=26){
-  const c=2*Math.PI*r;
-  const off=c-Math.max(0,Math.min(100,pct))/100*c;
-  return `<svg class="dash-ring-svg" viewBox="0 0 64 64" aria-hidden="true"><circle class="ring-track" cx="32" cy="32" r="${r}"/><circle class="ring-val" cx="32" cy="32" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg>`;
-}
-function portfolioOrbHtml(snap){
-  const score=snap.portfolioScore;
-  const r=68, c=2*Math.PI*r, off=c-(score/100)*c;
-  const logo=CompanyProfile.logoUrl();
-  return `<div class="portfolio-orb-wrap">
-    <div class="portfolio-orb-glow" aria-hidden="true"></div>
-    <svg class="portfolio-orb-svg" viewBox="0 0 160 160"><defs><linearGradient id="orbGradDash" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7fffd4"/><stop offset="50%" stop-color="#40e0d0"/><stop offset="100%" stop-color="#c9a66b"/></linearGradient></defs><circle cx="80" cy="80" r="${r}" class="orb-track"/><circle cx="80" cy="80" r="${r}" class="orb-progress" stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg>
-    <div class="portfolio-orb-core"><img src="${logo}" alt=""><strong class="dash-count" data-percent="1" data-value="${score}">0%</strong><span>مؤشر المحفظة</span></div>
-  </div>
-  <div class="orb-mini-stats">
-    <div>${dashRingSvg(snap.aptOcc,20)}<b class="dash-count" data-percent="1" data-value="${snap.aptOcc||0}">0%</b><span>إشغال</span></div>
-    <div>${dashRingSvg(snap.collectionRate,20)}<b class="dash-count" data-percent="1" data-value="${snap.collectionRate||0}">0%</b><span>تحصيل</span></div>
-    <div>${dashRingSvg(snap.riskScore,20)}<b class="dash-count" data-percent="1" data-value="${snap.riskScore||0}">0%</b><span>سلامة</span></div>
-  </div>`;
-}
-function animateDashCounts(root){
-  if(!root) return;
-  root.querySelectorAll('.dash-count').forEach(el=>{
-    const end=Number(el.dataset.value||0);
-    const isMoney=el.dataset.money==='1';
-    const isPercent=el.dataset.percent==='1';
-    const start=performance.now(), dur=1400;
-    const step=now=>{
-      const p=Math.min(1,(now-start)/dur);
-      const eased=1-Math.pow(1-p,3);
-      const val=end*eased;
-      el.textContent=isMoney?money(val):isPercent?fmt(Math.round(val))+'%':fmt(Math.round(val));
-      if(p<1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  });
-}
-function renderDashboardCockpit(snap,k,data){
-  const collectionRate=snap.collectionRate;
-  const nextRentForecast=Number(k.paid||0)+Math.max(0,Number(k.overdue||0)*.35);
-  const sub=$('#dashSubtitle');
-  if(sub && !isOwnerUser()) sub.textContent=`${CompanyProfile.settings.name_ar} · ${fmt(snap.aptTotal)} شقة · ${fmt(snap.activeContracts)} عقد نشط · تحديث ${new Date().toLocaleDateString('ar-OM')}`;
-  const stats=$('#dashHeroStats');
-  if(stats) stats.innerHTML=`<span class="dash-chip paid">جاهزية ${fmt(k.health)}%</span><span class="dash-chip">إشغال ${fmt(snap.aptOcc)}%</span><span class="dash-chip">تحصيل ${fmt(collectionRate)}%</span><span class="dash-chip ${snap.criticalCount?'chip-alert':''}">أولويات ${fmt(snap.criticalCount)}</span><span class="dash-chip">توقع ${money(nextRentForecast)}</span>`;
-  const orb=$('#dashPortfolioOrb');
-  if(orb){ orb.innerHTML=portfolioOrbHtml(snap); animateDashCounts(orb); }
-  const orbs=$('#dashQuickOrbs');
-  if(orbs) orbs.innerHTML=[['apartments','الشقق','layout-grid'],['compliance','امتثال','shield-check'],['nizwa-gis','GIS','map-pin'],['renewal-engine','التجديد','git-compare'],['invoices','فاتورة','receipt']].map(([sec,label,icon])=>`<button class="dash-orb-btn" onclick="showSection('${sec}')">${ic(icon)}<span>${label}</span></button>`).join('');
-  paintIcons($('.dash-cockpit'));
-}
 function renderExecutiveCommandCenter(){
-  const snap=Jawdah.executiveSnapshot||buildExecutiveSnapshot();
+  const snap=buildExecutiveSnapshot();
   Jawdah.executiveSnapshot=snap;
+  const brand=$('#eccBrandBlock');
+  if(brand){
+    const s=CompanyProfile.settings||{};
+    brand.innerHTML=`
+      <div class="ecc-brand">
+        <img src="${CompanyProfile.escapeHtml(CompanyProfile.logoUrl())}" alt="شعار المؤسسة">
+        <div>
+          <h3><i data-lucide="radar" class="lucide-icon title-ic"></i> مركز القرار التنفيذي</h3>
+          <p class="ecc-brand-name">${CompanyProfile.escapeHtml(s.name_ar || 'جودة الانطلاقة للخدمات ل.ل.س')}</p>
+          <p class="mini">قائمة الأولويات، الرادار المالي، ومؤشر المحفظة — محدّث لحظياً من بيانات الشقق والعقود والفواتير</p>
+        </div>
+      </div>`;
+  }
   const radar=$('#eccRadar');
   if(radar){
     radar.innerHTML=[
-      ['gauge','مؤشر المحفظة',snap.portfolioScore,snap.portfolioScore+'%',snap.portfolioScore>=70?'good':''],
-      ['percent','نسبة الإشغال',snap.aptOcc||snap.k.occupancy||0,fmt(snap.aptOcc||snap.k.occupancy||0)+'%',snap.aptOcc>=60?'good':''],
-      ['wallet','مؤشر التحصيل',snap.collectionRate,snap.collectionRate+'%',snap.collectionRate>=80?'good':''],
-      ['triangle-alert','أولويات حرجة',snap.criticalCount,fmt(snap.criticalCount),snap.criticalCount?'critical':'good'],
-    ].map(x=>`<div class="ecc-radar-item dash-radar-tile ${x[4]||''}">${dashRingSvg(Number(x[2])||0,24)}<div class="dash-radar-meta"><span>${x[1]}</span><strong class="dash-count" data-value="${Number(x[2])||0}" ${String(x[3]).includes('%')?'data-percent="1"':''}>0</strong></div></div>`).join('');
-    animateDashCounts(radar);
+      ['gauge','مؤشر المحفظة',fmt(snap.portfolioScore)+'%',snap.portfolioScore>=70?'good':''],
+      ['percent','نسبة الإشغال',fmt(snap.aptOcc||snap.k.occupancy||0)+'%',snap.aptOcc>=60?'good':''],
+      ['wallet','مؤشر التحصيل',fmt(snap.collectionRate)+'%',snap.collectionRate>=80?'good':''],
+      ['triangle-alert','أولويات حرجة',fmt(snap.criticalCount),snap.criticalCount?'critical':'good'],
+    ].map(x=>`<div class="ecc-radar-item ${x[3]||''}"><span>${x[1]}</span><strong>${x[2]}</strong></div>`).join('');
   }
   const queue=$('#eccPriorityQueue');
   if(queue){
@@ -516,76 +331,24 @@ async function downloadExecutiveReportPdf(){
     await downloadHtmlAsPdf(executiveReportHtml(snap), `executive-report-${today()}.pdf`);
   }catch(e){ toast(e.message||'تعذر إنشاء التقرير',true); }
 }
-function buildReminderQueue(){
-  const list=[];
-  const RH=window.ReminderHub;
-  if(!RH) return list;
-  (Jawdah.data.invoices||[]).forEach(inv=>{
-    const due=Number(inv.amount||0)-Number(inv.paid_amount||0);
-    if(due<=0) return;
-    const client=byId('clients',inv.client_id);
-    const prop=byId('properties',inv.property_id);
-    const left=contractDaysLeft(inv.due_date);
-    if(left!==null && left<=14){
-      const msg=RH.rentDueMessage({tenant:client.name,unit:prop.name,amount:money(due),dueDate:inv.due_date,invoiceNo:inv.invoice_no});
-      list.push({id:'inv-'+inv.id,type:'invoice',tone:left<0?'critical':'high',title:`فاتورة ${inv.invoice_no||inv.id}`,detail:`${client.name||'—'} · متبقي ${money(due)}`,phone:client.phone,message:msg,section:'invoices'});
-    }
-  });
-  renewalQueue().forEach(({contract:c,meta})=>{
-    if(meta.days===null || meta.days>30) return;
-    const client=byId('clients',c.client_id);
-    const prop=byId('properties',c.property_id);
-    const msg=RH.contractExpiryMessage({tenant:client.name,unit:prop.name,endDate:c.end_date,daysLeft:meta.days});
-    list.push({id:'con-'+c.id,type:'contract',tone:meta.days<0?'critical':'medium',title:`عقد ${c.contract_no||c.id}`,detail:`${client.name||'—'} · ${prop.name||''} · ينتهي ${c.end_date}`,phone:client.phone,message:msg,section:'contracts',contractId:c.id});
-  });
-  collectApartmentRows().filter(r=>r.shortContract).forEach(r=>{
-    if(!r.phone || r.phone==='—') return;
-    const msg=RH.contractExpiryMessage({tenant:r.tenant,unit:'شقة '+r.no,endDate:r.end,daysLeft:r.contractDaysLeft??0});
-    list.push({id:'apt-'+r.no,type:'short',tone:'critical',title:`شقة ${r.no} — عقد قصير`,detail:`${r.tenant} · ${r.shortLabel||''}`,phone:r.phone,message:msg,section:'apartments'});
-  });
-  const toneRank={critical:0,high:1,medium:2};
-  return list.sort((a,b)=>(toneRank[a.tone]??9)-(toneRank[b.tone]??9));
-}
-function reminderActionButtons(r){
-  const RH=ReminderHub;
-  const phone=RH.normalizePhone(r.phone);
-  if(!phone) return `<span class="mini">أضف رقم الهاتف في العميل</span>`;
-  const sent=RH.wasSentToday(r.id)?' reminder-sent':'';
-  const wa=RH.waUrl(r.phone,r.message);
-  const sms=RH.smsUrl(r.phone,r.message);
-  return `<div class="reminder-actions"><a class="glass-btn glass-btn-wa${sent}" href="${wa}" target="_blank" rel="noopener" onclick="ReminderHub.markSent('${r.id}')">${ic('message-circle')} واتساب</a><a class="glass-btn glass-btn-sms${sent}" href="${sms}" onclick="ReminderHub.markSent('${r.id}')">${ic('smartphone')} SMS</a></div>`;
-}
-function renderReminderRows(list,limit){
-  const rows=limit?list.slice(0,limit):list;
-  if(!rows.length) return `<div class="ecc-empty">${ic('circle-check-big','title-ic')} لا توجد تذكيرات مطلوبة الآن</div>`;
-  return `<div class="reminder-list">${rows.map(r=>`<div class="reminder-row ${r.tone}"><div class="reminder-main"><b>${r.title}</b><div class="mini">${r.detail}</div><div class="mini reminder-phone">${r.phone||'—'}</div></div>${reminderActionButtons(r)}</div>`).join('')}</div>`;
-}
-function renderReminders(refresh){
-  const list=buildReminderQueue();
-  Jawdah.reminderQueue=list;
-  if($('#reminderHubPreview')){ $('#reminderHubPreview').innerHTML=renderReminderRows(list,4); paintIcons($('#reminderHubPreview')); }
-  if($('#reminderHubFull')){ $('#reminderHubFull').innerHTML=renderReminderRows(list); paintIcons($('#reminderHubFull')); }
-  if(refresh) toast('تم تحديث قائمة التذكيرات');
-  paintIcons($('#reminderHub'));
-}
 function renderDashboard(){
   const k=Jawdah.dashboard.kpis;
   const data=Jawdah.data || {};
-  const snap=buildExecutiveSnapshot();
-  Jawdah.executiveSnapshot=snap;
-  const collectionRate=snap.collectionRate;
-  const openInvoices=snap.openInvoices;
-  const nextRentForecast=Number(k.paid||0)+Math.max(0,Number(k.overdue||0)*.35);
-  const riskScore=snap.riskScore;
-  renderDashboardCockpit(snap,k,data);
+  const apartmentCount = collectApartmentRows().length;
+  const totalInvoices = (data.invoices||[]).length;
+  const collectionRate = k.billed ? Math.round((Number(k.paid||0)/Number(k.billed||1))*100) : 0;
+  const openInvoices=(data.invoices||[]).filter(x=>Number(x.amount||0)>Number(x.paid_amount||0));
+  const nextRentForecast = Number(k.paid||0) + Math.max(0, Number(k.overdue||0) * .35);
+  const riskScore = Math.max(0, Math.min(100, 100 - (openInvoices.length*7) - (Number(k.maintenance||0)*6) + (collectionRate*.2)));
+  $('#heroStats').innerHTML=`<span class="badge paid">جاهزية ${fmt(k.health)}%</span><span class="badge">الإشغال ${fmt(k.occupancy)}%</span><span class="badge">التحصيل ${fmt(collectionRate)}%</span><span class="badge">مؤشر المخاطر ${fmt(riskScore)}%</span><span class="badge">توقع النقد ${money(nextRentForecast)}</span>`;
   const kpis=[
-    ['building-2','إجمالي العقارات',k.properties,'properties',''],['key-round','العقارات المؤجرة',k.rented,'properties',''],['home','العقارات الشاغرة',k.vacant,'properties',''],['file-check','العقود النشطة',snap.activeContracts,'contracts',''],
+    ['users-round','إجمالي العملاء',(data.clients||[]).length,'clients',''],['building-2','إجمالي البنايات',k.properties,'properties',''],['layout-grid','إجمالي الشقق',apartmentCount,'apartments',''],['file-check','العقود النشطة',(data.contracts||[]).filter(x=>String(x.status||'').toLowerCase().includes('active')).length,'contracts',''],
+    ['receipt','إجمالي الفواتير',totalInvoices,'invoices',''],
     ['refresh-cw','عقود تحتاج تجديد',k.expiring||0,'contracts',''],['timer','عقود منتهية',k.expired||0,'contracts',''],
     ['receipt','إجمالي الفوترة',k.billed,'invoices','money'],['credit-card','إجمالي التحصيل',k.paid,'accounts','money'],['alarm-clock','المبالغ المتأخرة',k.overdue,'invoices','money'],['trending-up','صافي الربح',k.net,'accounts','money'],
-    ['wrench','الصيانة المفتوحة',k.maintenance,'maintenance',''],['users-round','العملاء',(data.clients||[]).length,'clients',''],['shield-check','جودة البيانات',k.health,'reports','percent'],['sparkles','توقع الشهر',nextRentForecast,'reports','money']
+    ['wrench','الصيانة المفتوحة',k.maintenance,'maintenance',''],['shield-check','جودة البيانات',k.health,'reports','percent'],['sparkles','توقع الشهر',nextRentForecast,'reports','money']
   ];
-  $('#kpiGrid').innerHTML=kpis.map((x,i)=>`<div class="dash-kpi-tile kpi-pro" onclick="showSection('${x[3]}')" style="--tile-i:${i}"><div class="dash-kpi-shine"></div>${kpiIcon(x[0])}<span>${x[1]}</span><strong class="dash-count" data-value="${Number(x[2])||0}" ${x[4]==='money'?'data-money="1"':''} ${x[4]==='percent'?'data-percent="1"':''}>0</strong><small class="mini">فتح التفاصيل والتحليل</small></div>`).join('');
-  animateDashCounts($('#kpiGrid'));
+  $('#kpiGrid').innerHTML=kpis.map(x=>`<div class="kpi kpi-pro" onclick="showSection('${x[3]}')">${kpiIcon(x[0])}<span>${x[1]}</span><strong>${x[4]==='money'?money(x[2]):x[4]==='percent'?fmt(x[2])+'%':fmt(x[2])}</strong><small class="mini">فتح التفاصيل والتحليل</small></div>`).join('');
   renderExecutiveCommandCenter();
   const executiveMatrix=`
     <div class="command-panel">
@@ -594,16 +357,16 @@ function renderDashboard(){
       <div class="ai-stat"><b>${money(nextRentForecast)}</b><span>توقع النقد القادم</span></div>
     </div>
     <div class="ops-matrix">
-      <div><b>العقار</b><span>${fmt(k.properties)}</span></div><div><b>العميل</b><span>${fmt((data.clients||[]).length)}</span></div><div><b>العقد</b><span>${fmt((data.contracts||[]).length)}</span></div><div><b>الفاتورة</b><span>${fmt((data.invoices||[]).length)}</span></div><div><b>التحصيل</b><span>${money(k.paid)}</span></div><div><b>الحسابات</b><span>${money(k.net)}</span></div>
+      <div><b>العميل</b><span>${fmt((data.clients||[]).length)}</span></div><div><b>البناية</b><span>${fmt(k.properties)}</span></div><div><b>الشقة</b><span>${fmt(apartmentCount)}</span></div><div><b>العقد</b><span>${fmt((data.contracts||[]).length)}</span></div><div><b>الفاتورة</b><span>${fmt((data.invoices||[]).length)}</span></div><div><b>التحصيل</b><span>${money(k.paid)}</span></div>
     </div>
     <div class="executive-strip"><div class="executive-chip"><b>مؤشر التحصيل</b><br><span class="mini">${fmt(collectionRate)}% من إجمالي الفواتير</span></div><div class="executive-chip"><b>مؤشر الإشغال</b><br><span class="mini">${fmt(k.occupancy)}% من الوحدات</span></div><div class="executive-chip"><b>مؤشر السلامة</b><br><span class="mini">${fmt(riskScore)}% تشغيل مستقر</span></div></div>`;
   $('#decisionList').innerHTML=executiveMatrix + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
   const props=Jawdah.data.properties||[];
-  if(window.NizwaGIS) NizwaGIS.renderMini('gisPins'); else $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
-  $('#quickActions').innerHTML=[['إضافة عقار','properties','building-2'],['إضافة عميل','clients','user-plus'],['إنشاء عقد','contracts','file-plus-2'],['تجديد عقد','contracts','refresh-cw'],['فاتورة من عقد','invoices','receipt'],['تحصيل دفعة','invoices','wallet'],['Backup فوري','backup','archive'],['تقرير مالي','reports','chart-pie'],['اختبار التشغيل','qa','badge-check']].map((q,i)=>`<button class="ghost quick-pro dash-action-tile" style="--tile-i:${i}" onclick="showSection('${q[1]}')"><span class="quick-head">${ic(q[2],'quick-ic')}<b>${q[0]}</b></span><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
-  paintIcons($('#sec-dashboard'));
-  if(isOwnerUser()) renderOwnerWelcomeSurfaces();
+  $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
+  $('#quickActions').innerHTML=[['إضافة عميل','clients','user-plus'],['إضافة بناية','properties','building-2'],['إدارة الشقق','apartments','layout-grid'],['إنشاء عقد','contracts','file-plus-2'],['فاتورة من عقد','invoices','receipt'],['تحصيل دفعة','invoices','wallet'],['تجديد عقد','contracts','refresh-cw'],['تقرير مالي','reports','chart-pie'],['Backup فوري','backup','archive'],['اختبار التشغيل','qa','badge-check']].map(q=>`<button class="ghost quick-pro" onclick="showSection('${q[1]}')"><span class="quick-head">${ic(q[2],'quick-ic')}<b>${q[0]}</b></span><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
+  paintIcons($('#kpiGrid')); paintIcons($('#decisionList')); paintIcons($('#quickActions'));
 }
+function tableHtml(cols, rows, actions, rowClassFn){
   return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}${actions?'<th>إجراء</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr class="${rowClassFn?rowClassFn(r):''}">${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??'')}</td>`).join('')}${actions?`<td>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
 }
 function renderProperties(){
@@ -669,49 +432,13 @@ function renderApartments(){
 }
 function renderClients(){
   const rows=filterRows('clients',['name','phone','email','national_id']);
-  $('#clientsTable').innerHTML=tableHtml([['الاسم','name'],['الهاتف','phone'],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['البوابة','portal_token',(_,r)=>r.portal_token?'<span class="badge paid">مفعّلة</span>':'<span class="badge vacant">—</span>'],['ملاحظات','notes']],rows,r=>`<button class="gold-btn" onclick="generatePortalLink('${r.id}')">${ic('smartphone','quick-ic')} بوابة</button> <button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
-  paintIcons($('#clientsTable'));
-}
-async function generatePortalLink(clientId){
-  try{
-    const res=await api('portal/generate_token',{method:'POST',body:JSON.stringify({client_id:clientId})});
-    const url=location.origin+'/portal.html?t='+encodeURIComponent(res.token);
-    const client=byId('clients',clientId);
-    if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(url);
-    $('#genericModalBody').innerHTML=`<h2>بوابة المستأجر — ${client.name||''}</h2><p class="mini">انسخ الرابط وأرسله للمستأجر عبر واتساب:</p><input readonly value="${url}" style="width:100%;padding:12px;border-radius:12px;margin:12px 0" onclick="this.select()"><div class="toolbar"><a class="gold-btn glass-btn-wa" href="${ReminderHub?.waUrl?.(client.phone,`مرحباً ${client.name||''}، رابط بوابة المستأجر لعرض الفواتير ورفع إثبات التحويل:\n${url}`)||'#'}" target="_blank" rel="noopener">${ic('message-circle')} واتساب</a><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div>`;
-    openModal('genericModal'); paintIcons($('#genericModalBody'));
-    await loadAll(); toast('تم إنشاء/تحديث رابط البوابة');
-  }catch(e){ toast(e.message,true); }
-}
-async function reviewPaymentProof(proofId, action){
-  const note=action==='reject'?prompt('سبب الرفض (اختياري):',''):'';
-  try{
-    await api('portal/review_proof',{method:'POST',body:JSON.stringify({proof_id:proofId,action,review_note:note||''})});
-    toast(action==='approve'?'تم اعتماد الإثبات وتحديث الفاتورة':'تم رفض الإثبات');
-    await loadAll(); renderTenantPortal();
-  }catch(e){ toast(e.message,true); }
-}
-function renderTenantPortal(refresh){
-  const proofs=(Jawdah.data.payment_proofs||[]).filter(p=>p.status==='pending');
-  const host=$('#tenantPortalProofs');
-  if(host){
-    host.innerHTML=proofs.length?proofs.map(p=>{
-      const client=byId('clients',p.client_id);
-      const inv=byId('invoices',p.invoice_id);
-      const img=p.proof_image?`<a class="ghost" href="${p.proof_image}" target="_blank" rel="noopener">عرض الصورة</a>`:'';
-      return `<div class="tenant-proof-row ${p.status}"><div><b>${client.name||p.client_id}</b> · فاتورة ${inv.invoice_no||p.invoice_id||'—'}<div class="mini">${money(p.amount)} · مرجع: ${p.transfer_ref||'—'} · ${p.submitted_at||''}</div>${p.note?`<div class="mini">${p.note}</div>`:''}</div><div class="tenant-proof-actions">${img}<button class="gold-btn" onclick="reviewPaymentProof('${p.id}','approve')">اعتماد</button><button class="ghost" onclick="reviewPaymentProof('${p.id}','reject')">رفض</button></div></div>`;
-    }).join(''):`<div class="ecc-empty">${ic('circle-check-big','title-ic')} لا توجد إثباتات بانتظار المراجعة</div>`;
-    paintIcons(host);
-  }
-  const links=$('#tenantPortalLinks');
-  if(links){
-    const clients=(Jawdah.data.clients||[]).filter(c=>c.portal_token);
-    links.innerHTML=clients.length?tableHtml([['العميل','name'],['الهاتف','phone'],['الحالة','portal_active',(_,r)=>r.portal_active?badge('Active'):badge('Inactive')]],clients,r=>`<button class="ghost" onclick="generatePortalLink('${r.id}')">نسخ الرابط</button>`):'<p class="mini">لا روابط بعد — اضغط «بوابة» من جدول العملاء.</p>';
-  }
-  if(refresh) toast('تم تحديث بوابة المستأجر');
+  $('#clientsTable').innerHTML=tableHtml([['الاسم','name'],['الهاتف','phone'],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['ملاحظات','notes']],rows,r=>`<button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
 }
 function renderContracts(){
-  fillSelect('#contractProperty',Jawdah.data.properties||[],true,'id','name'); fillSelect('#contractClient',Jawdah.data.clients||[],true,'id','name');
+  fillSelect('#contractClient',Jawdah.data.clients||[],true,'id','name');
+  fillSelect('#contractProperty',Jawdah.data.properties||[],true,'id','name');
+  if($('#contractClient')?.options?.[0]) $('#contractClient').options[0].text='اختر العميل';
+  if($('#contractProperty')?.options?.[0]) $('#contractProperty').options[0].text='اختر البناية';
   const rows=filterRows('contracts',['id','status','notes']);
   const renewalHost = $('#renewalQueueBox');
   if(renewalHost){
@@ -726,16 +453,30 @@ function renderContracts(){
     legalTa.value = CompanyProfile.defaultLegalTerms();
     legalTa.dataset.initialized = '1';
   }
-  $('#contractsTable').innerHTML=tableHtml([['رقم العقد','contract_no',(v,r)=>v||r.id],['النوع','contract_type'],['العقار','property_id',(v)=>byId('properties',v).name||v],['العميل','client_id',(v)=>byId('clients',v).name||v],['البداية','start_date'],['النهاية','end_date'],['التجديد','id',(_,r)=>{const m=contractRenewalMeta(r); return m.label?`<span class="badge ${m.tone}">${m.label}</span>`:'—';}],['الإيجار','rent_amount',(v)=>money(v)],['التأمين','deposit_amount',(v)=>money(v)],['الحالة','status',(v)=>badge(v)]],rows,r=>{
+  const unitCell=(v)=>unitLabelFromDetails(v);
+  $('#contractsTable').innerHTML=tableHtml([['العميل','client_id',(v)=>byId('clients',v).name||v],['البناية','property_id',(v)=>byId('properties',v).name||v],['الشقة/الوحدة','unit_details',unitCell],['رقم العقد','contract_no',(v,r)=>v||r.id],['النوع','contract_type'],['البداية','start_date'],['النهاية','end_date'],['التجديد','id',(_,r)=>{const m=contractRenewalMeta(r); return m.label?`<span class="badge ${m.tone}">${m.label}</span>`:'—';}],['الإيجار','rent_amount',(v)=>money(v)],['التأمين','deposit_amount',(v)=>money(v)],['الحالة','status',(v)=>badge(v)]],rows,r=>{
     const meta = contractRenewalMeta(r);
     const renewBtn = meta.renewable ? `<button class="gold-btn" onclick="renewContract('${r.id}')">تجديد</button> ` : '';
     return `${renewBtn}<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button> <button class="ghost" onclick="contractDocument('${r.id}')">عرض</button> <button class="ghost" onclick="downloadContractPdf('${r.id}')">PDF</button> <button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> <button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
   });
 }
-function canWriteInvoices(){ return Jawdah.user && ['owner','admin','accountant','operations'].includes(Jawdah.user.role); }
+function canWriteInvoices(){ return Jawdah.user && ['admin','accountant','operations'].includes(Jawdah.user.role); }
 function contractLabel(c){
   const prop=byId('properties',c.property_id), client=byId('clients',c.client_id);
-  return `${c.contract_no||c.id} · ${client.name||'—'} · ${prop.name||'—'}`;
+  const unit=unitLabelFromDetails(c.unit_details);
+  return `${client.name||'—'} · ${prop.name||'—'} · ${unit} · ${c.contract_no||c.id}`;
+}
+function unitLabelFromDetails(details){
+  const source=String(details||'').trim();
+  if(!source) return '—';
+  const firstSegment=source.split(/[\n،,]+/)[0].trim();
+  if(!firstSegment) return '—';
+  return firstSegment.length>34?`${firstSegment.slice(0,34)}...`:firstSegment;
+}
+function contractFromInvoiceId(invoiceId){
+  const inv=byId('invoices', invoiceId);
+  if(!inv.id) return {};
+  return byId('contracts', inv.contract_id);
 }
 function syncInvoiceContractPreview(){
   const c=byId('contracts', val('invContractPick'));
@@ -743,29 +484,17 @@ function syncInvoiceContractPreview(){
   if(!preview) return;
   if(!c.id){ preview.innerHTML=''; return; }
   const client=byId('clients',c.client_id), prop=byId('properties',c.property_id);
+  const unit=unitLabelFromDetails(c.unit_details);
   preview.innerHTML=`<div class="link-preview-grid">
-    <span class="badge paid"><i data-lucide="file-signature" class="lucide-icon"></i> ${c.contract_no||c.id}</span>
     <span class="badge"><i data-lucide="users-round" class="lucide-icon"></i> ${client.name||'—'}</span>
     <span class="badge"><i data-lucide="building-2" class="lucide-icon"></i> ${prop.name||'—'}</span>
+    <span class="badge"><i data-lucide="layout-grid" class="lucide-icon"></i> ${unit}</span>
+    <span class="badge paid"><i data-lucide="file-signature" class="lucide-icon"></i> ${c.contract_no||c.id}</span>
     <span class="badge">إيجار ${money(c.rent_amount)}</span>
   </div>`;
   if($('#invAmount') && Number(c.rent_amount)>0) $('#invAmount').value=Number(c.rent_amount).toFixed(3);
   if($('#invDueDate') && !$('#invDueDate').value) $('#invDueDate').value=today();
-  const descEl=$('#invDescription');
-  if(descEl && CompanyProfile?.buildInvoiceDescription){
-    const draft={due_date:val('invDueDate')||today(), issue_date:today(), description:''};
-    const built=CompanyProfile.buildInvoiceDescription(draft, client, prop, c);
-    descEl.value=built.ar.split('\n')[0];
-  }
   paintIcons(preview);
-}
-function previewInvoiceTemplate(){
-  const html=CompanyProfile.sampleInvoiceHtml();
-  $('#invoicePreview').innerHTML=`<iframe class="invoice-preview-frame" title="Invoice Template Preview"></iframe>`;
-  const frame=$('#invoicePreview iframe');
-  if(frame) frame.srcdoc=html;
-  Jawdah.invoiceForPrint=null;
-  openModal('invoiceModal');
 }
 async function submitCreateInvoice(){
   if(!canWriteInvoices()) return toast('لا تملك صلاحية إنشاء الفواتير', true);
@@ -801,14 +530,16 @@ function renderInvoices(){
   syncInvoiceContractPreview();
   const rows=filterRows('invoices',['invoice_no','description','status']);
   const contractCell=(v,r)=>{ const c=byId('contracts',r.contract_id); return c.id?`<span class="linked-ok">${c.contract_no||c.id}</span>`:'<span class="low-stock">غير مربوط</span>'; };
+  const unitFromContractCell=(v,r)=>{ const c=byId('contracts',r.contract_id); return unitLabelFromDetails(c.unit_details); };
   const vatCell=(v,r)=>{ const b=CompanyProfile.vatBreakdown(r.amount); return money(b.vat); };
   const totalCell=(v,r)=> money(r.amount);
   const remainCell=(v,r)=> money(Math.max(0,Number(r.amount)-Number(r.paid_amount)));
   $('#invoicesTable').innerHTML=tableHtml([
-    ['رقم','invoice_no'],
-    ['العقد','contract_id',contractCell],
     ['العميل','client_id',(v)=>byId('clients',v).name||v],
-    ['العقار','property_id',(v)=>byId('properties',v).name||v],
+    ['البناية','property_id',(v)=>byId('properties',v).name||v],
+    ['الشقة/الوحدة','contract_id',unitFromContractCell],
+    ['العقد','contract_id',contractCell],
+    ['رقم الفاتورة','invoice_no'],
     ['الإصدار','issue_date'],
     ['الاستحقاق','due_date'],
     ['أساسي','amount',(v,r)=>money(CompanyProfile.vatBreakdown(r.amount).subtotal)],
@@ -832,14 +563,25 @@ function renderInvoices(){
 }
 function renderAccounts(){
   const rows=filterRows('accounts',['description','category','type']);
-  $('#accountsTable').innerHTML=tableHtml([['التاريخ','entry_date'],['النوع','type',(v)=>badge(v)],['التصنيف','category'],['الوصف','description'],['العميل','client_id',(v)=>v?(byId('clients',v).name||v):''],['العقار','property_id',(v)=>v?(byId('properties',v).name||v):''],['الفاتورة','invoice_id',(v)=>v?(byId('invoices',v).invoice_no||v):''],['المبلغ','amount',(v)=>money(v)]],rows,r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`);
+  $('#accountsTable').innerHTML=tableHtml([
+    ['التاريخ','entry_date'],
+    ['النوع','type',(v)=>badge(v)],
+    ['التصنيف','category'],
+    ['الوصف','description'],
+    ['العميل','client_id',(v)=>v?(byId('clients',v).name||v):''],
+    ['البناية','property_id',(v)=>v?(byId('properties',v).name||v):''],
+    ['الشقة/الوحدة','invoice_id',(v)=>unitLabelFromDetails(contractFromInvoiceId(v).unit_details)],
+    ['العقد','invoice_id',(v)=>{ const c=contractFromInvoiceId(v); return c.id?(c.contract_no||c.id):'—'; }],
+    ['الفاتورة','invoice_id',(v)=>v?(byId('invoices',v).invoice_no||v):'—'],
+    ['المبلغ','amount',(v)=>money(v)]
+  ],rows,r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`);
   const income=rows.filter(x=>x.type==='income').reduce((s,x)=>s+Number(x.amount||0),0), expense=rows.filter(x=>x.type==='expense').reduce((s,x)=>s+Number(x.amount||0),0);
   $('#accountSummary').innerHTML=`<span class="badge">إيرادات ${money(income)}</span><span class="badge">مصروفات ${money(expense)}</span><span class="badge">صافي ${money(income-expense)}</span>`;
 }
 function renderMaintenance(){
   fillSelect('#maintProperty',Jawdah.data.properties||[],true,'id','name');
   const rows=filterRows('maintenance',['title','priority','status','notes']);
-  $('#maintenanceGrid').innerHTML=rows.map(m=>`<div class="card ${m.source==='tenant'?'tenant-maint-card':''}"><h3>${m.title} ${m.source==='tenant'?'<span class="badge partial">من البوابة</span>':''}</h3><p>${byId('properties',m.property_id).name||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord('maintenance','${m.id}')">متابعة</button> <button class="danger" onclick="delRecord('maintenance','${m.id}')">حذف</button></div>`).join('')||'<div class="card">لا توجد طلبات صيانة</div>';
+  $('#maintenanceGrid').innerHTML=rows.map(m=>`<div class="card"><h3>${m.title}</h3><p>${byId('properties',m.property_id).name||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord('maintenance','${m.id}')">متابعة</button> <button class="danger" onclick="delRecord('maintenance','${m.id}')">حذف</button></div>`).join('')||'<div class="card">لا توجد طلبات صيانة</div>';
 }
 function renderUsers(){
   if(!Jawdah.data.users){ $('#usersTable').innerHTML='<div class="card">هذا القسم للمدير فقط</div>'; return; }
@@ -926,9 +668,29 @@ async function createClient(){
   await saveNew('clients',{name:val('cName'),phone:val('cPhone'),email:val('cEmail'),national_id:val('cNational'),balance:0,notes:val('cNotes')});
   ['cName','cPhone','cEmail','cNational','cNotes'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
 }
-async function createContract(){ await saveNew('contracts',{contract_type:val('contractType')||'Residential',property_id:val('contractProperty'),client_id:val('contractClient'),tenant_nationality:val('tenantNationality'),tenant_id_no:val('tenantIdNo'),unit_details:val('unitDetails'),start_date:val('contractStart')||today(),end_date:val('contractEnd')||today(),rent_amount:num('contractRent'),deposit_amount:num('contractDeposit'),late_fee:num('contractLateFee'),grace_days:num('contractGraceDays')||5,renewal_notice_days:num('contractRenewalDays')||90,status:'Draft',payment_cycle:'monthly',legal_terms:val('contractLegalTerms')||CompanyProfile.defaultLegalTerms(),notes:val('contractNotes')}); }
+async function createContract(){
+  await saveNew('contracts',{
+    contract_type:val('contractType')||'Residential',
+    client_id:val('contractClient'),
+    property_id:val('contractProperty'),
+    tenant_nationality:val('tenantNationality'),
+    tenant_id_no:val('tenantIdNo'),
+    unit_details:val('unitDetails'),
+    start_date:val('contractStart')||today(),
+    end_date:val('contractEnd')||today(),
+    rent_amount:num('contractRent'),
+    deposit_amount:num('contractDeposit'),
+    late_fee:num('contractLateFee'),
+    grace_days:num('contractGraceDays')||5,
+    renewal_notice_days:num('contractRenewalDays')||90,
+    status:'Draft',
+    payment_cycle:'monthly',
+    legal_terms:val('contractLegalTerms')||CompanyProfile.defaultLegalTerms(),
+    notes:val('contractNotes')
+  });
+}
 async function createAccount(){ await saveNew('accounts',{entry_date:val('accDate')||today(),type:val('accType'),category:val('accCategory'),description:val('accDesc'),client_id:val('accClient')||null,property_id:val('accProperty')||null,invoice_id:null,amount:num('accAmount')}); }
-async function createMaintenance(){ await saveNew('maintenance',{property_id:val('maintProperty'),client_id:null,source:'staff',title:val('maintTitle'),priority:val('maintPriority'),status:'Open',request_date:today(),cost:num('maintCost'),notes:val('maintNotes')}); }
+async function createMaintenance(){ await saveNew('maintenance',{property_id:val('maintProperty'),title:val('maintTitle'),priority:val('maintPriority'),status:'Open',request_date:today(),cost:num('maintCost'),notes:val('maintNotes')}); }
 async function createUser(){ await saveNew('users',{username:val('uUsername'),name:val('uName'),role:val('uRole'),password:val('uPassword'),active:true}); }
 async function saveNew(table,row){ try{ await api(table,{method:'POST',body:JSON.stringify(row)}); toast('تم الحفظ'); await loadAll(); }catch(e){toast(e.message,true)} }
 function val(id){ return ($('#'+id)?.value||'').trim(); } function num(id){ return Number(val(id)||0); }
@@ -938,7 +700,7 @@ function editOptions(field, row, table=''){
   const opts = {
     status: ['Rented','Vacant','Maintenance','Active','Closed','Renewed','Expired','Draft','Open','In Progress','Completed','Pending'],
     type: ['Villa','Apartment','Office','Compound','income','expense'],
-    role: ['owner','admin','accountant','operations','maintenance','viewer'],
+    role: ['admin','accountant','operations','maintenance','viewer'],
     priority: ['Low','Medium','High','Urgent'],
     payment_cycle: ['monthly','quarterly','yearly'],
     active: ['1','0']
@@ -959,7 +721,7 @@ function editOptions(field, row, table=''){
 const EDIT_CONFIG = {
   properties: {title:'تعديل عقار', fields:[['name','اسم العقار','text'],['type','النوع','select'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
   clients: {title:'تعديل عميل', fields:[['name','اسم العميل','text'],['phone','الهاتف','text'],['email','البريد','text'],['national_id','الهوية/السجل','text'],['balance','الرصيد الافتتاحي','number'],['notes','ملاحظات','textarea']]},
-  contracts: {title:'تعديل عقد', fields:[['contract_no','رقم العقد','text'],['contract_type','نوع العقد','select'],['property_id','العقار','select'],['client_id','العميل','select'],['tenant_nationality','جنسية المستأجر','text'],['tenant_id_no','رقم الهوية/السجل','text'],['unit_details','تفاصيل الوحدة','textarea'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['rent_amount','قيمة الإيجار','number'],['deposit_amount','التأمين','number'],['late_fee','غرامة التأخير','number'],['grace_days','مهلة السداد بالأيام','number'],['renewal_notice_days','تنبيه التجديد بالأيام','number'],['status','الحالة','select'],['payment_cycle','دورة الدفع','select'],['legal_terms','الشروط القانونية','textarea'],['notes','ملاحظات','textarea']]},
+  contracts: {title:'تعديل عقد', fields:[['contract_no','رقم العقد','text'],['contract_type','نوع العقد','select'],['client_id','العميل','select'],['property_id','العقار','select'],['unit_details','تفاصيل الوحدة','textarea'],['tenant_nationality','جنسية المستأجر','text'],['tenant_id_no','رقم الهوية/السجل','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['rent_amount','قيمة الإيجار','number'],['deposit_amount','التأمين','number'],['late_fee','غرامة التأخير','number'],['grace_days','مهلة السداد بالأيام','number'],['renewal_notice_days','تنبيه التجديد بالأيام','number'],['status','الحالة','select'],['payment_cycle','دورة الدفع','select'],['legal_terms','الشروط القانونية','textarea'],['notes','ملاحظات','textarea']]},
   accounts: {title:'تعديل حركة مالية', fields:[['entry_date','التاريخ','date'],['type','النوع','select'],['category','التصنيف','text'],['description','الوصف','text'],['client_id','العميل','select'],['property_id','العقار','select'],['invoice_id','الفاتورة','select'],['amount','المبلغ','number']]},
   maintenance: {title:'تعديل طلب صيانة', fields:[['property_id','العقار','select'],['title','عنوان الطلب','text'],['priority','الأولوية','select'],['status','الحالة','select'],['request_date','تاريخ الطلب','date'],['cost','التكلفة','number'],['notes','ملاحظات','textarea']]},
   chart_accounts: {title:'تعديل حساب في الدليل', fields:[['code','رمز الحساب','text'],['name','اسم الحساب','text'],['type','نوع الحساب','select'],['parent_code','الحساب الأب','select'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
@@ -1006,6 +768,24 @@ async function invoiceFromContract(contractId){
   toast('تم اختيار العقد — راجع البيانات ثم اضغط إنشاء وربط الفاتورة');
 }
 async function approveContract(contractId){ try{ if(!confirm('اعتماد العقد سيولد جدول الفواتير الشهرية حسب مدة العقد. هل تريد المتابعة؟')) return; const res=await api('approve_contract',{method:'POST',body:JSON.stringify({contract_id:contractId})}); toast('تم اعتماد العقد وتوليد '+(res.created_invoices||[]).length+' فاتورة'); await loadAll(); showSection('contracts'); }catch(e){toast(e.message,true)} }
+async function renewContract(contractId){
+  const c = byId('contracts', contractId);
+  if(!c.id) return toast('لم يتم العثور على العقد', true);
+  const oldStart = c.start_date || today();
+  const oldEnd = c.end_date || today();
+  const defaultMonths = Math.max(1, Math.round((new Date(oldEnd+'T00:00:00') - new Date(oldStart+'T00:00:00')) / (1000*60*60*24*30)));
+  const months = Number(prompt('مدة التجديد بالأشهر', String(defaultMonths)) || 0);
+  if(!months || months <= 0) return;
+  const newRentRaw = prompt('الإيجار الشهري الجديد OMR (اترك فارغاً للإبقاء على نفس القيمة)', String(c.rent_amount || ''));
+  const payload = {contract_id: contractId, months};
+  if(newRentRaw && String(newRentRaw).trim()) payload.rent_amount = Number(newRentRaw);
+  try{
+    const res = await api('renew_contract', {method:'POST', body:JSON.stringify(payload)});
+    toast('تم إنشاء عقد التجديد: ' + (res.contract?.contract_no || res.contract?.id));
+    await loadAll();
+    showSection('contracts');
+  }catch(e){ toast(e.message, true); }
+}
 async function contractDocument(contractId){ try{ const res=await api('contract_template',{method:'POST',body:JSON.stringify({contract_id:contractId})}); const w=window.open('', '_blank'); w.document.write(res.html); w.document.close(); }catch(e){toast(e.message,true)} }
 async function downloadContractPdf(contractId){
   try{
@@ -1060,6 +840,7 @@ function clientStatement(id){ const c=byId('clients',id); const inv=(Jawdah.data
 function openModal(id){ $('#'+id).classList.add('show'); ensureEnglishDigits($('#'+id)); } function closeModal(id){ $('#'+id).classList.remove('show'); }
 async function downloadBackup(){ try{ const res=await api('backup'); downloadFile('jawdah-cloud-backup.json', JSON.stringify(res.backup,null,2), 'application/json'); }catch(e){toast(e.message,true)} }
 function downloadFile(name,content,type='text/plain'){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+async function exportCsv(table){ try{ const res=await fetch('/api/export/'+table,{headers:{Authorization:'Bearer '+Jawdah.token}}); if(!res.ok) throw new Error('Export failed'); const blob=await res.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='jawdah-'+table+'.csv'; a.click(); }catch(e){toast(e.message,true)} }
 function renderReports(){
   const k=Jawdah.dashboard.kpis; $('#reportsBox').innerHTML=`<div class="kpis grid"><div class="kpi"><span>الإيرادات</span><strong>${money(k.income)}</strong></div><div class="kpi"><span>المصروفات</span><strong>${money(k.expense)}</strong></div><div class="kpi"><span>الصافي</span><strong>${money(k.net)}</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(k.overdue)}</strong></div></div><div class="card"><h3>قرارات تنفيذية</h3>${Jawdah.dashboard.decisions.map(d=>`<p><span class="badge">${d.level}</span> ${d.text}</p>`).join('')}</div>`;
 }
@@ -1072,39 +853,18 @@ function runQA(){
 }
 function drawCharts(){ if(!Jawdah.dashboard) return; drawLine('incomeChart',Jawdah.dashboard.series.map(x=>x.income),Jawdah.dashboard.series.map(x=>x.expense)); drawDonut('occupancyChart',Jawdah.dashboard.kpis.occupancy); drawBar('expenseChart',Jawdah.dashboard.series.map(x=>x.expense)); }
 function ctx(id){ const c=$('#'+id); return c?c.getContext('2d'):null; }
-function prepCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; const g=c.getContext('2d'); g.scale(devicePixelRatio,devicePixelRatio); return [g,r.width,r.height]; }
-function drawLine(id,a,b){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...a,...b,1], max=Math.max(...vals)*1.22; const area=(arr,color1,color2)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.lineTo(w-32,h-34); g.lineTo(32,h-34); g.closePath(); const gr=g.createLinearGradient(0,28,0,h-34); gr.addColorStop(0,color1); gr.addColorStop(1,color2); g.fillStyle=gr; g.fill(); }; const plot=(arr,color)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle=color; g.lineWidth=3; g.shadowBlur=0; g.stroke(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); g.beginPath(); g.fillStyle=color; g.arc(x,y,3.5,0,Math.PI*2); g.fill(); }); }; g.strokeStyle='rgba(148,163,184,.12)'; for(let i=0;i<5;i++){let y=24+i*(h-58)/4;g.beginPath();g.moveTo(24,y);g.lineTo(w-24,y);g.stroke();} area(a,'rgba(64,224,208,.16)','rgba(64,224,208,0)'); plot(a,'#40e0d0'); plot(b,'#2dd4bf'); }
-function drawDonut(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=22; g.lineCap='round'; g.strokeStyle='rgba(255,255,255,.08)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#7fffd4'); gr.addColorStop(.5,'#40e0d0'); gr.addColorStop(1,'#14b8a6'); g.strokeStyle=gr; g.shadowBlur=0; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.fillStyle='#f5f5f5'; g.font='700 28px Segoe UI'; g.textAlign='center'; g.fillText(fmt(p)+'%',x,y+6); g.font='13px Segoe UI'; g.fillStyle='rgba(163,163,163,.9)'; g.fillText('Occupancy',x,y+28); }
-function drawBar(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,'#7fffd4'); grd.addColorStop(1,'#14b8a6'); g.fillStyle=grd; g.shadowBlur=0; g.fillRect(x,h-25-bh,bw,bh);}); }
-function initClock(){
-  const tick=()=>{
-    const d=new Date();
-    const t=d.toLocaleTimeString('en-US',{hour12:false});
-    if($('#clock')) $('#clock').textContent=t;
-    const block=$('#dashClockBlock');
-    if(block) block.innerHTML=`<div class="dash-clock-time">${t}</div><div class="dash-clock-date">${d.toLocaleDateString('ar-OM',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>`;
-  };
-  tick();
-  setInterval(tick,1000);
-}
+function prepCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; const g=c.getContext('2d'); if(!g) return [null,0,0]; g.scale(devicePixelRatio,devicePixelRatio); return [g,r.width,r.height]; }
+function drawLine(id,a,b){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); if(!g) return; g.clearRect(0,0,w,h); const vals=[...a,...b,1], max=Math.max(...vals)*1.22; const area=(arr,color1,color2)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.lineTo(w-32,h-34); g.lineTo(32,h-34); g.closePath(); const gr=g.createLinearGradient(0,28,0,h-34); gr.addColorStop(0,color1); gr.addColorStop(1,color2); g.fillStyle=gr; g.fill(); }; const plot=(arr,color)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle=color; g.lineWidth=3; g.shadowBlur=0; g.stroke(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); g.beginPath(); g.fillStyle=color; g.arc(x,y,3.5,0,Math.PI*2); g.fill(); }); }; g.strokeStyle='rgba(148,163,184,.12)'; for(let i=0;i<5;i++){let y=24+i*(h-58)/4;g.beginPath();g.moveTo(24,y);g.lineTo(w-24,y);g.stroke();} area(a,'rgba(64,224,208,.16)','rgba(64,224,208,0)'); plot(a,'#40e0d0'); plot(b,'#2dd4bf'); }
+function drawDonut(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); if(!g) return; g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=22; g.lineCap='round'; g.strokeStyle='rgba(255,255,255,.08)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#7fffd4'); gr.addColorStop(.5,'#40e0d0'); gr.addColorStop(1,'#14b8a6'); g.strokeStyle=gr; g.shadowBlur=0; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.fillStyle='#f5f5f5'; g.font='700 28px Segoe UI'; g.textAlign='center'; g.fillText(fmt(p)+'%',x,y+6); g.font='13px Segoe UI'; g.fillStyle='rgba(163,163,163,.9)'; g.fillText('Occupancy',x,y+28); }
+function drawBar(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); if(!g) return; g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,'#7fffd4'); grd.addColorStop(1,'#14b8a6'); g.fillStyle=grd; g.shadowBlur=0; g.fillRect(x,h-25-bh,bw,bh);}); }
+function initClock(){ setInterval(()=>{ const d=new Date(); $('#clock').textContent=d.toLocaleTimeString('en-US',{hour12:false}); },1000); }
 function bind(){
-  $('#logoutBtn').onclick=logout; $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open'); $('#globalSearch').oninput=()=>renderAll();
+  $('#loginBtn').onclick=login; $('#logoutBtn').onclick=logout; $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open'); $('#globalSearch').oninput=()=>renderAll();
   document.addEventListener('input',e=>ensureEnglishDigits(e.target));
   document.addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key.toLowerCase()==='k'){ e.preventDefault(); $('#globalSearch').focus(); } if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#globalSearch').focus();} });
 }
 window.LAUNCH_QUALITY_CHECK=()=>({system:COMPANY,user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});
-function bootApp(){
-  bind();
-  initClock();
-  checkSession();
-  setInterval(()=>ensureEnglishDigits(),3000);
-  paintIcons();
-}
-function scheduleBoot(){
-  const run=()=>setTimeout(bootApp,0);
-  document.addEventListener('DOMContentLoaded', run);
-}
-scheduleBoot();
+window.addEventListener('load',()=>{ setUiShellMode(Jawdah.token ? 'app' : 'login'); bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); paintIcons(); });
 
 
 /* Quality Launch Services LLC - production experience layer */
@@ -1124,7 +884,7 @@ scheduleBoot();
       const collection = billed ? Math.round((paid/billed)*100) : 0;
       const readiness = Math.min(100, Math.round(((properties>0)+(clients>0)+(contracts>0)+(invoices>0)+(collection>0))*20));
       const banner = document.getElementById('launchBanner');
-      if(banner && !isOwnerUser()){
+      if(banner){
         banner.classList.remove('hidden');
         banner.innerHTML = `<div class="launch-card">${ic('gauge','title-ic')}<div><b>جاهزية التشغيل</b><br><span class="mini">جاهزية التشغيل والربط المالي الحالي: ${fmt(readiness)}%.</span></div></div>`;
         paintIcons(banner);
@@ -1132,7 +892,7 @@ scheduleBoot();
       const hero = document.querySelector('.hero h2');
       if(hero) hero.textContent = 'مركز القيادة التنفيذي — ' + (CompanyProfile.settings.name_ar || COMPANY);
       const heroP = document.querySelector('.hero p');
-      if(heroP) heroP.textContent = 'منصة إدارة عقارية وضيافة فاخرة تجمع العقارات والعملاء والعقود والفواتير والتحصيل والحسابات في تجربة تنفيذية واحدة متكاملة.';
+      if(heroP) heroP.textContent = 'منصة إدارة عقارية وضيافة فاخرة تجمع العملاء والبنايات والشقق والعقود والفواتير والتحصيل في تجربة تنفيذية واحدة متكاملة.';
     }catch(e){ console.warn('production dashboard layer', e); }
   };
   const oldCheck = window.JAWDAH_CLOUD_CHECK;
@@ -1205,12 +965,12 @@ scheduleBoot();
     const aging = document.getElementById('agingBox');
     if(aging) aging.innerHTML = `<div class="aging-grid">${Object.entries(e.aging).map(([k,v])=>`<div class="aging-card"><b>${k}</b><strong>${money(v)}</strong></div>`).join('')}</div>`;
     const tenant = document.getElementById('tenantBalanceBox');
-    if(tenant) tenant.innerHTML = tableHtml([['المستأجر','client',(v,r)=>r.client.name],['الفواتير','invoices',(v)=>fmt(v)],['إجمالي','total',(v)=>money(v)],['مدفوع','paid',(v)=>money(v)],['متبقي','outstanding',(v)=>money(v)]], e.tenantBalances.slice(0,8), r=>`<button class="ghost" onclick="clientStatement('${r.client.id}')">كشف</button>`);
+    if(tenant) tenant.innerHTML = tableHtml([['العميل','client',(v,r)=>r.client.name],['الفواتير','invoices',(v)=>fmt(v)],['إجمالي','total',(v)=>money(v)],['مدفوع','paid',(v)=>money(v)],['متبقي','outstanding',(v)=>money(v)]], e.tenantBalances.slice(0,8), r=>`<button class="ghost" onclick="clientStatement('${r.client.id}')">كشف</button>`);
     const profit = document.getElementById('propertyProfitBox');
-    if(profit) profit.innerHTML = tableHtml([['العقار','property',(v,r)=>r.property.name],['إيراد','revenue',(v)=>money(v)],['مصروف','cost',(v)=>money(v)],['صافي','net',(v)=>money(v)],['متبقي','outstanding',(v)=>money(v)]], e.propertyProfit.slice(0,8));
+    if(profit) profit.innerHTML = tableHtml([['البناية','property',(v,r)=>r.property.name],['إيراد','revenue',(v)=>money(v)],['مصروف','cost',(v)=>money(v)],['صافي','net',(v)=>money(v)],['متبقي','outstanding',(v)=>money(v)]], e.propertyProfit.slice(0,8));
     const rows = filterRows('accounts',['entry_date','type','category','description','amount']);
     const tbl = document.getElementById('accountsTable');
-    if(tbl) tbl.innerHTML = tableHtml([['التاريخ','entry_date'],['النوع','type'],['التصنيف','category'],['الوصف','description'],['العميل','client_id',(v)=>byId('clients',v).name||''],['العقار','property_id',(v)=>byId('properties',v).name||''],['الفاتورة','invoice_id',(v)=>byId('invoices',v).invoice_no||''],['المبلغ','amount',(v)=>money(v)]], rows, r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`);
+    if(tbl) tbl.innerHTML = tableHtml([['التاريخ','entry_date'],['النوع','type'],['التصنيف','category'],['الوصف','description'],['العميل','client_id',(v)=>byId('clients',v).name||''],['البناية','property_id',(v)=>byId('properties',v).name||''],['الشقة/الوحدة','invoice_id',(v)=>unitLabelFromDetails(contractFromInvoiceId(v).unit_details)],['العقد','invoice_id',(v)=>{ const c=contractFromInvoiceId(v); return c.id?(c.contract_no||c.id):'—'; }],['الفاتورة','invoice_id',(v)=>byId('invoices',v).invoice_no||'—'],['المبلغ','amount',(v)=>money(v)]], rows, r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`);
     drawBar('expenseChart',(Jawdah.dashboard?.series||[]).map(x=>x.expense));
     ensureEnglishDigits(document.getElementById('sec-accounts'));
   };
@@ -1233,25 +993,15 @@ scheduleBoot();
         <div class="card"><h3>أعمار الذمم المدينة</h3><div class="aging-grid">${Object.entries(e.aging).map(([k,v])=>`<div class="aging-card"><b>${k}</b><strong>${money(v)}</strong></div>`).join('')}</div></div>
         <div class="card"><h3>قرارات مالية</h3>${(risks.length?risks:['الوضع المالي مستقر حسب البيانات الحالية']).map(x=>`<p><span class="badge">Finance</span> ${x}</p>`).join('')}</div>
       </div>
-      <div class="card"><h3>ربحية العقارات</h3>${tableHtml([['العقار','property',(v,r)=>r.property.name],['إيراد','revenue',(v)=>money(v)],['مصروف','cost',(v)=>money(v)],['صافي','net',(v)=>money(v)],['ذمم','outstanding',(v)=>money(v)]], e.propertyProfit)}</div>
-      <div class="card"><h3>أرصدة المستأجرين</h3>${tableHtml([['المستأجر','client',(v,r)=>r.client.name],['إجمالي','total',(v)=>money(v)],['مدفوع','paid',(v)=>money(v)],['متبقي','outstanding',(v)=>money(v)]], e.tenantBalances)}</div>`;
+      <div class="card"><h3>أرصدة العملاء</h3>${tableHtml([['العميل','client',(v,r)=>r.client.name],['عدد الفواتير','invoices',(v)=>fmt(v)],['إجمالي','total',(v)=>money(v)],['مدفوع','paid',(v)=>money(v)],['متبقي','outstanding',(v)=>money(v)]], e.tenantBalances)}</div>
+      <div class="card"><h3>ربحية البنايات</h3>${tableHtml([['البناية','property',(v,r)=>r.property.name],['إيراد','revenue',(v)=>money(v)],['مصروف','cost',(v)=>money(v)],['صافي','net',(v)=>money(v)],['ذمم','outstanding',(v)=>money(v)]], e.propertyProfit)}</div>`;
     const box = document.getElementById('reportsBox'); if(box) box.innerHTML = html;
     ensureEnglishDigits(box);
   };
-  window.downloadFinancialReport = async function(){
+  window.downloadFinancialReport = function(){
     const e = accEngine();
-    const rows = [
-      { metric: 'الإيرادات', value: e.income }, { metric: 'المصروفات', value: e.expense },
-      { metric: 'الصافي', value: e.net }, { metric: 'نسبة التحصيل %', value: e.collectionRate },
-      ...Object.entries(e.aging).map(([k, v]) => ({ metric: 'ذمم — ' + k, value: v })),
-    ];
-    const html = DataExport.tableHtmlDoc('التقرير المالي التنفيذي', rows.map(r => ({ المؤشر: r.metric, القيمة: r.value })));
-    if (window.event?.shiftKey) {
-      await downloadHtmlAsPdf(html, `financial-report-${DataExport.todayStamp()}.pdf`);
-      return;
-    }
+    const html = `<!doctype html><meta charset="utf-8"><title>${COMPANY} Financial Report</title><body style="font-family:Arial;direction:rtl"><h1>${COMPANY} - التقرير المالي</h1><p>Income: ${money(e.income)} | Expense: ${money(e.expense)} | Net: ${money(e.net)} | Collection: ${fmt(e.collectionRate)}%</p><h2>أعمار الذمم</h2><ul>${Object.entries(e.aging).map(([k,v])=>`<li>${k}: ${money(v)}</li>`).join('')}</ul></body>`;
     downloadFile('launch-quality-financial-report.html', html, 'text/html');
-    toast('HTML — Shift+Click للـ PDF');
   };
   const oldCheck = window.LAUNCH_QUALITY_CHECK;
   window.LAUNCH_QUALITY_CHECK = function(){ const base = oldCheck ? oldCheck() : {}; return {...base, status:'accounting-ready', accounting:accEngine()}; };
@@ -1259,21 +1009,13 @@ scheduleBoot();
 
 
 (function(){
-  function populateSelects(){}
   const baseSections=[
     ['dashboard','لوحة التحكم','layout-dashboard'],
+    ['clients','العملاء','users-round'],
     ['properties','العقارات','building-2'],
     ['apartments','إدارة الشقق','layout-grid'],
-    ['clients','العملاء','users-round'],
-    ['tenant-portal','بوابة المستأجر','smartphone'],
-    ['renewal-engine','محرك التجديد','git-compare'],
-    ['nizwa-gis','GIS نزوى','map-pin'],
-    ['compliance','الامتثال','shield-check'],
-    ['vat-fta','FTA / VAT','qr-code'],
-    ['owner-pack','تقرير المالك','briefcase'],
     ['contracts','العقود','file-signature'],
     ['invoices','الفواتير','receipt'],
-    ['reminders','تذكيرات واتساب','message-circle'],
     ['admin-expenses','مصاريف إدارية','landmark'],
     ['purchases','فواتير المشتريات','shopping-cart'],
     ['revenues','الإيرادات','gem'],
@@ -1293,7 +1035,7 @@ scheduleBoot();
     ['backup','التخزين والنسخ','hard-drive'],
     ['qa','اختبار التشغيل','circle-check-big'],
   ];
-  buildNav=function(){ const nav=$('#nav'); nav.innerHTML=''; baseSections.forEach(([id,label,icon])=>{ if(id==='users'&&!isSuperUser())return; if(id==='company-settings'&&!isSuperUser())return; nav.appendChild(navItem(id,label,icon)); }); paintIcons(nav); };
+  buildNav=function(){ const nav=$('#nav'); nav.innerHTML=''; baseSections.forEach(([id,label,icon])=>{ if(id==='users'&&Jawdah.user.role!=='admin')return; if(id==='company-settings'&&Jawdah.user.role!=='admin')return; nav.appendChild(navItem(id,label,icon)); }); paintIcons(nav); };
   const oldPopulate=typeof populateSelects==='function'?populateSelects:function(){};
   populateSelects=function(){ oldPopulate(); const propOpts='<option value="">بدون عقار</option>'+(Jawdah.data.properties||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); ['#piProperty','#revProperty','#gaProperty'].forEach(s=>{if($(s))$(s).innerHTML=propOpts}); const clientOpts='<option value="">بدون عميل</option>'+(Jawdah.data.clients||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join(''); if($('#revClient'))$('#revClient').innerHTML=clientOpts; const itemOpts=(Jawdah.data.inventory_items||[]).map(i=>`<option value="${i.id}">${i.sku} - ${i.name}</option>`).join(''); if($('#stockItem'))$('#stockItem').innerHTML=itemOpts; const accOpts='<option value="">غير مطابق</option>'+(Jawdah.data.accounts||[]).map(a=>`<option value="${a.id}">${a.entry_date} - ${a.category} - ${money(a.amount)}</option>`).join(''); if($('#bankMatch'))$('#bankMatch').innerHTML=accOpts; const coaParentOpts='<option value="">بدون حساب أب</option>'+(Jawdah.data.chart_accounts||[]).map(a=>`<option value="${a.code}">${a.code} - ${a.name}</option>`).join(''); if($('#coaParent'))$('#coaParent').innerHTML=coaParentOpts; const periodOpts=(Jawdah.data.financial_periods||[]).filter(p=>String(p.status||'').toLowerCase()==='open').map(p=>`<option value="${p.period_name}">${p.period_name}</option>`).join(''); if($('#recPeriod')&&$('#recPeriod').tagName==='SELECT') $('#recPeriod').innerHTML=periodOpts||'<option value="">لا توجد فترة مفتوحة</option>'; ['piDate','revDate','salDate','gaDate','stockDate','bankDate','fpStart','fpEnd'].forEach(id=>{if($('#'+id)&&!$('#'+id).value)$('#'+id).value=today()}); if($('#salMonth')&&!$('#salMonth').value)$('#salMonth').value=today().slice(0,7); if($('#recPeriod')&&$('#recPeriod').tagName==='INPUT'&&!$('#recPeriod').value)$('#recPeriod').value=today().slice(0,7); };
   const oldRenderAll=renderAll;
@@ -1355,7 +1097,7 @@ scheduleBoot();
     const rows=safe(Jawdah.data.financial_periods);
     if($('#financialPeriodsTable')) $('#financialPeriodsTable').innerHTML=tableHtml([['الفترة','period_name'],['البداية','start_date'],['النهاية','end_date'],['الحالة','status',v=>badge(v)],['أغلق بواسطة','closed_by'],['تاريخ الإغلاق','closed_at'],['ملاحظات','notes']],rows,r=>canWriteFinance()?`<button class="ghost" onclick="editRecord('financial_periods','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('financial_periods','${r.id}')">حذف</button>`:'');
   };
-  function canWriteFinance(){ return Jawdah.user && ['owner','admin','accountant'].includes(Jawdah.user.role); }
+  function canWriteFinance(){ return Jawdah.user && ['admin','accountant'].includes(Jawdah.user.role); }
   function updateRecDifference(){
     const book=num('recBookBalance'), bank=num('recBankBalance');
     const diff=book-bank;
@@ -1406,7 +1148,7 @@ scheduleBoot();
   window.createInventoryItem=()=>postTable('inventory_items',{sku:val('itemSku'),name:val('itemName'),category:val('itemCategory'),unit:val('itemUnit')||'pcs',quantity:num('itemQty'),min_quantity:num('itemMin'),unit_cost:num('itemCost'),location:val('itemLocation')});
   window.createInventoryTransaction=()=>postTable('inventory_transactions',{item_id:val('stockItem'),tx_date:val('stockDate')||today(),tx_type:val('stockType'),quantity:num('stockQty'),unit_cost:num('stockCost'),reference:val('stockRef')});
   window.createBankTransaction=()=>postTable('bank_transactions',{bank_date:val('bankDate')||today(),bank_name:val('bankName')||'Main Bank',reference:val('bankRef'),type:val('bankType'),description:val('bankDesc'),amount:num('bankAmount'),matched_account_id:val('bankMatch')||null,status:val('bankMatch')?'Matched':'Unmatched'});
-  window.loadFinancialStatements=async function(){ try{ const res=await api('financial_statements'); const s=res.statements; Jawdah.lastStatements=s; $('#statementsBox').innerHTML=`<div class="statement-grid"><div class="statement-card"><h3>قائمة الدخل</h3><div class="statement-row"><span>الإيرادات</span><b>${money(s.income_statement.revenue)}</b></div><div class="statement-row"><span>المصروفات</span><b>${money(s.income_statement.expenses)}</b></div><div class="statement-row"><span>الرواتب</span><b>${money(s.income_statement.payroll)}</b></div><div class="statement-row"><span>إدارية وعمومية</span><b>${money(s.income_statement.general_admin)}</b></div><div class="statement-row"><span>صافي الدخل</span><b>${money(s.income_statement.net_income)}</b></div></div><div class="statement-card"><h3>الميزانية</h3><div class="statement-row"><span>البنك</span><b>${money(s.balance_sheet.assets.cash_bank)}</b></div><div class="statement-row"><span>الذمم المدينة</span><b>${money(s.balance_sheet.assets.accounts_receivable)}</b></div><div class="statement-row"><span>المخزون</span><b>${money(s.balance_sheet.assets.inventory)}</b></div><div class="statement-row"><span>الذمم الدائنة</span><b>${money(s.balance_sheet.liabilities.accounts_payable)}</b></div><div class="statement-row"><span>الأرباح المحتجزة</span><b>${money(s.balance_sheet.equity.retained_earnings)}</b></div></div><div class="statement-card"><h3>ربط التخزين</h3><p class="linked-ok">Backup / CSV / Restore يشمل الجداول المالية الجديدة.</p><p>${s.linked_storage.tables.join(' · ')}</p></div></div>`; ensureEnglishDigits($('#statementsBox')); initExportToolbars(); }catch(e){toast(e.message,true)} };
+  window.loadFinancialStatements=async function(){ try{ const res=await api('financial_statements'); const s=res.statements; $('#statementsBox').innerHTML=`<div class="statement-grid"><div class="statement-card"><h3>قائمة الدخل</h3><div class="statement-row"><span>الإيرادات</span><b>${money(s.income_statement.revenue)}</b></div><div class="statement-row"><span>المصروفات</span><b>${money(s.income_statement.expenses)}</b></div><div class="statement-row"><span>الرواتب</span><b>${money(s.income_statement.payroll)}</b></div><div class="statement-row"><span>إدارية وعمومية</span><b>${money(s.income_statement.general_admin)}</b></div><div class="statement-row"><span>صافي الدخل</span><b>${money(s.income_statement.net_income)}</b></div></div><div class="statement-card"><h3>الميزانية</h3><div class="statement-row"><span>البنك</span><b>${money(s.balance_sheet.assets.cash_bank)}</b></div><div class="statement-row"><span>الذمم المدينة</span><b>${money(s.balance_sheet.assets.accounts_receivable)}</b></div><div class="statement-row"><span>المخزون</span><b>${money(s.balance_sheet.assets.inventory)}</b></div><div class="statement-row"><span>الذمم الدائنة</span><b>${money(s.balance_sheet.liabilities.accounts_payable)}</b></div><div class="statement-row"><span>الأرباح المحتجزة</span><b>${money(s.balance_sheet.equity.retained_earnings)}</b></div></div><div class="statement-card"><h3>ربط التخزين</h3><p class="linked-ok">Backup / CSV / Restore يشمل الجداول المالية الجديدة.</p><p>${s.linked_storage.tables.join(' · ')}</p></div></div>`; ensureEnglishDigits($('#statementsBox')); }catch(e){toast(e.message,true)} };
   const oldBackup=renderBackup;
   renderBackup=function(){ oldBackup(); const extra=['purchase_invoices','revenues','salaries','employees','admin_expenses','inventory_items','inventory_transactions','bank_transactions','chart_accounts','bank_reconciliations','financial_periods']; const box=$('#backupStatus'); if(box) box.innerHTML += `<p class="mini">يشمل التخزين المالي: ${extra.join(', ')}</p>`; };
   document.addEventListener('input', e=>{ if(e.target && e.target.id==='recBankBalance') updateRecDifference(); });
@@ -1436,7 +1178,7 @@ scheduleBoot();
   renderAll=function(){ oldRenderAll2(); renderProductionUsers(); };
   window.renderProductionUsers=function(){
     const users=Jawdah.data.users||[];
-    const required=['owner','admin','razan.accounting','operations','maintenance'];
+    const required=['admin','razan.accounting','operations','maintenance'];
     const host=$('#productionUsersBox');
     if(!host) return;
     host.innerHTML=required.map(u=>{
@@ -1454,4 +1196,438 @@ scheduleBoot();
       ensureEnglishDigits(box);
     }catch(e){toast(e.message,true)}
   };
+})();
+
+
+(function(){
+  const accJumpState = {from:'', to:'', type:'all', link:'all', initialized:false};
+  const oldRenderAccounts = window.renderAccounts;
+
+  function toDate(value){
+    if(!value) return null;
+    const d = new Date(String(value).slice(0,10)+'T00:00:00');
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  function inRange(date, start, end){
+    if(!date) return false;
+    if(start && date < start) return false;
+    if(end && date > end) return false;
+    return true;
+  }
+  function sumRows(rows, type){
+    return rows.filter(r=>String(r.type||'').toLowerCase()===type).reduce((s,r)=>s+Number(r.amount||0),0);
+  }
+  function topCategory(rows, type){
+    const bucket = new Map();
+    rows.filter(r=>String(r.type||'').toLowerCase()===type).forEach(r=>{
+      const key = (r.category||'غير مصنف').trim() || 'غير مصنف';
+      bucket.set(key, (bucket.get(key)||0) + Number(r.amount||0));
+    });
+    const sorted = [...bucket.entries()].sort((a,b)=>b[1]-a[1]);
+    return sorted[0] ? {name:sorted[0][0], amount:sorted[0][1]} : null;
+  }
+  function netForWindow(rows, start, end){
+    const scoped = rows.filter(r=>inRange(toDate(r.entry_date), start, end));
+    return sumRows(scoped, 'income') - sumRows(scoped, 'expense');
+  }
+  function netTrend(rows){
+    const todayDate = toDate(today()) || new Date();
+    todayDate.setHours(0,0,0,0);
+    const currentStart = new Date(todayDate); currentStart.setDate(currentStart.getDate()-29);
+    const previousEnd = new Date(currentStart); previousEnd.setDate(previousEnd.getDate()-1);
+    const previousStart = new Date(previousEnd); previousStart.setDate(previousStart.getDate()-29);
+    const current = netForWindow(rows, currentStart, todayDate);
+    const previous = netForWindow(rows, previousStart, previousEnd);
+    if(previous === 0) return {label: current===0 ? '0%' : 'بداية قياس', tone: current>=0 ? 'good' : 'warn'};
+    const delta = ((current-previous)/Math.abs(previous))*100;
+    return {label:`${delta>=0?'+':''}${fmt(Math.round(delta*10)/10)}%`, tone:delta>=0 ? 'good' : 'warn'};
+  }
+  function getAccountRows(){
+    const start = toDate(accJumpState.from);
+    const end = toDate(accJumpState.to);
+    return [...(Jawdah.data.accounts||[])]
+      .filter(r=>{
+        const rowDate = toDate(r.entry_date);
+        if((start || end) && !inRange(rowDate, start, end)) return false;
+        if(accJumpState.type !== 'all' && String(r.type||'').toLowerCase() !== accJumpState.type) return false;
+        const linked = !!r.invoice_id;
+        if(accJumpState.link === 'linked' && !linked) return false;
+        if(accJumpState.link === 'unlinked' && linked) return false;
+        return true;
+      })
+      .sort((a,b)=>String(b.entry_date||'').localeCompare(String(a.entry_date||'')));
+  }
+  function syncToolbarValues(){
+    const from = document.getElementById('accJumpFrom');
+    const to = document.getElementById('accJumpTo');
+    const type = document.getElementById('accJumpType');
+    const link = document.getElementById('accJumpLink');
+    if(from) from.value = accJumpState.from;
+    if(to) to.value = accJumpState.to;
+    if(type) type.value = accJumpState.type;
+    if(link) link.value = accJumpState.link;
+  }
+  function setRange(mode){
+    const current = toDate(today()) || new Date();
+    let start = new Date(current);
+    if(mode === 'month') start = new Date(current.getFullYear(), current.getMonth(), 1);
+    else if(mode === 'qtd') start = new Date(current.getFullYear(), Math.floor(current.getMonth()/3)*3, 1);
+    else if(mode === 'ytd') start = new Date(current.getFullYear(), 0, 1);
+    else if(mode === 'last30') start = new Date(current.getFullYear(), current.getMonth(), current.getDate()-29);
+    accJumpState.from = start.toISOString().slice(0,10);
+    accJumpState.to = current.toISOString().slice(0,10);
+    syncToolbarValues();
+  }
+  function ensureToolbar(){
+    const hero = document.querySelector('#sec-accounts .accounting-hero');
+    if(!hero) return;
+    if(!document.getElementById('accountsJumpToolbar')){
+      const toolbar = document.createElement('div');
+      toolbar.id = 'accountsJumpToolbar';
+      toolbar.className = 'accounts-jump-toolbar';
+      toolbar.innerHTML = `
+        <div class="accounts-jump-line">
+          <label>من <input id="accJumpFrom" type="date"></label>
+          <label>إلى <input id="accJumpTo" type="date"></label>
+          <label>النوع
+            <select id="accJumpType">
+              <option value="all">الكل</option>
+              <option value="income">إيراد</option>
+              <option value="expense">مصروف</option>
+            </select>
+          </label>
+          <label>الربط
+            <select id="accJumpLink">
+              <option value="all">كل الحركات</option>
+              <option value="linked">مربوطة بفواتير</option>
+              <option value="unlinked">غير مربوطة</option>
+            </select>
+          </label>
+        </div>
+        <div class="accounts-jump-actions">
+          <button class="ghost" data-acc-range="month">هذا الشهر</button>
+          <button class="ghost" data-acc-range="qtd">الربع الحالي</button>
+          <button class="ghost" data-acc-range="ytd">من بداية السنة</button>
+          <button class="ghost" data-acc-range="last30">آخر 30 يوم</button>
+          <button class="ghost" data-acc-range="reset">إعادة ضبط</button>
+        </div>
+      `;
+      hero.appendChild(toolbar);
+      const bind = (id, key)=>{
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.addEventListener('change', ()=>{
+          accJumpState[key] = el.value;
+          renderAccounts();
+        });
+      };
+      bind('accJumpFrom', 'from');
+      bind('accJumpTo', 'to');
+      bind('accJumpType', 'type');
+      bind('accJumpLink', 'link');
+      toolbar.querySelectorAll('[data-acc-range]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const mode = btn.getAttribute('data-acc-range');
+          if(mode === 'reset'){
+            accJumpState.from = '';
+            accJumpState.to = '';
+          }else{
+            setRange(mode);
+          }
+          renderAccounts();
+        });
+      });
+    }
+    if(!accJumpState.initialized){
+      setRange('month');
+      accJumpState.initialized = true;
+    }else{
+      syncToolbarValues();
+    }
+  }
+  function ensureInsightsHost(){
+    const table = document.getElementById('accountsTable');
+    if(!table || !table.parentElement) return null;
+    let host = document.getElementById('accountsJumpInsights');
+    if(!host){
+      host = document.createElement('div');
+      host.id = 'accountsJumpInsights';
+      host.className = 'accounts-jump-insights';
+      table.parentElement.insertBefore(host, table);
+    }
+    return host;
+  }
+  function renderAccountsJump(){
+    const rows = getAccountRows();
+    const income = sumRows(rows, 'income');
+    const expense = sumRows(rows, 'expense');
+    const net = income - expense;
+    const avg = rows.length ? (income+expense)/rows.length : 0;
+    const linkedCount = rows.filter(r=>r.invoice_id).length;
+    const summary = document.getElementById('accountSummary');
+    if(summary){
+      summary.innerHTML = `
+        <span class="badge">القيود ${fmt(rows.length)}</span>
+        <span class="badge paid">إيرادات ${money(income)}</span>
+        <span class="badge">مصروفات ${money(expense)}</span>
+        <span class="badge ${net>=0?'paid':'overdue'}">صافي ${money(net)}</span>
+        <span class="badge">متوسط حركة ${money(avg)}</span>
+        <span class="badge">مربوط بفواتير ${fmt(linkedCount)}</span>
+      `;
+    }
+    const table = document.getElementById('accountsTable');
+    if(table){
+      table.innerHTML = tableHtml(
+        [
+          ['التاريخ','entry_date'],
+          ['النوع','type',(v)=>badge(v)],
+          ['التصنيف','category'],
+          ['الوصف','description'],
+          ['العميل','client_id',(v)=>v?(byId('clients',v).name||v):''],
+          ['البناية','property_id',(v)=>v?(byId('properties',v).name||v):''],
+          ['الشقة/الوحدة','invoice_id',(v)=>unitLabelFromDetails(contractFromInvoiceId(v).unit_details)],
+          ['العقد','invoice_id',(v)=>{ const c=contractFromInvoiceId(v); return c.id?(c.contract_no||c.id):'—'; }],
+          ['الفاتورة','invoice_id',(v)=>v?(byId('invoices',v).invoice_no||v):'—'],
+          ['المبلغ','amount',(v)=>money(v)]
+        ],
+        rows,
+        r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`
+      );
+    }
+    const insightHost = ensureInsightsHost();
+    if(insightHost){
+      const topIncome = topCategory(rows, 'income');
+      const topExpense = topCategory(rows, 'expense');
+      const trend = netTrend(Jawdah.data.accounts||[]);
+      insightHost.innerHTML = `
+        <div class="accounts-jump-grid">
+          <article class="accounts-jump-card">
+            <span>أعلى مصدر إيراد</span>
+            <strong>${topIncome ? topIncome.name : '—'}</strong>
+            <small class="mini">${topIncome ? money(topIncome.amount) : 'لا يوجد بيانات'}</small>
+          </article>
+          <article class="accounts-jump-card">
+            <span>أعلى بند مصروف</span>
+            <strong>${topExpense ? topExpense.name : '—'}</strong>
+            <small class="mini">${topExpense ? money(topExpense.amount) : 'لا يوجد بيانات'}</small>
+          </article>
+          <article class="accounts-jump-card">
+            <span>اتجاه صافي آخر 30 يوم</span>
+            <strong class="${trend.tone==='good'?'linked-ok':'low-stock'}">${trend.label}</strong>
+            <small class="mini">مقارنة بالـ 30 يوم السابقة</small>
+          </article>
+        </div>
+      `;
+    }
+    ensureEnglishDigits(document.getElementById('sec-accounts'));
+  }
+
+  window.renderAccounts = function(){
+    if(typeof oldRenderAccounts === 'function') oldRenderAccounts();
+    ensureToolbar();
+    renderAccountsJump();
+  };
+
+  window.renderFinanceHero = function(){
+    const sec = document.getElementById('sec-accounts');
+    if(!sec) return;
+    let host = document.getElementById('accountingOpsStrip');
+    if(!host){
+      host = document.createElement('div');
+      host.id = 'accountingOpsStrip';
+      host.className = 'accounting-ops-strip';
+      const firstLayout = sec.querySelector('.layout');
+      if(firstLayout) sec.insertBefore(host, firstLayout);
+      else sec.appendChild(host);
+    }
+    const k = Jawdah.dashboard?.kpis || {};
+    host.innerHTML = `
+      <div class="card accounting-ops-card">
+        <h3>نبض المحاسبة التنفيذي</h3>
+        <div class="accounts-jump-grid">
+          <article class="accounts-jump-card"><span>مشتريات مستحقة</span><strong>${money(k.purchases_due||0)}</strong></article>
+          <article class="accounts-jump-card"><span>رواتب الشهر</span><strong>${money(k.payroll||0)}</strong></article>
+          <article class="accounts-jump-card"><span>قيمة المخزون</span><strong>${money(k.inventory_value||0)}</strong></article>
+          <article class="accounts-jump-card"><span>رصيد البنك</span><strong>${money(k.bank_balance||0)}</strong></article>
+        </div>
+      </div>
+    `;
+    ensureEnglishDigits(host);
+  };
+})();
+
+
+(function(){
+  const MODE_KEY = 'lq.dashboard.control.mode';
+  const AUTO_KEY = 'lq.dashboard.control.auto';
+  const state = {
+    mode: localStorage.getItem(MODE_KEY) || 'executive',
+    auto: localStorage.getItem(AUTO_KEY) === '1'
+  };
+  let autoTimer = null;
+
+  function esc(v){
+    if(window.CompanyProfile && typeof CompanyProfile.escapeHtml === 'function') return CompanyProfile.escapeHtml(v);
+    return String(v ?? '');
+  }
+  function modeTitle(mode){
+    if(mode === 'finance') return 'وضع التحصيل والمحاسبة';
+    if(mode === 'operations') return 'وضع التشغيل اليومي';
+    if(mode === 'risk') return 'وضع الإنذارات والمخاطر';
+    return 'الوضع التنفيذي الكامل';
+  }
+  function modeHint(mode){
+    if(mode === 'finance') return 'يركز على التحصيل، الذمم، الصافي، والقوائم المالية.';
+    if(mode === 'operations') return 'يركز على العملاء ثم البنايات ثم الشقق ثم العقود ثم الفواتير.';
+    if(mode === 'risk') return 'يركز على التنبيهات الحرجة والمتابعة السريعة.';
+    return 'عرض متوازن لجميع مؤشرات لوحة التحكم والقرار.';
+  }
+  function quickMatcher(mode){
+    if(mode === 'finance') return [/فاتورة/i, /تحصيل/i, /تقرير/i, /مالي/i];
+    if(mode === 'operations') return [/عميل/i, /بناية/i, /عقار/i, /شقق/i, /عقد/i, /فاتورة/i];
+    if(mode === 'risk') return [/اختبار/i, /backup/i, /تجديد/i, /تحصيل/i];
+    return [];
+  }
+  function focusQuickActions(){
+    const host = document.getElementById('quickActions');
+    if(!host) return;
+    const buttons = [...host.querySelectorAll('.quick-pro')];
+    if(!buttons.length) return;
+    const matchers = quickMatcher(state.mode);
+    if(!matchers.length){
+      buttons.forEach(btn=>btn.classList.remove('quick-focus','quick-dim'));
+      return;
+    }
+    buttons.forEach(btn=>{
+      const text = String(btn.textContent || '');
+      const focus = matchers.some(rx=>rx.test(text));
+      btn.classList.toggle('quick-focus', focus);
+      btn.classList.toggle('quick-dim', !focus);
+    });
+  }
+  function syncAutoRefresh(){
+    if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+    if(!state.auto) return;
+    autoTimer = setInterval(()=>{
+      const sec = document.getElementById('sec-dashboard');
+      if(!sec || !sec.classList.contains('active')) return;
+      if(typeof loadAll === 'function') loadAll();
+    }, 60000);
+  }
+  function setMode(mode){
+    state.mode = mode;
+    localStorage.setItem(MODE_KEY, mode);
+    renderDashboard();
+  }
+  function toggleAuto(){
+    state.auto = !state.auto;
+    localStorage.setItem(AUTO_KEY, state.auto ? '1' : '0');
+    syncAutoRefresh();
+    renderControlDeck();
+    toast(state.auto ? 'تم تفعيل التحديث التلقائي كل دقيقة' : 'تم إيقاف التحديث التلقائي');
+  }
+  function dashboardSnapshot(){
+    const snap = Jawdah.executiveSnapshot || buildExecutiveSnapshot();
+    const dueSoon = renewalQueue().length;
+    const openMaint = (Jawdah.data.maintenance || []).filter(m=>String(m.status||'').toLowerCase().includes('open')).length;
+    const overdueAmount = Number(snap.k.overdue || 0);
+    const overdueCount = snap.overdueInvoices.length;
+    return {snap, dueSoon, openMaint, overdueAmount, overdueCount};
+  }
+  function renderControlDeck(){
+    const sec = document.getElementById('sec-dashboard');
+    if(!sec) return;
+    let deck = document.getElementById('controlDeck');
+    if(!deck){
+      deck = document.createElement('section');
+      deck.id = 'controlDeck';
+      deck.className = 'control-deck card';
+      const anchor = document.querySelector('#sec-dashboard .hero');
+      if(anchor) sec.insertBefore(deck, anchor);
+      else sec.appendChild(deck);
+    }
+    const {snap, dueSoon, openMaint, overdueAmount, overdueCount} = dashboardSnapshot();
+    const alerts = snap.priorities.slice(0, 6);
+    deck.innerHTML = `
+      <div class="control-deck-head">
+        <div>
+          <h3>${ic('sliders-horizontal','title-ic')} لوحة التحكم الفورية</h3>
+          <p class="mini">${modeHint(state.mode)}</p>
+        </div>
+        <div class="control-deck-actions">
+          <button class="ghost ${state.auto ? 'active' : ''}" data-action="toggle-auto">${state.auto ? 'إيقاف التحديث التلقائي' : 'تفعيل التحديث التلقائي'}</button>
+          <button class="ghost" data-action="refresh-now">تحديث الآن</button>
+        </div>
+      </div>
+      <div class="control-mode-switch">
+        <button class="${state.mode==='executive'?'active':''}" data-mode="executive">تنفيذي</button>
+        <button class="${state.mode==='finance'?'active':''}" data-mode="finance">تحصيل ومحاسبة</button>
+        <button class="${state.mode==='operations'?'active':''}" data-mode="operations">تشغيل يومي</button>
+        <button class="${state.mode==='risk'?'active':''}" data-mode="risk">مخاطر</button>
+      </div>
+      <div class="control-kpis">
+        <article class="control-kpi"><span>وضع اللوحة</span><strong>${esc(modeTitle(state.mode))}</strong><small class="mini">تبديل فوري للتركيز</small></article>
+        <article class="control-kpi"><span>ذمم متأخرة</span><strong>${money(overdueAmount)}</strong><small class="mini">${fmt(overdueCount)} فاتورة متأخرة</small></article>
+        <article class="control-kpi"><span>عقود تحتاج متابعة</span><strong>${fmt(dueSoon)}</strong><small class="mini">تجديدات قريبة/منتهية</small></article>
+        <article class="control-kpi"><span>طلبات صيانة مفتوحة</span><strong>${fmt(openMaint)}</strong><small class="mini">قيد التنفيذ الآن</small></article>
+      </div>
+      <div class="control-deck-grid">
+        <div class="control-alerts">
+          <h4>${ic('bell-ring','title-ic')} موجز التنبيهات</h4>
+          <ul>
+            ${alerts.length ? alerts.map(p=>`
+              <li class="ctrl-alert ${esc(p.tone||'medium')}">
+                <div><b>${esc(p.title)}</b><small>${esc(p.detail)}</small></div>
+                <button class="ghost" data-action="priority" data-section="${esc(p.section||'dashboard')}" data-contract="${esc(p.contractId||'')}">${esc(p.label||'فتح')}</button>
+              </li>
+            `).join('') : '<li class="ctrl-alert good"><div><b>لا توجد تنبيهات حرجة</b><small>الوضع مستقر حاليًا</small></div></li>'}
+          </ul>
+        </div>
+        <div class="control-commands">
+          <h4>${ic('rocket','title-ic')} أوامر تنفيذية سريعة</h4>
+          <div class="control-command-grid">
+            <button class="gold-btn" data-action="collect-now">تحصيل المتأخرات</button>
+            <button class="ghost" data-action="renewals">متابعة التجديد</button>
+            <button class="ghost" data-action="accounts">مراجعة الحسابات</button>
+            <button class="ghost" data-action="statements">قائمة الدخل والميزانية</button>
+            <button class="ghost" data-action="production">جاهزية التشغيل</button>
+            <button class="ghost" data-action="executive-pdf">تقرير PDF تنفيذي</button>
+          </div>
+        </div>
+      </div>
+    `;
+    deck.onclick = (ev)=>{
+      const modeBtn = ev.target.closest('[data-mode]');
+      if(modeBtn){ setMode(modeBtn.getAttribute('data-mode')); return; }
+      const actionBtn = ev.target.closest('[data-action]');
+      if(!actionBtn) return;
+      const action = actionBtn.getAttribute('data-action');
+      if(action === 'toggle-auto'){ toggleAuto(); return; }
+      if(action === 'refresh-now'){ if(typeof loadAll === 'function') loadAll(); return; }
+      if(action === 'collect-now'){ showSection('invoices'); return; }
+      if(action === 'renewals'){ showSection('contracts'); return; }
+      if(action === 'accounts'){ showSection('accounts'); return; }
+      if(action === 'statements'){ showSection('statements'); if(typeof loadFinancialStatements==='function') loadFinancialStatements(); return; }
+      if(action === 'production'){ showSection('production'); if(typeof loadProductionStatus==='function') loadProductionStatus(); return; }
+      if(action === 'executive-pdf'){ if(typeof downloadExecutiveReportPdf==='function') downloadExecutiveReportPdf(); return; }
+      if(action === 'priority'){
+        const contractId = actionBtn.getAttribute('data-contract');
+        const section = actionBtn.getAttribute('data-section') || 'dashboard';
+        if(contractId){ renewContract(contractId); return; }
+        showSection(section);
+      }
+    };
+    paintIcons(deck);
+    focusQuickActions();
+  }
+
+  const oldRenderDashboard = window.renderDashboard;
+  window.renderDashboard = function(){
+    if(typeof oldRenderDashboard === 'function') oldRenderDashboard();
+    renderControlDeck();
+  };
+
+  window.addEventListener('load', ()=>{
+    syncAutoRefresh();
+  });
 })();
