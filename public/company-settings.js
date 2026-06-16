@@ -66,8 +66,13 @@ window.CompanyProfile = {
     return this.settings;
   },
 
-  logoUrl() {
+  logoAssetPath() {
     const p = this.settings.logo_url || 'assets/logo-primary.png';
+    return /logo\.svg$/i.test(p) ? 'assets/logo-primary.png' : p;
+  },
+
+  logoUrl() {
+    const p = this.logoAssetPath();
     if (/^https?:\/\//i.test(p)) return p;
     if (typeof window !== 'undefined' && window.location?.href) {
       try { return new URL(p, window.location.href).href; } catch (e) { /* fall through */ }
@@ -309,7 +314,7 @@ body{margin:0;font-family:"Outfit","Tajawal",Arial,sans-serif;color:var(--ink);b
     const s = this.settings;
     return `
       <header class="qls-inv-top">
-        <img class="qls-inv-logo" src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(s.name_en)}" onerror="this.src='assets/logo.svg'">
+        <img class="qls-inv-logo" src="${this.escapeHtml(this.logoUrl())}" alt="${this.escapeHtml(s.name_en)}" onerror="this.src='assets/logo-primary.png'">
         <div class="qls-inv-brand">
           <h1>${this.escapeHtml(s.name_ar)}</h1>
           <h2>${this.escapeHtml(s.name_en)}</h2>

@@ -14,7 +14,7 @@ DEFAULT_COMPANY_SETTINGS: Dict[str, Any] = {
     "po_box": "320",
     "vat_rate": 0.05,
     "vat_reg_no": "",
-    "logo_url": "assets/logo.svg",
+    "logo_url": "assets/logo-primary.png",
     "description_ar": (
         "جودة الانطلاقة للخدمات ل.ل.س هي مؤسسة خدمية متخصصة في تقديم الخدمات المتعلقة بالعقارات، "
         "بالإضافة إلى خدمات الضيافة للمناسبات والعزاء، من خلال كادر وظيفي مترابط وذو خبرة طويلة في هذه المجالات، "
@@ -127,6 +127,8 @@ def merge_company_settings(raw: Dict[str, Any] | None) -> Dict[str, Any]:
             merged["bank"] = {**merged.get("bank", {}), **value}
         else:
             merged[key] = value
+    if str(merged.get("logo_url") or "").strip().lower().endswith("logo.svg"):
+        merged["logo_url"] = "assets/logo-primary.png"
     return merged
 
 
@@ -153,7 +155,10 @@ def load_company_settings(path: Path) -> Dict[str, Any]:
         return deepcopy(DEFAULT_COMPANY_SETTINGS)
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-        return merge_company_settings(raw if isinstance(raw, dict) else {})
+        merged = merge_company_settings(raw if isinstance(raw, dict) else {})
+        if isinstance(raw, dict) and str(raw.get("logo_url") or "").strip().lower().endswith("logo.svg"):
+            save_company_settings(path, merged)
+        return merged
     except (OSError, json.JSONDecodeError):
         return deepcopy(DEFAULT_COMPANY_SETTINGS)
 
