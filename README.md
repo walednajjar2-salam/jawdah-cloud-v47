@@ -25,5 +25,5 @@ See [RAILWAY.md](RAILWAY.md) or `DEPLOYMENT.txt`.
 
 ## Default users
 
-- `admin` / `admin123`
+- `admin` — password from `ADMIN_PASSWORD` environment variable (required for admin login)
 - `razan.accounting` / `Jawdeh123`

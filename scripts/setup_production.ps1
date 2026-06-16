@@ -2,8 +2,10 @@
 param(
   [string]$BaseUrl = "https://web-production-08d73.up.railway.app",
   [string]$AdminUser = "admin",
-  [string]$AdminPass = "admin123"
+  [string]$AdminPass = $env:ADMIN_PASSWORD
 )
+
+if (-not $AdminPass) { throw "Set ADMIN_PASSWORD environment variable or pass -AdminPass" }
 
 $ErrorActionPreference = "Stop"
 $settingsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "data\company_settings.json"

@@ -70,7 +70,7 @@ https://github.com/walednajjar2-salam/jawdah-cloud-v47
 تسجيل الدخول
 ────────────────────────────────────────
 
-admin / admin123
+admin — password from ADMIN_PASSWORD env var
 razan.accounting / Jawdeh123
 '@ | Set-Content -Path $guidePath -Encoding UTF8
 
