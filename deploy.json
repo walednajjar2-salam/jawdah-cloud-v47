@@ -1,0 +1,1561 @@
+﻿[
+  {
+    "id": "d09ae032-6235-40cb-94e8-41438a7246b9",
+    "status": "SUCCESS",
+    "createdAt": "2026-06-16T03:23:58.222Z",
+    "meta": {
+      "buildOnly": false,
+      "cliAgentSessionId": "railway-skill-redeploy-20260616072355",
+      "cliCaller": "skill:use-railway@1.3.0",
+      "cliMessage": "Add automatic daily SQLite and JSON backups",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:4dfffc421dc455e0a9ad5039112fbd8e94fad80060c6864a670f637929bb5f6d",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": [
+        "/app/data"
+      ]
+    }
+  },
+  {
+    "id": "a13836a3-626c-4fd2-98ee-ab5e21a11e8a",
+    "status": "REMOVED",
+    "createdAt": "2026-06-15T11:35:59.637Z",
+    "meta": {
+      "buildOnly": false,
+      "cliAgentSessionId": "6a2d52f6-af1b-4406-b0d3-2c9e294677b3",
+      "cliCaller": "cursor",
+      "cliMessage": "Fix gold sidebar logo and floating watermark",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:c5844e36ec9863aa99ce0e8b93c445b28954958243206ab310db69b8ebbad868",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": [
+        "/app/data"
+      ]
+    }
+  },
+  {
+    "id": "224f41e6-20a4-4fe1-ac39-3f32082d0e67",
+    "status": "REMOVED",
+    "createdAt": "2026-06-15T10:24:23.649Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "63b4c8fb2448e37d2435cc80f7942b37d68a56c2",
+      "commitMessage": "Enhance branding visibility across dashboard and user flows",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "ignoreWatchPatterns": true,
+      "imageDigest": "sha256:344ba4eb76277fed33ae013fcfa185c6157464aa26178f5dae608ffc202d16ef",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "patchId": "9fb2e958-c5e4-42ff-802c-e0da6944a152",
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "redeploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "skipBuildCache": true,
+      "volumeMounts": [
+        "/app/data"
+      ]
+    }
+  },
+  {
+    "id": "eae6c764-a930-4c2d-802d-53fdc97094e3",
+    "status": "REMOVED",
+    "createdAt": "2026-06-15T10:22:40.385Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "63b4c8fb2448e37d2435cc80f7942b37d68a56c2",
+      "commitMessage": "Enhance branding visibility across dashboard and user flows",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "ignoreWatchPatterns": true,
+      "imageDigest": "sha256:344ba4eb76277fed33ae013fcfa185c6157464aa26178f5dae608ffc202d16ef",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "patchId": "9fb2e958-c5e4-42ff-802c-e0da6944a152",
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": [
+        "/app/data"
+      ]
+    }
+  },
+  {
+    "id": "2047331a-3bb6-45d6-acea-1ff27f4a777d",
+    "status": "REMOVED",
+    "createdAt": "2026-06-15T10:22:18.998Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "63b4c8fb2448e37d2435cc80f7942b37d68a56c2",
+      "commitMessage": "Enhance branding visibility across dashboard and user flows",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "ignoreWatchPatterns": true,
+      "imageDigest": "sha256:344ba4eb76277fed33ae013fcfa185c6157464aa26178f5dae608ffc202d16ef",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "patchId": "dffb30ca-64c0-4322-b95f-1c5fd998ec9e",
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": [
+        "/app/data"
+      ]
+    }
+  },
+  {
+    "id": "b4905bad-6ca2-490c-9ee9-a118c4d1ad10",
+    "status": "REMOVED",
+    "createdAt": "2026-06-14T14:10:35.215Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "63b4c8fb2448e37d2435cc80f7942b37d68a56c2",
+      "commitMessage": "Enhance branding visibility across dashboard and user flows",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:344ba4eb76277fed33ae013fcfa185c6157464aa26178f5dae608ffc202d16ef",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "edbab2b1-391e-48f9-99f5-6162e69e8c6d",
+    "status": "REMOVED",
+    "createdAt": "2026-06-10T14:02:01.035Z",
+    "meta": {
+      "buildOnly": false,
+      "cliAgentSessionId": "f100fb70-4f0d-4bd5-b9f5-799c781f6cc5",
+      "cliCaller": "cursor",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:8295133cacab8cf58c6a0d2e7c1be8bc7052e5d06fa1e87ff38adc49d32eff95",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "3a5b94cf-b1e1-4db7-bd2c-5bfed9795d37",
+    "status": "REMOVED",
+    "createdAt": "2026-06-10T13:50:41.368Z",
+    "meta": {
+      "buildOnly": false,
+      "cliAgentSessionId": "f100fb70-4f0d-4bd5-b9f5-799c781f6cc5",
+      "cliCaller": "cursor",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:485675bcfcbae8f89d101172d20aa60e6c422a0c94106f50b96a207f42c7705e",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "eda8d93e-3411-434e-957c-f2a157badee8",
+    "status": "REMOVED",
+    "createdAt": "2026-06-10T09:31:20.117Z",
+    "meta": {
+      "buildOnly": false,
+      "cliAgentSessionId": "be14c093-3d70-454a-920d-b3b58c148117",
+      "cliCaller": "cursor",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:4e9045d3aae1e362f5805f0f6b689b6a07cd82f5cdd657687d48c8a8f39a0f2a",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "d71b9dad-7f93-4af2-8a55-982dc66b465f",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T23:28:18.087Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "5b963bdee71d1c935361dcc5485bf8b9bd405f8c",
+      "commitMessage": "Fix loading hang: defer script order, populateSelects crash, hide loader before render.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:3ea17dbcd9902e453dba2975d9eea9940b1e778a3e1402980c5987a7ea283505",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "08864b87-5ae3-40e6-922e-5c35d97c2e8e",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T23:15:56.673Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "676b658fd86514f7455c472227ca4bf4481bbc96",
+      "commitMessage": "Fix login hang by removing blocking CDN scripts and reloading after auth.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:2e15858e957fc0d8ba5b59b622890224e29cb79047761b0046c2f43e18521ede",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "abbea5f5-b779-4479-9fe7-9e8966c0fed4",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T23:02:07.053Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "a7793e0c81d2a39d57138ebbac8577a5f6036e29",
+      "commitMessage": "Fix unresponsive login by adding inline handler and deferring CDN scripts.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:3761d423027abcd07bc3f39d595dbdb7cd0c5a63007ecc7d52e8304dd2768f0b",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "65a60f22-cde7-4f67-9055-17ed13cbca26",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T22:54:05.411Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "b5e4529ed8e801f50e5b54a45ebddf51cc8c3661",
+      "commitMessage": "Restore branded login page and fix post-login loading flow.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:1a30b8c1df231547f1658c72d3ea006065c62cff584c5a048233c1a12cfdcd6c",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "7b7013b7-722e-4165-95ae-9b894930a7c6",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T22:38:43.042Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "05d3664bfef804bf4accb10f69258a4847f5fb88",
+      "commitMessage": "Fix invisible login button caused by gold-btn CSS override.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:c09feae88f2fe0c571f09c48ab0e0d4a8e96942ee992ebbdda693a1048a2f635",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "2f54761f-b741-4467-a59d-2d6ba39eb5e4",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T22:32:15.134Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "4e238766fc18568b39eb9d6843a435ff60610bc7",
+      "commitMessage": "Fix login button visibility with inline styles, early boot, and cache bust.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:841f57d3b0c42dfbddba27fea9efbd4860b114a01fd7b7a37d3d7a1b22555bd9",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "ad0b50c3-aa39-437d-b663-3a75e574aad4",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T22:27:08.653Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "0e173a1c9b6e01d9387789d1e6aad925865e330f",
+      "commitMessage": "Restore login button on minimal username and password page.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:bae27ab9821293e25262f83ba67dfd8f0dc82e4f1a3318a58d2a48168020aa5d",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "e0ac22de-d441-43f4-b324-c0baa1b305dc",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T22:23:22.151Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "70c279706699eddd5814c79f0a2a2798cf03448f",
+      "commitMessage": "Simplify login page to username and password fields only.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:9da088eca8d96117a9c58c90bf118a4c61d760f5512110799a4a72895855b23f",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "b8745795-2bd3-450a-ac57-242233f84705",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T22:03:40.389Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "419119c4cfe7e3f9bcc1910d6df539e00f975b8a",
+      "commitMessage": "Fix blank startup screen and add connection timeout with clearer login errors.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:dc3c61da494ca9cdc90012fadd2de0af9ab63726d978018f06add339525185ae",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "86d80a6f-2df0-4c1a-a1d3-d527a10983ed",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T21:53:54.602Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "30635eb882de9e31d5b0c0d5443693f340b066b0",
+      "commitMessage": "Add owner super-user with personalized welcome for Ya'qub Al-Khasibi.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:427c8da8bd66f074c9b02d9bd42da9344e4c032a6b77ba154a37f44ebf0da448",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  },
+  {
+    "id": "e60290dd-fe78-4f03-bcc8-5f9f57cd19f0",
+    "status": "REMOVED",
+    "createdAt": "2026-06-09T21:32:18.021Z",
+    "meta": {
+      "branch": "main",
+      "buildOnly": false,
+      "commitAuthor": "walednajjar2-salam",
+      "commitHash": "d4cf257bfd48a44dcf5a85ab418cda92584d400e",
+      "commitMessage": "Phase 6: Owner monthly pack unifying executive, GIS, renewal, compliance, and VAT reports.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "configFile": "/railway.toml",
+      "fileServiceManifest": {
+        "build": {
+          "builder": "NIXPACKS"
+        },
+        "deploy": {
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "startCommand": "python server.py"
+        }
+      },
+      "imageDigest": "sha256:d848927383a379884b64e0437da9510d527634251c8cd8f2684b04cf5d7c5da3",
+      "logsV2": true,
+      "nixpacksProviders": [],
+      "plan": "pro",
+      "propertyFileMapping": {
+        "build.builder": "$.build.builder",
+        "deploy.healthcheckPath": "$.deploy.healthcheckPath",
+        "deploy.healthcheckTimeout": "$.deploy.healthcheckTimeout",
+        "deploy.restartPolicyMaxRetries": "$.deploy.restartPolicyMaxRetries",
+        "deploy.restartPolicyType": "$.deploy.restartPolicyType",
+        "deploy.startCommand": "$.deploy.startCommand"
+      },
+      "reason": "deploy",
+      "repo": "walednajjar2-salam/jawdah-cloud-v47",
+      "rootDirectory": null,
+      "runtime": "V2",
+      "serviceManifest": {
+        "build": {
+          "buildCommand": null,
+          "buildEnvironment": "V3",
+          "builder": "DOCKERFILE",
+          "dockerfilePath": "/Dockerfile",
+          "nixpacksConfigPath": null,
+          "nixpacksPlan": null,
+          "watchPatterns": []
+        },
+        "deploy": {
+          "cronSchedule": null,
+          "drainingSeconds": null,
+          "healthcheckPath": "/api/health",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "limitOverride": null,
+          "multiRegionConfig": {
+            "sfo": {
+              "numReplicas": 1
+            }
+          },
+          "numReplicas": 1,
+          "overlapSeconds": null,
+          "preDeployCommand": null,
+          "region": null,
+          "registryCredentials": null,
+          "requiredMountPath": null,
+          "restartPolicyMaxRetries": 10,
+          "restartPolicyType": "ON_FAILURE",
+          "runtime": "V2",
+          "sleepApplication": false,
+          "startCommand": "python server.py",
+          "useLegacyStacker": false
+        }
+      },
+      "volumeMounts": []
+    }
+  }
+]

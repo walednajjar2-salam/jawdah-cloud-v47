@@ -14,6 +14,7 @@ import io
 import json
 import mimetypes
 import os
+import re
 import secrets
 import sqlite3
 import sys
@@ -72,7 +73,7 @@ ROLE_PERMISSIONS = {
 }
 
 TABLES = {
-    "properties": ["id", "name", "type", "status", "price", "location", "image", "last_update", "notes"],
+    "properties": ["id", "name", "type", "status", "price", "location", "building_no", "apartment_no", "room_no", "image", "last_update", "notes"],
     "clients": ["id", "name", "phone", "email", "national_id", "balance", "notes"],
     "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "notes"],
     "invoices": ["id", "invoice_no", "contract_id", "client_id", "property_id", "issue_date", "due_date", "description", "amount", "paid_amount", "status"],
@@ -159,6 +160,28 @@ def list_automatic_backups() -> List[Dict[str, Any]]:
             "created_at": datetime.fromtimestamp(json_path.stat().st_mtime).replace(microsecond=0).isoformat(sep=" "),
         })
     return backups
+
+
+def resolve_backup_file(kind: str, timestamp: Optional[str] = None) -> Optional[Path]:
+    kind = kind.lower()
+    if kind not in ("json", "sqlite"):
+        return None
+    ext = "json" if kind == "json" else "sqlite3"
+    if timestamp:
+        stamp = timestamp.strip()
+        if not re.fullmatch(r"\d{8}-\d{6}", stamp):
+            return None
+        path = BACKUP_DIR / f"jawdah-{stamp}.{ext}"
+        return path if path.exists() else None
+    recent = list_automatic_backups()
+    if not recent:
+        return None
+    latest = recent[0]
+    fname = latest["json_file"] if kind == "json" else latest.get("sqlite_file")
+    if not fname:
+        return None
+    path = BACKUP_DIR / fname
+    return path if path.exists() else None
 
 
 def prune_old_backups() -> None:
@@ -401,6 +424,9 @@ def init_db() -> None:
                 status TEXT NOT NULL,
                 price REAL NOT NULL DEFAULT 0,
                 location TEXT,
+                building_no TEXT,
+                apartment_no TEXT,
+                room_no TEXT,
                 image TEXT,
                 last_update TEXT,
                 notes TEXT
@@ -643,6 +669,13 @@ def init_db() -> None:
             ("approved_at", "TEXT"),
         ]:
             ensure_column(db, "contracts", col, definition)
+        for col, definition in [
+            ("building_no", "TEXT"),
+            ("apartment_no", "TEXT"),
+            ("room_no", "TEXT"),
+        ]:
+            ensure_column(db, "properties", col, definition)
+        migrate_property_statuses(db)
         seed_if_empty(db)
         ensure_user(db, "razan.accounting", "Razan", "accountant", "Jawdeh123")
         seed_chart_accounts(db)
@@ -672,9 +705,10 @@ def seed_if_empty(db: sqlite3.Connection) -> None:
             })
     if db.execute("SELECT COUNT(*) FROM properties").fetchone()[0] == 0:
         props = [
-            {"id":"P-1001","name":"Jawdah Pearl Residence","type":"Apartment","status":"Rented","price":780,"location":"Muscat","image":"🏢","last_update":today(),"notes":"Premium building"},
-            {"id":"P-1002","name":"Al Noor Villa","type":"Villa","status":"Vacant","price":1250,"location":"Barka","image":"🏠","last_update":today(),"notes":"Ready for rent"},
-            {"id":"P-1003","name":"Hospitality Suite A","type":"Suite","status":"Maintenance","price":650,"location":"Seeb","image":"🏨","last_update":today(),"notes":"AC maintenance"},
+            {"id":"P-1001","name":"بناية A - شقة 101 - غرفة 1","building_no":"A","apartment_no":"101","room_no":"1","type":"Apartment","status":"مستأجرة","price":780,"location":"Muscat","image":"🏢","last_update":today(),"notes":"Premium building"},
+            {"id":"P-1002","name":"بناية B - شقة 12 - غرفة 2","building_no":"B","apartment_no":"12","room_no":"2","type":"Villa","status":"شاغرة","price":1250,"location":"Barka","image":"🏠","last_update":today(),"notes":"Ready for rent"},
+            {"id":"P-1003","name":"بناية C - شقة 5 - غرفة 1","building_no":"C","apartment_no":"5","room_no":"1","type":"Suite","status":"صيانة","price":650,"location":"Seeb","image":"🏨","last_update":today(),"notes":"AC maintenance"},
+            {"id":"P-1004","name":"بناية A - شقة 203 - غرفة 1","building_no":"A","apartment_no":"203","room_no":"1","type":"Apartment","status":"محجوزة","price":720,"location":"Muscat","image":"🏢","last_update":today(),"notes":"Reserved pending contract"},
         ]
         for p in props:
             insert(db, "properties", p)
@@ -820,6 +854,75 @@ def ensure_column(db: sqlite3.Connection, table: str, column: str, definition: s
     cols = [r[1] for r in db.execute(f"PRAGMA table_info({table})").fetchall()]
     if column not in cols:
         db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+PROPERTY_STATUSES_AR = ("شاغرة", "محجوزة", "مستأجرة", "صيانة")
+
+
+def normalize_property_status(status: Any) -> str:
+    raw = str(status or "").strip()
+    if not raw:
+        return "شاغرة"
+    lower = raw.lower()
+    mapping = {
+        "vacant": "شاغرة",
+        "rented": "مستأجرة",
+        "leased": "مستأجرة",
+        "maintenance": "صيانة",
+        "pending": "محجوزة",
+        "reserved": "محجوزة",
+    }
+    if lower in mapping:
+        return mapping[lower]
+    if raw in PROPERTY_STATUSES_AR:
+        return raw
+    return raw
+
+
+def property_display_name(data: Dict[str, Any]) -> str:
+    building = str(data.get("building_no") or "").strip()
+    apartment = str(data.get("apartment_no") or "").strip()
+    room = str(data.get("room_no") or "").strip()
+    if building or apartment or room:
+        return f"بناية {building} - شقة {apartment} - غرفة {room}".strip(" -")
+    return str(data.get("name") or "").strip()
+
+
+def prepare_property_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    payload = dict(data)
+    payload["status"] = normalize_property_status(payload.get("status"))
+    for field in ("building_no", "apartment_no", "room_no", "location"):
+        val = str(payload.get(field) or "").strip()
+        if not val:
+            return None, f"Missing required field: {field}"
+        payload[field] = val
+    try:
+        price = float(payload.get("price") if payload.get("price") not in (None, "") else 0)
+    except (TypeError, ValueError):
+        return None, "Invalid price"
+    if price < 0:
+        return None, "Price must be non-negative"
+    payload["price"] = price
+    if not str(payload.get("name") or "").strip():
+        payload["name"] = property_display_name(payload)
+    payload.setdefault("type", str(payload.get("type") or "Apartment").strip() or "Apartment")
+    payload.setdefault("image", str(payload.get("image") or "🏠"))
+    payload["last_update"] = str(payload.get("last_update") or today())
+    return payload, None
+
+
+def migrate_property_statuses(db: sqlite3.Connection) -> None:
+    rows = db.execute("SELECT id, status, name, building_no, apartment_no, room_no FROM properties").fetchall()
+    for row in rows:
+        normalized = normalize_property_status(row["status"])
+        updates: Dict[str, Any] = {}
+        if normalized != row["status"]:
+            updates["status"] = normalized
+        if not str(row["name"] or "").strip() and (row["building_no"] or row["apartment_no"] or row["room_no"]):
+            updates["name"] = property_display_name(dict(row))
+        if updates:
+            sets = ", ".join(f"{col}=?" for col in updates)
+            db.execute(f"UPDATE properties SET {sets} WHERE id=?", list(updates.values()) + [row["id"]])
 
 
 def ensure_user(db: sqlite3.Connection, username: str, name: str, role: str, password: str) -> None:
@@ -1030,9 +1133,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_backup_status()
+                if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "archive" and method == "GET":
+                    user = self.require_user(db, "backup:export")
+                    return None if not user else self.api_backup_archive(db)
                 if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "verify" and method == "GET":
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_backup_verify(db)
+                if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "download" and method == "GET":
+                    user = self.require_user(db, "backup:export")
+                    return None if not user else self.api_backup_download(query)
                 if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "run" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_backup_run(db, user)
@@ -1177,6 +1286,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data.setdefault("status", "Draft")
             data.setdefault("legal_terms", default_legal_terms())
             data.setdefault("company_signatory", "Launch Quality LLC")
+        if table == "properties":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM properties WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+            prepared, err = prepare_property_payload(data)
+            if err:
+                return self.send_json({"ok": False, "error": err}, 400)
+            data.update(prepared)
         if table == "invoices":
             return self.send_json({"ok": False, "error": "Create invoices from a contract using the invoice action"}, 400)
         if table == "payments":
@@ -1499,6 +1619,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_backup(self, db: sqlite3.Connection) -> None:
         self.send_json({"ok": True, "backup": build_backup_payload(db)})
 
+    def api_backup_archive(self, db: sqlite3.Connection) -> None:
+        self.send_json({"ok": True, "archive": build_backup_payload(db), "exported_at": now_iso()})
+
     def api_backup_status(self) -> None:
         recent = list_automatic_backups()
         self.send_json({
@@ -1516,6 +1639,26 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_backup_verify(self, db: sqlite3.Connection) -> None:
         result = verify_backup_restore(db)
         self.send_json({"ok": result["ok"], "verification": result})
+
+    def api_backup_download(self, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        kind = (params.get("kind") or ["json"])[0].lower()
+        timestamp = (params.get("timestamp") or [""])[0] or None
+        path = resolve_backup_file(kind, timestamp)
+        if not path:
+            return self.send_json({"ok": False, "error": "Backup file not found"}, 404)
+        try:
+            path.resolve().relative_to(BACKUP_DIR.resolve())
+        except ValueError:
+            return self.send_json({"ok": False, "error": "Invalid backup path"}, 400)
+        raw = path.read_bytes()
+        ctype = "application/json" if kind == "json" else "application/octet-stream"
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
 
     def api_backup_run(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         audit(db, user, "backup", "database", None, "Manual automatic backup triggered")
@@ -1571,8 +1714,18 @@ def protected_delete_reason(db: sqlite3.Connection, table: str, row_id: str) -> 
 
 def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
     prop_total = db.execute("SELECT COUNT(*) FROM properties").fetchone()[0]
-    rented = db.execute("SELECT COUNT(*) FROM properties WHERE lower(status) LIKE '%rented%' OR lower(status) LIKE '%leased%'").fetchone()[0]
-    vacant = db.execute("SELECT COUNT(*) FROM properties WHERE lower(status) LIKE '%vacant%'").fetchone()[0]
+    rented = db.execute(
+        "SELECT COUNT(*) FROM properties WHERE status='مستأجرة' OR lower(status) LIKE '%rented%' OR lower(status) LIKE '%leased%'"
+    ).fetchone()[0]
+    vacant = db.execute(
+        "SELECT COUNT(*) FROM properties WHERE status='شاغرة' OR lower(status) LIKE '%vacant%'"
+    ).fetchone()[0]
+    reserved = db.execute(
+        "SELECT COUNT(*) FROM properties WHERE status='محجوزة' OR lower(status) LIKE '%pending%' OR lower(status) LIKE '%reserved%'"
+    ).fetchone()[0]
+    maintenance_props = db.execute(
+        "SELECT COUNT(*) FROM properties WHERE status='صيانة' OR lower(status) LIKE '%maintenance%'"
+    ).fetchone()[0]
     maintenance_count = db.execute("SELECT COUNT(*) FROM maintenance WHERE lower(status) NOT IN ('closed','done','completed')").fetchone()[0]
     invoices = rows_to_dicts(db.execute("SELECT * FROM invoices").fetchall())
     accounts = rows_to_dicts(db.execute("SELECT * FROM accounts").fetchall())
@@ -1621,7 +1774,11 @@ def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
     bank_balance = db.execute("SELECT COALESCE(SUM(CASE WHEN type IN ('deposit','in','income') THEN amount ELSE -amount END),0) FROM bank_transactions").fetchone()[0]
     return {
         "kpis": {
-            "properties": prop_total, "rented": rented, "vacant": vacant, "maintenance": maintenance_count,
+            "properties": prop_total, "rented": rented, "vacant": vacant, "reserved": reserved,
+            "maintenance_properties": maintenance_props, "maintenance": maintenance_count,
+            "property_status": {
+                "rented": rented, "vacant": vacant, "reserved": reserved, "maintenance": maintenance_props,
+            },
             "income": income, "expense": expense, "net": income - expense, "billed": billed, "paid": paid,
             "overdue": overdue, "occupancy": occupancy, "health": health,
             "purchases_due": float(purchases_due or 0), "payroll": float(payroll_total or 0), "inventory_value": float(inventory_value or 0), "bank_balance": float(bank_balance or 0),

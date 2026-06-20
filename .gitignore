@@ -1,0 +1,12 @@
+data/
+*.sqlite3
+.env
+.server.pid
+data/server.log
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+jawdah-cloud-v47/
+lanch-qulaty/
+_zip-check/

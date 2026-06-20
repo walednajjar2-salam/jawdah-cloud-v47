@@ -26,8 +26,11 @@ with mod.connect() as db:
         {
             "id": "PROP-BKP-TEST",
             "name": "Backup Verify Property",
+            "building_no": "V1",
+            "apartment_no": "1",
+            "room_no": "1",
             "type": "Villa",
-            "status": "Vacant",
+            "status": "شاغرة",
             "price": 1500,
             "location": "Verify",
             "image": "🏠",

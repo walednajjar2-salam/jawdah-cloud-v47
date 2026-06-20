@@ -7,6 +7,42 @@ const Jawdah = {
   charts: {},
   invoiceForPrint: null
 };
+const PROPERTY_STATUSES = ['شاغرة', 'محجوزة', 'مستأجرة', 'صيانة'];
+const STATUS_CLASS = {
+  'شاغرة': 'vacant', 'محجوزة': 'pending', 'مستأجرة': 'rented', 'صيانة': 'maintenance',
+  vacant: 'vacant', rented: 'rented', maintenance: 'maintenance', pending: 'pending',
+  partial: 'partial', paid: 'paid', active: 'active', overdue: 'overdue', open: 'open',
+  income: 'paid', expense: 'overdue', draft: 'draft', renewed: 'renewed', expired: 'expired'
+};
+function propertyLabel(p){
+  if(!p || !p.id) return '';
+  if(p.building_no || p.apartment_no || p.room_no){
+    const parts = [];
+    if(p.building_no) parts.push('بناية '+p.building_no);
+    if(p.apartment_no) parts.push('شقة '+p.apartment_no);
+    if(p.room_no) parts.push('غرفة '+p.room_no);
+    return parts.join(' · ');
+  }
+  return p.name || p.id;
+}
+function propertyUnitLine(p){
+  if(!p || !p.id) return '';
+  const bits = [p.building_no && ('ب'+p.building_no), p.apartment_no && ('ش'+p.apartment_no), p.room_no && ('غ'+p.room_no)].filter(Boolean);
+  return bits.join(' / ');
+}
+function statusBadge(v){
+  const raw = String(v ?? '');
+  const lower = raw.toLowerCase();
+  let cls = STATUS_CLASS[raw] || STATUS_CLASS[lower];
+  if(!cls){
+    if(raw.includes('مستأ') || lower.includes('rent') || lower.includes('lease')) cls = 'rented';
+    else if(raw.includes('شاغ') || lower.includes('vacant')) cls = 'vacant';
+    else if(raw.includes('صيان') || lower.includes('maint')) cls = 'maintenance';
+    else if(raw.includes('محج') || lower.includes('pend') || lower.includes('reserv')) cls = 'pending';
+    else cls = lower.replace(/\s+/g, '-');
+  }
+  return `<span class="badge ${cls}">${raw}</span>`;
+}
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const api = async (path, opts={}) => {
@@ -73,7 +109,8 @@ function renderDashboard(){
   const openInvoices=(data.invoices||[]).filter(x=>Number(x.amount||0)>Number(x.paid_amount||0));
   const nextRentForecast = Number(k.paid||0) + Math.max(0, Number(k.overdue||0) * .35);
   const riskScore = Math.max(0, Math.min(100, 100 - (openInvoices.length*7) - (Number(k.maintenance||0)*6) + (collectionRate*.2)));
-  $('#heroStats').innerHTML=`<span class="badge paid">جاهزية ${fmt(k.health)}%</span><span class="badge">الإشغال ${fmt(k.occupancy)}%</span><span class="badge">التحصيل ${fmt(collectionRate)}%</span><span class="badge">مؤشر المخاطر ${fmt(riskScore)}%</span><span class="badge">توقع النقد ${money(nextRentForecast)}</span>`;
+  const ps = k.property_status || {};
+  $('#heroStats').innerHTML=`<span class="badge paid">جاهزية ${fmt(k.health)}%</span><span class="badge">الإشغال ${fmt(k.occupancy)}%</span><span class="badge">التحصيل ${fmt(collectionRate)}%</span><span class="badge">مؤشر المخاطر ${fmt(riskScore)}%</span><span class="badge vacant">شاغرة ${fmt(ps.vacant ?? k.vacant ?? 0)}</span><span class="badge rented">مستأجرة ${fmt(ps.rented ?? k.rented ?? 0)}</span><span class="badge pending">محجوزة ${fmt(ps.reserved ?? k.reserved ?? 0)}</span><span class="badge maintenance">صيانة ${fmt(ps.maintenance ?? k.maintenance_properties ?? 0)}</span><span class="badge">توقع النقد ${money(nextRentForecast)}</span>`;
   const kpis=[
     ['🏛️','إجمالي العقارات',k.properties,'properties',''],['🔑','العقارات المؤجرة',k.rented,'properties',''],['🏠','العقارات الشاغرة',k.vacant,'properties',''],['📑','العقود النشطة',(data.contracts||[]).filter(x=>String(x.status||'').toLowerCase().includes('active')).length,'contracts',''],
     ['🔁','عقود تحتاج تجديد',k.expiring||0,'contracts',''],['⏳','عقود منتهية',k.expired||0,'contracts',''],
@@ -93,32 +130,32 @@ function renderDashboard(){
     <div class="executive-strip"><div class="executive-chip"><b>مؤشر التحصيل</b><br><span class="mini">${fmt(collectionRate)}% من إجمالي الفواتير</span></div><div class="executive-chip"><b>مؤشر الإشغال</b><br><span class="mini">${fmt(k.occupancy)}% من الوحدات</span></div><div class="executive-chip"><b>مؤشر السلامة</b><br><span class="mini">${fmt(riskScore)}% تشغيل مستقر</span></div></div>`;
   $('#decisionList').innerHTML=executiveMatrix + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
   const props=Jawdah.data.properties||[];
-  $('#gisPins').innerHTML=props.map((p,i)=>{ const cls=(p.status||'').toLowerCase().includes('maintenance')?'red':((p.status||'').toLowerCase().includes('vacant')?'blue':'gold'); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast('${p.name} - ${p.status}')"></button>` }).join('');
+  $('#gisPins').innerHTML=props.map((p,i)=>{ const st=String(p.status||''); const cls=st.includes('صيان')||st.toLowerCase().includes('maint')?'red':(st.includes('شاغ')||st.toLowerCase().includes('vacant')?'blue':(st.includes('محج')||st.toLowerCase().includes('pend')?'orange':'gold')); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${propertyLabel(p)} - ${p.status}" style="left:${left}%;top:${top}%" onclick="toast('${propertyLabel(p)} - ${p.status}')"></button>` }).join('');
   $('#quickActions').innerHTML=[['إضافة عقار','properties','🏠'],['إضافة عميل','clients','👥'],['إنشاء عقد','contracts','📑'],['تجديد عقد','contracts','🔁'],['فاتورة من عقد','invoices','🧾'],['تحصيل دفعة','invoices','💳'],['Backup فوري','backup','💾'],['تقرير مالي','reports','📊'],['اختبار التشغيل','qa','✅']].map(q=>`<button class="ghost quick-pro" onclick="showSection('${q[1]}')"><b>${q[2]} ${q[0]}</b><br><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
 }
 function tableHtml(cols, rows, actions){
   return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}${actions?'<th>إجراء</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??'')}</td>`).join('')}${actions?`<td>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
 }
 function renderProperties(){
-  const rows=filterRows('properties',['name','type','status','location']);
-  $('#propertiesTable').innerHTML=tableHtml([['الصورة','image'],['الاسم','name'],['النوع','type'],['الحالة','status',(v)=>badge(v)],['السعر','price',(v)=>money(v)],['الموقع','location'],['آخر تحديث','last_update']],rows,r=>`<button class="ghost" onclick="editRecord('properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('properties','${r.id}')">حذف</button>`);
-  fillSelect('#propStatusFilter',['','Rented','Vacant','Maintenance'],false);
+  const rows=filterRows('properties',['building_no','apartment_no','room_no','name','status','location','notes']);
+  $('#propertiesTable').innerHTML=tableHtml([['البناية','building_no'],['الشقة','apartment_no'],['الغرفة','room_no'],['الحالة','status',(v)=>statusBadge(v)],['السعر','price',(v)=>money(v)],['الموقع','location'],['الوحدة','id',(_,r)=>propertyLabel(r)]],rows,r=>`<button class="ghost" onclick="editRecord('properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('properties','${r.id}')">حذف</button>`);
+  fillSelect('#propStatusFilter',['',...PROPERTY_STATUSES],false);
 }
 function renderClients(){
   const rows=filterRows('clients',['name','phone','email','national_id']);
   $('#clientsTable').innerHTML=tableHtml([['الاسم','name'],['الهاتف','phone'],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['ملاحظات','notes']],rows,r=>`<button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
 }
 function renderContracts(){
-  fillSelect('#contractProperty',Jawdah.data.properties||[],true,'id','name'); fillSelect('#contractClient',Jawdah.data.clients||[],true,'id','name');
+  fillSelect('#contractProperty',Jawdah.data.properties||[],true,'id','name',propertyLabel); fillSelect('#contractClient',Jawdah.data.clients||[],true,'id','name');
   const rows=filterRows('contracts',['id','status','notes']);
   const renewalHost = $('#renewalQueueBox');
   if(renewalHost){
     const queue = renewalQueue();
     renewalHost.innerHTML = queue.length
-      ? `<div class="renewal-panel"><h3>🔁 قرارات التجديد (${queue.length})</h3><p class="mini">عقود نشطة تقترب من تاريخ النهاية أو منتهية وتحتاج قرار تجديد قبل تحولها إلى شغور.</p>${queue.map(({contract:c, meta})=>`<div class="renewal-row"><div><b>${c.contract_no||c.id}</b> · ${byId('clients',c.client_id).name||c.client_id}<br><span class="mini">${byId('properties',c.property_id).name||c.property_id} · ينتهي ${c.end_date}</span></div><span class="badge ${meta.tone}">${meta.label}</span><button class="gold-btn" onclick="renewContract('${c.id}')">تجديد</button></div>`).join('')}</div>`
+      ? `<div class="renewal-panel"><h3>🔁 قرارات التجديد (${queue.length})</h3><p class="mini">عقود نشطة تقترب من تاريخ النهاية أو منتهية وتحتاج قرار تجديد قبل تحولها إلى شغور.</p>${queue.map(({contract:c, meta})=>`<div class="renewal-row"><div><b>${c.contract_no||c.id}</b> · ${byId('clients',c.client_id).name||c.client_id}<br><span class="mini">${propertyLabel(byId('properties',c.property_id))} · ينتهي ${c.end_date}</span></div><span class="badge ${meta.tone}">${meta.label}</span><button class="gold-btn" onclick="renewContract('${c.id}')">تجديد</button></div>`).join('')}</div>`
       : `<div class="renewal-panel renewal-ok"><h3>🔁 التجديد</h3><p class="mini">لا توجد عقود تحتاج قرار تجديد حالياً.</p></div>`;
   }
-  $('#contractsTable').innerHTML=tableHtml([['رقم العقد','contract_no',(v,r)=>v||r.id],['النوع','contract_type'],['العقار','property_id',(v)=>byId('properties',v).name||v],['العميل','client_id',(v)=>byId('clients',v).name||v],['البداية','start_date'],['النهاية','end_date'],['التجديد','id',(_,r)=>{const m=contractRenewalMeta(r); return m.label?`<span class="badge ${m.tone}">${m.label}</span>`:'—';}],['الإيجار','rent_amount',(v)=>money(v)],['التأمين','deposit_amount',(v)=>money(v)],['الحالة','status',(v)=>badge(v)]],rows,r=>{
+  $('#contractsTable').innerHTML=tableHtml([['رقم العقد','contract_no',(v,r)=>v||r.id],['النوع','contract_type'],['الوحدة','property_id',(v)=>propertyLabel(byId('properties',v))],['العميل','client_id',(v)=>byId('clients',v).name||v],['البداية','start_date'],['النهاية','end_date'],['التجديد','id',(_,r)=>{const m=contractRenewalMeta(r); return m.label?`<span class="badge ${m.tone}">${m.label}</span>`:'—';}],['الإيجار','rent_amount',(v)=>money(v)],['التأمين','deposit_amount',(v)=>money(v)],['الحالة','status',(v)=>statusBadge(v)]],rows,r=>{
     const meta = contractRenewalMeta(r);
     const renewBtn = meta.renewable ? `<button class="gold-btn" onclick="renewContract('${r.id}')">تجديد</button> ` : '';
     return `${renewBtn}<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button> <button class="ghost" onclick="contractDocument('${r.id}')">العقد</button> <button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> <button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
@@ -126,18 +163,18 @@ function renderContracts(){
 }
 function renderInvoices(){
   const rows=filterRows('invoices',['invoice_no','description','status']);
-  $('#invoicesTable').innerHTML=tableHtml([['رقم','invoice_no'],['العميل','client_id',(v)=>byId('clients',v).name||v],['العقار','property_id',(v)=>byId('properties',v).name||v],['الإصدار','issue_date'],['الاستحقاق','due_date'],['الإجمالي','amount',(v)=>money(v)],['المدفوع','paid_amount',(v)=>money(v)],['المتبقي','amount',(v,r)=>money(Number(r.amount)-Number(r.paid_amount))],['الحالة','status',(v)=>badge(v)]],rows,r=>`<button class="gold-btn" onclick="openPayment('${r.id}')">تحصيل</button> <button class="ghost" onclick="printInvoice('${r.id}')">طباعة</button> <button class="danger" onclick="delRecord('invoices','${r.id}')">حذف</button>`);
+  $('#invoicesTable').innerHTML=tableHtml([['رقم','invoice_no'],['العميل','client_id',(v)=>byId('clients',v).name||v],['الوحدة','property_id',(v)=>propertyLabel(byId('properties',v))],['الإصدار','issue_date'],['الاستحقاق','due_date'],['الإجمالي','amount',(v)=>money(v)],['المدفوع','paid_amount',(v)=>money(v)],['المتبقي','amount',(v,r)=>money(Number(r.amount)-Number(r.paid_amount))],['الحالة','status',(v)=>statusBadge(v)]],rows,r=>`<button class="gold-btn" onclick="openPayment('${r.id}')">تحصيل</button> <button class="ghost" onclick="printInvoice('${r.id}')">طباعة</button> <button class="danger" onclick="delRecord('invoices','${r.id}')">حذف</button>`);
 }
 function renderAccounts(){
   const rows=filterRows('accounts',['description','category','type']);
-  $('#accountsTable').innerHTML=tableHtml([['التاريخ','entry_date'],['النوع','type',(v)=>badge(v)],['التصنيف','category'],['الوصف','description'],['العميل','client_id',(v)=>v?(byId('clients',v).name||v):''],['العقار','property_id',(v)=>v?(byId('properties',v).name||v):''],['الفاتورة','invoice_id',(v)=>v?(byId('invoices',v).invoice_no||v):''],['المبلغ','amount',(v)=>money(v)]],rows,r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`);
+  $('#accountsTable').innerHTML=tableHtml([['التاريخ','entry_date'],['النوع','type',(v)=>statusBadge(v)],['التصنيف','category'],['الوصف','description'],['العميل','client_id',(v)=>v?(byId('clients',v).name||v):''],['الوحدة','property_id',(v)=>v?propertyLabel(byId('properties',v)):'' ],['الفاتورة','invoice_id',(v)=>v?(byId('invoices',v).invoice_no||v):''],['المبلغ','amount',(v)=>money(v)]],rows,r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`);
   const income=rows.filter(x=>x.type==='income').reduce((s,x)=>s+Number(x.amount||0),0), expense=rows.filter(x=>x.type==='expense').reduce((s,x)=>s+Number(x.amount||0),0);
   $('#accountSummary').innerHTML=`<span class="badge">إيرادات ${money(income)}</span><span class="badge">مصروفات ${money(expense)}</span><span class="badge">صافي ${money(income-expense)}</span>`;
 }
 function renderMaintenance(){
-  fillSelect('#maintProperty',Jawdah.data.properties||[],true,'id','name');
+  fillSelect('#maintProperty',Jawdah.data.properties||[],true,'id','name',propertyLabel);
   const rows=filterRows('maintenance',['title','priority','status','notes']);
-  $('#maintenanceGrid').innerHTML=rows.map(m=>`<div class="card"><h3>${m.title}</h3><p>${byId('properties',m.property_id).name||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord('maintenance','${m.id}')">متابعة</button> <button class="danger" onclick="delRecord('maintenance','${m.id}')">حذف</button></div>`).join('')||'<div class="card">لا توجد طلبات صيانة</div>';
+  $('#maintenanceGrid').innerHTML=rows.map(m=>`<div class="card"><h3>${m.title}</h3><p>${propertyLabel(byId('properties',m.property_id))||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord('maintenance','${m.id}')">متابعة</button> <button class="danger" onclick="delRecord('maintenance','${m.id}')">حذف</button></div>`).join('')||'<div class="card">لا توجد طلبات صيانة</div>';
 }
 function renderUsers(){
   if(!Jawdah.data.users){ $('#usersTable').innerHTML='<div class="card">هذا القسم للمدير فقط</div>'; return; }
@@ -171,10 +208,10 @@ function renderQA(){
 function filterRows(table, fields){
   let rows=[...(Jawdah.data[table]||[])]; const q=($('#globalSearch')?.value||'').toLowerCase().trim();
   if(q) rows=rows.filter(r=>fields.some(f=>String(r[f]??'').toLowerCase().includes(q)));
-  if(table==='properties'){ const s=$('#propStatusFilter')?.value; if(s) rows=rows.filter(r=>r.status===s); }
+  if(table==='properties'){ const s=$('#propStatusFilter')?.value; if(s) rows=rows.filter(r=>r.status===s); const b=($('#propBuildingFilter')?.value||'').trim(); if(b) rows=rows.filter(r=>String(r.building_no||'').includes(b)); }
   return rows;
 }
-function badge(v){ const cls=String(v||'').toLowerCase(); return `<span class="badge ${cls}">${v||''}</span>`; }
+function badge(v){ return statusBadge(v); }
 function contractDaysLeft(endDate){
   if(!endDate) return null;
   const end = new Date(String(endDate)+'T00:00:00');
@@ -197,12 +234,12 @@ function renewalQueue(){
     .filter(x=>x.meta.renewable)
     .sort((a,b)=>(a.meta.days??999)-(b.meta.days??999));
 }
-function fillSelect(sel, data, objects=false, valueKey='id', textKey='name'){
+function fillSelect(sel, data, objects=false, valueKey='id', textKey='name', labelFn=null){
   const el=$(sel); if(!el) return; const old=el.value; let html='<option value="">اختر</option>';
-  if(objects) html+=data.map(x=>`<option value="${x[valueKey]}">${x[textKey]}</option>`).join(''); else html+=data.map(x=>`<option value="${x}">${x||'الكل'}</option>`).join('');
+  if(objects) html+=data.map(x=>`<option value="${x[valueKey]}">${labelFn?labelFn(x):(x[textKey]??'')}</option>`).join(''); else html+=data.map(x=>`<option value="${x}">${x||'الكل'}</option>`).join('');
   el.innerHTML=html; if([...el.options].some(o=>o.value===old)) el.value=old;
 }
-async function createProperty(){ await saveNew('properties',{name:val('pName'),type:val('pType'),status:val('pStatus'),price:num('pPrice'),location:val('pLocation'),image:val('pImage')||'🏠',last_update:today(),notes:val('pNotes')}); }
+async function createProperty(){ await saveNew('properties',{building_no:val('pBuilding'),apartment_no:val('pApartment'),room_no:val('pRoom'),status:val('pStatus'),price:num('pPrice'),location:val('pLocation'),notes:val('pNotes'),image:'🏠',last_update:today()}); }
 async function createClient(){ await saveNew('clients',{name:val('cName'),phone:val('cPhone'),email:val('cEmail'),national_id:val('cNational'),balance:0,notes:val('cNotes')}); }
 async function createContract(){ await saveNew('contracts',{contract_type:val('contractType')||'Residential',property_id:val('contractProperty'),client_id:val('contractClient'),tenant_nationality:val('tenantNationality'),tenant_id_no:val('tenantIdNo'),unit_details:val('unitDetails'),start_date:val('contractStart')||today(),end_date:val('contractEnd')||today(),rent_amount:num('contractRent'),deposit_amount:num('contractDeposit'),late_fee:num('contractLateFee'),grace_days:num('contractGraceDays')||5,renewal_notice_days:num('contractRenewalDays')||30,status:'Draft',payment_cycle:'monthly',legal_terms:val('contractLegalTerms'),notes:val('contractNotes')}); }
 async function createAccount(){ await saveNew('accounts',{entry_date:val('accDate')||today(),type:val('accType'),category:val('accCategory'),description:val('accDesc'),client_id:val('accClient')||null,property_id:val('accProperty')||null,invoice_id:null,amount:num('accAmount')}); }
@@ -221,7 +258,8 @@ function editOptions(field, row, table=''){
     payment_cycle: ['monthly','quarterly','yearly'],
     active: ['1','0']
   };
-  if(field === 'property_id') return (Jawdah.data.properties||[]).map(x=>[x.id,x.name]);
+  if(field === 'property_id') return (Jawdah.data.properties||[]).map(x=>[x.id, propertyLabel(x)]);
+  if(table === 'properties' && field === 'status') return PROPERTY_STATUSES.map(x=>[x,x]);
   if(field === 'client_id') return (Jawdah.data.clients||[]).map(x=>[x.id,x.name]);
   if(field === 'invoice_id') return [['','بدون فاتورة'], ...(Jawdah.data.invoices||[]).map(x=>[x.id,x.invoice_no])];
   if(field === 'parent_code') return [['','بدون حساب أب'], ...(Jawdah.data.chart_accounts||[]).map(x=>[x.code, `${x.code} - ${x.name}`])];
@@ -232,7 +270,7 @@ function editOptions(field, row, table=''){
   return null;
 }
 const EDIT_CONFIG = {
-  properties: {title:'تعديل عقار', fields:[['name','اسم العقار','text'],['type','النوع','select'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
+  properties: {title:'تعديل عقار', fields:[['building_no','رقم البناية','text'],['apartment_no','رقم الشقة','text'],['room_no','رقم الغرفة','text'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['name','اسم العرض (اختياري)','text'],['type','النوع','select'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
   clients: {title:'تعديل عميل', fields:[['name','اسم العميل','text'],['phone','الهاتف','text'],['email','البريد','text'],['national_id','الهوية/السجل','text'],['balance','الرصيد الافتتاحي','number'],['notes','ملاحظات','textarea']]},
   contracts: {title:'تعديل عقد', fields:[['contract_no','رقم العقد','text'],['contract_type','نوع العقد','select'],['property_id','العقار','select'],['client_id','العميل','select'],['tenant_nationality','جنسية المستأجر','text'],['tenant_id_no','رقم الهوية/السجل','text'],['unit_details','تفاصيل الوحدة','textarea'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['rent_amount','قيمة الإيجار','number'],['deposit_amount','التأمين','number'],['late_fee','غرامة التأخير','number'],['grace_days','مهلة السداد بالأيام','number'],['renewal_notice_days','تنبيه التجديد بالأيام','number'],['status','الحالة','select'],['payment_cycle','دورة الدفع','select'],['legal_terms','الشروط القانونية','textarea'],['notes','ملاحظات','textarea']]},
   accounts: {title:'تعديل حركة مالية', fields:[['entry_date','التاريخ','date'],['type','النوع','select'],['category','التصنيف','text'],['description','الوصف','text'],['client_id','العميل','select'],['property_id','العقار','select'],['invoice_id','الفاتورة','select'],['amount','المبلغ','number']]},
@@ -297,12 +335,27 @@ async function contractDocument(contractId){ try{ const res=await api('contract_
 
 function openPayment(id){ const inv=byId('invoices',id); const remaining=Number(inv.amount)-Number(inv.paid_amount); $('#payInvoiceId').value=id; $('#payAmount').value=remaining.toFixed(2); $('#payInfo').textContent=`${inv.invoice_no} - المتبقي ${money(remaining)}`; openModal('paymentModal'); }
 async function submitPayment(){ try{ await api('pay_invoice',{method:'POST',body:JSON.stringify({invoice_id:val('payInvoiceId'),amount:num('payAmount'),method:val('payMethod'),note:val('payNote')})}); closeModal('paymentModal'); toast('تم التحصيل وتحديث الحسابات'); await loadAll(); }catch(e){toast(e.message,true)} }
-function printInvoice(id){ const inv=byId('invoices',id), client=byId('clients',inv.client_id), prop=byId('properties',inv.property_id), contract=byId('contracts',inv.contract_id); Jawdah.invoiceForPrint=inv; const rem=Number(inv.amount)-Number(inv.paid_amount);
-  $('#invoicePreview').innerHTML=`<div class="invoice-paper"><div class="head"><div><h1>INVOICE</h1><h2>Quality of Launch</h2><p>Real Estate & Hospitality Services<br>GSM: 96203068 / 92120205<br>C.R: 1466316 | Postal Code: 611 | Sultanate of Oman</p></div><div><h2>${inv.invoice_no}</h2><p>Issue: ${inv.issue_date}<br>Due: ${inv.due_date}<br>Status: ${inv.status}</p></div></div><div class="grid" style="grid-template-columns:1fr 1fr"><div><h3>Client</h3><p>${client.name||''}<br>${client.phone||''}<br>${client.email||''}</p></div><div><h3>Contract / Property</h3><p>${contract.id||''}<br>${prop.name||''}<br>${prop.location||''}</p></div></div><table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>${inv.description}</td><td>${money(inv.amount)}</td></tr></tbody></table><h3>Total: ${money(inv.amount)}</h3><h3>Paid: ${money(inv.paid_amount)}</h3><h3>Remaining: ${money(rem)}</h3><div style="margin-top:40px;display:flex;justify-content:space-between"><p>Prepared By: __________</p><p>Client Signature: __________</p><p>Company Stamp: __________</p></div></div>`; openModal('invoiceModal'); }
+function printInvoice(id){ const inv=byId('invoices',id), client=byId('clients',inv.client_id), prop=byId('properties',inv.property_id), contract=byId('contracts',inv.contract_id); Jawdah.invoiceForPrint=inv; const rem=Number(inv.amount)-Number(inv.paid_amount); const unit=propertyUnitLine(prop);
+  $('#invoicePreview').innerHTML=`<div class="invoice-paper"><div class="head"><div><h1>INVOICE</h1><h2>Quality of Launch</h2><p>Real Estate & Hospitality Services<br>GSM: 96203068 / 92120205<br>C.R: 1466316 | Postal Code: 611 | Sultanate of Oman</p></div><div><h2>${inv.invoice_no}</h2><p>Issue: ${inv.issue_date}<br>Due: ${inv.due_date}<br>Status: ${inv.status}</p></div></div><div class="grid" style="grid-template-columns:1fr 1fr"><div><h3>Client</h3><p>${client.name||''}<br>${client.phone||''}<br>${client.email||''}</p></div><div><h3>Contract / Property</h3><p>${contract.contract_no||contract.id||''}<br>${propertyLabel(prop)}<br>${unit?('Unit: '+unit+'<br>'):''}${prop.location||''}</p></div></div><table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>${inv.description}</td><td>${money(inv.amount)}</td></tr></tbody></table><h3>Total: ${money(inv.amount)}</h3><h3>Paid: ${money(inv.paid_amount)}</h3><h3>Remaining: ${money(rem)}</h3><div style="margin-top:40px;display:flex;justify-content:space-between"><p>Prepared By: __________</p><p>Client Signature: __________</p><p>Company Stamp: __________</p></div></div>`; openModal('invoiceModal'); }
 function downloadInvoice(){ const html='<!doctype html><meta charset="utf-8">'+$('#invoicePreview').innerHTML; downloadFile(`invoice-${Jawdah.invoiceForPrint?.invoice_no||'file'}.html`,html,'text/html'); }
 function clientStatement(id){ const c=byId('clients',id); const inv=(Jawdah.data.invoices||[]).filter(x=>x.client_id===id); const acc=(Jawdah.data.accounts||[]).filter(x=>x.client_id===id); const total=inv.reduce((s,x)=>s+Number(x.amount||0),0), paid=inv.reduce((s,x)=>s+Number(x.paid_amount||0),0); $('#genericModalBody').innerHTML=`<h2>كشف حساب ${c.name}</h2><p>إجمالي الفواتير: ${money(total)} | المدفوع: ${money(paid)} | المتبقي: ${money(total-paid)}</p>${tableHtml([['رقم','invoice_no'],['تاريخ','issue_date'],['إجمالي','amount',(v)=>money(v)],['مدفوع','paid_amount',(v)=>money(v)],['حالة','status',(v)=>badge(v)]],inv)}<h3>الحركات</h3>${tableHtml([['تاريخ','entry_date'],['نوع','type'],['وصف','description'],['مبلغ','amount',(v)=>money(v)]],acc)}`; openModal('genericModal'); }
 function openModal(id){ $('#'+id).classList.add('show'); ensureEnglishDigits($('#'+id)); } function closeModal(id){ $('#'+id).classList.remove('show'); }
 async function downloadBackup(){ try{ const res=await api('backup'); downloadFile('jawdah-cloud-backup.json', JSON.stringify(res.backup,null,2), 'application/json'); }catch(e){toast(e.message,true)} }
+async function downloadBackupFile(kind, timestamp){
+  try{
+    const qs=new URLSearchParams({kind});
+    if(timestamp) qs.set('timestamp', timestamp);
+    const res=await fetch('/api/backup/download?'+qs,{headers:{Authorization:'Bearer '+Jawdah.token}});
+    if(!res.ok){ const err=await res.text(); throw new Error(err||'Download failed'); }
+    const blob=await res.blob();
+    const cd=res.headers.get('Content-Disposition')||'';
+    const match=cd.match(/filename="?([^"]+)"?/);
+    const name=match?match[1]:`jawdah-backup.${kind==='sqlite'?'sqlite3':'json'}`;
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast('تم تنزيل '+name);
+  }catch(e){ toast(e.message,true); }
+}
 function downloadFile(name,content,type='text/plain'){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
 async function exportCsv(table){ try{ const res=await fetch('/api/export/'+table,{headers:{Authorization:'Bearer '+Jawdah.token}}); if(!res.ok) throw new Error('Export failed'); const blob=await res.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='jawdah-'+table+'.csv'; a.click(); }catch(e){toast(e.message,true)} }
 function renderReports(){
