@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Launch Quality LLC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -21,10 +24,30 @@
     </div>
 
     <div class="login-logo-fixed">
-      <img src="assets/login-logo.png" alt="Quality of Launch Services — جودة انطلاقة للخدمات" class="login-logo-img">
+      <div class="login-brand-hero">
+        <img src="assets/login-logo.png" alt="Quality of Launch Services — جودة انطلاقة للخدمات" class="login-logo-img">
+        <div class="login-brand-lines">
+          <p class="login-line-en" dir="ltr" lang="en">Quality of Launch Services L.L.C</p>
+          <p class="login-line-ar" dir="rtl" lang="ar">جودة انطلاقة للخدمات ش.م.م</p>
+        </div>
+        <div class="login-desc-grid">
+          <div class="login-desc-en" dir="ltr" lang="en">
+            <span class="login-desc-label">About</span>
+            <p>Premium enterprise platform for property leasing, hospitality operations, finance, and intelligent portfolio management — built for global standards.</p>
+          </div>
+          <div class="login-desc-ar" dir="rtl" lang="ar">
+            <span class="login-desc-label">نبذة</span>
+            <p>منصة مؤسسية متكاملة لإدارة العقارات والإيجارات والضيافة والمالية وذكاء المحفظة — بمعايير عالمية واحترافية.</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <section class="login-glass-card" aria-label="تسجيل الدخول">
+      <div class="login-card-head">
+        <span class="login-secure-badge" dir="ltr">Secure Sign In</span>
+        <h2 class="login-card-title">تسجيل الدخول</h2>
+      </div>
       <div class="login-form">
         <label class="login-field">
           <span class="login-field-icon" aria-hidden="true">👤</span>
@@ -42,22 +65,28 @@
       <div class="footer-col footer-en" dir="ltr" lang="en">
         <strong>Quality of Launch Services L.L.C</strong>
         <span>Owner: Yaqoub Al-Khasibi</span>
-        <em>Real Estate &amp; Hospitality ERP</em>
+        <em>Real Estate &amp; Hospitality ERP · Sultanate of Oman · C.R. 1466316</em>
+        <small>Trusted enterprise operations · Finance · Leasing · Maintenance</small>
       </div>
       <div class="footer-sep" aria-hidden="true"></div>
       <div class="footer-col footer-ar" dir="rtl" lang="ar">
         <strong>جودة انطلاقة للخدمات ش.م.م</strong>
         <span>المالك: يعقوب الخصيبي</span>
-        <em>نظام إدارة العقارات والضيافة</em>
+        <em>نظام إدارة العقارات والضيافة · سلطنة عُمان · س.ت 1466316</em>
+        <small>تشغيل مؤسسي · مالية · إيجارات · صيانة</small>
       </div>
     </footer>
   </main>
 
   <main id="app" class="app hidden">
     <aside id="sidebar" class="sidebar">
-      <div class="brand">
-        <img src="assets/logo.png" alt="logo">
-        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>
+      <div class="brand brand-pro">
+        <img src="assets/login-logo.png" alt="Launch Quality" class="brand-logo-pro">
+        <div class="brand-copy-pro">
+          <h1>Launch Quality LLC</h1>
+          <small dir="ltr">Enterprise Real Estate &amp; Hospitality</small>
+          <small class="brand-ar" dir="rtl">إدارة عقارات وضيافة مؤسسية</small>
+        </div>
       </div>
       <nav id="nav" class="nav"></nav>
     </aside>
