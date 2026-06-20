@@ -148,32 +148,25 @@
 .brand-copy-pro h1{font-size:15px!important;margin:0 0 4px!important}
 .brand-copy-pro small{display:block;font-size:11px;color:rgba(148,163,184,.9);line-height:1.45}
 .brand-copy-pro .brand-ar{color:rgba(201,166,107,.95);margin-top:4px}
-@media(max-width:650px){
-  .login-glass-card{width:calc(100vw - 24px);padding:22px 18px;border-radius:18px;top:calc(50% + clamp(48px,10vh,80px))}
-  .login-logo-fixed{top:clamp(12px,3vh,28px);width:min(340px,92vw)}
-  .login-logo-fixed .login-logo-img{max-height:clamp(120px,18vh,160px)}
-  .login-brand-lines,.login-desc-grid{grid-template-columns:1fr;gap:10px}
-  .login-line-en,.login-line-ar{text-align:center;justify-self:center}
-  .login-desc-en,.login-desc-ar{text-align:center}
-  .login-company-footer{grid-template-columns:1fr;gap:14px;padding:18px 16px 22px;text-align:center}
+@media(max-width:768px),(max-height:820px){
+  .login{display:flex;flex-direction:column;align-items:center;gap:14px;padding:14px 14px 24px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  .login-bg,.login-bg-glow,.login-mesh,.login-icons{position:fixed}
+  .login-logo-fixed{position:relative;top:auto;left:auto;transform:none;width:min(360px,92vw);margin-top:8px}
+  .login-logo-fixed .login-logo-img{max-height:clamp(130px,20vh,170px)}
+  .login-brand-lines{grid-template-columns:1fr;gap:6px}
+  .login-line-en,.login-line-ar{text-align:center;justify-self:center;font-size:14px}
+  .login-desc-grid{display:none}
+  .login-glass-card{position:relative;top:auto;left:auto;transform:none;width:min(100%,400px);padding:22px 18px;margin:0 auto;border-radius:18px}
+  .login-company-footer{position:relative;bottom:auto;left:auto;right:auto;width:100%;max-width:520px;margin:8px auto 0;grid-template-columns:1fr;gap:12px;padding:16px;border-radius:16px;background:rgba(6,10,18,.55)}
   .footer-en,.footer-ar{text-align:center;justify-self:center}
-  .footer-sep{width:min(180px,60%);height:1px;margin:0 auto;background:linear-gradient(90deg,transparent,rgba(212,175,55,.45),transparent)}
-  .login-float-icon{width:40px;height:40px;font-size:18px;border-radius:10px;opacity:.55}
+  .footer-sep{width:min(160px,50%);height:1px;margin:0 auto;background:linear-gradient(90deg,transparent,rgba(212,175,55,.45),transparent)}
+  .login-float-icon{width:40px;height:40px;font-size:18px;border-radius:10px;opacity:.45}
   .fi-1{left:4%;top:14%}.fi-2{right:4%;top:16%}.fi-3,.fi-4,.fi-5,.fi-6{display:none}
 }
-@media(max-height:780px){
-  .login-logo-fixed .login-logo-img{max-height:clamp(120px,18vh,180px)}
-  .login-desc-grid{padding:10px 14px}
-  .login-desc-en p,.login-desc-ar p{font-size:11px;line-height:1.5}
-}
 @media(max-height:680px){
-  .login-logo-fixed{top:12px;width:min(300px,90vw)}
-  .login-logo-fixed .login-logo-img{max-height:100px}
-  .login-desc-grid{display:none}
-  .login-brand-lines{grid-template-columns:1fr;gap:4px}
-  .login-glass-card{top:calc(50% + 20px);padding:18px}
-  .login-company-footer{padding:12px 16px}
-  .footer-sep{height:40px}
+  .login-logo-fixed .login-logo-img{max-height:110px}
+  .login-glass-card{padding:18px}
+  .login-company-footer{padding:12px 14px}
 }
 
 /* ===== Premium Glass Dashboard ===== */
