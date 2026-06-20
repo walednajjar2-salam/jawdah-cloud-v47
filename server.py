@@ -65,6 +65,7 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 
 
 ROLE_PERMISSIONS = {
+    "owner": {"all"},
     "admin": {"all"},
     "accountant": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
     "operations": {"dashboard", "properties", "clients", "contracts", "invoices:read", "maintenance", "reports:read"},

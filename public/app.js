@@ -59,7 +59,7 @@ const fmt = n => Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
 const money = n => fmt(n) + ' OMR';
 const today = () => new Date().toISOString().slice(0,10);
 const byId = (table,id) => (Jawdah.data[table]||[]).find(x=>x.id===id) || {};
-const roleName = r => ({admin:'مدير النظام',accountant:'محاسب',operations:'تشغيل',maintenance:'صيانة',viewer:'مشاهد'}[r]||r);
+const roleName = r => ({owner:'General Owner',admin:'System Admin',accountant:'Accountant',operations:'Operations',maintenance:'Maintenance',viewer:'Viewer'}[r]||r);
 function toast(msg, err=false){ const t=document.createElement('div'); t.className='toast'+(err?' err':''); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
 function ensureEnglishDigits(root=document.body){
   const rx=/[\u0660-\u0669\u06F0-\u06F9]/g;
