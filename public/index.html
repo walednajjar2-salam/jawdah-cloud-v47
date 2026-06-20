@@ -10,18 +10,47 @@
   <main id="loginScreen" class="login hidden">
     <div class="login-bg" aria-hidden="true"></div>
     <div class="login-bg-glow" aria-hidden="true"></div>
-    <section class="login-card login-glass">
-      <div class="login-brand">
-        <img src="assets/login-logo.png" alt="جودة الانطلاقة — Quality of Launch Services" class="login-logo-img">
-        <p class="login-tagline">نظام إدارة العقارات والضيافة</p>
-      </div>
+    <div class="login-mesh" aria-hidden="true"></div>
+    <div class="login-icons" aria-hidden="true">
+      <span class="login-float-icon fi-1">🏛️</span>
+      <span class="login-float-icon fi-2">🏠</span>
+      <span class="login-float-icon fi-3">🔑</span>
+      <span class="login-float-icon fi-4">📊</span>
+      <span class="login-float-icon fi-5">🌐</span>
+      <span class="login-float-icon fi-6">✨</span>
+    </div>
+
+    <div class="login-logo-fixed">
+      <img src="assets/login-logo.png" alt="Quality of Launch Services — جودة انطلاقة للخدمات" class="login-logo-img">
+    </div>
+
+    <section class="login-glass-card" aria-label="تسجيل الدخول">
       <div class="login-form">
-        <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
-        <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
-        <button id="loginBtn" class="gold-btn login-submit">تسجيل الدخول</button>
+        <label class="login-field">
+          <span class="login-field-icon" aria-hidden="true">👤</span>
+          <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
+        </label>
+        <label class="login-field">
+          <span class="login-field-icon" aria-hidden="true">🔒</span>
+          <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
+        </label>
+        <button id="loginBtn" class="gold-btn login-submit" type="button">تسجيل الدخول</button>
       </div>
-      <p class="login-footer mini">Launch Quality LLC · Real Estate &amp; Hospitality</p>
     </section>
+
+    <footer class="login-company-footer">
+      <div class="footer-col footer-en" dir="ltr" lang="en">
+        <strong>Quality of Launch Services L.L.C</strong>
+        <span>Owner: Yaqoub Al-Khasibi</span>
+        <em>Real Estate &amp; Hospitality ERP</em>
+      </div>
+      <div class="footer-sep" aria-hidden="true"></div>
+      <div class="footer-col footer-ar" dir="rtl" lang="ar">
+        <strong>جودة انطلاقة للخدمات ش.م.م</strong>
+        <span>المالك: يعقوب الخصيبي</span>
+        <em>نظام إدارة العقارات والضيافة</em>
+      </div>
+    </footer>
   </main>
 
   <main id="app" class="app hidden">
