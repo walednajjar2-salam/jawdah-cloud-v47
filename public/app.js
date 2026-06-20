@@ -98,40 +98,81 @@ function buildNav(){
 function showSection(id){
   Jawdah.activeSection=id; $$('.section').forEach(s=>s.classList.remove('active')); const s=$('#sec-'+id); if(s) s.classList.add('active');
   $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
-  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم التنفيذية',properties:'العقارات',clients:'العملاء',contracts:'العقود والتجديد',invoices:'الفواتير',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل'}[id]||'Jawdah');
+  document.body.classList.toggle('dash-pro-active', id==='dashboard');
+  $('#sectionTitle').textContent = ({dashboard:'لوحة التحكم',properties:'العقارات',clients:'العملاء',contracts:'العقود والتجديد',invoices:'الفواتير',accounts:'الحسابات',maintenance:'الصيانة',reports:'التقارير المالية',users:'المستخدمين والصلاحيات',backup:'التخزين والنسخ الاحتياطي',qa:'اختبار التشغيل'}[id]||'Jawdah');
   if(innerWidth<1100) $('#sidebar').classList.remove('open'); setTimeout(drawCharts,50); ensureEnglishDigits();
 }
 function renderAll(){ renderDashboard(); renderProperties(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }
+function houseArt(kind){
+  const n = kind==='total'?3: (kind==='maint'?3:2);
+  return `<div class="house-art ${kind}">${Array.from({length:n},()=>'<i></i>').join('')}</div>`;
+}
+function propStatusDot(status){
+  const s=String(status||'');
+  if(s.includes('مستأ')||s.toLowerCase().includes('rent')) return `<span class="status-dot rented"><i></i>مستأجرة</span>`;
+  if(s.includes('صيان')||s.toLowerCase().includes('maint')) return `<span class="status-dot maint"><i></i>صيانة</span>`;
+  return `<span class="status-dot vacant"><i></i>شاغرة</span>`;
+}
+function maintQueueTag(m){
+  const st=String(m.status||'').toLowerCase();
+  if(st.includes('done')||st.includes('closed')||st.includes('complete')) return `<span class="mq-tag done">مكتمل</span>`;
+  if(String(m.priority||'').toLowerCase()==='high') return `<span class="mq-tag high">أولوية عالية</span>`;
+  return `<span class="mq-tag progress">قيد التنفيذ</span>`;
+}
+function showMapPopup(p, leftPct, topPct){
+  const box=$('#mapPopup'); if(!box) return;
+  const thumb=p.image && !String(p.image).startsWith('http') ? p.image : '🏠';
+  box.classList.remove('hidden');
+  box.style.left=`calc(${leftPct}% - 120px)`;
+  box.style.top=`calc(${topPct}% - 10px)`;
+  box.innerHTML=`<div class="map-thumb">${thumb}</div><h4>${propertyLabel(p)}</h4><p>${p.location||'—'}</p><div class="price">${money(p.price||0)} / شهر</div>${statusBadge(p.status)}`;
+}
+function showMapPopupById(id, leftPct, topPct){ showMapPopup(byId('properties', id), leftPct, topPct); }
 function renderDashboard(){
   const k=Jawdah.dashboard.kpis;
   const data=Jawdah.data || {};
+  const props=data.properties||[];
+  const maint=data.maintenance||[];
+  const openMaint=maint.filter(x=>!String(x.status||'').toLowerCase().match(/closed|done|complete/));
+  const overdueInv=(data.invoices||[]).filter(x=>Number(x.amount||0)>Number(x.paid_amount||0));
   const collectionRate = k.billed ? Math.round((Number(k.paid||0)/Number(k.billed||1))*100) : 0;
-  const openInvoices=(data.invoices||[]).filter(x=>Number(x.amount||0)>Number(x.paid_amount||0));
-  const nextRentForecast = Number(k.paid||0) + Math.max(0, Number(k.overdue||0) * .35);
-  const riskScore = Math.max(0, Math.min(100, 100 - (openInvoices.length*7) - (Number(k.maintenance||0)*6) + (collectionRate*.2)));
-  const ps = k.property_status || {};
-  $('#heroStats').innerHTML=`<span class="badge paid">جاهزية ${fmt(k.health)}%</span><span class="badge">الإشغال ${fmt(k.occupancy)}%</span><span class="badge">التحصيل ${fmt(collectionRate)}%</span><span class="badge">مؤشر المخاطر ${fmt(riskScore)}%</span><span class="badge vacant">شاغرة ${fmt(ps.vacant ?? k.vacant ?? 0)}</span><span class="badge rented">مستأجرة ${fmt(ps.rented ?? k.rented ?? 0)}</span><span class="badge pending">محجوزة ${fmt(ps.reserved ?? k.reserved ?? 0)}</span><span class="badge maintenance">صيانة ${fmt(ps.maintenance ?? k.maintenance_properties ?? 0)}</span><span class="badge">توقع النقد ${money(nextRentForecast)}</span>`;
+  const forecastOcc = Math.min(100, Math.round(Number(k.occupancy||0) + (collectionRate > 80 ? 6 : 2)));
+  const riskContracts = Number(k.expiring||0) + Number(k.expired||0);
+  const bell=$('#bellDot');
+  if(bell) bell.classList.toggle('hidden', !(Number(k.overdue||0)>0 || riskContracts>0 || openMaint.length>0));
+
   const kpis=[
-    ['🏛️','إجمالي العقارات',k.properties,'properties',''],['🔑','العقارات المؤجرة',k.rented,'properties',''],['🏠','العقارات الشاغرة',k.vacant,'properties',''],['📑','العقود النشطة',(data.contracts||[]).filter(x=>String(x.status||'').toLowerCase().includes('active')).length,'contracts',''],
-    ['🔁','عقود تحتاج تجديد',k.expiring||0,'contracts',''],['⏳','عقود منتهية',k.expired||0,'contracts',''],
-    ['🧾','إجمالي الفوترة',k.billed,'invoices','money'],['💳','إجمالي التحصيل',k.paid,'accounts','money'],['⏰','المبالغ المتأخرة',k.overdue,'invoices','money'],['📈','صافي الربح',k.net,'accounts','money'],
-    ['🔧','الصيانة المفتوحة',k.maintenance,'maintenance',''],['👥','العملاء',(data.clients||[]).length,'clients',''],['🛡️','جودة البيانات',k.health,'reports','percent'],['🤖','توقع الشهر',nextRentForecast,'reports','money']
+    {art:'total',label:'إجمالي العقارات',value:fmt(k.properties),section:'properties'},
+    {art:'rented',label:'العقارات المؤجرة',value:fmt(k.rented),section:'properties'},
+    {art:'vacant',label:'العقارات الشاغرة',value:fmt(k.vacant),section:'properties'},
+    {art:'expiring',label:'تنتهي قريباً',value:fmt(k.expiring||0),section:'contracts',danger:true},
+    {art:'overdue',label:'مدفوعات متأخرة',value:fmt(overdueInv.length),section:'invoices',warn:true},
+    {art:'maint',label:'صيانة مفتوحة',value:fmt(k.maintenance||openMaint.length),section:'maintenance'}
   ];
-  $('#kpiGrid').innerHTML=kpis.map(x=>`<div class="kpi kpi-pro" onclick="showSection('${x[3]}')"><div class="icon">${x[0]}</div><span>${x[1]}</span><strong>${x[4]==='money'?money(x[2]):x[4]==='percent'?fmt(x[2])+'%':fmt(x[2])}</strong><small class="mini">فتح التفاصيل والتحليل</small></div>`).join('');
-  const executiveMatrix=`
-    <div class="command-panel">
-      <div class="ai-orb">🤖</div>
-      <div><h3>مساعد القرار التنفيذي</h3><p>الأولوية الآن: ${Number(k.overdue||0)>0?'تحصيل المتأخرات':'رفع الإشغال وتحسين التدفق النقدي'}، ومؤشر المخاطر الحالي ${fmt(riskScore)}%.</p></div>
-      <div class="ai-stat"><b>${money(nextRentForecast)}</b><span>توقع النقد القادم</span></div>
-    </div>
-    <div class="ops-matrix">
-      <div><b>العقار</b><span>${fmt(k.properties)}</span></div><div><b>العميل</b><span>${fmt((data.clients||[]).length)}</span></div><div><b>العقد</b><span>${fmt((data.contracts||[]).length)}</span></div><div><b>الفاتورة</b><span>${fmt((data.invoices||[]).length)}</span></div><div><b>التحصيل</b><span>${money(k.paid)}</span></div><div><b>الحسابات</b><span>${money(k.net)}</span></div>
-    </div>
-    <div class="executive-strip"><div class="executive-chip"><b>مؤشر التحصيل</b><br><span class="mini">${fmt(collectionRate)}% من إجمالي الفواتير</span></div><div class="executive-chip"><b>مؤشر الإشغال</b><br><span class="mini">${fmt(k.occupancy)}% من الوحدات</span></div><div class="executive-chip"><b>مؤشر السلامة</b><br><span class="mini">${fmt(riskScore)}% تشغيل مستقر</span></div></div>`;
-  $('#decisionList').innerHTML=executiveMatrix + Jawdah.dashboard.decisions.map(d=>`<div class="decision-card"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join('');
-  const props=Jawdah.data.properties||[];
-  $('#gisPins').innerHTML=props.map((p,i)=>{ const st=String(p.status||''); const cls=st.includes('صيان')||st.toLowerCase().includes('maint')?'red':(st.includes('شاغ')||st.toLowerCase().includes('vacant')?'blue':(st.includes('محج')||st.toLowerCase().includes('pend')?'orange':'gold')); const left=[18,43,68,28,78,52,36,61,22,84][i%10], top=[24,42,58,70,32,22,64,76,48,54][i%10]; return `<button class="pin ${cls}" title="${propertyLabel(p)} - ${p.status}" style="left:${left}%;top:${top}%" onclick="toast('${propertyLabel(p)} - ${p.status}')"></button>` }).join('');
-  $('#quickActions').innerHTML=[['إضافة عقار','properties','🏠'],['إضافة عميل','clients','👥'],['إنشاء عقد','contracts','📑'],['تجديد عقد','contracts','🔁'],['فاتورة من عقد','invoices','🧾'],['تحصيل دفعة','invoices','💳'],['Backup فوري','backup','💾'],['تقرير مالي','reports','📊'],['اختبار التشغيل','qa','✅']].map(q=>`<button class="ghost quick-pro" onclick="showSection('${q[1]}')"><b>${q[2]} ${q[0]}</b><br><small class="mini">أمر تنفيذي سريع</small></button>`).join('');
+  const row=$('#dashKpiRow');
+  if(row) row.innerHTML=kpis.map(x=>`<article class="dash-kpi${x.danger?' danger':''}${x.warn?' warn':''}" onclick="showSection('${x.section}')"><div><strong>${x.value}</strong><span>${x.label}</span></div>${houseArt(x.art)}</article>`).join('');
+
+  const occLabel=$('#occPctLabel');
+  if(occLabel) occLabel.textContent=fmt(k.occupancy)+'%';
+
+  const positions=[[18,24],[43,42],[68,58],[28,70],[78,32],[52,22],[36,61],[22,84],[84,54],[61,76]];
+  $('#gisPins').innerHTML=props.map((p,i)=>{
+    const st=String(p.status||'');
+    const cls=st.includes('صيان')||st.toLowerCase().includes('maint')?'red':(st.includes('شاغ')||st.toLowerCase().includes('vacant')?'blue':(st.includes('محج')||st.toLowerCase().includes('pend')?'orange':'gold'));
+    const [left,top]=positions[i%positions.length];
+    return `<button type="button" class="pin ${cls}" title="${propertyLabel(p)}" style="left:${left}%;top:${top}%" onclick="showMapPopupById('${p.id}',${left},${top})"></button>`;
+  }).join('');
+  if(props[0]) showMapPopup(props[0], positions[0][0], positions[0][1]);
+
+  const maintRows=openMaint.slice(0,3);
+  $('#maintQueue').innerHTML=maintRows.length ? maintRows.map(m=>`<div class="mq-item"><div><b>${m.title||'طلب صيانة'}</b><div class="mini">${propertyLabel(byId('properties',m.property_id))}</div></div>${maintQueueTag(m)}</div>`).join('') : '<div class="mq-item"><b>لا توجد طلبات مفتوحة</b><span class="mq-tag done">جاهز</span></div>';
+
+  const propRows=props.slice(0,6);
+  $('#dashPropsTable').innerHTML=`<div class="table-wrap"><table><thead><tr><th></th><th>العقار</th><th>الحالة</th><th>الإيجار الشهري</th></tr></thead><tbody>${propRows.map(p=>`<tr><td><div class="prop-thumb">${p.image||'🏠'}</div></td><td class="prop-name-cell"><b>${propertyLabel(p)}</b><small>${p.location||''}</small></td><td>${propStatusDot(p.status)}</td><td><b>${money(p.price||0)}</b></td></tr>`).join('')||'<tr><td colspan="4">لا توجد عقارات</td></tr>'}</tbody></table></div>`;
+
+  $('#dashMaintCards').innerHTML=maintRows.slice(0,2).map(m=>`<div class="maint-card"><div class="thumb">🔧</div><div><b>${m.title||'صيانة'}</b><p>${propertyLabel(byId('properties',m.property_id))}</p></div><button type="button" class="view-btn" onclick="showSection('maintenance')">عرض</button></div>`).join('') || '<div class="maint-card"><div class="thumb">✓</div><div><b>لا توجد طلبات</b><p>كل شيء مستقر</p></div></div>';
+
+  $('#aiAssistant').innerHTML=`<div class="ai-head"><div class="spark">✨</div><h3>المساعد الذكي</h3></div><div class="ai-list"><div><b>توقع الإشغال:</b> ${fmt(forecastOcc)}%</div><div><b>عقود معرضة للتأخير:</b> ${fmt(riskContracts)}</div><div><b>نصائح تحسين الدخل:</b> ${Number(k.overdue||0)>0?'ركّز على تحصيل المتأخرات':'ارفع الإشغال في الوحدات الشاغرة'}</div></div><button type="button" class="insights-btn" onclick="showSection('reports')">احصل على التحليلات</button>`;
 }
 function tableHtml(cols, rows, actions){
   return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}${actions?'<th>إجراء</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??'')}</td>`).join('')}${actions?`<td>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
@@ -377,9 +418,11 @@ async function runQA(){
   }catch(e){ html+=`<p class="badge overdue">تعذر فحص النسخ الاحتياطي: ${e.message}</p>`; }
   $('#qaBox').innerHTML=html;
 }
-function drawCharts(){ if(!Jawdah.dashboard) return; drawLine('incomeChart',Jawdah.dashboard.series.map(x=>x.income),Jawdah.dashboard.series.map(x=>x.expense)); drawDonut('occupancyChart',Jawdah.dashboard.kpis.occupancy); drawBar('expenseChart',Jawdah.dashboard.series.map(x=>x.expense)); }
-function ctx(id){ const c=$('#'+id); return c?c.getContext('2d'):null; }
+function drawCharts(){ if(!Jawdah.dashboard) return; drawLinePro('incomeChart', Jawdah.dashboard.series.map(x=>x.income)); drawDonutPro('occupancyChart', Jawdah.dashboard.kpis.occupancy); drawBarPro('maintCostChart', Jawdah.dashboard.series.map(x=>x.expense)); if($('#expenseChart')) drawBar('expenseChart', Jawdah.dashboard.series.map(x=>x.expense)); }
 function prepCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; const g=c.getContext('2d'); g.scale(devicePixelRatio,devicePixelRatio); return [g,r.width,r.height]; }
+function drawLinePro(id, arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...arr,1], max=Math.max(...vals)*1.25; g.strokeStyle='rgba(255,255,255,.08)'; for(let i=0;i<4;i++){let y=20+i*(h-50)/3;g.beginPath();g.moveTo(20,y);g.lineTo(w-20,y);g.stroke();} g.beginPath(); arr.forEach((v,i)=>{ const x=24+i*(w-48)/(arr.length-1||1), y=h-28-(v/max)*(h-58); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle='#fbbf24'; g.lineWidth=3; g.shadowColor='rgba(251,191,36,.35)'; g.shadowBlur=8; g.stroke(); g.shadowBlur=0; arr.forEach((v,i)=>{ const x=24+i*(w-48)/(arr.length-1||1), y=h-28-(v/max)*(h-58); g.beginPath(); g.fillStyle='#fde68a'; g.arc(x,y,4,0,Math.PI*2); g.fill(); }); }
+function drawDonutPro(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/2.8; g.lineWidth=16; g.strokeStyle='rgba(255,255,255,.12)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const pct=Math.max(0,Math.min(100,Number(p||0))); g.strokeStyle='#3b82f6'; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*(pct/100)); g.stroke(); if(pct<100){ g.strokeStyle='#f97316'; g.beginPath(); g.arc(x,y,r,-Math.PI/2+Math.PI*2*(pct/100),-Math.PI/2+Math.PI*2); g.stroke(); } }
+function drawBarPro(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.25, colors=['#3b82f6','#f97316','#ef4444','#8b5cf6','#06b6d4','#22c55e']; const bw=(w-50)/arr.length*.55; arr.forEach((v,i)=>{ const x=24+i*(w-50)/arr.length+8, bh=(v/max)*(h-36); g.fillStyle=colors[i%colors.length]; g.fillRect(x,h-22-bh,bw,bh); }); }
 function drawLine(id,a,b){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...a,...b,1], max=Math.max(...vals)*1.22; const area=(arr,color1,color2)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.lineTo(w-32,h-34); g.lineTo(32,h-34); g.closePath(); const gr=g.createLinearGradient(0,28,0,h-34); gr.addColorStop(0,color1); gr.addColorStop(1,color2); g.fillStyle=gr; g.fill(); }; const plot=(arr,color)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle=color; g.lineWidth=3; g.shadowBlur=0; g.stroke(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); g.beginPath(); g.fillStyle=color; g.arc(x,y,3.5,0,Math.PI*2); g.fill(); }); }; g.strokeStyle='rgba(148,163,184,.12)'; for(let i=0;i<5;i++){let y=24+i*(h-58)/4;g.beginPath();g.moveTo(24,y);g.lineTo(w-24,y);g.stroke();} area(a,'rgba(106,171,158,.18)','rgba(106,171,158,0)'); plot(a,'#6aab9e'); plot(b,'#7eb8d4'); }
 function drawDonut(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=22; g.lineCap='round'; g.strokeStyle='rgba(148,163,184,.14)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#9fd4d0'); gr.addColorStop(.5,'#6aab9e'); gr.addColorStop(1,'#4a8580'); g.strokeStyle=gr; g.shadowBlur=0; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.fillStyle='#e2e8f0'; g.font='700 28px Segoe UI'; g.textAlign='center'; g.fillText(fmt(p)+'%',x,y+6); g.font='13px Segoe UI'; g.fillStyle='rgba(148,163,184,.85)'; g.fillText('Occupancy',x,y+28); }
 function drawBar(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,'#9fd4d0'); grd.addColorStop(1,'#4a8580'); g.fillStyle=grd; g.shadowBlur=0; g.fillRect(x,h-25-bh,bw,bh);}); }
@@ -395,29 +438,12 @@ window.addEventListener('load',()=>{ bind(); initClock(); checkSession(); setInt
 
 /* Launch Quality LLC - production experience layer */
 (function(){
-  const VERSION = 'Launch Quality LLC';
   const oldRenderDashboard = window.renderDashboard;
   window.renderDashboard = function(){
     oldRenderDashboard && oldRenderDashboard();
     try{
-      const k = Jawdah.dashboard && Jawdah.dashboard.kpis ? Jawdah.dashboard.kpis : {};
-      const properties = (Jawdah.data.properties||[]).length;
-      const clients = (Jawdah.data.clients||[]).length;
-      const contracts = (Jawdah.data.contracts||[]).length;
-      const invoices = (Jawdah.data.invoices||[]).length;
-      const paid = Number(k.paid||0);
-      const billed = Number(k.billed||0);
-      const collection = billed ? Math.round((paid/billed)*100) : 0;
-      const readiness = Math.min(100, Math.round(((properties>0)+(clients>0)+(contracts>0)+(invoices>0)+(collection>0))*20));
       const banner = document.getElementById('launchBanner');
-      if(banner){
-        banner.classList.remove('hidden');
-        banner.innerHTML = `<div class="launch-card"><b>جاهزية التشغيل</b><br><span class="mini">جاهزية التشغيل والربط المالي الحالي: ${fmt(readiness)}%.</span></div><div class="launch-card"><b>الهوية المعتمدة</b><br><span class="mini">كحلي داكن + ذهبي معدني + فضي. لا توجد هوية خضراء في واجهة الإطلاق.</span></div>`;
-      }
-      const hero = document.querySelector('.hero h2');
-      if(hero) hero.textContent = 'Jawdah Executive Command Center';
-      const heroP = document.querySelector('.hero p');
-      if(heroP) heroP.textContent = 'لوحة قيادة عقارية جاهزة للإطلاق تجمع العقارات والعملاء والعقود والفواتير والتحصيلات والحسابات في تجربة تنفيذية فاخرة ومترابطة.';
+      if(banner) banner.classList.add('hidden');
     }catch(e){ console.warn('production dashboard layer', e); }
   };
   const oldBuildNav = window.buildNav;

@@ -33,28 +33,62 @@
       <nav id="nav" class="nav"></nav>
     </aside>
     <section class="content">
-      <header class="topbar">
-        <button id="menuBtn" class="ghost mobile-nav">☰</button>
-        <div class="search"><input id="globalSearch" placeholder="بحث سريع Ctrl + K"></div>
-        <button class="gold-btn" onclick="showSection('properties')">+ إضافة</button>
-        <div id="clock" class="top-pill">00:00:00</div>
-        <div class="userbox"><div id="avatar" class="avatar">J</div><div><b id="userName">User</b><br><small id="userRole" class="mini">Role</small></div></div>
-        <button id="logoutBtn" class="ghost">خروج</button>
+      <header class="topbar topbar-pro">
+        <button id="menuBtn" class="tb-icon mobile-nav" type="button" aria-label="القائمة">☰</button>
+        <button class="tb-icon tb-star" type="button" title="المفضلة">☆</button>
+        <div class="search search-pro"><input id="globalSearch" placeholder="بحث العقارات..."></div>
+        <button class="tb-icon tb-bell" type="button" title="التنبيهات"><span class="bell-glyph">🔔</span><span id="bellDot" class="bell-dot hidden"></span></button>
+        <button class="tb-icon" type="button" title="الإعدادات" onclick="showSection('backup')">⚙</button>
+        <button class="add-new-btn" type="button" onclick="showSection('properties')">+ إضافة جديد</button>
+        <div id="clock" class="top-pill top-pill-pro">00:00:00</div>
+        <div class="userbox userbox-pro"><div id="avatar" class="avatar avatar-pro">J</div><div><b id="userName">User</b><br><small id="userRole" class="mini">Role</small></div></div>
+        <button id="logoutBtn" class="ghost tb-logout" type="button">خروج</button>
       </header>
-      <h2 id="sectionTitle">لوحة التحكم التنفيذية</h2><div id="launchBanner" class="launch-banner hidden"></div>
+      <h2 id="sectionTitle">لوحة التحكم</h2><div id="launchBanner" class="launch-banner hidden"></div>
 
-      <section id="sec-dashboard" class="section active">
-        <div class="hero"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id="heroStats" class="status-line" style="margin-top:14px"></div></div>
-        <div id="kpiGrid" class="grid kpis"></div>
-        <div class="layout">
-          <div class="card"><h3>الإيرادات والمصروفات</h3><div class="canvas-wrap"><canvas id="incomeChart"></canvas></div></div>
-          <div class="card"><h3>خريطة GIS تشغيلية</h3><div class="gis"><div id="gisPins"></div></div></div>
+      <section id="sec-dashboard" class="section active dash-pro">
+        <div id="dashKpiRow" class="dash-kpi-row"></div>
+        <div class="dash-main-grid">
+          <div class="dash-panel dash-map-panel">
+            <div class="gis-pro"><div id="gisPins" class="gis-pins-layer"></div><div id="mapPopup" class="map-popup hidden"></div></div>
+          </div>
+          <div class="dash-center-col">
+            <div class="dash-panel dash-panel-dark">
+              <div class="dash-panel-head"><h3>إيرادات الإيجار</h3><span class="mini">آخر 6 أشهر</span></div>
+              <div class="canvas-wrap canvas-pro"><canvas id="incomeChart"></canvas></div>
+            </div>
+            <div class="dash-panel dash-panel-dark dash-occ-panel">
+              <div class="occ-wrap">
+                <div class="canvas-wrap canvas-donut"><canvas id="occupancyChart"></canvas></div>
+                <div class="occ-copy"><strong id="occPctLabel">0%</strong><span>معدل الإشغال</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="dash-right-col">
+            <div class="dash-panel dash-panel-light">
+              <div class="dash-panel-head"><h3>تكاليف الصيانة</h3></div>
+              <div class="canvas-wrap canvas-bar"><canvas id="maintCostChart"></canvas></div>
+            </div>
+            <div class="dash-panel dash-panel-light">
+              <div class="dash-panel-head"><h3>طلبات الصيانة</h3></div>
+              <div id="maintQueue" class="maint-queue"></div>
+            </div>
+          </div>
         </div>
-        <div class="layout">
-          <div class="card"><h3>قرارات الآن</h3><div id="decisionList"></div></div>
-          <div class="card"><h3>الإشغال</h3><div class="canvas-wrap"><canvas id="occupancyChart"></canvas></div></div>
+        <div class="dash-bottom-grid">
+          <div class="dash-panel dash-panel-light dash-table-panel">
+            <div class="dash-panel-head"><h3>نظرة على العقارات</h3><button class="link-btn" type="button" onclick="showSection('properties')">عرض الكل</button></div>
+            <div id="dashPropsTable"></div>
+          </div>
+          <div class="dash-panel dash-panel-light">
+            <div class="dash-panel-head"><h3>طلبات الصيانة</h3></div>
+            <div id="dashMaintCards" class="dash-maint-cards"></div>
+          </div>
+          <div class="dash-panel dash-panel-dark dash-ai-panel">
+            <div id="aiAssistant" class="ai-assistant"></div>
+          </div>
         </div>
-        <div class="card"><h3>إجراءات سريعة</h3><div id="quickActions" class="quick"></div></div>
+        <div id="heroStats" class="hidden"></div><div id="kpiGrid" class="hidden"></div><div id="decisionList" class="hidden"></div><div id="quickActions" class="hidden"></div>
       </section>
 
       <section id="sec-properties" class="section">
