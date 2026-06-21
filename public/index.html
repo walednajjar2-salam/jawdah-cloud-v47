@@ -96,10 +96,10 @@
       <header class="topbar topbar-pro">
         <button id="menuBtn" class="tb-icon mobile-nav" type="button" aria-label="القائمة">☰</button>
         <button class="tb-icon tb-star" type="button" title="المفضلة">☆</button>
-        <div class="search search-pro"><input id="globalSearch" placeholder="بحث العقارات..."></div>
+        <div class="search search-pro"><input id="globalSearch" placeholder="Search properties... · بحث العقارات"></div>
         <button class="tb-icon tb-bell" type="button" title="التنبيهات"><span class="bell-glyph">🔔</span><span id="bellDot" class="bell-dot hidden"></span></button>
         <button class="tb-icon" type="button" title="الإعدادات" onclick="showSection('backup')">⚙</button>
-        <button class="add-new-btn" type="button" onclick="showSection('properties')">+ إضافة جديد</button>
+        <button class="add-new-btn" type="button" onclick="showSection('properties')">+ Add New</button>
         <div id="clock" class="top-pill top-pill-pro">00:00:00</div>
         <div class="userbox userbox-pro"><div id="avatar" class="avatar avatar-pro">J</div><div><b id="userName">User</b><br><small id="userRole" class="mini">Role</small></div></div>
         <button id="logoutBtn" class="ghost tb-logout" type="button">خروج</button>
@@ -107,6 +107,13 @@
       <h2 id="sectionTitle">لوحة التحكم</h2><div id="launchBanner" class="launch-banner hidden"></div>
 
       <section id="sec-dashboard" class="section active dash-pro">
+        <div class="dash-welcome">
+          <div class="dash-welcome-copy">
+            <h2>Property Management Dashboard</h2>
+            <p>لوحة إدارة العقارات · Quality of Launch Services L.L.C</p>
+          </div>
+          <div id="dashWelcomeMeta" class="dash-welcome-meta"></div>
+        </div>
         <div id="dashKpiRow" class="dash-kpi-row"></div>
         <div class="dash-main-grid">
           <div class="dash-panel dash-map-panel">
@@ -114,30 +121,31 @@
           </div>
           <div class="dash-center-col">
             <div class="dash-panel dash-panel-dark">
-              <div class="dash-panel-head"><h3>إيرادات الإيجار</h3><span class="mini">آخر 6 أشهر</span></div>
+              <div class="dash-panel-head"><div><h3>إيرادات الإيجار</h3><span class="panel-sub" dir="ltr">Rental Income</span></div><span class="mini">Last 6 months</span></div>
               <div class="canvas-wrap canvas-pro"><canvas id="incomeChart"></canvas></div>
             </div>
             <div class="dash-panel dash-panel-dark dash-occ-panel">
+              <div class="dash-panel-head"><div><h3>معدل الإشغال</h3><span class="panel-sub" dir="ltr">Occupancy Rate</span></div></div>
               <div class="occ-wrap">
                 <div class="canvas-wrap canvas-donut"><canvas id="occupancyChart"></canvas></div>
-                <div class="occ-copy"><strong id="occPctLabel">0%</strong><span>معدل الإشغال</span></div>
+                <div class="occ-copy"><strong id="occPctLabel">0%</strong><span>Occupancy</span></div>
               </div>
             </div>
           </div>
           <div class="dash-right-col">
             <div class="dash-panel dash-panel-light">
-              <div class="dash-panel-head"><h3>تكاليف الصيانة</h3></div>
+              <div class="dash-panel-head"><div><h3>تكاليف الصيانة</h3><span class="panel-sub" dir="ltr">Maintenance Costs</span></div></div>
               <div class="canvas-wrap canvas-bar"><canvas id="maintCostChart"></canvas></div>
             </div>
             <div class="dash-panel dash-panel-light">
-              <div class="dash-panel-head"><h3>طلبات الصيانة</h3></div>
+              <div class="dash-panel-head"><div><h3>طلبات الصيانة</h3><span class="panel-sub" dir="ltr">Maintenance Requests</span></div></div>
               <div id="maintQueue" class="maint-queue"></div>
             </div>
           </div>
         </div>
         <div class="dash-bottom-grid">
           <div class="dash-panel dash-panel-light dash-table-panel">
-            <div class="dash-panel-head"><h3>نظرة على العقارات</h3><button class="link-btn" type="button" onclick="showSection('properties')">عرض الكل</button></div>
+            <div class="dash-panel-head"><div><h3>نظرة على العقارات</h3><span class="panel-sub" dir="ltr">Properties Overview</span></div><button class="link-btn" type="button" onclick="showSection('properties')">View All</button></div>
             <div id="dashPropsTable"></div>
           </div>
           <div class="dash-panel dash-panel-light">

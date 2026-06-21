@@ -115,17 +115,24 @@ function propStatusDot(status){
 }
 function maintQueueTag(m){
   const st=String(m.status||'').toLowerCase();
-  if(st.includes('done')||st.includes('closed')||st.includes('complete')) return `<span class="mq-tag done">مكتمل</span>`;
-  if(String(m.priority||'').toLowerCase()==='high') return `<span class="mq-tag high">أولوية عالية</span>`;
-  return `<span class="mq-tag progress">قيد التنفيذ</span>`;
+  if(st.includes('done')||st.includes('closed')||st.includes('complete')) return `<span class="mq-tag done">Completed</span>`;
+  if(String(m.priority||'').toLowerCase()==='high') return `<span class="mq-tag high">High Priority</span>`;
+  return `<span class="mq-tag progress">In Progress</span>`;
+}
+function mapStatusBadge(status){
+  const s=String(status||'');
+  if(s.includes('مستأ')||s.toLowerCase().includes('rent')) return `<span class="map-rented-badge">Rented</span>`;
+  if(s.includes('شاغ')||s.toLowerCase().includes('vacant')) return `<span class="map-vacant-badge">Vacant</span>`;
+  if(s.includes('صيان')||s.toLowerCase().includes('maint')) return `<span class="map-maint-badge">Maintenance</span>`;
+  return `<span class="map-rented-badge">${s||'Active'}</span>`;
 }
 function showMapPopup(p, leftPct, topPct){
   const box=$('#mapPopup'); if(!box) return;
   const thumb=p.image && !String(p.image).startsWith('http') ? p.image : '🏠';
   box.classList.remove('hidden');
-  box.style.left=`calc(${leftPct}% - 120px)`;
-  box.style.top=`calc(${topPct}% - 10px)`;
-  box.innerHTML=`<div class="map-thumb">${thumb}</div><h4>${propertyLabel(p)}</h4><p>${p.location||'—'}</p><div class="price">${money(p.price||0)} / شهر</div>${statusBadge(p.status)}`;
+  box.style.left=`clamp(12px, calc(${leftPct}% - 130px), calc(100% - 292px))`;
+  box.style.top=`clamp(12px, calc(${topPct}% - 8px), calc(100% - 220px))`;
+  box.innerHTML=`<div class="map-thumb">${thumb}</div><h4>${propertyLabel(p)}</h4><p>${p.location||'Oman'}</p><div class="price">${money(p.price||0)} <small>/ month</small></div>${mapStatusBadge(p.status)}`;
 }
 function showMapPopupById(id, leftPct, topPct){ showMapPopup(byId('properties', id), leftPct, topPct); }
 function renderDashboard(){
@@ -142,15 +149,18 @@ function renderDashboard(){
   if(bell) bell.classList.toggle('hidden', !(Number(k.overdue||0)>0 || riskContracts>0 || openMaint.length>0));
 
   const kpis=[
-    {art:'total',label:'إجمالي العقارات',value:fmt(k.properties),section:'properties'},
-    {art:'rented',label:'العقارات المؤجرة',value:fmt(k.rented),section:'properties'},
-    {art:'vacant',label:'العقارات الشاغرة',value:fmt(k.vacant),section:'properties'},
-    {art:'expiring',label:'تنتهي قريباً',value:fmt(k.expiring||0),section:'contracts',danger:true},
-    {art:'overdue',label:'مدفوعات متأخرة',value:fmt(overdueInv.length),section:'invoices',warn:true},
-    {art:'maint',label:'صيانة مفتوحة',value:fmt(k.maintenance||openMaint.length),section:'maintenance'}
+    {art:'total',label:'إجمالي العقارات',labelEn:'Total Properties',value:fmt(k.properties),section:'properties'},
+    {art:'rented',label:'العقارات المؤجرة',labelEn:'Rented Properties',value:fmt(k.rented),section:'properties'},
+    {art:'vacant',label:'العقارات الشاغرة',labelEn:'Vacant Properties',value:fmt(k.vacant),section:'properties'},
+    {art:'expiring',label:'تنتهي قريباً',labelEn:'Expiring Soon',value:fmt(k.expiring||0),section:'contracts',danger:true},
+    {art:'overdue',label:'مدفوعات متأخرة',labelEn:'Overdue Payments',value:fmt(overdueInv.length),section:'invoices',warn:true},
+    {art:'maint',label:'صيانة مفتوحة',labelEn:'Open Maintenance',value:fmt(k.maintenance||openMaint.length),section:'maintenance'}
   ];
   const row=$('#dashKpiRow');
-  if(row) row.innerHTML=kpis.map(x=>`<article class="dash-kpi${x.danger?' danger':''}${x.warn?' warn':''}" onclick="showSection('${x.section}')"><div><strong>${x.value}</strong><span>${x.label}</span></div>${houseArt(x.art)}</article>`).join('');
+  if(row) row.innerHTML=kpis.map(x=>`<article class="dash-kpi${x.danger?' danger':''}${x.warn?' warn':''}" onclick="showSection('${x.section}')"><div class="kpi-copy"><strong>${x.value}</strong><span class="kpi-ar">${x.label}</span><span class="kpi-en" dir="ltr">${x.labelEn}</span></div>${houseArt(x.art)}</article>`).join('');
+
+  const welcome=$('#dashWelcomeMeta');
+  if(welcome) welcome.innerHTML=`<span class="dash-chip">Occupancy ${fmt(k.occupancy)}%</span><span class="dash-chip">Net ${money(k.net||0)}</span><span class="dash-chip ${Number(k.overdue||0)>0?'chip-warn':''}">Overdue ${fmt(k.overdue||0)}</span>`;
 
   const occLabel=$('#occPctLabel');
   if(occLabel) occLabel.textContent=fmt(k.occupancy)+'%';
@@ -168,9 +178,9 @@ function renderDashboard(){
   $('#maintQueue').innerHTML=maintRows.length ? maintRows.map(m=>`<div class="mq-item"><div><b>${m.title||'طلب صيانة'}</b><div class="mini">${propertyLabel(byId('properties',m.property_id))}</div></div>${maintQueueTag(m)}</div>`).join('') : '<div class="mq-item"><b>لا توجد طلبات مفتوحة</b><span class="mq-tag done">جاهز</span></div>';
 
   const propRows=props.slice(0,6);
-  $('#dashPropsTable').innerHTML=`<div class="table-wrap"><table><thead><tr><th></th><th>العقار</th><th>الحالة</th><th>الإيجار الشهري</th></tr></thead><tbody>${propRows.map(p=>`<tr><td><div class="prop-thumb">${p.image||'🏠'}</div></td><td class="prop-name-cell"><b>${propertyLabel(p)}</b><small>${p.location||''}</small></td><td>${propStatusDot(p.status)}</td><td><b>${money(p.price||0)}</b></td></tr>`).join('')||'<tr><td colspan="4">لا توجد عقارات</td></tr>'}</tbody></table></div>`;
+  $('#dashPropsTable').innerHTML=`<div class="table-wrap"><table><thead><tr><th></th><th>Property · العقار</th><th>Type</th><th>Status</th><th>Monthly Rent</th></tr></thead><tbody>${propRows.map(p=>`<tr><td><div class="prop-thumb">${p.image||'🏠'}</div></td><td class="prop-name-cell"><b>${propertyLabel(p)}</b><small>${p.location||''}</small></td><td><span class="type-pill">${p.notes?'Commercial':'Residential'}</span></td><td>${propStatusDot(p.status)}</td><td><b>${money(p.price||0)}</b></td></tr>`).join('')||'<tr><td colspan="5">No properties yet</td></tr>'}</tbody></table></div>`;
 
-  $('#dashMaintCards').innerHTML=maintRows.slice(0,2).map(m=>`<div class="maint-card"><div class="thumb">🔧</div><div><b>${m.title||'صيانة'}</b><p>${propertyLabel(byId('properties',m.property_id))}</p></div><button type="button" class="view-btn" onclick="showSection('maintenance')">عرض</button></div>`).join('') || '<div class="maint-card"><div class="thumb">✓</div><div><b>لا توجد طلبات</b><p>كل شيء مستقر</p></div></div>';
+  $('#dashMaintCards').innerHTML=(maintRows.slice(0,2).map(m=>`<div class="maint-card"><div class="thumb">🔧</div><div><b>${m.title||'Maintenance'}</b><p>${propertyLabel(byId('properties',m.property_id))}</p></div><button type="button" class="view-btn" onclick="showSection('maintenance')">View</button></div>`).join('') || '<div class="maint-card"><div class="thumb">✓</div><div><b>All clear</b><p>No open requests</p></div></div>') + (maintRows.length?`<button type="button" class="see-update-btn" onclick="showSection('maintenance')">See Update</button>`:'');
 
   $('#aiAssistant').innerHTML=`<div class="ai-head"><div class="spark">✨</div><h3>AI Assistant</h3></div><div class="ai-list"><div><b>Occupancy Forecast:</b> ${fmt(forecastOcc)}%</div><div><b>Contracts at Risk:</b> ${fmt(riskContracts)}</div><div><b>Income Optimization:</b> ${Number(k.overdue||0)>0?'Focus on overdue collections':'Increase occupancy on vacant units'}</div></div><button type="button" class="insights-btn" onclick="showSection('reports')">Get Insights</button>`;
 }
@@ -418,11 +428,19 @@ async function runQA(){
   }catch(e){ html+=`<p class="badge overdue">تعذر فحص النسخ الاحتياطي: ${e.message}</p>`; }
   $('#qaBox').innerHTML=html;
 }
-function drawCharts(){ if(!Jawdah.dashboard) return; drawLinePro('incomeChart', Jawdah.dashboard.series.map(x=>x.income)); drawDonutPro('occupancyChart', Jawdah.dashboard.kpis.occupancy); drawBarPro('maintCostChart', Jawdah.dashboard.series.map(x=>x.expense)); if($('#expenseChart')) drawBar('expenseChart', Jawdah.dashboard.series.map(x=>x.expense)); }
+function drawCharts(){
+  if(!Jawdah.dashboard) return;
+  const series=Jawdah.dashboard.series||[];
+  const labels=series.map(x=>x.month||x.label||'');
+  drawLinePro('incomeChart', series.map(x=>x.income), labels);
+  drawDonutPro('occupancyChart', Jawdah.dashboard.kpis.occupancy);
+  drawBarPro('maintCostChart', series.map(x=>x.expense), labels);
+  if($('#expenseChart')) drawBar('expenseChart', series.map(x=>x.expense));
+}
 function prepCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; const g=c.getContext('2d'); g.scale(devicePixelRatio,devicePixelRatio); return [g,r.width,r.height]; }
-function drawLinePro(id, arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...arr,1], max=Math.max(...vals)*1.25; g.strokeStyle='rgba(255,255,255,.12)'; for(let i=0;i<4;i++){let y=20+i*(h-50)/3;g.beginPath();g.moveTo(20,y);g.lineTo(w-20,y);g.stroke();} g.beginPath(); arr.forEach((v,i)=>{ const x=24+i*(w-48)/(arr.length-1||1), y=h-28-(v/max)*(h-58); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle='#f59e0b'; g.lineWidth=3; g.shadowColor='rgba(245,158,11,.35)'; g.shadowBlur=8; g.stroke(); g.shadowBlur=0; arr.forEach((v,i)=>{ const x=24+i*(w-48)/(arr.length-1||1), y=h-28-(v/max)*(h-58); g.beginPath(); g.fillStyle='#fbbf24'; g.arc(x,y,4,0,Math.PI*2); g.fill(); }); }
+function drawLinePro(id, arr, labels=[]){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...arr,1], max=Math.max(...vals)*1.25; g.strokeStyle='rgba(255,255,255,.12)'; for(let i=0;i<4;i++){let y=20+i*(h-50)/3;g.beginPath();g.moveTo(20,y);g.lineTo(w-20,y);g.stroke();} g.beginPath(); arr.forEach((v,i)=>{ const x=24+i*(w-48)/(arr.length-1||1), y=h-28-(v/max)*(h-58); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle='#f59e0b'; g.lineWidth=3; g.shadowColor='rgba(245,158,11,.35)'; g.shadowBlur=8; g.stroke(); g.shadowBlur=0; arr.forEach((v,i)=>{ const x=24+i*(w-48)/(arr.length-1||1), y=h-28-(v/max)*(h-58); g.beginPath(); g.fillStyle='#fbbf24'; g.arc(x,y,4,0,Math.PI*2); g.fill(); }); g.fillStyle='rgba(219,234,254,.75)'; g.font='11px Inter,Segoe UI,sans-serif'; labels.slice(0,arr.length).forEach((lb,i)=>{ const x=24+i*(w-48)/(arr.length-1||1); g.fillText(String(lb).slice(0,6), x-12, h-8); }); }
 function drawDonutPro(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/2.8; g.lineWidth=16; g.strokeStyle='#e2e8f0'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const pct=Math.max(0,Math.min(100,Number(p||0))); g.strokeStyle='#2563eb'; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*(pct/100)); g.stroke(); if(pct<100){ g.strokeStyle='#f59e0b'; g.beginPath(); g.arc(x,y,r,-Math.PI/2+Math.PI*2*(pct/100),-Math.PI/2+Math.PI*2); g.stroke(); } }
-function drawBarPro(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.25, colors=['#2563eb','#f59e0b','#ef4444','#3b82f6','#d97706','#64748b']; const bw=(w-50)/arr.length*.55; arr.forEach((v,i)=>{ const x=24+i*(w-50)/arr.length+8, bh=(v/max)*(h-36); g.fillStyle=colors[i%colors.length]; g.fillRect(x,h-22-bh,bw,bh); }); }
+function drawBarPro(id,arr,labels=[]){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.25, colors=['#2563eb','#f59e0b','#ef4444','#3b82f6','#d97706','#64748b']; const bw=(w-50)/arr.length*.55; arr.forEach((v,i)=>{ const x=24+i*(w-50)/arr.length+8, bh=(v/max)*(h-36); g.fillStyle=colors[i%colors.length]; g.fillRect(x,h-22-bh,bw,bh); }); g.fillStyle='#64748b'; g.font='11px Inter,Segoe UI,sans-serif'; labels.slice(0,arr.length).forEach((lb,i)=>{ const x=24+i*(w-50)/arr.length+8; g.fillText(String(lb).slice(0,6), x, h-6); }); }
 function drawLine(id,a,b){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...a,...b,1], max=Math.max(...vals)*1.22; const area=(arr,color1,color2)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.lineTo(w-32,h-34); g.lineTo(32,h-34); g.closePath(); const gr=g.createLinearGradient(0,28,0,h-34); gr.addColorStop(0,color1); gr.addColorStop(1,color2); g.fillStyle=gr; g.fill(); }; const plot=(arr,color)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle=color; g.lineWidth=3; g.shadowBlur=0; g.stroke(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); g.beginPath(); g.fillStyle=color; g.arc(x,y,3.5,0,Math.PI*2); g.fill(); }); }; g.strokeStyle='rgba(148,163,184,.12)'; for(let i=0;i<5;i++){let y=24+i*(h-58)/4;g.beginPath();g.moveTo(24,y);g.lineTo(w-24,y);g.stroke();} area(a,'rgba(106,171,158,.18)','rgba(106,171,158,0)'); plot(a,'#6aab9e'); plot(b,'#7eb8d4'); }
 function drawDonut(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=22; g.lineCap='round'; g.strokeStyle='rgba(148,163,184,.14)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#9fd4d0'); gr.addColorStop(.5,'#6aab9e'); gr.addColorStop(1,'#4a8580'); g.strokeStyle=gr; g.shadowBlur=0; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.fillStyle='#e2e8f0'; g.font='700 28px Segoe UI'; g.textAlign='center'; g.fillText(fmt(p)+'%',x,y+6); g.font='13px Segoe UI'; g.fillStyle='rgba(148,163,184,.85)'; g.fillText('Occupancy',x,y+28); }
 function drawBar(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,'#9fd4d0'); grd.addColorStop(1,'#4a8580'); g.fillStyle=grd; g.shadowBlur=0; g.fillRect(x,h-25-bh,bw,bh);}); }
