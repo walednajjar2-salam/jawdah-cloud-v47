@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#06111f">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/assets/app-icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/app-icon-192.png">
+  <title>تحميل تطبيق جودة الانطلاقة</title>
+  <style>
+    :root{--bg:#06111f;--panel:rgba(255,255,255,.08);--line:rgba(212,175,55,.34);--gold:#f5d76e;--text:#f7fbff;--muted:#a8b7c8}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Tajawal,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at 22% 12%,rgba(212,175,55,.16),transparent 30%),linear-gradient(135deg,#040914,#06111f 52%,#0b1220);color:var(--text);display:grid;place-items:center;padding:20px}
+    main{width:min(900px,100%);border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.1),rgba(255,255,255,.04));border-radius:24px;padding:24px;box-shadow:0 28px 80px rgba(0,0,0,.38)}
+    header{display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:18px;margin-bottom:18px}
+    img{width:80px;height:80px;border-radius:18px;object-fit:contain}
+    h1{margin:0;color:var(--gold);font-size:28px}
+    p{color:var(--muted);line-height:1.8}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    section{border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.18);border-radius:18px;padding:16px}
+    h2{font-size:18px;color:#fff4c2;margin:0 0 10px}
+    a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:900;margin-top:12px}
+    .android{background:linear-gradient(135deg,#3DDC84,#1FA463);color:#fff}
+    .windows{background:linear-gradient(135deg,#0078D4,#005A9E);color:#fff}
+    .open{border:1px solid var(--line);color:#e8fffb;background:rgba(255,255,255,.06);margin-inline-start:8px}
+    .note{margin-top:16px;border:1px solid rgba(245,215,110,.3);background:rgba(245,215,110,.08);border-radius:16px;padding:12px;color:#fff4c2;font-size:.92rem;line-height:1.7}
+    code{direction:ltr;display:block;color:#e8fffb;word-break:break-all;font-size:.78rem;margin-top:6px}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="/assets/app-icon-192.png" alt="جودة الانطلاقة">
+      <div>
+        <h1>تحميل تطبيق الموظفين</h1>
+        <p>Launch Quality Staff — روابط تحميل مباشرة · أيقونة التطبيق = شعار المؤسسة</p>
+      </div>
+    </header>
+    <div class="grid">
+      <section>
+        <h2>Android (APK)</h2>
+        <p>حمّل الملف مباشرة وثبّته على الجوال. اسمح بالمصادر غير المعروفة إن طُلب منك.</p>
+        <a class="android" href="/downloads/Launch-Quality-Staff.apk" download="Launch-Quality-Staff.apk">تحميل APK مباشر</a>
+        <code>https://web-production-08d73.up.railway.app/downloads/Launch-Quality-Staff.apk</code>
+      </section>
+      <section>
+        <h2>Windows (ZIP)</h2>
+        <p>فك الضغط وشغّل <code style="display:inline">launch_quality_mobile.exe</code></p>
+        <a class="windows" href="/downloads/Launch-Quality-Staff-Windows.zip" download="Launch-Quality-Staff-Windows.zip">تحميل Windows ZIP</a>
+        <code>https://web-production-08d73.up.railway.app/downloads/Launch-Quality-Staff-Windows.zip</code>
+      </section>
+    </div>
+    <p class="note">الروابط أعلاه تبدأ التحميل فوراً دون صفحات وسيطة. للتثبيت كـ PWA من المتصفح: <a href="/install.html" style="color:#fff4c2">صفحة التثبيت</a></p>
+    <a class="open" href="/app.html">فتح لوحة التحكم</a>
+    <a class="open" href="/">بوابة الدخول</a>
+  </main>
+</body>
+</html>
