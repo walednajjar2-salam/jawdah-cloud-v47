@@ -1,0 +1,50 @@
+{
+  "id": "/app.html",
+  "name": "Launch Quality ERP",
+  "short_name": "Launch Quality",
+  "description": "Real Estate, Hospitality, Finance and Asset Management ERP",
+  "start_url": "/app.html?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "background_color": "#071426",
+  "theme_color": "#071426",
+  "lang": "ar",
+  "dir": "rtl",
+  "orientation": "any",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "لوحة التحكم",
+      "short_name": "Dashboard",
+      "url": "/app.html?section=dashboard",
+      "icons": [{"src": "assets/app-icon-192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "العقود",
+      "short_name": "Contracts",
+      "url": "/app.html?section=contracts",
+      "icons": [{"src": "assets/app-icon-192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "الفواتير",
+      "short_name": "Invoices",
+      "url": "/app.html?section=invoices",
+      "icons": [{"src": "assets/app-icon-192.png", "sizes": "192x192"}]
+    }
+  ]
+}

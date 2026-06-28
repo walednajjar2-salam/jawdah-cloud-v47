@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -44,7 +44,7 @@ BACKUP_LOCK = threading.Lock()
 LAST_AUTO_BACKUP_AT: Optional[str] = None
 
 # Fallback assets: Railway can still open the app even if the public folder is misplaced.
-FALLBACK_INDEX_HTML = "<!doctype html>\n<html lang=\"ar\" dir=\"rtl\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Launch Quality LLC</title>\n  <link rel=\"stylesheet\" href=\"app.css\">\n</head>\n<body>\n  <main id=\"loginScreen\" class=\"login hidden\">\n    <section class=\"login-card\">\n      <img src=\"assets/logo.png\" alt=\"Jawdah logo\">\n      <h1>Launch Quality LLC</h1>\n      <p class=\"mini\">Real Estate & Hospitality Management System</p>\n      <input id=\"loginUser\" placeholder=\"اسم المستخدم\" autocomplete=\"username\" value=\"admin\">\n      <input id=\"loginPass\" placeholder=\"كلمة المرور\" type=\"password\" autocomplete=\"current-password\" value=\"admin123\">\n      <button id=\"loginBtn\" class=\"gold-btn\" style=\"width:100%;margin-top:10px\">تسجيل الدخول</button>\n      <p class=\"mini\">admin / admin123</p>\n    </section>\n  </main>\n\n  <main id=\"app\" class=\"app hidden\">\n    <aside id=\"sidebar\" class=\"sidebar\">\n      <div class=\"brand\">\n        <img src=\"assets/logo.png\" alt=\"logo\">\n        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>\n      </div>\n      <nav id=\"nav\" class=\"nav\"></nav>\n    </aside>\n    <section class=\"content\">\n      <header class=\"topbar\">\n        <button id=\"menuBtn\" class=\"ghost mobile-nav\">☰</button>\n        <div class=\"search\"><input id=\"globalSearch\" placeholder=\"بحث سريع Ctrl + K\"></div>\n        <button class=\"gold-btn\" onclick=\"showSection('properties')\">+ إضافة</button>\n        <div id=\"clock\" class=\"top-pill\">00:00:00</div>\n        <div class=\"userbox\"><div id=\"avatar\" class=\"avatar\">J</div><div><b id=\"userName\">User</b><br><small id=\"userRole\" class=\"mini\">Role</small></div></div>\n        <button id=\"logoutBtn\" class=\"ghost\">خروج</button>\n      </header>\n      <h2 id=\"sectionTitle\">لوحة التحكم التنفيذية</h2>\n\n      <section id=\"sec-dashboard\" class=\"section active\">\n        <div class=\"hero\"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id=\"heroStats\" class=\"status-line\" style=\"margin-top:14px\"></div></div>\n        <div id=\"kpiGrid\" class=\"grid kpis\"></div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>الإيرادات والمصروفات</h3><div class=\"canvas-wrap\"><canvas id=\"incomeChart\"></canvas></div></div>\n          <div class=\"card\"><h3>خريطة GIS تشغيلية</h3><div class=\"gis\"><div id=\"gisPins\"></div></div></div>\n        </div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>قرارات الآن</h3><div id=\"decisionList\"></div></div>\n          <div class=\"card\"><h3>الإشغال</h3><div class=\"canvas-wrap\"><canvas id=\"occupancyChart\"></canvas></div></div>\n        </div>\n        <div class=\"card\"><h3>إجراءات سريعة</h3><div id=\"quickActions\" class=\"quick\"></div></div>\n      </section>\n\n      <section id=\"sec-properties\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عقار</h3><div class=\"form\"><input id=\"pImage\" placeholder=\"إيموجي/رمز\" value=\"🏠\"><input id=\"pName\" placeholder=\"اسم العقار\"><input id=\"pType\" placeholder=\"النوع\"><select id=\"pStatus\"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id=\"pPrice\" placeholder=\"السعر\"><input id=\"pLocation\" placeholder=\"الموقع\"><textarea id=\"pNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createProperty()\">حفظ العقار</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><select id=\"propStatusFilter\" onchange=\"renderProperties()\"></select><button class=\"ghost\" onclick=\"exportCsv('properties')\">تصدير CSV</button></div><div id=\"propertiesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-clients\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عميل</h3><div class=\"form\"><input id=\"cName\" placeholder=\"اسم العميل\"><input id=\"cPhone\" placeholder=\"الهاتف\"><input id=\"cEmail\" placeholder=\"البريد\"><input id=\"cNational\" placeholder=\"الهوية/السجل\"><textarea id=\"cNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createClient()\">حفظ العميل</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('clients')\">تصدير CSV</button></div><div id=\"clientsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-contracts\" class=\"section\">\n        <div class=\"card\"><h3>إنشاء عقد</h3><div class=\"form\"><select id=\"contractProperty\"></select><select id=\"contractClient\"></select><input id=\"contractStart\" type=\"date\"><input id=\"contractEnd\" type=\"date\"><input id=\"contractRent\" placeholder=\"قيمة الإيجار\"><textarea id=\"contractNotes\" placeholder=\"ملاحظات العقد\"></textarea></div><button class=\"gold-btn\" onclick=\"createContract()\">حفظ العقد</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('contracts')\">تصدير CSV</button></div><div id=\"contractsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-invoices\" class=\"section\">\n        <div class=\"card\"><h3>الفواتير والتحصيل</h3><p class=\"mini\">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id=\"invoicesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-accounts\" class=\"section\">\n        <div class=\"card\"><h3>إضافة حركة مالية</h3><div class=\"form\"><input id=\"accDate\" type=\"date\"><select id=\"accType\"><option value=\"income\">income</option><option value=\"expense\">expense</option></select><input id=\"accCategory\" placeholder=\"التصنيف\"><input id=\"accDesc\" placeholder=\"الوصف\"><input id=\"accAmount\" placeholder=\"المبلغ\"></div><button class=\"gold-btn\" onclick=\"createAccount()\">حفظ الحركة</button></div>\n        <div class=\"card\"><h3>ملخص الحسابات</h3><div id=\"accountSummary\" class=\"status-line\"></div><div class=\"canvas-wrap\"><canvas id=\"expenseChart\"></canvas></div></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('accounts')\">تصدير CSV</button></div><div id=\"accountsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-maintenance\" class=\"section\">\n        <div class=\"card\"><h3>طلب صيانة</h3><div class=\"form\"><select id=\"maintProperty\"></select><input id=\"maintTitle\" placeholder=\"عنوان الطلب\"><select id=\"maintPriority\"><option>High</option><option>Medium</option><option>Low</option></select><input id=\"maintCost\" placeholder=\"التكلفة المتوقعة\"><textarea id=\"maintNotes\" placeholder=\"تفاصيل\"></textarea></div><button class=\"gold-btn\" onclick=\"createMaintenance()\">حفظ الطلب</button></div>\n        <div class=\"grid\" id=\"maintenanceGrid\" style=\"grid-template-columns:repeat(auto-fit,minmax(260px,1fr))\"></div>\n      </section>\n\n      <section id=\"sec-reports\" class=\"section\">\n        <div id=\"reportsBox\"></div>\n        <div class=\"card\"><button class=\"gold-btn\" onclick=\"renderReports()\">تحديث التقرير</button> <button class=\"ghost\" onclick=\"downloadBackup()\">تنزيل Backup</button></div>\n      </section>\n\n      <section id=\"sec-users\" class=\"section\">\n        <div class=\"card\"><h3>إضافة مستخدم</h3><div class=\"form\"><input id=\"uUsername\" placeholder=\"اسم المستخدم\"><input id=\"uName\" placeholder=\"الاسم\"><select id=\"uRole\"><option value=\"admin\">admin</option><option value=\"accountant\">accountant</option><option value=\"operations\">operations</option><option value=\"maintenance\">maintenance</option><option value=\"viewer\">viewer</option></select><input id=\"uPassword\" placeholder=\"كلمة المرور\"></div><button class=\"gold-btn\" onclick=\"createUser()\">حفظ المستخدم</button></div>\n        <div class=\"card\"><div id=\"usersTable\"></div></div>\n      </section>\n\n      <section id=\"sec-backup\" class=\"section\">\n        <div class=\"card\"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id=\"backupStatus\" class=\"status-line\"></div><div class=\"toolbar\" style=\"margin-top:16px\"><button class=\"gold-btn\" onclick=\"downloadBackup()\">تنزيل Backup JSON</button><button class=\"ghost\" onclick=\"exportCsv('properties')\">عقارات CSV</button><button class=\"ghost\" onclick=\"exportCsv('clients')\">عملاء CSV</button><button class=\"ghost\" onclick=\"exportCsv('contracts')\">عقود CSV</button><button class=\"ghost\" onclick=\"exportCsv('invoices')\">فواتير CSV</button><button class=\"ghost\" onclick=\"exportCsv('accounts')\">حسابات CSV</button></div></div>\n      </section>\n\n      <section id=\"sec-qa\" class=\"section\">\n        <div class=\"card\"><h3>اختبار التشغيل</h3><button class=\"gold-btn\" onclick=\"runQA()\">تشغيل الاختبار الآن</button><div id=\"qaBox\" style=\"margin-top:15px\"></div></div>\n      </section>\n    </section>\n  </main>\n\n  <div id=\"paymentModal\" class=\"modal\"><div class=\"modal-box\"><h2>تحصيل فاتورة</h2><p id=\"payInfo\"></p><input id=\"payInvoiceId\" type=\"hidden\"><div class=\"form\"><input id=\"payAmount\" placeholder=\"المبلغ\"><select id=\"payMethod\"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id=\"payNote\" placeholder=\"ملاحظة\"></div><button class=\"gold-btn\" onclick=\"submitPayment()\">تأكيد التحصيل</button> <button class=\"ghost\" onclick=\"closeModal('paymentModal')\">إغلاق</button></div></div>\n  <div id=\"invoiceModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"invoicePreview\"></div><div class=\"toolbar\"><button class=\"gold-btn\" onclick=\"window.print()\">طباعة A4</button><button class=\"ghost\" onclick=\"downloadInvoice()\">تنزيل HTML</button><button class=\"ghost\" onclick=\"closeModal('invoiceModal')\">إغلاق</button></div></div></div>\n  <div id=\"genericModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"genericModalBody\"></div><button class=\"ghost\" onclick=\"closeModal('genericModal')\">إغلاق</button></div></div>\n  <script src=\"app.js\"></script>\n</body>\n</html>\n"
+FALLBACK_INDEX_HTML = "<!doctype html>\n<html lang=\"ar\" dir=\"rtl\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Launch Quality LLC</title>\n  <link rel=\"stylesheet\" href=\"app.css\">\n</head>\n<body>\n  <main id=\"loginScreen\" class=\"login hidden\">\n    <section class=\"login-card\">\n      <img src=\"assets/logo.png\" alt=\"Jawdah logo\">\n      <h1>Launch Quality LLC</h1>\n      <p class=\"mini\">Real Estate & Hospitality Management System</p>\n      <input id=\"loginUser\" placeholder=\"اسم المستخدم\" autocomplete=\"username\">\n      <input id=\"loginPass\" placeholder=\"كلمة المرور\" type=\"password\" autocomplete=\"current-password\">\n      <button id=\"loginBtn\" class=\"gold-btn\" style=\"width:100%;margin-top:10px\">تسجيل الدخول</button>\n      <p class=\"mini\">Use the authorized administrator account.</p>\n    </section>\n  </main>\n\n  <main id=\"app\" class=\"app hidden\">\n    <aside id=\"sidebar\" class=\"sidebar\">\n      <div class=\"brand\">\n        <img src=\"assets/logo.png\" alt=\"logo\">\n        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>\n      </div>\n      <nav id=\"nav\" class=\"nav\"></nav>\n    </aside>\n    <section class=\"content\">\n      <header class=\"topbar\">\n        <button id=\"menuBtn\" class=\"ghost mobile-nav\">☰</button>\n        <div class=\"search\"><input id=\"globalSearch\" placeholder=\"بحث سريع Ctrl + K\"></div>\n        <button class=\"gold-btn\" onclick=\"showSection('properties')\">+ إضافة</button>\n        <div id=\"clock\" class=\"top-pill\">00:00:00</div>\n        <div class=\"userbox\"><div id=\"avatar\" class=\"avatar\">J</div><div><b id=\"userName\">User</b><br><small id=\"userRole\" class=\"mini\">Role</small></div></div>\n        <button id=\"logoutBtn\" class=\"ghost\">خروج</button>\n      </header>\n      <h2 id=\"sectionTitle\">لوحة التحكم التنفيذية</h2>\n\n      <section id=\"sec-dashboard\" class=\"section active\">\n        <div class=\"hero\"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id=\"heroStats\" class=\"status-line\" style=\"margin-top:14px\"></div></div>\n        <div id=\"kpiGrid\" class=\"grid kpis\"></div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>الإيرادات والمصروفات</h3><div class=\"canvas-wrap\"><canvas id=\"incomeChart\"></canvas></div></div>\n          <div class=\"card\"><h3>خريطة GIS تشغيلية</h3><div class=\"gis\"><div id=\"gisPins\"></div></div></div>\n        </div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>قرارات الآن</h3><div id=\"decisionList\"></div></div>\n          <div class=\"card\"><h3>الإشغال</h3><div class=\"canvas-wrap\"><canvas id=\"occupancyChart\"></canvas></div></div>\n        </div>\n        <div class=\"card\"><h3>إجراءات سريعة</h3><div id=\"quickActions\" class=\"quick\"></div></div>\n      </section>\n\n      <section id=\"sec-properties\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عقار</h3><div class=\"form\"><input id=\"pImage\" placeholder=\"إيموجي/رمز\" value=\"🏠\"><input id=\"pName\" placeholder=\"اسم العقار\"><input id=\"pType\" placeholder=\"النوع\"><select id=\"pStatus\"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id=\"pPrice\" placeholder=\"السعر\"><input id=\"pLocation\" placeholder=\"الموقع\"><textarea id=\"pNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createProperty()\">حفظ العقار</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><select id=\"propStatusFilter\" onchange=\"renderProperties()\"></select><button class=\"ghost\" onclick=\"exportCsv('properties')\">تصدير CSV</button></div><div id=\"propertiesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-clients\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عميل</h3><div class=\"form\"><input id=\"cName\" placeholder=\"اسم العميل\"><input id=\"cPhone\" placeholder=\"الهاتف\"><input id=\"cEmail\" placeholder=\"البريد\"><input id=\"cNational\" placeholder=\"الهوية/السجل\"><textarea id=\"cNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createClient()\">حفظ العميل</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('clients')\">تصدير CSV</button></div><div id=\"clientsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-contracts\" class=\"section\">\n        <div class=\"card\"><h3>إنشاء عقد</h3><div class=\"form\"><select id=\"contractProperty\"></select><select id=\"contractClient\"></select><input id=\"contractStart\" type=\"date\"><input id=\"contractEnd\" type=\"date\"><input id=\"contractRent\" placeholder=\"قيمة الإيجار\"><textarea id=\"contractNotes\" placeholder=\"ملاحظات العقد\"></textarea></div><button class=\"gold-btn\" onclick=\"createContract()\">حفظ العقد</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('contracts')\">تصدير CSV</button></div><div id=\"contractsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-invoices\" class=\"section\">\n        <div class=\"card\"><h3>الفواتير والتحصيل</h3><p class=\"mini\">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id=\"invoicesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-accounts\" class=\"section\">\n        <div class=\"card\"><h3>إضافة حركة مالية</h3><div class=\"form\"><input id=\"accDate\" type=\"date\"><select id=\"accType\"><option value=\"income\">income</option><option value=\"expense\">expense</option></select><input id=\"accCategory\" placeholder=\"التصنيف\"><input id=\"accDesc\" placeholder=\"الوصف\"><input id=\"accAmount\" placeholder=\"المبلغ\"></div><button class=\"gold-btn\" onclick=\"createAccount()\">حفظ الحركة</button></div>\n        <div class=\"card\"><h3>ملخص الحسابات</h3><div id=\"accountSummary\" class=\"status-line\"></div><div class=\"canvas-wrap\"><canvas id=\"expenseChart\"></canvas></div></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('accounts')\">تصدير CSV</button></div><div id=\"accountsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-maintenance\" class=\"section\">\n        <div class=\"card\"><h3>طلب صيانة</h3><div class=\"form\"><select id=\"maintProperty\"></select><input id=\"maintTitle\" placeholder=\"عنوان الطلب\"><select id=\"maintPriority\"><option>High</option><option>Medium</option><option>Low</option></select><input id=\"maintCost\" placeholder=\"التكلفة المتوقعة\"><textarea id=\"maintNotes\" placeholder=\"تفاصيل\"></textarea></div><button class=\"gold-btn\" onclick=\"createMaintenance()\">حفظ الطلب</button></div>\n        <div class=\"grid\" id=\"maintenanceGrid\" style=\"grid-template-columns:repeat(auto-fit,minmax(260px,1fr))\"></div>\n      </section>\n\n      <section id=\"sec-reports\" class=\"section\">\n        <div id=\"reportsBox\"></div>\n        <div class=\"card\"><button class=\"gold-btn\" onclick=\"renderReports()\">تحديث التقرير</button> <button class=\"ghost\" onclick=\"downloadBackup()\">تنزيل Backup</button></div>\n      </section>\n\n      <section id=\"sec-users\" class=\"section\">\n        <div class=\"card\"><h3>إضافة مستخدم</h3><div class=\"form\"><input id=\"uUsername\" placeholder=\"اسم المستخدم\"><input id=\"uName\" placeholder=\"الاسم\"><select id=\"uRole\"><option value=\"admin\">admin</option><option value=\"accountant\">accountant</option><option value=\"operations\">operations</option><option value=\"maintenance\">maintenance</option><option value=\"viewer\">viewer</option></select><input id=\"uPassword\" placeholder=\"كلمة المرور\"></div><button class=\"gold-btn\" onclick=\"createUser()\">حفظ المستخدم</button></div>\n        <div class=\"card\"><div id=\"usersTable\"></div></div>\n      </section>\n\n      <section id=\"sec-backup\" class=\"section\">\n        <div class=\"card\"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id=\"backupStatus\" class=\"status-line\"></div><div class=\"toolbar\" style=\"margin-top:16px\"><button class=\"gold-btn\" onclick=\"downloadBackup()\">تنزيل Backup JSON</button><button class=\"ghost\" onclick=\"exportCsv('properties')\">عقارات CSV</button><button class=\"ghost\" onclick=\"exportCsv('clients')\">عملاء CSV</button><button class=\"ghost\" onclick=\"exportCsv('contracts')\">عقود CSV</button><button class=\"ghost\" onclick=\"exportCsv('invoices')\">فواتير CSV</button><button class=\"ghost\" onclick=\"exportCsv('accounts')\">حسابات CSV</button></div></div>\n      </section>\n\n      <section id=\"sec-qa\" class=\"section\">\n        <div class=\"card\"><h3>اختبار التشغيل</h3><button class=\"gold-btn\" onclick=\"runQA()\">تشغيل الاختبار الآن</button><div id=\"qaBox\" style=\"margin-top:15px\"></div></div>\n      </section>\n    </section>\n  </main>\n\n  <div id=\"paymentModal\" class=\"modal\"><div class=\"modal-box\"><h2>تحصيل فاتورة</h2><p id=\"payInfo\"></p><input id=\"payInvoiceId\" type=\"hidden\"><div class=\"form\"><input id=\"payAmount\" placeholder=\"المبلغ\"><select id=\"payMethod\"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id=\"payNote\" placeholder=\"ملاحظة\"></div><button class=\"gold-btn\" onclick=\"submitPayment()\">تأكيد التحصيل</button> <button class=\"ghost\" onclick=\"closeModal('paymentModal')\">إغلاق</button></div></div>\n  <div id=\"invoiceModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"invoicePreview\"></div><div class=\"toolbar\"><button class=\"gold-btn\" onclick=\"window.print()\">طباعة A4</button><button class=\"ghost\" onclick=\"downloadInvoice()\">تنزيل HTML</button><button class=\"ghost\" onclick=\"closeModal('invoiceModal')\">إغلاق</button></div></div></div>\n  <div id=\"genericModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"genericModalBody\"></div><button class=\"ghost\" onclick=\"closeModal('genericModal')\">إغلاق</button></div></div>\n  <script src=\"app.js\"></script>\n</body>\n</html>\n"
 FALLBACK_CSS = ":root{\n  --bg:#030712;\n  --navy:#07111f;\n  --navy2:#0b1728;\n  --navy3:#111f34;\n  --panel:rgba(11,23,40,.82);\n  --panel2:rgba(17,31,52,.72);\n  --glass:rgba(255,255,255,.075);\n  --text:#f8f5ec;\n  --muted:#aeb8c9;\n  --gold:#d8b15b;\n  --gold2:#fff0b8;\n  --gold3:#9c6d21;\n  --silver:#dce3ef;\n  --silver2:#93a4ba;\n  --blue:#4ea1ff;\n  --red:#ff6666;\n  --line:rgba(255,255,255,.13);\n  --line-gold:rgba(216,177,91,.42);\n  --shadow:0 28px 85px rgba(0,0,0,.42);\n  --soft:0 16px 45px rgba(0,0,0,.22);\n  --radius:24px;\n  --side:300px;\n}\n*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:\"Tajawal\",\"Segoe UI\",Arial,sans-serif;background:radial-gradient(circle at 14% 10%,rgba(216,177,91,.22),transparent 27%),radial-gradient(circle at 82% 0%,rgba(78,161,255,.14),transparent 30%),linear-gradient(135deg,#030712 0%,#07111f 44%,#0b1220 100%);color:var(--text);min-height:100vh;overflow-x:hidden}body:before{content:\"\";position:fixed;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(216,177,91,.07),transparent 18%,transparent 82%,rgba(216,177,91,.06)),radial-gradient(circle at 50% 110%,rgba(216,177,91,.14),transparent 38%);z-index:-1}button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}.app{min-height:100vh;display:grid;grid-template-columns:var(--side) 1fr}.sidebar{position:sticky;top:0;height:100vh;padding:22px;background:linear-gradient(180deg,rgba(15,25,42,.95),rgba(5,11,22,.97));border-left:1px solid var(--line-gold);box-shadow:var(--shadow);overflow-y:auto}.sidebar::-webkit-scrollbar{width:6px}.sidebar::-webkit-scrollbar-thumb{background:rgba(216,177,91,.45);border-radius:20px}.brand{display:flex;align-items:center;gap:14px;margin-bottom:24px;border:1px solid rgba(216,177,91,.25);border-radius:26px;padding:12px;background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(216,177,91,.08))}.brand img{width:64px;height:64px;border-radius:22px;object-fit:cover;border:2px solid rgba(216,177,91,.95);box-shadow:0 0 38px rgba(216,177,91,.38)}.brand h1{font-size:19px;margin:0;color:var(--gold2)}.brand small{color:var(--muted)}.nav{display:grid;gap:10px}.nav button{border:1px solid var(--line);background:linear-gradient(135deg,rgba(255,255,255,.055),rgba(255,255,255,.025));color:var(--text);padding:13px 14px;border-radius:18px;display:flex;justify-content:space-between;align-items:center;transition:.22s;box-shadow:0 10px 22px rgba(0,0,0,.12)}.nav button:hover,.nav button.active{background:linear-gradient(135deg,rgba(216,177,91,.28),rgba(255,255,255,.08));border-color:rgba(216,177,91,.78);transform:translateX(-4px);box-shadow:0 14px 34px rgba(216,177,91,.16), inset 0 1px 0 rgba(255,255,255,.16)}.content{padding:22px 24px 34px;min-width:0}.topbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;position:sticky;top:10px;z-index:10;background:linear-gradient(180deg,rgba(8,18,32,.86),rgba(8,18,32,.62));backdrop-filter:blur(18px);padding:10px;border:1px solid rgba(216,177,91,.25);border-radius:26px;box-shadow:0 18px 48px rgba(0,0,0,.26)}.search{flex:1;position:relative}.search input{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.055);color:var(--text);padding:14px 18px;border-radius:18px;outline:none}.search input:focus{border-color:rgba(216,177,91,.72);box-shadow:0 0 0 4px rgba(216,177,91,.1)}.top-pill{border:1px solid rgba(216,177,91,.55);background:linear-gradient(135deg,rgba(216,177,91,.24),rgba(255,255,255,.07));color:var(--gold2);padding:12px 15px;border-radius:18px;white-space:nowrap;font-weight:800}.gold-btn,.primary{border:0;background:linear-gradient(135deg,#9a681e,#f4d77f 48%,#b88328);color:#101010;border-radius:17px;padding:12px 18px;font-weight:900;box-shadow:0 18px 42px rgba(216,177,91,.27), inset 0 1px 0 rgba(255,255,255,.5)}.gold-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}.ghost{border:1px solid var(--line);background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.035));color:var(--text);border-radius:15px;padding:10px 13px}.ghost:hover{border-color:rgba(216,177,91,.45);background:rgba(216,177,91,.08)}.danger{border:0;background:linear-gradient(135deg,#7f1d1d,#ff7474);color:#fff;border-radius:15px;padding:10px 13px;font-weight:900}.userbox{display:flex;align-items:center;gap:10px}.avatar{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#fff1b8,#b8862e);color:#111;border:2px solid var(--gold2);font-weight:900}.content>h2{font-size:24px;margin:8px 0 18px;color:var(--gold2);letter-spacing:.2px}.hero{position:relative;overflow:hidden;border:1px solid rgba(216,177,91,.32);border-radius:34px;background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.035)),radial-gradient(circle at 12% 15%,rgba(216,177,91,.28),transparent 32%),radial-gradient(circle at 85% 25%,rgba(78,161,255,.14),transparent 30%),linear-gradient(135deg,#0a1627,#111d31);padding:30px;margin-bottom:20px;box-shadow:var(--shadow)}.hero:before{content:\"Jawdah Command Center\";position:absolute;left:28px;bottom:10px;font-size:56px;font-weight:900;color:rgba(255,255,255,.035);letter-spacing:1px;white-space:nowrap}.hero:after{content:\"\";position:absolute;inset:auto -110px -160px auto;width:420px;height:420px;background:radial-gradient(circle,rgba(216,177,91,.36),transparent 62%);filter:blur(12px)}.hero h2{font-size:36px;margin:0 0 10px;color:var(--gold2)}.hero p{margin:0;color:var(--muted);max-width:920px;line-height:1.9}.grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.kpi{border:1px solid rgba(216,177,91,.18);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.035));padding:18px;box-shadow:0 18px 52px rgba(0,0,0,.24);position:relative;overflow:hidden;transition:.22s;min-height:142px}.kpi:hover{transform:translateY(-3px);border-color:rgba(216,177,91,.55);box-shadow:0 24px 68px rgba(0,0,0,.32),0 0 26px rgba(216,177,91,.12)}.kpi:before{content:\"\";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),var(--gold2),transparent)}.kpi:after{content:\"\";position:absolute;left:-25%;bottom:-55%;width:180px;height:180px;background:radial-gradient(circle,rgba(216,177,91,.18),transparent 62%)}.kpi .icon{font-size:31px;filter:drop-shadow(0 8px 18px rgba(216,177,91,.28))}.kpi strong{display:block;font-size:31px;margin:10px 0 4px;color:#fff}.kpi span{color:var(--muted)}.layout{display:grid;grid-template-columns:1.18fr .82fr;gap:16px;margin-top:16px}.card{border:1px solid rgba(216,177,91,.16);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.032));padding:18px;box-shadow:0 18px 48px rgba(0,0,0,.22);min-width:0}.card h3{margin:0 0 14px;color:var(--gold2)}.canvas-wrap{height:280px}.canvas-wrap canvas{width:100%;height:100%}.gis{height:330px;border-radius:24px;background:radial-gradient(circle at 40% 35%,rgba(216,177,91,.14),transparent 30%),linear-gradient(135deg,#10233a,#0b1628);position:relative;overflow:hidden;border:1px solid rgba(216,177,91,.18)}.gis:before{content:\"\";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:35px 35px;opacity:.35}.gis:after{content:\"\";position:absolute;inset:15%;border:1px solid rgba(216,177,91,.18);border-radius:50%;filter:blur(.2px)}.pin{position:absolute;width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 8px rgba(255,255,255,.08),0 0 25px currentColor;border:2px solid rgba(255,255,255,.75)}.pin.gold{color:#f6d77f;background:#f6d77f}.pin.blue{color:#60a5fa;background:#60a5fa}.pin.red{color:#ff6b6b;background:#ff6b6b}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.toolbar select,.form input,.form select,.form textarea{border:1px solid var(--line);background:rgba(255,255,255,.065);color:var(--text);border-radius:15px;padding:11px 12px;outline:none}.toolbar option,.form option{background:#0b1728;color:#fff}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.18)}table{width:100%;border-collapse:collapse;min-width:880px}th,td{padding:13px;border-bottom:1px solid rgba(255,255,255,.075);text-align:right;vertical-align:middle}th{color:var(--gold2);background:rgba(216,177,91,.09);position:sticky;top:0}td{color:#edf2fa}.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--line);font-size:13px;color:var(--silver)}.paid,.active,.rented{color:#1b1302;background:linear-gradient(135deg,#b9882c,#ffe49a);border-color:rgba(216,177,91,.8);font-weight:800}.partial,.pending{color:#261a02;background:linear-gradient(135deg,#b68b39,#e8d9ac);border-color:rgba(216,177,91,.65);font-weight:800}.overdue,.maintenance,.open{color:#fff;background:linear-gradient(135deg,#7f1d1d,#e15b5b);border-color:rgba(255,115,115,.65);font-weight:800}.vacant{color:#06172c;background:linear-gradient(135deg,#79b7ff,#dceaff);border-color:rgba(96,165,250,.65);font-weight:800}.section{display:none}.section.active{display:block}.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:15px}.form textarea{grid-column:1/-1;min-height:90px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}.modal.show{display:flex}.modal-box{width:min(880px,100%);max-height:90vh;overflow:auto;border:1px solid rgba(216,177,91,.38);border-radius:28px;background:#081426;color:var(--text);padding:22px;box-shadow:0 30px 90px rgba(0,0,0,.55)}.invoice-paper{background:#fff;color:#111;border-radius:18px;padding:30px;direction:ltr}.invoice-paper .head{display:flex;justify-content:space-between;border-bottom:4px solid #d8b15b;padding-bottom:16px;margin-bottom:18px}.invoice-paper table{min-width:0;color:#111}.invoice-paper th{background:#071426;color:#fff}.invoice-paper td{color:#111;border-color:#ddd}.login{min-height:100vh;display:grid;place-items:center;padding:20px}.login-card{width:min(460px,100%);border:1px solid rgba(216,177,91,.35);border-radius:32px;background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.04));padding:32px;box-shadow:var(--shadow);text-align:center}.login-card img{width:96px;height:96px;border-radius:30px;border:2px solid var(--gold);object-fit:cover}.login-card input{width:100%;margin:9px 0;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;padding:14px;border-radius:16px;outline:none}.toast{position:fixed;bottom:22px;left:22px;background:#101d30;border:1px solid rgba(216,177,91,.45);padding:14px 18px;border-radius:18px;box-shadow:var(--shadow);z-index:50}.toast.err{border-color:#ef4444}.mobile-nav{display:none}.mini{font-size:13px;color:var(--muted)}.status-line{display:flex;gap:10px;flex-wrap:wrap}.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.quick button{text-align:right;padding:18px;border-radius:22px}.executive-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}.executive-chip{border:1px solid rgba(216,177,91,.2);background:rgba(255,255,255,.055);border-radius:20px;padding:14px}.executive-chip b{color:var(--gold2)}@media(max-width:1100px){.app{grid-template-columns:1fr}.sidebar{position:fixed;right:-320px;width:290px;z-index:40;transition:.25s}.sidebar.open{right:0}.content{padding:14px}.kpis{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}.form{grid-template-columns:1fr}.mobile-nav{display:inline-flex}.topbar{flex-wrap:wrap}.quick{grid-template-columns:repeat(2,1fr)}.executive-strip{grid-template-columns:1fr}}@media(max-width:650px){.kpis{grid-template-columns:1fr}.hero h2{font-size:25px}.hero:before{font-size:34px}.userbox{width:100%;justify-content:space-between}.top-pill{font-size:13px}.quick{grid-template-columns:1fr}}@media print{body{background:#fff;color:#000}.app,.modal .ghost,.modal .gold-btn{display:none!important}.modal{display:block!important;position:static;background:#fff;padding:0}.modal-box{box-shadow:none;border:0;max-height:none;width:100%;padding:0}.invoice-paper{border-radius:0;padding:0}}\n"
 FALLBACK_JS = 'const Jawdah = {\n  token: localStorage.getItem(\'jawdah_cloud_token\') || \'\',\n  user: null,\n  data: {},\n  dashboard: null,\n  activeSection: \'dashboard\',\n  charts: {},\n  invoiceForPrint: null\n};\nconst $ = s => document.querySelector(s);\nconst $$ = s => Array.from(document.querySelectorAll(s));\nconst api = async (path, opts={}) => {\n  const headers = {\'Content-Type\':\'application/json\'};\n  if(Jawdah.token) headers.Authorization = \'Bearer \' + Jawdah.token;\n  const res = await fetch(\'/api/\' + path.replace(/^\\//,\'\'), {...opts, headers:{...headers, ...(opts.headers||{})}});\n  const text = await res.text();\n  let data;\n  try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false,error:text || \'Invalid response\'}; }\n  if(!res.ok || data.ok === false) throw new Error(data.error || data.detail || \'Request failed\');\n  return data;\n};\nconst fmt = n => Number(n||0).toLocaleString(\'en-US\',{maximumFractionDigits:2});\nconst money = n => fmt(n) + \' OMR\';\nconst today = () => new Date().toISOString().slice(0,10);\nconst byId = (table,id) => (Jawdah.data[table]||[]).find(x=>x.id===id) || {};\nconst roleName = r => ({admin:\'مدير النظام\',accountant:\'محاسب\',operations:\'تشغيل\',maintenance:\'صيانة\',viewer:\'مشاهد\'}[r]||r);\nfunction toast(msg, err=false){ const t=document.createElement(\'div\'); t.className=\'toast\'+(err?\' err\':\'\'); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }\nfunction ensureEnglishDigits(root=document.body){\n  const rx=/[\\u0660-\\u0669\\u06F0-\\u06F9]/g;\n  const convert=s=>String(s).replace(rx,ch=>String(ch.charCodeAt(0)-((ch.charCodeAt(0)>=0x06F0)?0x06F0:0x0660)));\n  const walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);\n  let n; while(n=walk.nextNode()){ if(rx.test(n.nodeValue)) n.nodeValue=convert(n.nodeValue); }\n  $$(\'input,textarea\').forEach(el=>{ if(rx.test(el.value)) el.value=convert(el.value); });\n}\nasync function login(){\n  try{\n    const username=$(\'#loginUser\').value.trim(); const password=$(\'#loginPass\').value;\n    const res=await api(\'login\',{method:\'POST\',body:JSON.stringify({username,password})});\n    Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem(\'jawdah_cloud_token\',res.token);\n    $(\'#loginScreen\').classList.add(\'hidden\'); $(\'#app\').classList.remove(\'hidden\'); await loadAll(); toast(\'تم تسجيل الدخول\');\n  }catch(e){toast(e.message,true)}\n}\nasync function logout(){ try{await api(\'logout\',{method:\'POST\'});}catch(e){} localStorage.removeItem(\'jawdah_cloud_token\'); location.reload(); }\nasync function checkSession(){\n  if(!Jawdah.token){ $(\'#loginScreen\').classList.remove(\'hidden\'); return; }\n  try{ const me=await api(\'me\'); Jawdah.user=me.user; $(\'#loginScreen\').classList.add(\'hidden\'); $(\'#app\').classList.remove(\'hidden\'); await loadAll(); }\n  catch(e){ localStorage.removeItem(\'jawdah_cloud_token\'); $(\'#loginScreen\').classList.remove(\'hidden\'); }\n}\nasync function loadAll(){\n  const res=await api(\'bootstrap\'); Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;\n  $(\'#userName\').textContent=Jawdah.user.name; $(\'#userRole\').textContent=roleName(Jawdah.user.role); $(\'#avatar\').textContent=(Jawdah.user.name||\'J\').slice(0,1).toUpperCase();\n  buildNav(); renderAll(); showSection(Jawdah.activeSection||\'dashboard\'); ensureEnglishDigits();\n}\nfunction buildNav(){\n  const items=[[\'dashboard\',\'لوحة التحكم\',\'🏛️\'],[\'properties\',\'العقارات\',\'🏠\'],[\'clients\',\'العملاء\',\'👥\'],[\'contracts\',\'العقود\',\'📑\'],[\'invoices\',\'الفواتير\',\'🧾\'],[\'accounts\',\'الحسابات\',\'💰\'],[\'maintenance\',\'الصيانة\',\'🔧\'],[\'reports\',\'التقارير\',\'📊\'],[\'users\',\'المستخدمين\',\'🛡️\'],[\'backup\',\'التخزين والنسخ\',\'💾\'],[\'qa\',\'اختبار التشغيل\',\'✅\']];\n  const nav=$(\'#nav\'); nav.innerHTML=\'\';\n  items.forEach(([id,label,icon])=>{\n    if(id===\'users\' && Jawdah.user.role!==\'admin\') return;\n    const b=document.createElement(\'button\'); b.dataset.section=id; b.innerHTML=`<span>${icon} ${label}</span><small>›</small>`; b.onclick=()=>showSection(id); nav.appendChild(b);\n  });\n}\nfunction showSection(id){\n  Jawdah.activeSection=id; $$(\'.section\').forEach(s=>s.classList.remove(\'active\')); const s=$(\'#sec-\'+id); if(s) s.classList.add(\'active\');\n  $$(\'#nav button\').forEach(b=>b.classList.toggle(\'active\',b.dataset.section===id));\n  $(\'#sectionTitle\').textContent = ({dashboard:\'لوحة التحكم التنفيذية\',properties:\'العقارات\',clients:\'العملاء\',contracts:\'العقود\',invoices:\'الفواتير\',accounts:\'الحسابات\',maintenance:\'الصيانة\',reports:\'التقارير المالية\',users:\'المستخدمين والصلاحيات\',backup:\'التخزين والنسخ الاحتياطي\',qa:\'اختبار التشغيل\'}[id]||\'Jawdah\');\n  if(innerWidth<1100) $(\'#sidebar\').classList.remove(\'open\'); setTimeout(drawCharts,50); ensureEnglishDigits();\n}\nfunction renderAll(){ renderDashboard(); renderProperties(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }\nfunction renderDashboard(){\n  const k=Jawdah.dashboard.kpis;\n  const collectionRate = k.billed ? Math.round((Number(k.paid||0)/Number(k.billed||1))*100) : 0;\n  $(\'#heroStats\').innerHTML=`<span class="badge paid">جاهزية النظام ${fmt(k.health)}%</span><span class="badge">الإشغال ${fmt(k.occupancy)}%</span><span class="badge">التحصيل ${fmt(collectionRate)}%</span><span class="badge">صافي الدخل ${money(k.net)}</span>`;\n  const kpis=[[\'🏛️\',\'إجمالي العقارات\',k.properties,\'properties\'],[\'🔑\',\'العقارات المؤجرة\',k.rented,\'properties\'],[\'🏠\',\'العقارات الشاغرة\',k.vacant,\'properties\'],[\'🧾\',\'إجمالي الفوترة\',k.billed,\'invoices\',\'money\'],[\'💳\',\'إجمالي التحصيل\',k.paid,\'accounts\',\'money\'],[\'⏰\',\'المبالغ المتأخرة\',k.overdue,\'invoices\',\'money\'],[\'🔧\',\'طلبات الصيانة المفتوحة\',k.maintenance,\'maintenance\'],[\'📈\',\'صافي الربح\',k.net,\'accounts\',\'money\']];\n  $(\'#kpiGrid\').innerHTML=kpis.map(x=>`<div class="kpi" onclick="showSection(\'${x[3]}\')"><div class="icon">${x[0]}</div><span>${x[1]}</span><strong>${x[4]?money(x[2]):fmt(x[2])}</strong><small class="mini">فتح التفاصيل</small></div>`).join(\'\');\n  $(\'#decisionList\').innerHTML=`<div class="executive-strip"><div class="executive-chip"><b>مؤشر التحصيل</b><br><span class="mini">${fmt(collectionRate)}% من إجمالي الفواتير</span></div><div class="executive-chip"><b>مؤشر الإشغال</b><br><span class="mini">${fmt(k.occupancy)}% من الوحدات</span></div><div class="executive-chip"><b>القرار التالي</b><br><span class="mini">راجع المتأخرات والصيانة أولاً</span></div></div>` + Jawdah.dashboard.decisions.map(d=>`<div class="card" style="padding:13px;margin-bottom:10px"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join(\'\');\n  const props=Jawdah.data.properties||[];\n  $(\'#gisPins\').innerHTML=props.map((p,i)=>{ const cls=(p.status||\'\').toLowerCase().includes(\'maintenance\')?\'red\':((p.status||\'\').toLowerCase().includes(\'vacant\')?\'blue\':\'gold\'); const left=[18,43,68,28,78,52,36][i%7], top=[24,42,58,70,32,22,64][i%7]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast(\'${p.name} - ${p.status}\')"></button>` }).join(\'\');\n  $(\'#quickActions\').innerHTML=[[\'إضافة عقار\',\'properties\',\'🏠\'],[\'إضافة عميل\',\'clients\',\'👥\'],[\'إنشاء عقد\',\'contracts\',\'📑\'],[\'فاتورة من عقد\',\'invoices\',\'🧾\'],[\'تحصيل دفعة\',\'invoices\',\'💳\'],[\'Backup فوري\',\'backup\',\'💾\'],[\'تقرير مالي\',\'reports\',\'📊\'],[\'اختبار التشغيل\',\'qa\',\'✅\']].map(q=>`<button class="ghost" onclick="showSection(\'${q[1]}\')"><b>${q[2]} ${q[0]}</b><br><small class="mini">أمر تنفيذي سريع</small></button>`).join(\'\');\n}\nfunction tableHtml(cols, rows, actions){\n  return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join(\'\')}${actions?\'<th>إجراء</th>\':\'\'}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??\'\')}</td>`).join(\'\')}${actions?`<td>${actions(r)}</td>`:\'\'}</tr>`).join(\'\')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;\n}\nfunction renderProperties(){\n  const rows=filterRows(\'properties\',[\'name\',\'type\',\'status\',\'location\']);\n  $(\'#propertiesTable\').innerHTML=tableHtml([[\'الصورة\',\'image\'],[\'الاسم\',\'name\'],[\'النوع\',\'type\'],[\'الحالة\',\'status\',(v)=>badge(v)],[\'السعر\',\'price\',(v)=>money(v)],[\'الموقع\',\'location\'],[\'آخر تحديث\',\'last_update\']],rows,r=>`<button class="ghost" onclick="editRecord(\'properties\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'properties\',\'${r.id}\')">حذف</button>`);\n  fillSelect(\'#propStatusFilter\',[\'\',\'Rented\',\'Vacant\',\'Maintenance\'],false);\n}\nfunction renderClients(){\n  const rows=filterRows(\'clients\',[\'name\',\'phone\',\'email\',\'national_id\']);\n  $(\'#clientsTable\').innerHTML=tableHtml([[\'الاسم\',\'name\'],[\'الهاتف\',\'phone\'],[\'البريد\',\'email\'],[\'الهوية/السجل\',\'national_id\'],[\'الرصيد\',\'balance\',(v)=>money(v)],[\'ملاحظات\',\'notes\']],rows,r=>`<button class="ghost" onclick="clientStatement(\'${r.id}\')">كشف</button> <button class="ghost" onclick="editRecord(\'clients\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'clients\',\'${r.id}\')">حذف</button>`);\n}\nfunction renderContracts(){\n  fillSelect(\'#contractProperty\',Jawdah.data.properties||[],true,\'id\',\'name\'); fillSelect(\'#contractClient\',Jawdah.data.clients||[],true,\'id\',\'name\');\n  const rows=filterRows(\'contracts\',[\'id\',\'status\',\'notes\']);\n  $(\'#contractsTable\').innerHTML=tableHtml([[\'العقد\',\'id\'],[\'العقار\',\'property_id\',(v)=>byId(\'properties\',v).name||v],[\'العميل\',\'client_id\',(v)=>byId(\'clients\',v).name||v],[\'البداية\',\'start_date\'],[\'النهاية\',\'end_date\'],[\'الإيجار\',\'rent_amount\',(v)=>money(v)],[\'الحالة\',\'status\',(v)=>badge(v)]],rows,r=>`<button class="gold-btn" onclick="invoiceFromContract(\'${r.id}\')">فاتورة</button> <button class="ghost" onclick="editRecord(\'contracts\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'contracts\',\'${r.id}\')">حذف</button>`);\n}\nfunction renderInvoices(){\n  const rows=filterRows(\'invoices\',[\'invoice_no\',\'description\',\'status\']);\n  $(\'#invoicesTable\').innerHTML=tableHtml([[\'رقم\',\'invoice_no\'],[\'العميل\',\'client_id\',(v)=>byId(\'clients\',v).name||v],[\'العقار\',\'property_id\',(v)=>byId(\'properties\',v).name||v],[\'الإصدار\',\'issue_date\'],[\'الاستحقاق\',\'due_date\'],[\'الإجمالي\',\'amount\',(v)=>money(v)],[\'المدفوع\',\'paid_amount\',(v)=>money(v)],[\'المتبقي\',\'amount\',(v,r)=>money(Number(r.amount)-Number(r.paid_amount))],[\'الحالة\',\'status\',(v)=>badge(v)]],rows,r=>`<button class="gold-btn" onclick="openPayment(\'${r.id}\')">تحصيل</button> <button class="ghost" onclick="printInvoice(\'${r.id}\')">طباعة</button> <button class="danger" onclick="delRecord(\'invoices\',\'${r.id}\')">حذف</button>`);\n}\nfunction renderAccounts(){\n  const rows=filterRows(\'accounts\',[\'description\',\'category\',\'type\']);\n  $(\'#accountsTable\').innerHTML=tableHtml([[\'التاريخ\',\'entry_date\'],[\'النوع\',\'type\',(v)=>badge(v)],[\'التصنيف\',\'category\'],[\'الوصف\',\'description\'],[\'العميل\',\'client_id\',(v)=>v?(byId(\'clients\',v).name||v):\'\'],[\'العقار\',\'property_id\',(v)=>v?(byId(\'properties\',v).name||v):\'\'],[\'الفاتورة\',\'invoice_id\',(v)=>v?(byId(\'invoices\',v).invoice_no||v):\'\'],[\'المبلغ\',\'amount\',(v)=>money(v)]],rows,r=>`<button class="ghost" onclick="editRecord(\'accounts\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'accounts\',\'${r.id}\')">حذف</button>`);\n  const income=rows.filter(x=>x.type===\'income\').reduce((s,x)=>s+Number(x.amount||0),0), expense=rows.filter(x=>x.type===\'expense\').reduce((s,x)=>s+Number(x.amount||0),0);\n  $(\'#accountSummary\').innerHTML=`<span class="badge">إيرادات ${money(income)}</span><span class="badge">مصروفات ${money(expense)}</span><span class="badge">صافي ${money(income-expense)}</span>`;\n}\nfunction renderMaintenance(){\n  fillSelect(\'#maintProperty\',Jawdah.data.properties||[],true,\'id\',\'name\');\n  const rows=filterRows(\'maintenance\',[\'title\',\'priority\',\'status\',\'notes\']);\n  $(\'#maintenanceGrid\').innerHTML=rows.map(m=>`<div class="card"><h3>${m.title}</h3><p>${byId(\'properties\',m.property_id).name||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord(\'maintenance\',\'${m.id}\')">متابعة</button> <button class="danger" onclick="delRecord(\'maintenance\',\'${m.id}\')">حذف</button></div>`).join(\'\')||\'<div class="card">لا توجد طلبات صيانة</div>\';\n}\nfunction renderUsers(){\n  if(!Jawdah.data.users){ $(\'#usersTable\').innerHTML=\'<div class="card">هذا القسم للمدير فقط</div>\'; return; }\n  $(\'#usersTable\').innerHTML=tableHtml([[\'المستخدم\',\'username\'],[\'الاسم\',\'name\'],[\'الدور\',\'role\',(v)=>roleName(v)],[\'نشط\',\'active\',(v)=>v?\'نعم\':\'لا\'],[\'آخر دخول\',\'last_login\']],Jawdah.data.users,r=>`<button class="ghost" onclick="editRecord(\'users\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'users\',\'${r.id}\')">حذف</button>`);\n}\nfunction renderBackup(){\n  const counts=Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,(v||[]).length]));\n  $(\'#backupStatus\').innerHTML=Object.entries(counts).map(([k,v])=>`<span class="badge">${k}: ${fmt(v)}</span>`).join(\' \');\n}\nfunction renderQA(){\n  $(\'#qaBox\').innerHTML=\'<p>اضغط تشغيل الاختبار لفحص الترابط والتخزين والفواتير والحسابات.</p>\';\n}\nfunction filterRows(table, fields){\n  let rows=[...(Jawdah.data[table]||[])]; const q=($(\'#globalSearch\')?.value||\'\').toLowerCase().trim();\n  if(q) rows=rows.filter(r=>fields.some(f=>String(r[f]??\'\').toLowerCase().includes(q)));\n  if(table===\'properties\'){ const s=$(\'#propStatusFilter\')?.value; if(s) rows=rows.filter(r=>r.status===s); }\n  return rows;\n}\nfunction badge(v){ const cls=String(v||\'\').toLowerCase(); return `<span class="badge ${cls}">${v||\'\'}</span>`; }\nfunction fillSelect(sel, data, objects=false, valueKey=\'id\', textKey=\'name\'){\n  const el=$(sel); if(!el) return; const old=el.value; let html=\'<option value="">اختر</option>\';\n  if(objects) html+=data.map(x=>`<option value="${x[valueKey]}">${x[textKey]}</option>`).join(\'\'); else html+=data.map(x=>`<option value="${x}">${x||\'الكل\'}</option>`).join(\'\');\n  el.innerHTML=html; if([...el.options].some(o=>o.value===old)) el.value=old;\n}\nasync function createProperty(){ await saveNew(\'properties\',{name:val(\'pName\'),type:val(\'pType\'),status:val(\'pStatus\'),price:num(\'pPrice\'),location:val(\'pLocation\'),image:val(\'pImage\')||\'🏠\',last_update:today(),notes:val(\'pNotes\')}); }\nasync function createClient(){ await saveNew(\'clients\',{name:val(\'cName\'),phone:val(\'cPhone\'),email:val(\'cEmail\'),national_id:val(\'cNational\'),balance:0,notes:val(\'cNotes\')}); }\nasync function createContract(){ await saveNew(\'contracts\',{property_id:val(\'contractProperty\'),client_id:val(\'contractClient\'),start_date:val(\'contractStart\')||today(),end_date:val(\'contractEnd\')||today(),rent_amount:num(\'contractRent\'),status:\'Active\',payment_cycle:\'monthly\',notes:val(\'contractNotes\')}); }\nasync function createAccount(){ await saveNew(\'accounts\',{entry_date:val(\'accDate\')||today(),type:val(\'accType\'),category:val(\'accCategory\'),description:val(\'accDesc\'),client_id:val(\'accClient\')||null,property_id:val(\'accProperty\')||null,invoice_id:null,amount:num(\'accAmount\')}); }\nasync function createMaintenance(){ await saveNew(\'maintenance\',{property_id:val(\'maintProperty\'),title:val(\'maintTitle\'),priority:val(\'maintPriority\'),status:\'Open\',request_date:today(),cost:num(\'maintCost\'),notes:val(\'maintNotes\')}); }\nasync function createUser(){ await saveNew(\'users\',{username:val(\'uUsername\'),name:val(\'uName\'),role:val(\'uRole\'),password:val(\'uPassword\'),active:true}); }\nasync function saveNew(table,row){ try{ await api(table,{method:\'POST\',body:JSON.stringify(row)}); toast(\'تم الحفظ\'); await loadAll(); }catch(e){toast(e.message,true)} }\nfunction val(id){ return ($(\'#\'+id)?.value||\'\').trim(); } function num(id){ return Number(val(id)||0); }\nasync function delRecord(table,id){ if(!confirm(\'تأكيد الحذف؟\')) return; try{ await api(`${table}/${id}`,{method:\'DELETE\'}); toast(\'تم الحذف\'); await loadAll(); }catch(e){toast(e.message,true)} }\nfunction escapeHtml(v){ return String(v ?? \'\').replace(/[&<>"\']/g, ch => ({\'&\':\'&amp;\',\'<\':\'&lt;\',\'>\':\'&gt;\',\'"\':\'&quot;\',"\'":\'&#39;\'}[ch])); }\nfunction editOptions(field, row){\n  const opts = {\n    status: [\'Rented\',\'Vacant\',\'Maintenance\',\'Active\',\'Closed\',\'Open\',\'In Progress\',\'Completed\',\'Pending\'],\n    type: [\'Villa\',\'Apartment\',\'Office\',\'Compound\',\'income\',\'expense\'],\n    role: [\'admin\',\'accountant\',\'operations\',\'maintenance\',\'viewer\'],\n    priority: [\'Low\',\'Medium\',\'High\',\'Urgent\'],\n    payment_cycle: [\'monthly\',\'quarterly\',\'yearly\'],\n    active: [\'1\',\'0\']\n  };\n  if(field === \'property_id\') return (Jawdah.data.properties||[]).map(x=>[x.id,x.name]);\n  if(field === \'client_id\') return (Jawdah.data.clients||[]).map(x=>[x.id,x.name]);\n  if(field === \'invoice_id\') return [[\'\',\'بدون فاتورة\'], ...(Jawdah.data.invoices||[]).map(x=>[x.id,x.invoice_no])];\n  if(opts[field]) return opts[field].map(x=>[x, field===\'role\'?roleName(x):(x===\'1\'?\'نعم\':x===\'0\'?\'لا\':x)]);\n  return null;\n}\nconst EDIT_CONFIG = {\n  properties: {title:\'تعديل عقار\', fields:[[\'name\',\'اسم العقار\',\'text\'],[\'type\',\'النوع\',\'select\'],[\'status\',\'الحالة\',\'select\'],[\'price\',\'السعر\',\'number\'],[\'location\',\'الموقع\',\'text\'],[\'image\',\'رمز/صورة\',\'text\'],[\'notes\',\'ملاحظات\',\'textarea\']]},\n  clients: {title:\'تعديل عميل\', fields:[[\'name\',\'اسم العميل\',\'text\'],[\'phone\',\'الهاتف\',\'text\'],[\'email\',\'البريد\',\'text\'],[\'national_id\',\'الهوية/السجل\',\'text\'],[\'balance\',\'الرصيد الافتتاحي\',\'number\'],[\'notes\',\'ملاحظات\',\'textarea\']]},\n  contracts: {title:\'تعديل عقد\', fields:[[\'property_id\',\'العقار\',\'select\'],[\'client_id\',\'العميل\',\'select\'],[\'start_date\',\'تاريخ البداية\',\'date\'],[\'end_date\',\'تاريخ النهاية\',\'date\'],[\'rent_amount\',\'قيمة الإيجار\',\'number\'],[\'status\',\'الحالة\',\'select\'],[\'payment_cycle\',\'دورة الدفع\',\'select\'],[\'notes\',\'ملاحظات\',\'textarea\']]},\n  accounts: {title:\'تعديل حركة مالية\', fields:[[\'entry_date\',\'التاريخ\',\'date\'],[\'type\',\'النوع\',\'select\'],[\'category\',\'التصنيف\',\'text\'],[\'description\',\'الوصف\',\'text\'],[\'client_id\',\'العميل\',\'select\'],[\'property_id\',\'العقار\',\'select\'],[\'invoice_id\',\'الفاتورة\',\'select\'],[\'amount\',\'المبلغ\',\'number\']]},\n  maintenance: {title:\'تعديل طلب صيانة\', fields:[[\'property_id\',\'العقار\',\'select\'],[\'title\',\'عنوان الطلب\',\'text\'],[\'priority\',\'الأولوية\',\'select\'],[\'status\',\'الحالة\',\'select\'],[\'request_date\',\'تاريخ الطلب\',\'date\'],[\'cost\',\'التكلفة\',\'number\'],[\'notes\',\'ملاحظات\',\'textarea\']]},\n  users: {title:\'تعديل مستخدم\', fields:[[\'username\',\'اسم المستخدم\',\'text\'],[\'name\',\'الاسم\',\'text\'],[\'role\',\'الدور\',\'select\'],[\'active\',\'نشط\',\'select\'],[\'password\',\'كلمة مرور جديدة - اختياري\',\'password\']]}\n};\nfunction editRecord(table,id){\n  const cfg = EDIT_CONFIG[table];\n  const row = byId(table,id);\n  if(!cfg || !row.id){ toast(\'لم يتم العثور على السجل\', true); return; }\n  const fields = cfg.fields.map(([key,label,type])=>{\n    const value = key === \'password\' ? \'\' : (row[key] ?? \'\');\n    const options = editOptions(key,row);\n    if(type === \'textarea\') return `<label>${label}<textarea data-edit-field="${key}" rows="3">${escapeHtml(value)}</textarea></label>`;\n    if(options) return `<label>${label}<select data-edit-field="${key}">${options.map(([v,t])=>`<option value="${escapeHtml(v)}" ${String(value)===String(v)?\'selected\':\'\'}>${escapeHtml(t)}</option>`).join(\'\')}</select></label>`;\n    return `<label>${label}<input data-edit-field="${key}" type="${type}" value="${escapeHtml(value)}" ${type===\'number\'?\'step="0.001"\':\'\'}></label>`;\n  }).join(\'\');\n  $(\'#genericModalBody\').innerHTML = `<h2>${cfg.title}</h2><p class="mini">تعديل مباشر محفوظ في قاعدة البيانات عبر API.</p><div class="form edit-form">${fields}</div><div class="toolbar"><button class="gold-btn" onclick="submitEditRecord(\'${table}\',\'${id}\')">حفظ التعديل</button><button class="ghost" onclick="closeModal(\'genericModal\')">إلغاء</button></div>`;\n  openModal(\'genericModal\');\n}\nasync function submitEditRecord(table,id){\n  try{\n    const data = {};\n    $$(\'#genericModalBody [data-edit-field]\').forEach(el=>{\n      let v = el.value;\n      if(el.type === \'number\') v = Number(v || 0);\n      if(el.dataset.editField === \'active\') v = v === \'1\';\n      if(el.dataset.editField === \'password\' && !v) return;\n      if(v === \'\' && [\'client_id\',\'property_id\',\'invoice_id\'].includes(el.dataset.editField)) v = null;\n      data[el.dataset.editField] = v;\n    });\n    await api(`${table}/${id}`, {method:\'PUT\', body:JSON.stringify(data)});\n    closeModal(\'genericModal\');\n    toast(\'تم حفظ التعديل\');\n    await loadAll();\n  }catch(e){ toast(e.message, true); }\n}\nasync function invoiceFromContract(contractId){ try{ const due=prompt(\'تاريخ الاستحقاق YYYY-MM-DD\', today()); const desc=prompt(\'وصف الفاتورة\',\'Rent invoice\'); const res=await api(\'invoice_from_contract\',{method:\'POST\',body:JSON.stringify({contract_id:contractId,due_date:due||today(),description:desc||\'Rent invoice\'})}); toast(\'تم إنشاء الفاتورة \'+res.item.invoice_no); await loadAll(); showSection(\'invoices\'); }catch(e){toast(e.message,true)} }\nfunction openPayment(id){ const inv=byId(\'invoices\',id); const remaining=Number(inv.amount)-Number(inv.paid_amount); $(\'#payInvoiceId\').value=id; $(\'#payAmount\').value=remaining.toFixed(2); $(\'#payInfo\').textContent=`${inv.invoice_no} - المتبقي ${money(remaining)}`; openModal(\'paymentModal\'); }\nasync function submitPayment(){ try{ await api(\'pay_invoice\',{method:\'POST\',body:JSON.stringify({invoice_id:val(\'payInvoiceId\'),amount:num(\'payAmount\'),method:val(\'payMethod\'),note:val(\'payNote\')})}); closeModal(\'paymentModal\'); toast(\'تم التحصيل وتحديث الحسابات\'); await loadAll(); }catch(e){toast(e.message,true)} }\nfunction printInvoice(id){ const inv=byId(\'invoices\',id), client=byId(\'clients\',inv.client_id), prop=byId(\'properties\',inv.property_id), contract=byId(\'contracts\',inv.contract_id); Jawdah.invoiceForPrint=inv; const rem=Number(inv.amount)-Number(inv.paid_amount);\n  $(\'#invoicePreview\').innerHTML=`<div class="invoice-paper"><div class="head"><div><h1>INVOICE</h1><h2>Quality of Launch</h2><p>Real Estate & Hospitality Services<br>GSM: 96203068 / 92120205<br>C.R: 1466316 | Postal Code: 611 | Sultanate of Oman</p></div><div><h2>${inv.invoice_no}</h2><p>Issue: ${inv.issue_date}<br>Due: ${inv.due_date}<br>Status: ${inv.status}</p></div></div><div class="grid" style="grid-template-columns:1fr 1fr"><div><h3>Client</h3><p>${client.name||\'\'}<br>${client.phone||\'\'}<br>${client.email||\'\'}</p></div><div><h3>Contract / Property</h3><p>${contract.id||\'\'}<br>${prop.name||\'\'}<br>${prop.location||\'\'}</p></div></div><table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>${inv.description}</td><td>${money(inv.amount)}</td></tr></tbody></table><h3>Total: ${money(inv.amount)}</h3><h3>Paid: ${money(inv.paid_amount)}</h3><h3>Remaining: ${money(rem)}</h3><div style="margin-top:40px;display:flex;justify-content:space-between"><p>Prepared By: __________</p><p>Client Signature: __________</p><p>Company Stamp: __________</p></div></div>`; openModal(\'invoiceModal\'); }\nfunction downloadInvoice(){ const html=\'<!doctype html><meta charset="utf-8">\'+$(\'#invoicePreview\').innerHTML; downloadFile(`invoice-${Jawdah.invoiceForPrint?.invoice_no||\'file\'}.html`,html,\'text/html\'); }\nfunction clientStatement(id){ const c=byId(\'clients\',id); const inv=(Jawdah.data.invoices||[]).filter(x=>x.client_id===id); const acc=(Jawdah.data.accounts||[]).filter(x=>x.client_id===id); const total=inv.reduce((s,x)=>s+Number(x.amount||0),0), paid=inv.reduce((s,x)=>s+Number(x.paid_amount||0),0); $(\'#genericModalBody\').innerHTML=`<h2>كشف حساب ${c.name}</h2><p>إجمالي الفواتير: ${money(total)} | المدفوع: ${money(paid)} | المتبقي: ${money(total-paid)}</p>${tableHtml([[\'رقم\',\'invoice_no\'],[\'تاريخ\',\'issue_date\'],[\'إجمالي\',\'amount\',(v)=>money(v)],[\'مدفوع\',\'paid_amount\',(v)=>money(v)],[\'حالة\',\'status\',(v)=>badge(v)]],inv)}<h3>الحركات</h3>${tableHtml([[\'تاريخ\',\'entry_date\'],[\'نوع\',\'type\'],[\'وصف\',\'description\'],[\'مبلغ\',\'amount\',(v)=>money(v)]],acc)}`; openModal(\'genericModal\'); }\nfunction openModal(id){ $(\'#\'+id).classList.add(\'show\'); ensureEnglishDigits($(\'#\'+id)); } function closeModal(id){ $(\'#\'+id).classList.remove(\'show\'); }\nasync function downloadBackup(){ try{ const res=await api(\'backup\'); downloadFile(\'jawdah-cloud-backup.json\', JSON.stringify(res.backup,null,2), \'application/json\'); }catch(e){toast(e.message,true)} }\nfunction downloadFile(name,content,type=\'text/plain\'){ const a=document.createElement(\'a\'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }\nasync function exportCsv(table){ try{ const res=await fetch(\'/api/export/\'+table,{headers:{Authorization:\'Bearer \'+Jawdah.token}}); if(!res.ok) throw new Error(\'Export failed\'); const blob=await res.blob(); const a=document.createElement(\'a\'); a.href=URL.createObjectURL(blob); a.download=\'jawdah-\'+table+\'.csv\'; a.click(); }catch(e){toast(e.message,true)} }\nfunction renderReports(){\n  const k=Jawdah.dashboard.kpis; $(\'#reportsBox\').innerHTML=`<div class="kpis grid"><div class="kpi"><span>الإيرادات</span><strong>${money(k.income)}</strong></div><div class="kpi"><span>المصروفات</span><strong>${money(k.expense)}</strong></div><div class="kpi"><span>الصافي</span><strong>${money(k.net)}</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(k.overdue)}</strong></div></div><div class="card"><h3>قرارات تنفيذية</h3>${Jawdah.dashboard.decisions.map(d=>`<p><span class="badge">${d.level}</span> ${d.text}</p>`).join(\'\')}</div>`;\n}\nfunction runQA(){\n  const problems=[]; const data=Jawdah.data;\n  (data.contracts||[]).forEach(c=>{ if(!byId(\'properties\',c.property_id).id) problems.push(\'عقد بدون عقار: \'+c.id); if(!byId(\'clients\',c.client_id).id) problems.push(\'عقد بدون عميل: \'+c.id); });\n  (data.invoices||[]).forEach(i=>{ if(!byId(\'contracts\',i.contract_id).id) problems.push(\'فاتورة بدون عقد: \'+i.invoice_no); if(Number(i.paid_amount)>Number(i.amount)) problems.push(\'فاتورة مدفوعة أكثر من الإجمالي: \'+i.invoice_no); });\n  const score=Math.max(0,100-problems.length*10);\n  $(\'#qaBox\').innerHTML=`<div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(score)}%</strong></div>${problems.length?problems.map(p=>`<p class="badge overdue">${p}</p>`).join(\'\'):\'<p class="badge paid">كل الفحوصات الأساسية ناجحة</p>\'}`;\n}\nfunction drawCharts(){ if(!Jawdah.dashboard) return; drawLine(\'incomeChart\',Jawdah.dashboard.series.map(x=>x.income),Jawdah.dashboard.series.map(x=>x.expense)); drawDonut(\'occupancyChart\',Jawdah.dashboard.kpis.occupancy); drawBar(\'expenseChart\',Jawdah.dashboard.series.map(x=>x.expense)); }\nfunction ctx(id){ const c=$(\'#\'+id); return c?c.getContext(\'2d\'):null; }\nfunction prepCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; const g=c.getContext(\'2d\'); g.scale(devicePixelRatio,devicePixelRatio); return [g,r.width,r.height]; }\nfunction drawLine(id,a,b){ const c=$(\'#\'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...a,...b,1], max=Math.max(...vals)*1.22; const area=(arr,color1,color2)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.lineTo(w-32,h-34); g.lineTo(32,h-34); g.closePath(); const gr=g.createLinearGradient(0,28,0,h-34); gr.addColorStop(0,color1); gr.addColorStop(1,color2); g.fillStyle=gr; g.fill(); }; const plot=(arr,color)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle=color; g.lineWidth=4; g.shadowBlur=16; g.shadowColor=color; g.stroke(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); g.beginPath(); g.fillStyle=color; g.arc(x,y,4,0,Math.PI*2); g.fill(); }); g.shadowBlur=0; }; g.strokeStyle=\'rgba(255,255,255,.12)\'; for(let i=0;i<5;i++){let y=24+i*(h-58)/4;g.beginPath();g.moveTo(24,y);g.lineTo(w-24,y);g.stroke();} area(a,\'rgba(246,215,127,.28)\',\'rgba(246,215,127,0)\'); plot(a,\'#f6d77f\'); plot(b,\'#8fbfff\'); }\nfunction drawDonut(id,p){ const c=$(\'#\'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=26; g.lineCap=\'round\'; g.strokeStyle=\'rgba(255,255,255,.12)\'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,\'#fff0b8\'); gr.addColorStop(.5,\'#d8b15b\'); gr.addColorStop(1,\'#8f631b\'); g.strokeStyle=gr; g.shadowBlur=20; g.shadowColor=\'rgba(216,177,91,.4)\'; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.shadowBlur=0; g.fillStyle=\'#fff\'; g.font=\'800 30px Segoe UI\'; g.textAlign=\'center\'; g.fillText(fmt(p)+\'%\',x,y+6); g.font=\'13px Segoe UI\'; g.fillStyle=\'rgba(255,255,255,.7)\'; g.fillText(\'Occupancy\',x,y+28); }\nfunction drawBar(id,arr){ const c=$(\'#\'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,\'#f6d77f\'); grd.addColorStop(1,\'#8f631b\'); g.fillStyle=grd; g.shadowBlur=16; g.shadowColor=\'rgba(216,177,91,.38)\'; g.fillRect(x,h-25-bh,bw,bh);}); g.shadowBlur=0; }\nfunction initClock(){ setInterval(()=>{ const d=new Date(); $(\'#clock\').textContent=d.toLocaleTimeString(\'en-US\',{hour12:false}); },1000); }\nfunction bind(){\n  $(\'#loginBtn\').onclick=login; $(\'#logoutBtn\').onclick=logout; $(\'#menuBtn\').onclick=()=>$(\'#sidebar\').classList.toggle(\'open\'); $(\'#globalSearch\').oninput=()=>renderAll();\n  document.addEventListener(\'input\',e=>ensureEnglishDigits(e.target));\n  document.addEventListener(\'keydown\',e=>{ if(e.ctrlKey&&e.key.toLowerCase()===\'k\'){ e.preventDefault(); $(\'#globalSearch\').focus(); } if(e.key===\'/\' && document.activeElement.tagName!==\'INPUT\'){e.preventDefault();$(\'#globalSearch\').focus();} });\n}\nwindow.JAWDAH_CLOUD_CHECK=()=>({status:\'v40-executive-dashboard\',user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});\nwindow.addEventListener(\'load\',()=>{ bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); });\n'
 
@@ -67,16 +67,16 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices:read", "maintenance", "reports:read"},
-    "maintenance": {"dashboard", "properties:read", "maintenance", "reports:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals:read", "bank_reconciliations", "reports", "backup:export"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "reports:read"},
+    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "purchase_invoices:read", "reports:read"},
     "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export"},
 }
 
 TABLES = {
     "properties": ["id", "name", "type", "status", "price", "location", "building_no", "apartment_no", "room_no", "image", "last_update", "notes"],
     "clients": ["id", "name", "phone", "email", "national_id", "balance", "notes"],
-    "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "notes"],
+    "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "ended_at", "attachments", "notes"],
     "invoices": ["id", "invoice_no", "contract_id", "client_id", "property_id", "issue_date", "due_date", "description", "amount", "paid_amount", "status"],
     "payments": ["id", "invoice_id", "client_id", "property_id", "contract_id", "payment_date", "amount", "method", "note"],
     "accounts": ["id", "entry_date", "type", "category", "description", "client_id", "property_id", "invoice_id", "amount"],
@@ -97,6 +97,12 @@ TABLES = {
 }
 
 WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
+
+OTP_CODES: Dict[str, Tuple[str, float]] = {}
+OTP_TTL_SECONDS = 300
+SUPPORT_PHONE = os.environ.get("LQ_SUPPORT_PHONE", "+96871924089")
+SUPPORT_EMAIL = os.environ.get("LQ_SUPPORT_EMAIL", "info@alamal.info")
+AI_ASSISTANT_NAME = "Walid"
 
 
 def now_iso() -> str:
@@ -258,7 +264,7 @@ def start_auto_backup_scheduler() -> None:
 def backup_table_counts(db: sqlite3.Connection) -> Dict[str, int]:
     counts: Dict[str, int] = {}
     for table in TABLES:
-        if table == "users":
+        if table in ("users", "audit_log"):
             continue
         counts[table] = int(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
     return counts
@@ -668,6 +674,8 @@ def init_db() -> None:
             ("legal_terms", "TEXT"),
             ("company_signatory", "TEXT"),
             ("approved_at", "TEXT"),
+            ("ended_at", "TEXT"),
+            ("attachments", "TEXT"),
         ]:
             ensure_column(db, "contracts", col, definition)
         for col, definition in [
@@ -678,7 +686,7 @@ def init_db() -> None:
             ensure_column(db, "properties", col, definition)
         migrate_property_statuses(db)
         seed_if_empty(db)
-        ensure_user(db, "razan.accounting", "Razan", "accountant", "Jawdeh123")
+        ensure_team_users(db)
         seed_chart_accounts(db)
         db.commit()
 
@@ -929,9 +937,31 @@ def migrate_property_statuses(db: sqlite3.Connection) -> None:
 def ensure_user(db: sqlite3.Connection, username: str, name: str, role: str, password: str) -> None:
     row = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
     if row:
-        db.execute("UPDATE users SET name=?, role=?, active=1 WHERE username=?", (name, role, username))
+        db.execute(
+            "UPDATE users SET name=?, role=?, active=1 WHERE username=?",
+            (name, role, username),
+        )
         return
     insert(db, "users", {"id": uid("USR"), "username": username, "name": name, "role": role, "active": 1, "password_hash": password_hash(password), "created_at": now_iso(), "last_login": None})
+
+
+def ensure_team_users(db: sqlite3.Connection) -> None:
+    team = [
+        ("owner", "يعقوب فاضل حمد الخصيبي", "owner", "owner2015"),
+        ("ahmed.najjar", "أحمد محمد النجار", "admin", "Ahmed2026!"),
+        ("waleed.najjar", "وليد محمد النجار", "owner", "Waleed2026!"),
+        ("ahoud.shuaili", "عهود سعيد الشعيلي", "operations", "Ahoud2026!"),
+        ("properties.manager", "محمد حمد الربعاني", "operations", "Properties2026!"),
+        ("operations", "محمد مجدول أسلم", "viewer", "Operations2026!"),
+        ("ali.hospitality", "علي محمد النديش", "maintenance", "Ali2026!"),
+        ("maintenance", "محمد صالح سراج النور", "viewer", "Maintenance2026!"),
+        ("viewer", "محمد فاروق حمد شافي", "operations", "Viewer2026!"),
+        ("accountant", "محمد سجاد حسين", "viewer", "Accountant2026!"),
+        ("razan.accounting", "محمد بو فايز", "viewer", "Razan2026!"),
+        ("razan.shuaili", "رزان سالم الشعيلي", "accountant", "Razan2026!"),
+    ]
+    for username, name, role, password in team:
+        ensure_user(db, username, name, role, password)
 
 
 class JawdahHandler(BaseHTTPRequestHandler):
@@ -961,6 +991,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def send_html(self, html: str, status: int = 200) -> None:
+        raw = html.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.send_cors_headers()
+        self.end_headers()
+        self.wfile.write(raw)
+
     def read_json(self) -> Dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0") or "0")
         if length <= 0:
@@ -968,11 +1007,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length).decode("utf-8")
         return json.loads(raw or "{}")
 
-    def current_user(self, db: sqlite3.Connection) -> Optional[Dict[str, Any]]:
+    def token_from_request(self, query: str = "") -> str:
         auth = self.headers.get("Authorization", "")
-        token = ""
         if auth.startswith("Bearer "):
-            token = auth[7:].strip()
+            return auth[7:].strip()
+        params = urllib.parse.parse_qs(query or "")
+        return (params.get("token") or [""])[0].strip()
+
+    def current_user(self, db: sqlite3.Connection, query: str = "") -> Optional[Dict[str, Any]]:
+        token = self.token_from_request(query)
         if not token:
             return None
         row = db.execute(
@@ -991,8 +1034,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return None
         return dict(row)
 
-    def require_user(self, db: sqlite3.Connection, permission: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        user = self.current_user(db)
+    def require_user(self, db: sqlite3.Connection, permission: Optional[str] = None, query: str = "") -> Optional[Dict[str, Any]]:
+        user = self.current_user(db, query)
         if not user:
             self.send_json({"ok": False, "error": "Authentication required"}, 401)
             return None
@@ -1043,6 +1086,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(raw)))
+            if safe.endswith(".html"):
+                self.send_header("Cache-Control", "no-cache, must-revalidate")
+            elif safe.endswith((".css", ".js")):
+                self.send_header("Cache-Control", "public, max-age=300, must-revalidate")
+            elif full.suffix in {".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico"}:
+                self.send_header("Cache-Control", "public, max-age=86400")
             self.end_headers()
             self.wfile.write(raw)
             return
@@ -1094,6 +1143,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
                             "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
                         },
                     })
+                if parts[0] == "login_preview" and method == "GET":
+                    dash = build_dashboard(db)
+                    k = dash.get("kpis") or {}
+                    collection = round((float(k.get("paid") or 0) / float(k.get("billed") or 1)) * 100) if k.get("billed") else 0
+                    return self.send_json({
+                        "ok": True,
+                        "preview": {
+                            "revenue": k.get("income", 0),
+                            "profit": k.get("net", 0),
+                            "occupancy": k.get("occupancy", 0),
+                            "assets": k.get("properties", 0),
+                            "health": k.get("health", 0),
+                            "overdue": k.get("overdue", 0),
+                            "expiring": k.get("expiring", 0),
+                            "collection_rate": collection,
+                            "series": dash.get("series") or [],
+                            "decisions": (dash.get("decisions") or [])[:4],
+                        },
+                    })
+                if parts[0] == "login" and len(parts) >= 2 and parts[1] == "otp" and method == "POST":
+                    return self.api_login_otp(db)
                 if parts[0] == "login" and method == "POST":
                     return self.api_login(db)
                 if parts[0] == "logout" and method == "POST":
@@ -1110,12 +1180,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "invoice_from_contract" and method == "POST":
                     user = self.require_user(db, "invoices")
                     return None if not user else self.api_invoice_from_contract(db, user)
+                if parts[0] == "manual_invoice" and method == "POST":
+                    user = self.require_user(db, "invoices")
+                    return None if not user else self.api_manual_invoice(db, user)
+                if parts[0] == "reissue_invoice" and method == "POST":
+                    user = self.require_user(db, "invoices")
+                    return None if not user else self.api_reissue_invoice(db, user)
                 if parts[0] == "approve_contract" and method == "POST":
                     user = self.require_user(db, "contracts")
                     return None if not user else self.api_approve_contract(db, user)
                 if parts[0] == "renew_contract" and method == "POST":
                     user = self.require_user(db, "contracts")
                     return None if not user else self.api_renew_contract(db, user)
+                if parts[0] == "end_contract" and method == "POST":
+                    user = self.require_user(db, "contracts")
+                    return None if not user else self.api_end_contract(db, user)
                 if parts[0] == "contract_template" and method == "POST":
                     user = self.require_user(db, "contracts:read")
                     return None if not user else self.api_contract_template(db, user)
@@ -1155,6 +1234,23 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "export" and method == "GET" and len(parts) >= 2:
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_export_csv(db, parts[1])
+                if parts[0] == "ai" and len(parts) >= 2 and parts[1] == "ask" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_ai_ask(db, user)
+                if parts[0] == "ai" and len(parts) >= 2 and parts[1] == "ask_preview" and method == "POST":
+                    return self.api_ai_ask_preview(db)
+                if parts[0] == "events" and len(parts) >= 2 and parts[1] == "stream" and method == "GET":
+                    return self.api_events_stream(db, query)
+                if parts[0] == "otp" and len(parts) >= 2 and parts[1] == "send" and method == "POST":
+                    return self.api_otp_send(db)
+                if parts[0] == "otp" and len(parts) >= 2 and parts[1] == "verify" and method == "POST":
+                    return self.api_otp_verify()
+                if parts[0] == "report" and len(parts) >= 2 and parts[1] == "executive" and method == "GET":
+                    user = self.require_user(db, "reports:read", query)
+                    return None if not user else self.api_report_executive(db, user)
+                if parts[0] == "permissions" and len(parts) >= 2 and parts[1] == "ui" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_permissions_ui(user)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -1163,6 +1259,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
         except Exception as exc:
             self.send_json({"ok": False, "error": "Server error", "detail": str(exc)}, 500)
 
+    def issue_session(self, db: sqlite3.Connection, row: sqlite3.Row, via: str = "password", remember: bool = False) -> None:
+        token = secrets.token_urlsafe(32)
+        session_hours = 30 * 24 if remember else 12
+        expires = (datetime.now() + timedelta(hours=session_hours)).isoformat()
+        db.execute("INSERT INTO sessions(token,user_id,created_at,expires_at) VALUES(?,?,?,?)", (token, row["id"], now_iso(), expires))
+        db.execute("UPDATE users SET last_login=? WHERE id=?", (now_iso(), row["id"]))
+        audit(db, dict(row), "login", "users", row["id"], f"User login ({via})")
+        db.commit()
+        user = dict(row)
+        user.pop("password_hash", None)
+        self.send_json({"ok": True, "token": token, "user": user, "expires_at": expires})
+
     def api_login(self, db: sqlite3.Connection) -> None:
         data = self.read_json()
         username = str(data.get("username", "")).strip()
@@ -1170,15 +1278,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
         row = db.execute("SELECT * FROM users WHERE username=? AND active=1", (username,)).fetchone()
         if not row or not verify_password(password, row["password_hash"]):
             return self.send_json({"ok": False, "error": "Invalid username or password"}, 401)
-        token = secrets.token_urlsafe(32)
-        expires = (datetime.now() + timedelta(hours=12)).isoformat()
-        db.execute("INSERT INTO sessions(token,user_id,created_at,expires_at) VALUES(?,?,?,?)", (token, row["id"], now_iso(), expires))
-        db.execute("UPDATE users SET last_login=? WHERE id=?", (now_iso(), row["id"]))
-        audit(db, dict(row), "login", "users", row["id"], "User login")
-        db.commit()
-        user = dict(row)
-        user.pop("password_hash", None)
-        self.send_json({"ok": True, "token": token, "user": user})
+        self.issue_session(db, row, via="password", remember=bool(data.get("remember_device")))
+
+    def api_login_otp(self, db: sqlite3.Connection) -> None:
+        data = self.read_json()
+        username = str(data.get("username", "")).strip()
+        code = str(data.get("code", "")).strip()
+        stored = OTP_CODES.get(username)
+        if not stored or time.time() > stored[1] or stored[0] != code:
+            return self.send_json({"ok": False, "error": "Invalid or expired OTP code"}, 401)
+        OTP_CODES.pop(username, None)
+        row = db.execute("SELECT * FROM users WHERE username=? AND active=1", (username,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "User not found"}, 404)
+        self.issue_session(db, row, via="otp", remember=bool(data.get("remember_device")))
 
     def api_logout(self, db: sqlite3.Connection) -> None:
         auth = self.headers.get("Authorization", "")
@@ -1194,7 +1307,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_bootstrap(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = {}
         for table, cols in TABLES.items():
-            if table == "users" and user["role"] != "admin":
+            if table == "users" and user["role"] not in ("admin", "owner"):
                 continue
             visible_cols = ",".join(cols)
             data[table] = rows_to_dicts(db.execute(f"SELECT {visible_cols} FROM {table} ORDER BY rowid DESC").fetchall())
@@ -1273,6 +1386,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
         row_id = item_id or data.get("id") or uid(table[:3].upper())
         data["id"] = row_id
         if table == "contracts":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM contracts WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
             if not data.get("property_id") or not data.get("client_id") or float(data.get("rent_amount") or 0) <= 0:
                 return self.send_json({"ok": False, "error": "Contract requires property, client, and valid rent amount"}, 400)
             if not exists(db, "properties", data["property_id"]) or not exists(db, "clients", data["client_id"]):
@@ -1287,6 +1406,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data.setdefault("status", "Draft")
             data.setdefault("legal_terms", default_legal_terms())
             data.setdefault("company_signatory", "Launch Quality LLC")
+            data.setdefault("attachments", "[]")
         if table == "properties":
             if method == "PUT" and item_id:
                 current = db.execute("SELECT * FROM properties WHERE id=?", (item_id,)).fetchone()
@@ -1393,6 +1513,60 @@ class JawdahHandler(BaseHTTPRequestHandler):
         audit(db, user, "create", "invoices", invoice["id"], f"Invoice {invoice['invoice_no']} from contract {contract_id}")
         db.commit()
         self.send_json({"ok": True, "item": invoice})
+
+    def api_manual_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = data.get("contract_id")
+        contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not contract:
+            return self.send_json({"ok": False, "error": "Manual invoice requires an existing contract"}, 400)
+        amount_value = float(data.get("amount") or 0)
+        if amount_value <= 0:
+            return self.send_json({"ok": False, "error": "Invoice amount must be positive"}, 400)
+        invoice = {
+            "id": uid("INV"),
+            "invoice_no": next_invoice_no(db),
+            "contract_id": contract["id"],
+            "client_id": contract["client_id"],
+            "property_id": contract["property_id"],
+            "issue_date": data.get("issue_date") or today(),
+            "due_date": data.get("due_date") or (date.today() + timedelta(days=7)).isoformat(),
+            "description": data.get("description") or "Manual invoice",
+            "amount": amount_value,
+            "paid_amount": 0,
+            "status": "Pending",
+        }
+        insert(db, "invoices", invoice)
+        audit(db, user, "create", "invoices", invoice["id"], f"Manual invoice {invoice['invoice_no']}")
+        db.commit()
+        self.send_json({"ok": True, "item": invoice})
+
+    def api_reissue_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        invoice_id = data.get("invoice_id")
+        source = db.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
+        if not source:
+            return self.send_json({"ok": False, "error": "Invoice not found"}, 404)
+        amount_value = float(data.get("amount") or source["amount"] or 0)
+        if amount_value <= 0:
+            return self.send_json({"ok": False, "error": "Invoice amount must be positive"}, 400)
+        invoice = {
+            "id": uid("INV"),
+            "invoice_no": next_invoice_no(db),
+            "contract_id": source["contract_id"],
+            "client_id": source["client_id"],
+            "property_id": source["property_id"],
+            "issue_date": data.get("issue_date") or today(),
+            "due_date": data.get("due_date") or source["due_date"],
+            "description": data.get("description") or f"Reissue of {source['invoice_no']} - {source['description']}",
+            "amount": amount_value,
+            "paid_amount": 0,
+            "status": "Pending",
+        }
+        insert(db, "invoices", invoice)
+        audit(db, user, "reissue", "invoices", invoice["id"], f"Reissued {source['invoice_no']} as {invoice['invoice_no']}")
+        db.commit()
+        self.send_json({"ok": True, "item": invoice, "source_invoice_id": invoice_id})
 
     def api_pay_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -1530,6 +1704,36 @@ class JawdahHandler(BaseHTTPRequestHandler):
         db.commit()
         self.send_json({"ok": True, "contract": new_contract, "previous_contract_id": contract_id})
 
+    def api_end_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = data.get("contract_id")
+        contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not contract:
+            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        status = str(contract["status"] or "").lower()
+        if status in ("cancelled", "canceled", "renewed"):
+            return self.send_json({"ok": False, "error": "This contract is already closed"}, 400)
+        ended_at = data.get("ended_at") or today()
+        try:
+            datetime.fromisoformat(str(ended_at)).date()
+        except ValueError:
+            return self.send_json({"ok": False, "error": "Invalid end date"}, 400)
+        requested_status = str(data.get("status") or "").strip().lower()
+        final_status = "Expired" if requested_status in ("expired", "ended", "منتهي") else "Cancelled"
+        reason = str(data.get("reason") or "").strip()
+        existing_notes = str(contract["notes"] or "").strip()
+        note_line = f"Contract ended on {ended_at}"
+        if reason:
+            note_line += f": {reason}"
+        notes = (existing_notes + "\n" + note_line).strip() if existing_notes else note_line
+        db.execute(
+            "UPDATE contracts SET status=?, ended_at=?, notes=? WHERE id=?",
+            (final_status, ended_at, notes, contract_id),
+        )
+        audit(db, user, "end", "contracts", contract_id, note_line)
+        db.commit()
+        self.send_json({"ok": True, "status": final_status, "ended_at": ended_at})
+
     def api_contract_template(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
         contract_id = data.get("contract_id")
@@ -1538,7 +1742,82 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": False, "error": "Contract not found"}, 404)
         client = db.execute("SELECT * FROM clients WHERE id=?", (c["client_id"],)).fetchone()
         prop = db.execute("SELECT * FROM properties WHERE id=?", (c["property_id"],)).fetchone()
-        html = f"""<!doctype html><html lang='en' dir='ltr'><head><meta charset='utf-8'><title>{c['contract_no'] or c['id']}</title><style>body{{font-family:Arial; color:#111827; margin:35px}} h1{{color:#091627}} .gold{{color:#b8892f}} .box{{border:1px solid #d7c38a;padding:14px;border-radius:10px;margin:12px 0}} table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #ddd;padding:8px}}</style></head><body><h1>Launch Quality LLC Lease Contract</h1><h2 class='gold'>{c['contract_no'] or c['id']}</h2><div class='box'><b>Company:</b> Launch Quality LLC - Real Estate & Hospitality Management<br><b>Jurisdiction:</b> Sultanate of Oman</div><table><tr><th>Tenant</th><td>{client['name'] if client else ''}</td><th>ID/CR</th><td>{c['tenant_id_no'] or (client['national_id'] if client else '')}</td></tr><tr><th>Property</th><td>{prop['name'] if prop else ''}</td><th>Unit</th><td>{c['unit_details'] or (prop['location'] if prop else '')}</td></tr><tr><th>Start</th><td>{c['start_date']}</td><th>End</th><td>{c['end_date']}</td></tr><tr><th>Rent</th><td>{c['rent_amount']} OMR</td><th>Deposit</th><td>{c['deposit_amount']} OMR</td></tr><tr><th>Late Fee</th><td>{c['late_fee']} OMR</td><th>Grace Days</th><td>{c['grace_days']}</td></tr></table><div class='box'><h3>Protection Terms</h3><p>{c['legal_terms'] or default_legal_terms()}</p></div><br><table><tr><th>Tenant Signature</th><th>Company Signature</th><th>Company Stamp</th></tr><tr><td style='height:90px'></td><td>{c['company_signatory'] or 'Launch Quality LLC'}</td><td></td></tr></table></body></html>"""
+        try:
+            attachments = json.loads(c["attachments"] or "[]")
+        except Exception:
+            attachments = []
+        duration_days = max(0, (datetime.fromisoformat(c["end_date"]).date() - datetime.fromisoformat(c["start_date"]).date()).days + 1)
+        duration_months = contract_duration_months(c["start_date"], c["end_date"])
+        attachment_html = "".join(
+            f"<li>{html_escape(a.get('name', 'Attachment'))} - {html_escape(a.get('type', 'file'))}</li>"
+            for a in attachments if isinstance(a, dict)
+        ) or "<li>No attachments recorded</li>"
+        html = f"""<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>{html_escape(c['contract_no'] or c['id'])} - Launch Quality LLC</title>
+<style>
+  @page{{size:A4;margin:16mm}}
+  *{{box-sizing:border-box}}
+  body{{font-family:Tajawal,Segoe UI,Arial,sans-serif;margin:0;color:#111827;background:#fff;line-height:1.7}}
+  .sheet{{max-width:980px;margin:0 auto;padding:22px}}
+  .hero{{background:#08111f;color:#fff;border:1px solid #d8b15b;border-radius:18px;padding:22px;display:grid;grid-template-columns:120px 1fr;gap:18px;align-items:center}}
+  .hero img{{width:104px;height:104px;object-fit:contain;background:#fff;border-radius:18px;padding:10px}}
+  .hero h1{{margin:0;color:#f5d76e;font-size:26px}}
+  .hero p{{margin:4px 0;color:#dbe3ee}}
+  .badge{{display:inline-block;border:1px solid #d8b15b;border-radius:999px;padding:5px 12px;color:#f5d76e;margin-top:8px}}
+  .grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0}}
+  .box{{border:1px solid #e5d39a;border-radius:14px;padding:14px;background:#fffdf7}}
+  .box h3{{margin:0 0 8px;color:#8f631b}}
+  table{{width:100%;border-collapse:collapse;margin:16px 0;direction:rtl}}
+  th,td{{border:1px solid #e5e7eb;padding:10px;text-align:right;vertical-align:top}}
+  th{{background:#111827;color:#f5d76e}}
+  .terms{{white-space:pre-wrap}}
+  .signatures{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}}
+  .sig{{border:1px solid #d8b15b;border-radius:14px;min-height:110px;padding:12px;background:#fff}}
+  .actions{{position:sticky;top:0;background:#fff;padding:10px 0;margin-bottom:8px;text-align:left}}
+  button{{border:0;border-radius:12px;padding:10px 16px;font-weight:800;background:#111827;color:#f5d76e;cursor:pointer}}
+  @media print{{.actions{{display:none}}.sheet{{padding:0}}.hero{{border-radius:0}}}}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="actions"><button onclick="window.print()">Print / Save as PDF</button></div>
+  <header class="hero">
+    <img src="/assets/brand-logo-gold.png" alt="Launch Quality LLC">
+    <div>
+      <h1>Launch Quality LLC - عقد إيجار</h1>
+      <p>Real Estate & Hospitality Management - Sultanate of Oman</p>
+      <span class="badge">{html_escape(c['contract_no'] or c['id'])}</span>
+    </div>
+  </header>
+  <section class="grid">
+    <div class="box"><h3>العميل</h3><p>{html_escape(client['name'] if client else '')}<br>{html_escape(client['phone'] if client else '')}<br>{html_escape(c['tenant_id_no'] or (client['national_id'] if client else ''))}</p></div>
+    <div class="box"><h3>العقار والوحدة</h3><p>{html_escape(prop['name'] if prop else '')}<br>{html_escape(c['unit_details'] or (prop['location'] if prop else ''))}</p></div>
+  </section>
+  <table>
+    <tr><th>البداية</th><td>{html_escape(c['start_date'])}</td><th>النهاية</th><td>{html_escape(c['end_date'])}</td></tr>
+    <tr><th>المدة</th><td>{duration_months} شهر / {duration_days} يوم</td><th>الحالة</th><td>{html_escape(c['status'])}</td></tr>
+    <tr><th>الإيجار</th><td>{fmt_omr(c['rent_amount'])}</td><th>التأمين</th><td>{fmt_omr(c['deposit_amount'])}</td></tr>
+    <tr><th>غرامة التأخير</th><td>{fmt_omr(c['late_fee'])}</td><th>مهلة السداد</th><td>{html_escape(c['grace_days'])} يوم</td></tr>
+  </table>
+  <section class="box">
+    <h3>الشروط القانونية</h3>
+    <p class="terms">{html_escape(c['legal_terms'] or default_legal_terms())}</p>
+  </section>
+  <section class="box">
+    <h3>المرفقات</h3>
+    <ul>{attachment_html}</ul>
+  </section>
+  <section class="signatures">
+    <div class="sig"><strong>توقيع المستأجر</strong></div>
+    <div class="sig"><strong>توقيع الشركة</strong><br>{html_escape(c['company_signatory'] or 'Launch Quality LLC')}</div>
+    <div class="sig"><strong>الختم</strong></div>
+  </section>
+</div>
+</body>
+</html>"""
         self.send_json({"ok": True, "html": html})
 
     def api_bank_reconciliation_preview(self, db: sqlite3.Connection, query: str) -> None:
@@ -1694,6 +1973,268 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
+
+    def api_ai_ask(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        question = str(data.get("question", "")).strip()
+        if not question:
+            return self.send_json({"ok": False, "error": "Missing question"}, 400)
+        dash = build_dashboard(db)
+        result = analyze_ai_question(question, dash)
+        audit(db, user, "ai_ask", "dashboard", None, question[:120])
+        db.commit()
+        self.send_json({"ok": True, "assistant": AI_ASSISTANT_NAME, **result})
+
+    def api_ai_ask_preview(self, db: sqlite3.Connection) -> None:
+        data = self.read_json()
+        question = str(data.get("question", "")).strip() or "overview"
+        dash = build_dashboard(db)
+        k = dash.get("kpis") or {}
+        preview = {
+            "revenue": k.get("income", 0),
+            "profit": k.get("net", 0),
+            "occupancy": k.get("occupancy", 0),
+            "assets": k.get("properties", 0),
+            "health": k.get("health", 0),
+            "overdue": k.get("overdue", 0),
+            "expiring": k.get("expiring", 0),
+        }
+        result = analyze_ai_question(question, dash, limited=True)
+        self.send_json({
+            "ok": True,
+            "assistant": AI_ASSISTANT_NAME,
+            "reply": result["reply"],
+            "actions": result.get("actions", [])[:2],
+            "preview": preview,
+        })
+
+    def api_otp_send(self, db: sqlite3.Connection) -> None:
+        data = self.read_json()
+        username = str(data.get("username", "")).strip()
+        if not username:
+            return self.send_json({"ok": False, "error": "Missing username"}, 400)
+        row = db.execute("SELECT id FROM users WHERE username=? AND active=1", (username,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "User not found"}, 404)
+        code = f"{secrets.randbelow(900000) + 100000:06d}"
+        OTP_CODES[username] = (code, time.time() + OTP_TTL_SECONDS)
+        self.send_json({
+            "ok": True,
+            "message": f"تم إرسال رمز التحقق · OTP sent to registered phone ending {SUPPORT_PHONE[-4:]}",
+            "expires_in": OTP_TTL_SECONDS,
+        })
+
+    def api_otp_verify(self) -> None:
+        data = self.read_json()
+        username = str(data.get("username", "")).strip()
+        code = str(data.get("code", "")).strip()
+        stored = OTP_CODES.get(username)
+        if stored and time.time() <= stored[1] and stored[0] == code:
+            return self.send_json({"ok": True, "verified": True, "message": "OTP verified"})
+        return self.send_json({"ok": False, "error": "Invalid or expired OTP code"}, 401)
+
+    def api_permissions_ui(self, user: Dict[str, Any]) -> None:
+        self.send_json({"ok": True, **ui_permissions_for_role(user.get("role", "viewer"))})
+
+    def api_report_executive(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        dash = build_dashboard(db)
+        owner = user.get("name") or "Launch Quality LLC"
+        html = build_executive_report_html(owner, dash)
+        self.send_html(html)
+
+    def api_events_stream(self, db: sqlite3.Connection, query: str) -> None:
+        user = self.current_user(db, query)
+        token = self.token_from_request(query)
+        public_only = not user and not token
+        if token and not user:
+            return self.send_json({"ok": False, "error": "Invalid or expired token"}, 401)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_cors_headers()
+        self.end_headers()
+        prev: Optional[Dict[str, float]] = None
+        try:
+            for _ in range(120):
+                if public_only:
+                    payload = {
+                        "type": "health",
+                        "health": 100,
+                        "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
+                        "ts": now_iso(),
+                    }
+                else:
+                    dash = build_dashboard(db)
+                    k = dash.get("kpis") or {}
+                    cur = {
+                        "overdue": float(k.get("overdue") or 0),
+                        "expiring": float(k.get("expiring") or 0),
+                        "health": float(k.get("health") or 0),
+                    }
+                    deltas = {}
+                    if prev:
+                        for key in cur:
+                            deltas[key] = round(cur[key] - prev.get(key, 0), 2)
+                    prev = cur
+                    payload = {
+                        "type": "kpis",
+                        "kpis": cur,
+                        "deltas": deltas,
+                        "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
+                        "ts": now_iso(),
+                    }
+                line = f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                self.wfile.write(line.encode("utf-8"))
+                self.wfile.flush()
+                time.sleep(15)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+
+
+UI_SECTIONS_ALL = [
+    "dashboard", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
+    "admin-expenses", "maintenance", "reports", "messages", "production", "timeline",
+    "backup", "settings", "accounts", "purchases", "payroll", "inventory", "bank",
+    "chart-accounts", "statements", "bank-reconciliation", "financial-periods", "users", "qa",
+]
+UI_KPIS_ALL = [
+    "properties", "rented", "vacant", "income", "expense", "net", "health", "occupancy",
+    "overdue", "maintenance", "expiring", "expired", "paid", "billed", "bank_balance",
+    "payroll", "inventory_value", "purchases_due",
+]
+UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
+    "owner": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
+    "admin": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
+    "accountant": {
+        "sections": ["dashboard", "properties", "clients", "contracts", "invoices", "revenues",
+                     "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
+                     "chart-accounts", "statements", "reports", "backup", "messages", "timeline"],
+        "kpis": ["income", "expense", "net", "overdue", "paid", "billed", "bank_balance", "payroll",
+                 "inventory_value", "purchases_due", "health", "occupancy"],
+    },
+    "operations": {
+        "sections": ["dashboard", "properties", "tasks", "clients", "contracts", "invoices",
+                     "maintenance", "inventory", "reports", "messages", "timeline", "backup"],
+        "kpis": ["properties", "rented", "vacant", "occupancy", "maintenance", "expiring", "health"],
+    },
+    "maintenance": {
+        "sections": ["dashboard", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
+        "kpis": ["maintenance", "properties", "vacant", "inventory_value", "health"],
+    },
+    "viewer": {
+        "sections": ["dashboard", "properties", "clients", "contracts", "invoices", "reports",
+                     "maintenance", "messages", "timeline", "backup"],
+        "kpis": ["properties", "occupancy", "health", "overdue", "net"],
+    },
+}
+
+
+def ui_permissions_for_role(role: str) -> Dict[str, List[str]]:
+    return UI_PERMISSIONS_BY_ROLE.get(role, UI_PERMISSIONS_BY_ROLE["viewer"])
+
+
+def fmt_omr(n: float) -> str:
+    return f"{float(n or 0):,.2f} OMR"
+
+
+def analyze_ai_question(question: str, dash: Dict[str, Any], limited: bool = False) -> Dict[str, Any]:
+    q = question.lower()
+    k = dash.get("kpis") or {}
+    decisions = dash.get("decisions") or []
+    actions: List[Dict[str, str]] = []
+    parts: List[str] = []
+
+    def act(label: str, section: str, action: str = "navigate") -> None:
+        actions.append({"label": label, "section": section, "action": action})
+
+    if any(w in q for w in ["profit", "ربح", "صافي", "net", "margin"]):
+        net = float(k.get("net") or 0)
+        parts.append(f"Net profit / صافي الربح: {fmt_omr(net)} — Income {fmt_omr(k.get('income', 0))} minus expenses {fmt_omr(k.get('expense', 0))}.")
+        act("التقارير المالية", "reports")
+        act("الحسابات", "accounts")
+    if any(w in q for w in ["overdue", "متأخر", "late", "collection", "تحصيل"]):
+        overdue = float(k.get("overdue") or 0)
+        coll = round((float(k.get("paid") or 0) / float(k.get("billed") or 1)) * 100) if k.get("billed") else 0
+        parts.append(f"Overdue receivables / المتأخرات: {fmt_omr(overdue)} · Collection rate / نسبة التحصيل: {coll}%.")
+        act("الفواتير والتحصيل", "invoices")
+    if any(w in q for w in ["expir", "تجديد", "renew", "contract", "عقد"]):
+        exp = int(k.get("expiring") or 0)
+        exd = int(k.get("expired") or 0)
+        parts.append(f"Contracts / العقود: {exp} expiring soon · {exd} expired — review renewal decisions.")
+        act("إدارة العقود", "contracts")
+    if any(w in q for w in ["invoice", "فاتور", "bill"]):
+        parts.append(f"Billing / الفوترة: {fmt_omr(k.get('billed', 0))} billed · {fmt_omr(k.get('paid', 0))} collected.")
+        act("الفواتير", "invoices")
+    if any(w in q for w in ["maint", "صيان", "repair"]):
+        mc = int(k.get("maintenance") or 0)
+        parts.append(f"Open maintenance / صيانة مفتوحة: {mc} requests — prioritize high priority tickets.")
+        act("الصيانة", "maintenance")
+    if any(w in q for w in ["occup", "إشغال", "vacant", "شاغ"]):
+        occ = float(k.get("occupancy") or 0)
+        vac = int(k.get("vacant") or 0)
+        parts.append(f"Occupancy / الإشغال: {occ}% · Vacant units / شاغر: {vac}.")
+        act("المشاريع", "properties")
+    if any(w in q for w in ["health", "جاهز", "status", "overview", "summary", "ملخص"]):
+        parts.append(f"System health / جاهزية النظام: {k.get('health', 0)}% · Portfolio {k.get('properties', 0)} assets.")
+
+    if not parts:
+        top = decisions[0]["text"] if decisions else "Operations stable / التشغيل مستقر"
+        parts.append(f"Executive snapshot · {top}")
+        parts.append(f"KPIs: occupancy {k.get('occupancy', 0)}% · net {fmt_omr(k.get('net', 0))}.")
+        act("لوحة التحكم", "dashboard")
+        act("التقارير", "reports")
+
+    reply = " ".join(parts[:3] if limited else parts)
+    return {"reply": reply, "actions": actions[:4 if limited else 6]}
+
+
+def build_executive_report_html(owner: str, dash: Dict[str, Any]) -> str:
+    k = dash.get("kpis") or {}
+    decisions = dash.get("decisions") or []
+    dec_html = "".join(
+        f'<li><strong>{html_escape(d.get("level", ""))}</strong> — {html_escape(d.get("text", ""))}</li>'
+        for d in decisions
+    )
+    return f"""<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Executive Report · Launch Quality LLC</title>
+<style>
+  body{{font-family:Tajawal,Segoe UI,Arial,sans-serif;margin:32px;color:#111;background:#fff}}
+  h1{{color:#8f631b;border-bottom:3px solid #d8b15b;padding-bottom:12px}}
+  .meta{{color:#555;margin-bottom:24px}}
+  .kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:24px 0}}
+  .kpi{{border:1px solid #ddd;border-radius:12px;padding:14px;background:#faf8f3}}
+  .kpi b{{display:block;font-size:22px;color:#071426}}
+  ul{{line-height:1.8}}
+  @media print{{button{{display:none}}}}
+</style>
+</head>
+<body>
+<h1>Launch Quality LLC — التقرير التنفيذي</h1>
+<p class="meta">Prepared for / أُعد لـ: <strong>{html_escape(owner)}</strong> · {now_iso()}</p>
+<div class="kpis">
+  <div class="kpi"><span>الإيرادات</span><b>{fmt_omr(k.get('income', 0))}</b></div>
+  <div class="kpi"><span>المصروفات</span><b>{fmt_omr(k.get('expense', 0))}</b></div>
+  <div class="kpi"><span>صافي الربح</span><b>{fmt_omr(k.get('net', 0))}</b></div>
+  <div class="kpi"><span>المتأخرات</span><b>{fmt_omr(k.get('overdue', 0))}</b></div>
+  <div class="kpi"><span>الإشغال</span><b>{k.get('occupancy', 0)}%</b></div>
+  <div class="kpi"><span>جاهزية النظام</span><b>{k.get('health', 0)}%</b></div>
+  <div class="kpi"><span>عقود تنتهي</span><b>{k.get('expiring', 0)}</b></div>
+  <div class="kpi"><span>صيانة مفتوحة</span><b>{k.get('maintenance', 0)}</b></div>
+</div>
+<h2>قرارات تنفيذية · Executive Decisions</h2>
+<ul>{dec_html or '<li>لا قرارات حرجة — stable operations</li>'}</ul>
+<p style="margin-top:40px"><button onclick="window.print()">طباعة / Print PDF</button></p>
+<script>window.onload=function(){{setTimeout(function(){{window.print()}},400)}}</script>
+</body>
+</html>"""
+
+
+def html_escape(s: str) -> str:
+    return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def exists(db: sqlite3.Connection, table: str, row_id: str) -> bool:
