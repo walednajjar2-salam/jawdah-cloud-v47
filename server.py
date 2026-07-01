@@ -971,9 +971,6 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "restore" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_restore(db, user)
-                if parts[0] == "admin" and len(parts) >= 2 and parts[1] == "reset_operational" and method == "POST":
-                    user = self.require_user(db, "admin")
-                    return None if not user else self.api_admin_reset_operational(db, user)
                 if parts[0] == "export" and method == "GET" and len(parts) >= 2:
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_export_csv(db, parts[1])
@@ -1585,8 +1582,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         tables = backup.get("tables", {})
         mode = data.get("mode") or "merge"
         if mode == "replace":
-            reset_operational_data(db)
-            seed_chart_accounts(db)
+            for table in ["audit_log","maintenance","accounts","payments","invoices","contracts","clients","properties"]:
+                db.execute(f"DELETE FROM {table}")
         for table, items in tables.items():
             if table not in TABLES or table == "users":
                 continue
@@ -1601,18 +1598,6 @@ class JawdahHandler(BaseHTTPRequestHandler):
         audit(db, user, "restore", "database", None, f"Restore mode {mode}")
         db.commit()
         self.send_json({"ok": True})
-
-    def api_admin_reset_operational(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
-        data = self.read_json() or {}
-        confirm = str(data.get("confirm") or "").strip().lower()
-        if confirm not in ("yes", "true", "1", "reset"):
-            return self.send_json({"ok": False, "error": 'Confirmation required — send {"confirm":"yes"}'}, 400)
-        reset_operational_data(db)
-        seed_chart_accounts(db)
-        audit(db, user, "reset", "database", None, "Operational data wiped — fresh start")
-        db.commit()
-        users_kept = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-        self.send_json({"ok": True, "users_kept": users_kept})
 
     def portal_client(self, db: sqlite3.Connection, token: str) -> Optional[Dict[str, Any]]:
         token = (token or "").strip()
