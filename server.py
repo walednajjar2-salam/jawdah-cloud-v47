@@ -17,6 +17,7 @@ import mimetypes
 import os
 import re
 import secrets
+import shutil
 import sqlite3
 import sys
 import tempfile
@@ -24,6 +25,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import zipfile
 from datetime import date, datetime, timedelta
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -38,6 +40,28 @@ from lq_expand.security import (
     validate_new_password,
 )
 
+try:
+    from fido2.server import Fido2Server
+    from fido2.webauthn import (
+        AttestationObject,
+        AttestedCredentialData,
+        AuthenticatorData,
+        PublicKeyCredentialRpEntity,
+    )
+    try:
+        from fido2.client import CollectedClientData
+    except Exception:
+        from fido2.webauthn import CollectedClientData  # type: ignore
+    FIDO2_AVAILABLE = True
+except Exception:
+    Fido2Server = None  # type: ignore
+    AttestationObject = None  # type: ignore
+    AttestedCredentialData = None  # type: ignore
+    AuthenticatorData = None  # type: ignore
+    PublicKeyCredentialRpEntity = None  # type: ignore
+    CollectedClientData = None  # type: ignore
+    FIDO2_AVAILABLE = False
+
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
 DATA_DIR = Path(os.environ.get("JAWDAH_DATA_DIR", str(BASE_DIR / "data"))).resolve()
@@ -51,13 +75,14 @@ MAX_JOURNAL_FILES_PER_ENTRY = 5
 HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
-APP_VERSION = "Launch-Quality-LLC-v48-security"
+APP_VERSION = "Launch-Quality-LLC-v49-production"
 BACKUP_DIR = Path(os.environ.get("JAWDAH_BACKUP_DIR", str(DATA_DIR / "backups"))).resolve()
 AUTO_BACKUP_ENABLED = os.environ.get("JAWDAH_AUTO_BACKUP", "1").strip().lower() not in ("0", "false", "no", "off")
 BACKUP_INTERVAL_HOURS = max(1, int(os.environ.get("JAWDAH_BACKUP_INTERVAL_HOURS", "24") or "24"))
 BACKUP_RETENTION = max(1, int(os.environ.get("JAWDAH_BACKUP_RETENTION", "30") or "30"))
 BACKUP_LOCK = threading.Lock()
 LAST_AUTO_BACKUP_AT: Optional[str] = None
+STORAGE_WARN_GB = float(os.environ.get("JAWDAH_STORAGE_WARN_GB", "2") or "2")
 
 # Fallback assets: Railway can still open the app even if the public folder is misplaced.
 FALLBACK_INDEX_HTML = "<!doctype html>\n<html lang=\"ar\" dir=\"rtl\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Launch Quality LLC</title>\n  <link rel=\"stylesheet\" href=\"app.css\">\n</head>\n<body>\n  <main id=\"loginScreen\" class=\"login hidden\">\n    <section class=\"login-card\">\n      <img src=\"assets/brand-logo-gold.png\" alt=\"Jawdah logo\">\n      <h1>Launch Quality LLC</h1>\n      <p class=\"mini\">Real Estate & Hospitality Management System</p>\n      <input id=\"loginUser\" placeholder=\"اسم المستخدم\" autocomplete=\"username\">\n      <input id=\"loginPass\" placeholder=\"كلمة المرور\" type=\"password\" autocomplete=\"current-password\">\n      <button id=\"loginBtn\" class=\"gold-btn\" style=\"width:100%;margin-top:10px\">تسجيل الدخول</button>\n      <p class=\"mini\">Use the authorized administrator account.</p>\n    </section>\n  </main>\n\n  <main id=\"app\" class=\"app hidden\">\n    <aside id=\"sidebar\" class=\"sidebar\">\n      <div class=\"brand\">\n        <img src=\"assets/brand-logo-gold.png\" alt=\"logo\">\n        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>\n      </div>\n      <nav id=\"nav\" class=\"nav\"></nav>\n    </aside>\n    <section class=\"content\">\n      <header class=\"topbar\">\n        <button id=\"menuBtn\" class=\"ghost mobile-nav\">☰</button>\n        <div class=\"search\"><input id=\"globalSearch\" placeholder=\"بحث سريع Ctrl + K\"></div>\n        <button class=\"gold-btn\" onclick=\"showSection('properties')\">+ إضافة</button>\n        <div id=\"clock\" class=\"top-pill\">00:00:00</div>\n        <div class=\"userbox\"><div id=\"avatar\" class=\"avatar\">J</div><div><b id=\"userName\">User</b><br><small id=\"userRole\" class=\"mini\">Role</small></div></div>\n        <button id=\"logoutBtn\" class=\"ghost\">خروج</button>\n      </header>\n      <h2 id=\"sectionTitle\">لوحة التحكم التنفيذية</h2>\n\n      <section id=\"sec-dashboard\" class=\"section active\">\n        <div class=\"hero\"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id=\"heroStats\" class=\"status-line\" style=\"margin-top:14px\"></div></div>\n        <div id=\"kpiGrid\" class=\"grid kpis\"></div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>الإيرادات والمصروفات</h3><div class=\"canvas-wrap\"><canvas id=\"incomeChart\"></canvas></div></div>\n          <div class=\"card\"><h3>خريطة GIS تشغيلية</h3><div class=\"gis\"><div id=\"gisPins\"></div></div></div>\n        </div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>قرارات الآن</h3><div id=\"decisionList\"></div></div>\n          <div class=\"card\"><h3>الإشغال</h3><div class=\"canvas-wrap\"><canvas id=\"occupancyChart\"></canvas></div></div>\n        </div>\n        <div class=\"card\"><h3>إجراءات سريعة</h3><div id=\"quickActions\" class=\"quick\"></div></div>\n      </section>\n\n      <section id=\"sec-properties\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عقار</h3><div class=\"form\"><input id=\"pImage\" placeholder=\"إيموجي/رمز\" value=\"🏠\"><input id=\"pName\" placeholder=\"اسم العقار\"><input id=\"pType\" placeholder=\"النوع\"><select id=\"pStatus\"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id=\"pPrice\" placeholder=\"السعر\"><input id=\"pLocation\" placeholder=\"الموقع\"><textarea id=\"pNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createProperty()\">حفظ العقار</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><select id=\"propStatusFilter\" onchange=\"renderProperties()\"></select><button class=\"ghost\" onclick=\"exportCsv('properties')\">تصدير CSV</button></div><div id=\"propertiesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-clients\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عميل</h3><div class=\"form\"><input id=\"cName\" placeholder=\"اسم العميل\"><input id=\"cPhone\" placeholder=\"الهاتف\"><input id=\"cEmail\" placeholder=\"البريد\"><input id=\"cNational\" placeholder=\"الهوية/السجل\"><textarea id=\"cNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createClient()\">حفظ العميل</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('clients')\">تصدير CSV</button></div><div id=\"clientsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-contracts\" class=\"section\">\n        <div class=\"card\"><h3>إنشاء عقد</h3><div class=\"form\"><select id=\"contractProperty\"></select><select id=\"contractClient\"></select><input id=\"contractStart\" type=\"date\"><input id=\"contractEnd\" type=\"date\"><input id=\"contractRent\" placeholder=\"قيمة الإيجار\"><textarea id=\"contractNotes\" placeholder=\"ملاحظات العقد\"></textarea></div><button class=\"gold-btn\" onclick=\"createContract()\">حفظ العقد</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('contracts')\">تصدير CSV</button></div><div id=\"contractsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-invoices\" class=\"section\">\n        <div class=\"card\"><h3>الفواتير والتحصيل</h3><p class=\"mini\">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id=\"invoicesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-accounts\" class=\"section\">\n        <div class=\"card\"><h3>إضافة حركة مالية</h3><div class=\"form\"><input id=\"accDate\" type=\"date\"><select id=\"accType\"><option value=\"income\">income</option><option value=\"expense\">expense</option></select><input id=\"accCategory\" placeholder=\"التصنيف\"><input id=\"accDesc\" placeholder=\"الوصف\"><input id=\"accAmount\" placeholder=\"المبلغ\"></div><button class=\"gold-btn\" onclick=\"createAccount()\">حفظ الحركة</button></div>\n        <div class=\"card\"><h3>ملخص الحسابات</h3><div id=\"accountSummary\" class=\"status-line\"></div><div class=\"canvas-wrap\"><canvas id=\"expenseChart\"></canvas></div></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('accounts')\">تصدير CSV</button></div><div id=\"accountsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-maintenance\" class=\"section\">\n        <div class=\"card\"><h3>طلب صيانة</h3><div class=\"form\"><select id=\"maintProperty\"></select><input id=\"maintTitle\" placeholder=\"عنوان الطلب\"><select id=\"maintPriority\"><option>High</option><option>Medium</option><option>Low</option></select><input id=\"maintCost\" placeholder=\"التكلفة المتوقعة\"><textarea id=\"maintNotes\" placeholder=\"تفاصيل\"></textarea></div><button class=\"gold-btn\" onclick=\"createMaintenance()\">حفظ الطلب</button></div>\n        <div class=\"grid\" id=\"maintenanceGrid\" style=\"grid-template-columns:repeat(auto-fit,minmax(260px,1fr))\"></div>\n      </section>\n\n      <section id=\"sec-reports\" class=\"section\">\n        <div id=\"reportsBox\"></div>\n        <div class=\"card\"><button class=\"gold-btn\" onclick=\"renderReports()\">تحديث التقرير</button> <button class=\"ghost\" onclick=\"downloadBackup()\">تنزيل Backup</button></div>\n      </section>\n\n      <section id=\"sec-users\" class=\"section\">\n        <div class=\"card\"><h3>إضافة مستخدم</h3><div class=\"form\"><input id=\"uUsername\" placeholder=\"اسم المستخدم\"><input id=\"uName\" placeholder=\"الاسم\"><select id=\"uRole\"><option value=\"admin\">admin</option><option value=\"accountant\">accountant</option><option value=\"operations\">operations</option><option value=\"maintenance\">maintenance</option><option value=\"viewer\">viewer</option></select><input id=\"uPassword\" placeholder=\"كلمة المرور\"></div><button class=\"gold-btn\" onclick=\"createUser()\">حفظ المستخدم</button></div>\n        <div class=\"card\"><div id=\"usersTable\"></div></div>\n      </section>\n\n      <section id=\"sec-backup\" class=\"section\">\n        <div class=\"card\"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id=\"backupStatus\" class=\"status-line\"></div><div class=\"toolbar\" style=\"margin-top:16px\"><button class=\"gold-btn\" onclick=\"downloadBackup()\">تنزيل Backup JSON</button><button class=\"ghost\" onclick=\"exportCsv('properties')\">عقارات CSV</button><button class=\"ghost\" onclick=\"exportCsv('clients')\">عملاء CSV</button><button class=\"ghost\" onclick=\"exportCsv('contracts')\">عقود CSV</button><button class=\"ghost\" onclick=\"exportCsv('invoices')\">فواتير CSV</button><button class=\"ghost\" onclick=\"exportCsv('accounts')\">حسابات CSV</button></div></div>\n      </section>\n\n      <section id=\"sec-qa\" class=\"section\">\n        <div class=\"card\"><h3>اختبار التشغيل</h3><button class=\"gold-btn\" onclick=\"runQA()\">تشغيل الاختبار الآن</button><div id=\"qaBox\" style=\"margin-top:15px\"></div></div>\n      </section>\n    </section>\n  </main>\n\n  <div id=\"paymentModal\" class=\"modal\"><div class=\"modal-box\"><h2>تحصيل فاتورة</h2><p id=\"payInfo\"></p><input id=\"payInvoiceId\" type=\"hidden\"><div class=\"form\"><input id=\"payAmount\" placeholder=\"المبلغ\"><select id=\"payMethod\"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id=\"payNote\" placeholder=\"ملاحظة\"></div><button class=\"gold-btn\" onclick=\"submitPayment()\">تأكيد التحصيل</button> <button class=\"ghost\" onclick=\"closeModal('paymentModal')\">إغلاق</button></div></div>\n  <div id=\"invoiceModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"invoicePreview\"></div><div class=\"toolbar\"><button class=\"gold-btn\" onclick=\"window.print()\">طباعة A4</button><button class=\"ghost\" onclick=\"downloadInvoice()\">تنزيل HTML</button><button class=\"ghost\" onclick=\"closeModal('invoiceModal')\">إغلاق</button></div></div></div>\n  <div id=\"genericModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"genericModalBody\"></div><button class=\"ghost\" onclick=\"closeModal('genericModal')\">إغلاق</button></div></div>\n  <script src=\"app.js\"></script>\n</body>\n</html>\n"
@@ -83,15 +108,15 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "reports:read", "approvals:request", "branches"},
-    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "purchase_invoices:read", "reports:read", "branches:read"},
-    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches"},
+    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read"},
+    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read"},
 }
 
 TABLES = {
     "branches": ["id", "code", "name", "city", "address", "manager", "active", "notes", "created_at"],
-    "properties": ["id", "name", "type", "status", "price", "location", "building_no", "apartment_no", "room_no", "image", "last_update", "notes", "branch_id"],
+    "properties": ["id", "name", "type", "status", "price", "location", "building_no", "apartment_no", "room_no", "latitude", "longitude", "image", "last_update", "notes", "branch_id"],
     "clients": ["id", "name", "phone", "email", "national_id", "balance", "notes"],
     "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "deposit_received", "deposit_received_at", "deposit_received_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "ended_at", "attachments", "notes"],
     "invoices": ["id", "invoice_no", "contract_id", "client_id", "property_id", "issue_date", "due_date", "description", "invoice_type", "subtotal", "vat_rate", "vat_amount", "grand_total", "amount", "paid_amount", "status", "is_void", "void_reason", "voided_at", "sequence_year", "sequence_no", "reissued_from"],
@@ -101,8 +126,12 @@ TABLES = {
     "revenues": ["id", "revenue_no", "revenue_date", "source", "category", "description", "amount", "client_id", "property_id", "account_id"],
     "salaries": ["id", "employee_name", "salary_month", "basic_salary", "allowances", "deductions", "net_salary", "status", "payment_date", "account_id"],
     "admin_expenses": ["id", "expense_date", "category", "description", "amount", "supplier", "property_id", "account_id"],
-    "inventory_items": ["id", "sku", "name", "category", "unit", "quantity", "min_quantity", "unit_cost", "location", "notes"],
+    "inventory_items": ["id", "sku", "name", "category", "unit", "quantity", "min_quantity", "unit_cost", "location", "property_id", "notes"],
     "inventory_transactions": ["id", "item_id", "tx_date", "tx_type", "quantity", "unit_cost", "reference", "notes"],
+    "hospitality_rooms": ["id", "property_id", "room_code", "room_type", "capacity", "rate_per_night", "status", "notes"],
+    "hospitality_bookings": ["id", "room_id", "client_id", "guest_name", "guest_phone", "checkin_date", "checkout_date", "nights", "rate_per_night", "total_amount", "paid_amount", "balance_amount", "status", "booking_source", "property_id", "notes", "created_at"],
+    "hospitality_season_rates": ["id", "property_id", "room_type", "season_name", "start_date", "end_date", "nightly_rate", "active", "notes"],
+    "hospitality_folios": ["id", "booking_id", "folio_no", "issue_date", "total_amount", "paid_amount", "balance_amount", "status", "notes"],
     "bank_transactions": ["id", "bank_date", "bank_name", "reference", "type", "description", "amount", "matched_account_id", "matched_invoice_id", "matched_payment_id", "status"],
     "chart_accounts": ["id", "code", "name", "type", "parent_code", "active", "notes"],
     "financial_periods": ["id", "period_name", "start_date", "end_date", "status", "closed_by", "closed_at", "notes"],
@@ -113,10 +142,16 @@ TABLES = {
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
+PRIMARY_OWNER_USERNAMES = {"owner", "waleed.najjar", "yaqoub.khasibi", "yaqoub"}
+DAILY_OPS_MANAGER_USERNAMES = {"razan", "owner", "waleed.najjar", "yaqoub.khasibi", "yaqoub"}
+
 WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
 
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
+BIOMETRIC_CHALLENGE_TTL_SECONDS = 180
+BIOMETRIC_CHALLENGES: Dict[str, Dict[str, Any]] = {}
+BIOMETRIC_FLOW_STATES: Dict[str, Dict[str, Any]] = {}
 SUPPORT_PHONE = os.environ.get("LQ_SUPPORT_PHONE", "+96871924089")
 SUPPORT_EMAIL = os.environ.get("LQ_SUPPORT_EMAIL", "info@alamal.info")
 VAT_RATE = float(os.environ.get("LQ_VAT_RATE", "0.05") or "0.05")
@@ -156,6 +191,106 @@ def today() -> str:
 
 def uid(prefix: str) -> str:
     return f"{prefix}-{secrets.token_hex(4).upper()}"
+
+
+def b64url_encode(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def b64url_decode(raw: str) -> bytes:
+    cleaned = str(raw or "").strip()
+    if not cleaned:
+        return b""
+    padded = cleaned + "=" * ((4 - len(cleaned) % 4) % 4)
+    return base64.urlsafe_b64decode(padded.encode("ascii"))
+
+
+def rp_id_from_origin(origin_url: str) -> str:
+    host = urllib.parse.urlparse(origin_url or "").hostname or ""
+    return host or "localhost"
+
+
+def cleanup_biometric_challenges() -> None:
+    now_ts = time.time()
+    expired = [key for key, item in BIOMETRIC_CHALLENGES.items() if now_ts > float(item.get("expires", 0))]
+    for key in expired:
+        BIOMETRIC_CHALLENGES.pop(key, None)
+    expired_states = [key for key, item in BIOMETRIC_FLOW_STATES.items() if now_ts > float(item.get("expires", 0))]
+    for key in expired_states:
+        BIOMETRIC_FLOW_STATES.pop(key, None)
+
+
+def create_biometric_challenge(user_id: str, action: str) -> Dict[str, str]:
+    cleanup_biometric_challenges()
+    state = uid("BCH")
+    challenge = b64url_encode(secrets.token_bytes(32))
+    BIOMETRIC_CHALLENGES[state] = {
+        "user_id": user_id,
+        "action": action,
+        "challenge": challenge,
+        "expires": time.time() + BIOMETRIC_CHALLENGE_TTL_SECONDS,
+    }
+    return {"state": state, "challenge": challenge}
+
+
+def consume_biometric_challenge(state: str, user_id: str, action: str) -> Optional[str]:
+    cleanup_biometric_challenges()
+    item = BIOMETRIC_CHALLENGES.pop(state, None)
+    if not item:
+        return None
+    if item.get("user_id") != user_id or item.get("action") != action:
+        return None
+    return str(item.get("challenge") or "")
+
+
+def store_biometric_flow_state(user_id: str, action: str, payload: Dict[str, Any]) -> str:
+    cleanup_biometric_challenges()
+    state = uid("BFS")
+    BIOMETRIC_FLOW_STATES[state] = {
+        "user_id": user_id,
+        "action": action,
+        "payload": payload,
+        "expires": time.time() + BIOMETRIC_CHALLENGE_TTL_SECONDS,
+    }
+    return state
+
+
+def consume_biometric_flow_state(state: str, user_id: str, action: str) -> Optional[Dict[str, Any]]:
+    cleanup_biometric_challenges()
+    item = BIOMETRIC_FLOW_STATES.pop(state, None)
+    if not item:
+        return None
+    if item.get("user_id") != user_id or item.get("action") != action:
+        return None
+    payload = item.get("payload")
+    return payload if isinstance(payload, dict) else None
+
+
+def webauthn_to_jsonable(value: Any) -> Any:
+    if isinstance(value, bytes):
+        return b64url_encode(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, dict):
+        return {str(k): webauthn_to_jsonable(v) for k, v in value.items()}
+    if hasattr(value, "items"):
+        try:
+            return {str(k): webauthn_to_jsonable(v) for k, v in dict(value).items()}
+        except Exception:
+            pass
+    if isinstance(value, (list, tuple)):
+        return [webauthn_to_jsonable(v) for v in value]
+    if hasattr(value, "to_dict"):
+        try:
+            return webauthn_to_jsonable(value.to_dict())
+        except Exception:
+            pass
+    if hasattr(value, "__dict__"):
+        try:
+            return webauthn_to_jsonable(vars(value))
+        except Exception:
+            pass
+    return str(value)
 
 
 def password_hash(password: str, salt: Optional[str] = None) -> str:
@@ -208,6 +343,38 @@ def list_automatic_backups() -> List[Dict[str, Any]]:
             "created_at": datetime.fromtimestamp(json_path.stat().st_mtime).replace(microsecond=0).isoformat(sep=" "),
         })
     return backups
+
+
+def storage_status() -> Dict[str, Any]:
+    usage = shutil.disk_usage(str(DATA_DIR))
+    free_gb = round(usage.free / (1024 ** 3), 2)
+    total_gb = round(usage.total / (1024 ** 3), 2)
+    used_gb = round((usage.total - usage.free) / (1024 ** 3), 2)
+    warning = free_gb <= STORAGE_WARN_GB
+    return {
+        "path": str(DATA_DIR),
+        "total_gb": total_gb,
+        "used_gb": used_gb,
+        "free_gb": free_gb,
+        "warn_threshold_gb": STORAGE_WARN_GB,
+        "warning": warning,
+    }
+
+
+def latest_backup_integrity() -> Dict[str, Any]:
+    recent = list_automatic_backups()
+    if not recent:
+        return {"ok": False, "reason": "no_backup"}
+    latest = recent[0]
+    json_ok = bool(latest.get("json_bytes") and int(latest["json_bytes"]) > 100)
+    sqlite_ok = bool(latest.get("sqlite_file") and int(latest.get("sqlite_bytes") or 0) > 0)
+    return {
+        "ok": bool(json_ok and sqlite_ok),
+        "timestamp": latest.get("timestamp"),
+        "json_ok": json_ok,
+        "sqlite_ok": sqlite_ok,
+        "checked_at": now_iso(),
+    }
 
 
 def resolve_backup_file(kind: str, timestamp: Optional[str] = None) -> Optional[Path]:
@@ -493,6 +660,8 @@ def init_db() -> None:
                 building_no TEXT,
                 apartment_no TEXT,
                 room_no TEXT,
+                latitude REAL,
+                longitude REAL,
                 image TEXT,
                 last_update TEXT,
                 notes TEXT
@@ -630,7 +799,9 @@ def init_db() -> None:
                 min_quantity REAL NOT NULL DEFAULT 0,
                 unit_cost REAL NOT NULL DEFAULT 0,
                 location TEXT,
-                notes TEXT
+                property_id TEXT,
+                notes TEXT,
+                FOREIGN KEY(property_id) REFERENCES properties(id)
             );
             CREATE TABLE IF NOT EXISTS inventory_transactions (
                 id TEXT PRIMARY KEY,
@@ -642,6 +813,63 @@ def init_db() -> None:
                 reference TEXT,
                 notes TEXT,
                 FOREIGN KEY(item_id) REFERENCES inventory_items(id)
+            );
+            CREATE TABLE IF NOT EXISTS hospitality_rooms (
+                id TEXT PRIMARY KEY,
+                property_id TEXT,
+                room_code TEXT NOT NULL,
+                room_type TEXT,
+                capacity INTEGER NOT NULL DEFAULT 2,
+                rate_per_night REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'available',
+                notes TEXT,
+                FOREIGN KEY(property_id) REFERENCES properties(id)
+            );
+            CREATE TABLE IF NOT EXISTS hospitality_bookings (
+                id TEXT PRIMARY KEY,
+                room_id TEXT NOT NULL,
+                client_id TEXT,
+                guest_name TEXT NOT NULL,
+                guest_phone TEXT,
+                checkin_date TEXT NOT NULL,
+                checkout_date TEXT NOT NULL,
+                nights INTEGER NOT NULL DEFAULT 1,
+                rate_per_night REAL NOT NULL DEFAULT 0,
+                total_amount REAL NOT NULL DEFAULT 0,
+                paid_amount REAL NOT NULL DEFAULT 0,
+                balance_amount REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'reserved',
+                booking_source TEXT,
+                property_id TEXT,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(room_id) REFERENCES hospitality_rooms(id),
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(property_id) REFERENCES properties(id)
+            );
+            CREATE TABLE IF NOT EXISTS hospitality_season_rates (
+                id TEXT PRIMARY KEY,
+                property_id TEXT,
+                room_type TEXT,
+                season_name TEXT NOT NULL,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL,
+                nightly_rate REAL NOT NULL DEFAULT 0,
+                active INTEGER NOT NULL DEFAULT 1,
+                notes TEXT,
+                FOREIGN KEY(property_id) REFERENCES properties(id)
+            );
+            CREATE TABLE IF NOT EXISTS hospitality_folios (
+                id TEXT PRIMARY KEY,
+                booking_id TEXT NOT NULL,
+                folio_no TEXT UNIQUE NOT NULL,
+                issue_date TEXT NOT NULL,
+                total_amount REAL NOT NULL DEFAULT 0,
+                paid_amount REAL NOT NULL DEFAULT 0,
+                balance_amount REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'open',
+                notes TEXT,
+                FOREIGN KEY(booking_id) REFERENCES hospitality_bookings(id) ON DELETE CASCADE
             );
             CREATE TABLE IF NOT EXISTS bank_transactions (
                 id TEXT PRIMARY KEY,
@@ -727,6 +955,21 @@ def init_db() -> None:
                 created_at TEXT NOT NULL,
                 last_seen TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS biometric_credentials (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                credential_id TEXT UNIQUE NOT NULL,
+                credential_data TEXT,
+                public_key TEXT,
+                algorithm TEXT,
+                label TEXT,
+                transports TEXT,
+                sign_count INTEGER NOT NULL DEFAULT 0,
+                active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                last_verified TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
             CREATE TABLE IF NOT EXISTS alert_dismissals (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
@@ -761,6 +1004,21 @@ def init_db() -> None:
                 attachments TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS daily_operations (
+                id TEXT PRIMARY KEY,
+                entry_date TEXT NOT NULL,
+                employee_user_id TEXT,
+                employee_name TEXT NOT NULL,
+                icon TEXT,
+                done_text TEXT NOT NULL,
+                deferred_text TEXT,
+                deferred_to TEXT,
+                created_by_user_id TEXT NOT NULL,
+                created_by_name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(employee_user_id) REFERENCES users(id),
+                FOREIGN KEY(created_by_user_id) REFERENCES users(id)
             );
             """
         )
@@ -806,6 +1064,8 @@ def init_db() -> None:
             ("building_no", "TEXT"),
             ("apartment_no", "TEXT"),
             ("room_no", "TEXT"),
+            ("latitude", "REAL"),
+            ("longitude", "REAL"),
         ]:
             ensure_column(db, "properties", col, definition)
         for col, definition in [
@@ -826,6 +1086,45 @@ def init_db() -> None:
             ("period_end", "TEXT"),
         ]:
             ensure_column(db, "bank_reconciliations", col, definition)
+        ensure_column(db, "inventory_items", "property_id", "TEXT")
+        ensure_column(db, "hospitality_rooms", "property_id", "TEXT")
+        ensure_column(db, "hospitality_rooms", "room_type", "TEXT")
+        ensure_column(db, "hospitality_rooms", "capacity", "INTEGER NOT NULL DEFAULT 2")
+        ensure_column(db, "hospitality_rooms", "rate_per_night", "REAL NOT NULL DEFAULT 0")
+        ensure_column(db, "hospitality_rooms", "status", "TEXT NOT NULL DEFAULT 'available'")
+        ensure_column(db, "hospitality_rooms", "notes", "TEXT")
+        ensure_column(db, "hospitality_bookings", "property_id", "TEXT")
+        ensure_column(db, "hospitality_bookings", "booking_source", "TEXT")
+        ensure_column(db, "hospitality_bookings", "created_at", "TEXT")
+        ensure_column(db, "hospitality_bookings", "guest_phone", "TEXT")
+        ensure_column(db, "hospitality_bookings", "notes", "TEXT")
+        ensure_column(db, "hospitality_season_rates", "property_id", "TEXT")
+        ensure_column(db, "hospitality_season_rates", "room_type", "TEXT")
+        ensure_column(db, "hospitality_season_rates", "season_name", "TEXT")
+        ensure_column(db, "hospitality_season_rates", "start_date", "TEXT")
+        ensure_column(db, "hospitality_season_rates", "end_date", "TEXT")
+        ensure_column(db, "hospitality_season_rates", "nightly_rate", "REAL NOT NULL DEFAULT 0")
+        ensure_column(db, "hospitality_season_rates", "active", "INTEGER NOT NULL DEFAULT 1")
+        ensure_column(db, "hospitality_season_rates", "notes", "TEXT")
+        ensure_column(db, "hospitality_folios", "booking_id", "TEXT")
+        ensure_column(db, "hospitality_folios", "folio_no", "TEXT")
+        ensure_column(db, "hospitality_folios", "issue_date", "TEXT")
+        ensure_column(db, "hospitality_folios", "total_amount", "REAL NOT NULL DEFAULT 0")
+        ensure_column(db, "hospitality_folios", "paid_amount", "REAL NOT NULL DEFAULT 0")
+        ensure_column(db, "hospitality_folios", "balance_amount", "REAL NOT NULL DEFAULT 0")
+        ensure_column(db, "hospitality_folios", "status", "TEXT NOT NULL DEFAULT 'open'")
+        ensure_column(db, "hospitality_folios", "notes", "TEXT")
+        for col, definition in [
+            ("credential_data", "TEXT"),
+            ("public_key", "TEXT"),
+            ("algorithm", "TEXT"),
+            ("label", "TEXT"),
+            ("transports", "TEXT"),
+            ("sign_count", "INTEGER NOT NULL DEFAULT 0"),
+            ("active", "INTEGER NOT NULL DEFAULT 1"),
+            ("last_verified", "TEXT"),
+        ]:
+            ensure_column(db, "biometric_credentials", col, definition)
         migrate_property_statuses(db)
         seed_branches_from_buildings(db)
         seed_if_empty(db)
@@ -941,6 +1240,36 @@ def has_permission(user: Dict[str, Any], permission: str) -> bool:
     if permission == "approvals:request" and ("approvals:request" in perms or "approvals" in perms or "all" in perms):
         return True
     return False
+
+
+def is_primary_owner_user(user: Dict[str, Any]) -> bool:
+    uname = str((user or {}).get("username") or "").strip().lower()
+    return uname in PRIMARY_OWNER_USERNAMES
+
+
+def can_manage_daily_operations(user: Optional[Dict[str, Any]]) -> bool:
+    uname = str((user or {}).get("username") or "").strip().lower()
+    return uname in DAILY_OPS_MANAGER_USERNAMES
+
+
+def default_daily_ops_icon(username: str, display_name: str = "") -> str:
+    uname = str(username or "").strip().lower()
+    if "waleed" in uname or uname == "owner":
+        return "👑"
+    if "yaqoub" in uname:
+        return "🛰️"
+    if "razan" in uname:
+        return "🗂️"
+    if "admin" in uname:
+        return "🛡️"
+    if "account" in uname:
+        return "💼"
+    if "oper" in uname:
+        return "📋"
+    if "maint" in uname:
+        return "🛠️"
+    first = str(display_name or uname or "•").strip()[:1]
+    return first if first else "•"
 
 
 def audit(db: sqlite3.Connection, user: Optional[Dict[str, Any]], action: str, entity: str, entity_id: Optional[str], details: str = "") -> None:
@@ -1220,39 +1549,252 @@ def build_owner_staff_activity(db: sqlite3.Connection, days: int = 14) -> Dict[s
     }
 
 
+def normalize_timeline_days(value: Any, default: int = 7) -> int:
+    try:
+        days = int(value)
+    except Exception:
+        days = default
+    return max(0, min(days, 365))
+
+
+def build_owner_live_hub(db: sqlite3.Connection, timeline_days: int = 7) -> Dict[str, Any]:
+    dashboard = build_dashboard(db)
+    k = dashboard.get("kpis") or {}
+    accounts = rows_to_dicts(
+        db.execute(
+            "SELECT id, entry_date, type, category, amount, property_id, description FROM accounts ORDER BY entry_date DESC LIMIT 300"
+        ).fetchall()
+    )
+    properties = rows_to_dicts(db.execute("SELECT id, name, type, status FROM properties").fetchall())
+    inventory_items = rows_to_dicts(db.execute("SELECT id, name, quantity, unit_cost, property_id FROM inventory_items").fetchall())
+    journals = rows_to_dicts(
+        db.execute(
+            """
+            SELECT w.id, w.user_id, w.work_date, w.text, w.created_at, u.name AS user_name, u.username
+            FROM work_journal w
+            JOIN users u ON u.id = w.user_id
+            ORDER BY w.created_at DESC
+            LIMIT 20
+            """
+        ).fetchall()
+    )
+    audits = rows_to_dicts(
+        db.execute(
+            """
+            SELECT id, created_at, username, action, entity, details
+            FROM audit_log
+            WHERE username IS NOT NULL AND username != 'system'
+            ORDER BY created_at DESC
+            LIMIT 24
+            """
+        ).fetchall()
+    )
+    timeline_days = normalize_timeline_days(timeline_days, 7)
+    timeline_cutoff = (datetime.now() - timedelta(days=timeline_days)).strftime("%Y-%m-%d %H:%M:%S") if timeline_days > 0 else ""
+    timeline_sql = """
+            SELECT
+                a.id,
+                a.created_at,
+                a.username,
+                a.entity_id AS booking_id,
+                a.details,
+                b.guest_name,
+                b.checkin_date,
+                b.checkout_date,
+                r.room_code
+            FROM audit_log a
+            LEFT JOIN hospitality_bookings b ON b.id = a.entity_id
+            LEFT JOIN hospitality_rooms r ON r.id = b.room_id
+            WHERE a.action = 'timeline_update'
+              AND a.entity = 'hospitality_bookings'
+    """
+    timeline_args: List[Any] = []
+    if timeline_days > 0:
+        timeline_sql += " AND datetime(a.created_at) >= datetime(?)"
+        timeline_args.append(timeline_cutoff)
+    timeline_sql += """
+            ORDER BY a.created_at DESC
+            LIMIT 20
+    """
+    timeline_updates = rows_to_dicts(db.execute(timeline_sql, tuple(timeline_args)).fetchall())
+    prop_map = {p["id"]: p for p in properties}
+    inv_value_by_property: Dict[str, float] = {}
+    for item in inventory_items:
+        pid = str(item.get("property_id") or "").strip()
+        if not pid:
+            continue
+        inv_value_by_property[pid] = inv_value_by_property.get(pid, 0.0) + float(item.get("quantity") or 0) * float(item.get("unit_cost") or 0)
+    acct_by_property: Dict[str, Dict[str, float]] = {}
+    for row in accounts:
+        pid = str(row.get("property_id") or "").strip()
+        if not pid:
+            continue
+        if pid not in acct_by_property:
+            acct_by_property[pid] = {"income": 0.0, "expense": 0.0}
+        kind = str(row.get("type") or "").lower()
+        amt = float(row.get("amount") or 0)
+        if kind == "income":
+            acct_by_property[pid]["income"] += amt
+        elif kind == "expense":
+            acct_by_property[pid]["expense"] += amt
+    property_finance = []
+    for pid, vals in acct_by_property.items():
+        property_finance.append(
+            {
+                "property_id": pid,
+                "property_name": (prop_map.get(pid) or {}).get("name") or pid,
+                "income": round(vals.get("income", 0), 3),
+                "expense": round(vals.get("expense", 0), 3),
+                "net": round(vals.get("income", 0) - vals.get("expense", 0), 3),
+                "inventory_value": round(inv_value_by_property.get(pid, 0), 3),
+            }
+        )
+    property_finance.sort(key=lambda x: x["net"], reverse=True)
+    hospitality_ids = {
+        p["id"]
+        for p in properties
+        if str(p.get("type") or "").strip().lower() in ("hospitality", "hotel", "resort", "short-term")
+    }
+    hospitality_income = 0.0
+    for row in accounts:
+        pid = str(row.get("property_id") or "").strip()
+        if pid and pid in hospitality_ids and str(row.get("type") or "").lower() == "income":
+            hospitality_income += float(row.get("amount") or 0)
+    hs = build_hospitality_summary(db, date.today().replace(day=1).isoformat(), today())
+    hk = hs.get("kpis") or {}
+    return {
+        "kpis": {
+            "properties": int(k.get("properties") or 0),
+            "occupancy": float(k.get("occupancy") or 0),
+            "income": float(k.get("income") or 0),
+            "expense": float(k.get("expense") or 0),
+            "net": float(k.get("net") or 0),
+            "overdue": float(k.get("overdue") or 0),
+            "inventory_value": float(k.get("inventory_value") or 0),
+        },
+        "channels": {
+            "realestate": {
+                "units": len(properties),
+                "active_contracts": int(db.execute("SELECT COUNT(*) FROM contracts WHERE lower(status)='active'").fetchone()[0]),
+                "property_stock_items": sum(1 for i in inventory_items if i.get("property_id")),
+            },
+            "hospitality": {
+                "units": len(hospitality_ids),
+                "income": round(hospitality_income, 3),
+                "active_bookings": int(hk.get("active_bookings") or 0),
+                "occupancy_pct": float(hk.get("occupancy_pct") or 0),
+                "adr": float(hk.get("adr") or 0),
+                "revpar": float(hk.get("revpar") or 0),
+                "note": "تشغيل حي متصل بالحجوزات والتحصيل.",
+            },
+        },
+        "property_finance": property_finance[:12],
+        "recent_staff_journal": journals,
+        "recent_staff_actions": audits,
+        "recent_timeline_updates": timeline_updates,
+        "timeline_filter": {"days": timeline_days},
+        "ts": now_iso(),
+    }
+
+
+def build_hospitality_summary(db: sqlite3.Connection, from_date: str, to_date: str) -> Dict[str, Any]:
+    rooms = rows_to_dicts(db.execute("SELECT id, status, room_type, rate_per_night FROM hospitality_rooms").fetchall())
+    bookings = rows_to_dicts(
+        db.execute(
+            """
+            SELECT id, room_id, checkin_date, checkout_date, nights, total_amount, paid_amount, balance_amount, status
+            FROM hospitality_bookings
+            WHERE date(checkin_date) <= date(?) AND date(checkout_date) >= date(?)
+            ORDER BY checkin_date DESC
+            """,
+            (to_date, from_date),
+        ).fetchall()
+    )
+    total_rooms = len(rooms)
+    occupied_rooms = sum(1 for r in rooms if str(r.get("status") or "").lower() == "occupied")
+    active_bookings = [b for b in bookings if str(b.get("status") or "").lower() in ("reserved", "checked_in")]
+    sold_nights = sum(int(b.get("nights") or 0) for b in active_bookings)
+    total_revenue = sum(float(b.get("total_amount") or 0) for b in bookings)
+    paid_revenue = sum(float(b.get("paid_amount") or 0) for b in bookings)
+    balance_revenue = sum(float(b.get("balance_amount") or 0) for b in bookings)
+    booking_count = max(len(bookings), 1)
+    adr = (total_revenue / booking_count) if booking_count else 0
+    revpar = (total_revenue / total_rooms) if total_rooms else 0
+    occupancy = (occupied_rooms / total_rooms * 100.0) if total_rooms else 0.0
+    by_type: Dict[str, Dict[str, float]] = {}
+    room_map = {r["id"]: r for r in rooms}
+    for b in bookings:
+        rt = str((room_map.get(b.get("room_id")) or {}).get("room_type") or "Standard")
+        if rt not in by_type:
+            by_type[rt] = {"bookings": 0, "revenue": 0.0}
+        by_type[rt]["bookings"] += 1
+        by_type[rt]["revenue"] += float(b.get("total_amount") or 0)
+    type_rows = [{"room_type": k, "bookings": int(v["bookings"]), "revenue": round(v["revenue"], 3)} for k, v in by_type.items()]
+    type_rows.sort(key=lambda x: x["revenue"], reverse=True)
+    return {
+        "period": {"from": from_date, "to": to_date},
+        "kpis": {
+            "rooms": total_rooms,
+            "occupied_rooms": occupied_rooms,
+            "occupancy_pct": round(occupancy, 2),
+            "bookings": len(bookings),
+            "active_bookings": len(active_bookings),
+            "total_revenue": round(total_revenue, 3),
+            "paid_revenue": round(paid_revenue, 3),
+            "balance_revenue": round(balance_revenue, 3),
+            "adr": round(adr, 3),
+            "revpar": round(revpar, 3),
+            "sold_nights": sold_nights,
+        },
+        "room_type_breakdown": type_rows,
+        "recent_bookings": bookings[:30],
+    }
+
+
 def execute_contract_approval(db: sqlite3.Connection, user: Dict[str, Any], contract_id: str) -> List[Dict[str, Any]]:
     contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
     if not contract:
         raise ValueError("Contract not found")
+    if active_contract_exists_for_property(db, str(contract["property_id"]), contract_id):
+        raise ValueError("Another active contract exists for this property")
     start = datetime.fromisoformat(contract["start_date"]).date()
     end = datetime.fromisoformat(contract["end_date"]).date()
     rent = float(contract["rent_amount"] or 0)
     if rent <= 0 or end < start:
         raise ValueError("Invalid contract dates or rent")
     created: List[Dict[str, Any]] = []
+    created_count = 0
+    cycle = str(contract["payment_cycle"] or "monthly").strip().lower()
+    step_months = 1
+    max_invoices = 120
+    if cycle in ("quarterly", "quarter"):
+        step_months = 3
+    elif cycle in ("yearly", "annual"):
+        step_months = 12
+    elif cycle in ("once", "one-time", "single"):
+        max_invoices = 1
     due = start
-    i = 0
-    while due <= end and i < 120:
+    while due <= end and created_count < max_invoices:
         exists_invoice = db.execute(
             "SELECT id FROM invoices WHERE contract_id=? AND due_date=?",
             (contract_id, due.isoformat()),
         ).fetchone()
         if not exists_invoice:
+            desc = contract_invoice_description(db, contract, due.isoformat())
             inv = build_invoice_row(
                 db,
                 contract,
-                f"Rent installment for contract {contract['contract_no'] or contract['id']}",
+                desc,
                 rent,
                 due_date=due.isoformat(),
                 invoice_type="rent",
             )
             insert(db, "invoices", inv)
             created.append(inv)
-        i += 1
-        due = add_months(start, i)
-        if str(contract["payment_cycle"]).lower() in ("once", "one-time", "single"):
-            break
+            created_count += 1
+        due = add_months(due, step_months)
     db.execute("UPDATE contracts SET status=?, approved_at=? WHERE id=?", ("Active", now_iso(), contract_id))
+    sync_property_status_for_contract(db, contract["property_id"], "Active")
     audit(db, user, "approve", "contracts", contract_id, f"Approved contract and generated {len(created)} invoices")
     return created
 
@@ -1365,6 +1907,7 @@ def build_invoice_row(
 ) -> Dict[str, Any]:
     tax = invoice_tax_breakdown(subtotal, vat_rate)
     invoice_no, seq_year, seq_no = next_invoice_no(db)
+    description_text = str(description or "").strip() or contract_invoice_description(db, contract, due_date)
     return {
         "id": uid("INV"),
         "invoice_no": invoice_no,
@@ -1373,7 +1916,7 @@ def build_invoice_row(
         "property_id": contract["property_id"],
         "issue_date": issue_date or today(),
         "due_date": due_date or (date.today() + timedelta(days=7)).isoformat(),
-        "description": description,
+        "description": description_text,
         "invoice_type": invoice_type,
         "subtotal": tax["subtotal"],
         "vat_rate": tax["vat_rate"],
@@ -1446,6 +1989,41 @@ def next_contract_no(db: sqlite3.Connection, contract_type: str = "Residential")
     return f"LQL-{code}-{year}-{count + 1:04d}"
 
 
+def next_hospitality_folio_no(db: sqlite3.Connection) -> str:
+    year = date.today().year
+    count = db.execute("SELECT COUNT(*) FROM hospitality_folios WHERE folio_no LIKE ?", (f"HFO-{year}-%",)).fetchone()[0]
+    return f"HFO-{year}-{count + 1:04d}"
+
+
+def seasonal_rate_for_booking(
+    db: sqlite3.Connection,
+    property_id: Optional[str],
+    room_type: Optional[str],
+    checkin_date: str,
+    checkout_date: str,
+) -> Optional[float]:
+    pid = str(property_id or "").strip()
+    rtype = str(room_type or "").strip()
+    q = """
+        SELECT nightly_rate, room_type, start_date, end_date, property_id
+        FROM hospitality_season_rates
+        WHERE active=1
+          AND date(start_date) <= date(?)
+          AND date(end_date) >= date(?)
+          AND (? = '' OR property_id = ?)
+          AND (room_type IS NULL OR room_type='' OR ? = '' OR lower(room_type)=lower(?))
+        ORDER BY
+          CASE WHEN property_id=? THEN 0 ELSE 1 END,
+          CASE WHEN lower(room_type)=lower(?) THEN 0 ELSE 1 END,
+          start_date DESC
+        LIMIT 1
+    """
+    row = db.execute(q, (checkin_date, checkout_date, pid, pid, rtype, rtype, pid, rtype)).fetchone()
+    if not row:
+        return None
+    return float(row["nightly_rate"] or 0)
+
+
 def add_months(d: date, months: int) -> date:
     month = d.month - 1 + months
     year = d.year + month // 12
@@ -1497,6 +2075,58 @@ def default_legal_terms() -> str:
     )
 
 
+def active_contract_exists_for_property(db: sqlite3.Connection, property_id: str, exclude_contract_id: str = "") -> bool:
+    rows = db.execute(
+        """
+        SELECT id, status FROM contracts
+        WHERE property_id=? AND (?='' OR id<>?)
+        """,
+        (property_id, exclude_contract_id, exclude_contract_id),
+    ).fetchall()
+    for row in rows:
+        st = str(row["status"] or "").strip().lower()
+        if st in ("active",):
+            return True
+    return False
+
+
+def sync_property_status_for_contract(db: sqlite3.Connection, property_id: str, contract_status: str) -> None:
+    status = str(contract_status or "").strip().lower()
+    if status == "active":
+        db.execute(
+            "UPDATE properties SET status=?, last_update=? WHERE id=?",
+            ("مستأجرة", today(), property_id),
+        )
+        return
+    if status in ("expired", "cancelled", "canceled", "renewed", "closed"):
+        if not active_contract_exists_for_property(db, property_id):
+            db.execute(
+                "UPDATE properties SET status=?, last_update=? WHERE id=?",
+                ("شاغرة", today(), property_id),
+            )
+
+
+def contract_invoice_description(db: sqlite3.Connection, contract: Any, due_date: Optional[str] = None) -> str:
+    prop = db.execute(
+        "SELECT building_no, apartment_no, room_no, location FROM properties WHERE id=?",
+        (contract["property_id"],),
+    ).fetchone()
+    client = db.execute("SELECT name FROM clients WHERE id=?", (contract["client_id"],)).fetchone()
+    unit = "وحدة"
+    if prop:
+        unit_parts = []
+        if prop["building_no"]:
+            unit_parts.append(f"بناية {prop['building_no']}")
+        if prop["apartment_no"]:
+            unit_parts.append(f"شقة {prop['apartment_no']}")
+        if prop["room_no"]:
+            unit_parts.append(f"غرفة {prop['room_no']}")
+        unit = " - ".join(unit_parts) if unit_parts else "وحدة"
+    client_name = str(client["name"] or "").strip() if client else "عميل"
+    due_text = due_date or ""
+    return f"إيجار {unit} للعميل {client_name}" + (f" - استحقاق {due_text}" if due_text else "")
+
+
 def ensure_column(db: sqlite3.Connection, table: str, column: str, definition: str) -> None:
     cols = [r[1] for r in db.execute(f"PRAGMA table_info({table})").fetchall()]
     if column not in cols:
@@ -1504,6 +2134,7 @@ def ensure_column(db: sqlite3.Connection, table: str, column: str, definition: s
 
 
 PROPERTY_STATUSES_AR = ("شاغرة", "محجوزة", "مستأجرة", "صيانة")
+GEOCODE_CACHE: Dict[str, Tuple[float, float]] = {}
 
 
 def normalize_property_status(status: Any) -> str:
@@ -1535,6 +2166,31 @@ def property_display_name(data: Dict[str, Any]) -> str:
     return str(data.get("name") or "").strip()
 
 
+def geocode_property_location(location: str) -> Optional[Tuple[float, float]]:
+    key = str(location or "").strip()
+    if not key:
+        return None
+    if key in GEOCODE_CACHE:
+        return GEOCODE_CACHE[key]
+    query = key if any(token in key.lower() for token in ("oman", "nizwa", "نزوى")) else f"{key}, Nizwa, Oman"
+    url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode(
+        {"q": query, "format": "json", "limit": "1"}
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "LaunchQualityERP/49.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            raw = json.loads(resp.read().decode("utf-8") or "[]")
+        if isinstance(raw, list) and raw:
+            lat = float(raw[0].get("lat"))
+            lng = float(raw[0].get("lon"))
+            if -90 <= lat <= 90 and -180 <= lng <= 180:
+                GEOCODE_CACHE[key] = (lat, lng)
+                return lat, lng
+    except Exception:
+        return None
+    return None
+
+
 def prepare_property_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     payload = dict(data)
     payload["status"] = normalize_property_status(payload.get("status"))
@@ -1550,6 +2206,32 @@ def prepare_property_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str, A
     if price < 0:
         return None, "Price must be non-negative"
     payload["price"] = price
+    lat_raw = payload.get("latitude")
+    lng_raw = payload.get("longitude")
+    if lat_raw not in (None, ""):
+        try:
+            lat = float(lat_raw)
+        except (TypeError, ValueError):
+            return None, "Invalid latitude"
+        if lat < -90 or lat > 90:
+            return None, "Latitude must be between -90 and 90"
+        payload["latitude"] = lat
+    else:
+        payload["latitude"] = None
+    if lng_raw not in (None, ""):
+        try:
+            lng = float(lng_raw)
+        except (TypeError, ValueError):
+            return None, "Invalid longitude"
+        if lng < -180 or lng > 180:
+            return None, "Longitude must be between -180 and 180"
+        payload["longitude"] = lng
+    else:
+        payload["longitude"] = None
+    if payload["latitude"] is None and payload["longitude"] is None and payload.get("location"):
+        coords = geocode_property_location(str(payload.get("location") or ""))
+        if coords:
+            payload["latitude"], payload["longitude"] = coords
     if not str(payload.get("name") or "").strip():
         payload["name"] = property_display_name(payload)
     payload.setdefault("type", str(payload.get("type") or "Apartment").strip() or "Apartment")
@@ -1932,6 +2614,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return None
         return user
 
+    def request_rp_id(self) -> str:
+        host = (self.headers.get("Host") or "").strip()
+        host = host.split(":")[0].strip().lower()
+        if host and host not in ("127.0.0.1",):
+            return host
+        return rp_id_from_origin(PRODUCTION_URL)
+
     def do_GET(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path.startswith("/api/"):
@@ -2058,6 +2747,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                             "directory": str(BACKUP_DIR),
                             "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
                         },
+                        "storage": storage_status(),
+                        "backup_integrity": latest_backup_integrity(),
                     })
                 if parts[0] == "openapi.json" and method == "GET":
                     spec = build_openapi_spec(PRODUCTION_URL, APP_VERSION)
@@ -2068,6 +2759,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "owner" and len(parts) >= 2 and parts[1] == "staff_activity" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_owner_staff_activity(db, user, query)
+                if parts[0] == "owner" and len(parts) >= 2 and parts[1] == "live_hub" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_owner_live_hub(db, user, query)
                 if parts[0] == "enterprise_status" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_enterprise_status(db, user)
@@ -2094,6 +2788,24 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return self.api_login_otp(db)
                 if parts[0] == "login" and method == "POST":
                     return self.api_login(db)
+                if parts[0] == "biometric" and len(parts) >= 3 and parts[1] == "register" and parts[2] == "options" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_biometric_register_options(db, user)
+                if parts[0] == "biometric" and len(parts) >= 3 and parts[1] == "register" and parts[2] == "finish" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_biometric_register_finish(db, user)
+                if parts[0] == "biometric" and len(parts) >= 3 and parts[1] == "auth" and parts[2] == "options" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_biometric_auth_options(db, user)
+                if parts[0] == "biometric" and len(parts) >= 3 and parts[1] == "auth" and parts[2] == "finish" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_biometric_auth_finish(db, user)
+                if parts[0] == "biometric" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_biometric_status(db, user)
+                if parts[0] == "biometric" and len(parts) >= 2 and parts[1] == "clear" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_biometric_clear(db, user)
                 if parts[0] == "logout" and method == "POST":
                     return self.api_logout(db)
                 if parts[0] == "change_password" and method == "POST":
@@ -2150,6 +2862,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "financial_statements" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_financial_statements(db)
+                if parts[0] == "accounts_insights" and method == "GET":
+                    user = self.require_user(db, "accounts:read")
+                    return None if not user else self.api_accounts_insights(db, query)
+                if parts[0] == "hospitality_summary" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_hospitality_summary(db, query)
                 if parts[0] == "bank_reconciliation_preview" and method == "GET":
                     user = self.require_user(db, "bank_reconciliations:read")
                     return None if not user else self.api_bank_reconciliation_preview(db, query)
@@ -2209,6 +2927,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "restore" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_restore(db, user)
+                if parts[0] == "export" and len(parts) >= 2 and parts[1] == "bundle" and method == "POST":
+                    user = self.require_user(db, "backup:export")
+                    return None if not user else self.api_export_bundle_zip(user)
+                if parts[0] == "export" and len(parts) >= 2 and parts[1] == "timeline_audit" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_export_timeline_audit_csv(db, user, query)
                 if parts[0] == "export" and method == "GET" and len(parts) >= 2:
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_export_csv(db, parts[1])
@@ -2244,9 +2968,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "report" and len(parts) >= 2 and parts[1] == "bank_reconciliation" and method == "GET":
                     user = self.require_user(db, "bank_reconciliations:read", query)
                     return None if not user else self.api_report_bank_reconciliation(db, user, query)
+                if parts[0] == "report" and len(parts) >= 2 and parts[1] == "hospitality" and method == "GET":
+                    user = self.require_user(db, "reports:read", query)
+                    return None if not user else self.api_report_hospitality(db, user, query)
                 if parts[0] == "permissions" and len(parts) >= 2 and parts[1] == "ui" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_permissions_ui(user)
+                if parts[0] == "permissions" and len(parts) >= 2 and parts[1] == "audit" and method == "GET":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_permissions_audit(db, user)
                 if (
                     parts[0] == "work_journal"
                     and method == "GET"
@@ -2255,6 +2985,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 ):
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_work_journal_list(db, user, today())
+                if parts[0] == "daily_operations" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_daily_operations_list(db, user, query)
+                if parts[0] == "daily_operations" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_daily_operations_create(db, user)
                 if parts[0] == "work_journal" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     if not user:
@@ -2326,6 +3062,374 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if not row:
             return self.send_json({"ok": False, "error": "User not found"}, 404)
         self.issue_session(db, row, via="otp", remember=bool(data.get("remember_device")))
+
+    def parse_client_data(self, client_data_b64: str) -> Dict[str, Any]:
+        raw = b64url_decode(client_data_b64)
+        if not raw:
+            raise ValueError("بيانات clientDataJSON مفقودة")
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except Exception as exc:
+            raise ValueError("تعذر قراءة clientDataJSON") from exc
+
+    def api_biometric_register_options(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        if FIDO2_AVAILABLE:
+            rp_id = self.request_rp_id()
+            rp = PublicKeyCredentialRpEntity(id=rp_id, name="Launch Quality LLC")
+            server = Fido2Server(rp)
+            existing_rows = db.execute(
+                "SELECT credential_data FROM biometric_credentials WHERE user_id=? AND active=1 AND credential_data IS NOT NULL",
+                (user["id"],),
+            ).fetchall()
+            credentials: List[Any] = []
+            for row in existing_rows:
+                blob = str(row["credential_data"] or "").strip()
+                if not blob:
+                    continue
+                try:
+                    credentials.append(AttestedCredentialData(b64url_decode(blob)))
+                except Exception:
+                    continue
+            user_entity = {
+                "id": str(user["id"]).encode("utf-8"),
+                "name": str(user.get("username") or user["id"]),
+                "displayName": str(user.get("name") or user.get("username") or user["id"]),
+            }
+            options, server_state = server.register_begin(
+                user=user_entity,
+                credentials=credentials,
+                user_verification="required",
+                authenticator_attachment="platform",
+            )
+            state = store_biometric_flow_state(str(user["id"]), "register_fido2", {"rp_id": rp_id, "server_state": server_state})
+            return self.send_json({"ok": True, "state": state, "publicKey": webauthn_to_jsonable(options)})
+        challenge = create_biometric_challenge(str(user["id"]), "register")
+        existing = db.execute(
+            "SELECT credential_id FROM biometric_credentials WHERE user_id=? AND active=1",
+            (user["id"],),
+        ).fetchall()
+        self.send_json(
+            {
+                "ok": True,
+                "state": challenge["state"],
+                "publicKey": {
+                    "challenge": challenge["challenge"],
+                    "rp": {"name": "Launch Quality LLC", "id": self.request_rp_id()},
+                    "user": {
+                        "id": b64url_encode(str(user["id"]).encode("utf-8")),
+                        "name": str(user.get("username") or user["id"]),
+                        "displayName": str(user.get("name") or user.get("username") or user["id"]),
+                    },
+                    "pubKeyCredParams": [{"type": "public-key", "alg": -7}, {"type": "public-key", "alg": -257}],
+                    "timeout": 60000,
+                    "attestation": "none",
+                    "authenticatorSelection": {"authenticatorAttachment": "platform", "userVerification": "required"},
+                    "excludeCredentials": [{"type": "public-key", "id": str(row["credential_id"])} for row in existing],
+                },
+            }
+        )
+
+    def api_biometric_register_finish(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        state = str(data.get("state") or "").strip()
+        credential = data.get("credential") or {}
+        if not state or not isinstance(credential, dict):
+            return self.send_json({"ok": False, "error": "بيانات التسجيل غير مكتملة"}, 400)
+        if FIDO2_AVAILABLE:
+            flow = consume_biometric_flow_state(state, str(user["id"]), "register_fido2")
+            if flow:
+                rp_id = str(flow.get("rp_id") or self.request_rp_id())
+                server_state = flow.get("server_state")
+                if not isinstance(server_state, dict):
+                    return self.send_json({"ok": False, "error": "حالة التسجيل غير صالحة"}, 400)
+                response = credential.get("response") or {}
+                client_json = str(response.get("clientDataJSON") or "")
+                attestation_obj = str(response.get("attestationObject") or "")
+                if not client_json or not attestation_obj:
+                    return self.send_json({"ok": False, "error": "بيانات WebAuthn ناقصة"}, 400)
+                try:
+                    rp = PublicKeyCredentialRpEntity(id=rp_id, name="Launch Quality LLC")
+                    server = Fido2Server(rp)
+                    client_data = CollectedClientData(b64url_decode(client_json))
+                    att_obj = AttestationObject(b64url_decode(attestation_obj))
+                    auth_data = server.register_complete(server_state, client_data, att_obj)
+                    cred_data = auth_data.credential_data
+                    credential_id = b64url_encode(cred_data.credential_id)
+                    credential_blob = b64url_encode(bytes(cred_data))
+                    sign_count = int(getattr(auth_data, "sign_count", 0) or 0)
+                    alg = str(getattr(cred_data.public_key, "ALGORITHM", "") or "")
+                except Exception as exc:
+                    return self.send_json({"ok": False, "error": "فشل التحقق التشفيري للتسجيل", "detail": str(exc)}, 400)
+                label = str(data.get("label") or "هذا الجهاز").strip()[:100]
+                transports_payload = response.get("transports")
+                transports: List[str] = []
+                if isinstance(transports_payload, list):
+                    transports = [str(item).strip() for item in transports_payload if str(item).strip()]
+                row_id = uid("BIO")
+                db.execute(
+                    """
+                    INSERT INTO biometric_credentials(id,user_id,credential_id,credential_data,public_key,algorithm,label,transports,sign_count,active,created_at,last_verified)
+                    VALUES(?,?,?,?,?,?,?,?,?,1,?,?)
+                    ON CONFLICT(credential_id) DO UPDATE SET
+                        user_id=excluded.user_id,
+                        credential_data=excluded.credential_data,
+                        public_key=excluded.public_key,
+                        algorithm=excluded.algorithm,
+                        label=excluded.label,
+                        transports=excluded.transports,
+                        active=1,
+                        sign_count=excluded.sign_count,
+                        last_verified=excluded.last_verified
+                    """,
+                    (
+                        row_id,
+                        user["id"],
+                        credential_id,
+                        credential_blob,
+                        b64url_encode(bytes(getattr(cred_data, "public_key"))),
+                        alg,
+                        label or "هذا الجهاز",
+                        json.dumps(transports, ensure_ascii=False),
+                        sign_count,
+                        now_iso(),
+                        now_iso(),
+                    ),
+                )
+                audit(db, user, "biometric_register", "users", user["id"], f"Registered biometric credential ({credential_id[:18]}...)")
+                db.commit()
+                return self.send_json({"ok": True, "message": "تم تسجيل البصمة المؤسسية (تحقق تشفيري كامل)"})
+        expected = consume_biometric_challenge(state, str(user["id"]), "register")
+        if not expected:
+            return self.send_json({"ok": False, "error": "انتهت صلاحية جلسة التسجيل، أعد المحاولة"}, 400)
+        response = credential.get("response") or {}
+        try:
+            client_data = self.parse_client_data(str(response.get("clientDataJSON") or ""))
+        except ValueError as exc:
+            return self.send_json({"ok": False, "error": str(exc)}, 400)
+        if str(client_data.get("type") or "") != "webauthn.create":
+            return self.send_json({"ok": False, "error": "نوع التسجيل غير صحيح"}, 400)
+        if str(client_data.get("challenge") or "") != expected:
+            return self.send_json({"ok": False, "error": "تحدي التسجيل غير مطابق"}, 400)
+        credential_id = str(credential.get("id") or credential.get("rawId") or "").strip()
+        if not credential_id:
+            return self.send_json({"ok": False, "error": "معرف البصمة غير موجود"}, 400)
+        label = str(data.get("label") or "هذا الجهاز").strip()[:100]
+        transports_payload = response.get("transports")
+        transports: List[str] = []
+        if isinstance(transports_payload, list):
+            transports = [str(item).strip() for item in transports_payload if str(item).strip()]
+        row_id = uid("BIO")
+        db.execute(
+            """
+            INSERT INTO biometric_credentials(id,user_id,credential_id,credential_data,public_key,algorithm,label,transports,sign_count,active,created_at,last_verified)
+            VALUES(?,?,?,?,?,?,?,?,?,1,?,?)
+            ON CONFLICT(credential_id) DO UPDATE SET
+                user_id=excluded.user_id,
+                credential_data=excluded.credential_data,
+                public_key=excluded.public_key,
+                algorithm=excluded.algorithm,
+                label=excluded.label,
+                transports=excluded.transports,
+                active=1,
+                last_verified=excluded.last_verified
+            """,
+            (
+                row_id,
+                user["id"],
+                credential_id,
+                None,
+                None,
+                None,
+                label or "هذا الجهاز",
+                json.dumps(transports, ensure_ascii=False),
+                0,
+                now_iso(),
+                now_iso(),
+            ),
+        )
+        audit(db, user, "biometric_register", "users", user["id"], f"Registered biometric credential ({credential_id[:18]}...)")
+        db.commit()
+        self.send_json({"ok": True, "message": "تم تسجيل البصمة المؤسسية"})
+
+    def api_biometric_auth_options(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        if FIDO2_AVAILABLE:
+            rp_id = self.request_rp_id()
+            rp = PublicKeyCredentialRpEntity(id=rp_id, name="Launch Quality LLC")
+            server = Fido2Server(rp)
+            rows = db.execute(
+                """
+                SELECT credential_data
+                FROM biometric_credentials
+                WHERE user_id=? AND active=1 AND credential_data IS NOT NULL
+                ORDER BY created_at DESC
+                """,
+                (user["id"],),
+            ).fetchall()
+            credentials: List[Any] = []
+            for row in rows:
+                blob = str(row["credential_data"] or "").strip()
+                if not blob:
+                    continue
+                try:
+                    credentials.append(AttestedCredentialData(b64url_decode(blob)))
+                except Exception:
+                    continue
+            if not credentials:
+                return self.send_json({"ok": False, "error": "لا توجد بصمة قابلة للتحقق التشفيري. أعد التسجيل."}, 400)
+            options, server_state = server.authenticate_begin(credentials=credentials, user_verification="required")
+            state = store_biometric_flow_state(str(user["id"]), "verify_fido2", {"rp_id": rp_id, "server_state": server_state})
+            return self.send_json({"ok": True, "state": state, "publicKey": webauthn_to_jsonable(options)})
+        rows = db.execute(
+            """
+            SELECT credential_id
+            FROM biometric_credentials
+            WHERE user_id=? AND active=1
+            ORDER BY created_at DESC
+            """,
+            (user["id"],),
+        ).fetchall()
+        if not rows:
+            return self.send_json({"ok": False, "error": "لا توجد بصمة مربوطة لهذا الحساب"}, 400)
+        challenge = create_biometric_challenge(str(user["id"]), "verify")
+        self.send_json(
+            {
+                "ok": True,
+                "state": challenge["state"],
+                "publicKey": {
+                    "challenge": challenge["challenge"],
+                    "timeout": 60000,
+                    "userVerification": "required",
+                    "rpId": self.request_rp_id(),
+                    "allowCredentials": [{"type": "public-key", "id": str(row["credential_id"])} for row in rows],
+                },
+            }
+        )
+
+    def api_biometric_auth_finish(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        state = str(data.get("state") or "").strip()
+        credential = data.get("credential") or {}
+        if not state or not isinstance(credential, dict):
+            return self.send_json({"ok": False, "error": "بيانات التحقق غير مكتملة"}, 400)
+        if FIDO2_AVAILABLE:
+            flow = consume_biometric_flow_state(state, str(user["id"]), "verify_fido2")
+            if flow:
+                rp_id = str(flow.get("rp_id") or self.request_rp_id())
+                server_state = flow.get("server_state")
+                if not isinstance(server_state, dict):
+                    return self.send_json({"ok": False, "error": "حالة التحقق غير صالحة"}, 400)
+                response = credential.get("response") or {}
+                credential_id = str(credential.get("id") or credential.get("rawId") or "").strip()
+                row = db.execute(
+                    "SELECT id, credential_data FROM biometric_credentials WHERE credential_id=? AND user_id=? AND active=1",
+                    (credential_id, user["id"]),
+                ).fetchone()
+                if not row or not row["credential_data"]:
+                    return self.send_json({"ok": False, "error": "لا يوجد اعتماد مطابق للحساب الحالي"}, 403)
+                try:
+                    rp = PublicKeyCredentialRpEntity(id=rp_id, name="Launch Quality LLC")
+                    server = Fido2Server(rp)
+                    stored_cred = AttestedCredentialData(b64url_decode(str(row["credential_data"])))
+                    client_data = CollectedClientData(b64url_decode(str(response.get("clientDataJSON") or "")))
+                    auth_data = AuthenticatorData(b64url_decode(str(response.get("authenticatorData") or "")))
+                    signature = b64url_decode(str(response.get("signature") or ""))
+                    server.authenticate_complete(
+                        server_state,
+                        [stored_cred],
+                        stored_cred.credential_id,
+                        client_data,
+                        auth_data,
+                        signature,
+                    )
+                    sign_count = int(getattr(auth_data, "counter", 0) or 0)
+                except Exception as exc:
+                    return self.send_json({"ok": False, "error": "فشل التحقق التشفيري للبصمة", "detail": str(exc)}, 401)
+                db.execute(
+                    "UPDATE biometric_credentials SET last_verified=?, sign_count=? WHERE id=?",
+                    (now_iso(), sign_count, row["id"]),
+                )
+                audit(db, user, "biometric_verify", "users", user["id"], f"Verified biometric credential ({credential_id[:18]}...)")
+                db.commit()
+                return self.send_json({"ok": True, "verified_at": now_iso(), "mode": "fido2"})
+        expected = consume_biometric_challenge(state, str(user["id"]), "verify")
+        if not expected:
+            return self.send_json({"ok": False, "error": "انتهت جلسة التحقق، أعد المحاولة"}, 400)
+        response = credential.get("response") or {}
+        try:
+            client_data = self.parse_client_data(str(response.get("clientDataJSON") or ""))
+        except ValueError as exc:
+            return self.send_json({"ok": False, "error": str(exc)}, 400)
+        if str(client_data.get("type") or "") != "webauthn.get":
+            return self.send_json({"ok": False, "error": "نوع تحقق غير صحيح"}, 400)
+        if str(client_data.get("challenge") or "") != expected:
+            return self.send_json({"ok": False, "error": "تحدي التحقق غير مطابق"}, 400)
+        credential_id = str(credential.get("id") or credential.get("rawId") or "").strip()
+        if not credential_id:
+            return self.send_json({"ok": False, "error": "معرف الاعتماد مفقود"}, 400)
+        row = db.execute(
+            """
+            SELECT id, user_id, sign_count
+            FROM biometric_credentials
+            WHERE credential_id=? AND user_id=? AND active=1
+            """,
+            (credential_id, user["id"]),
+        ).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "هذا الاعتماد غير مرتبط بالحساب الحالي"}, 403)
+        sign_count = int(row["sign_count"] or 0)
+        auth_data_b64 = str(response.get("authenticatorData") or "")
+        if auth_data_b64:
+            auth_raw = b64url_decode(auth_data_b64)
+            if len(auth_raw) >= 37:
+                flags = auth_raw[32]
+                if (flags & 0x04) == 0:
+                    return self.send_json({"ok": False, "error": "التحقق الحيوي لم يتم بشكل آمن (UV)"}, 401)
+                sign_count = int.from_bytes(auth_raw[33:37], "big")
+        db.execute(
+            "UPDATE biometric_credentials SET last_verified=?, sign_count=? WHERE id=?",
+            (now_iso(), sign_count, row["id"]),
+        )
+        audit(db, user, "biometric_verify", "users", user["id"], f"Verified biometric credential ({credential_id[:18]}...)")
+        db.commit()
+        self.send_json({"ok": True, "verified_at": now_iso()})
+
+    def api_biometric_status(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, credential_id, credential_data, algorithm, label, transports, sign_count, active, created_at, last_verified
+                FROM biometric_credentials
+                WHERE user_id=?
+                ORDER BY created_at DESC
+                """,
+                (user["id"],),
+            ).fetchall()
+        )
+        for item in rows:
+            item["transports"] = json.loads(item["transports"]) if item.get("transports") else []
+            cid = str(item.get("credential_id") or "")
+            item["credential_hint"] = f"{cid[:8]}...{cid[-6:]}" if len(cid) > 16 else cid
+            item["crypto_verified"] = bool(item.get("credential_data"))
+            item.pop("credential_id", None)
+            item.pop("credential_data", None)
+        active_count = sum(1 for item in rows if int(item.get("active") or 0) == 1)
+        self.send_json({"ok": True, "active_count": active_count, "fido2_available": FIDO2_AVAILABLE, "items": rows})
+
+    def api_biometric_clear(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        binding_id = str(data.get("binding_id") or "").strip()
+        if binding_id:
+            db.execute(
+                "UPDATE biometric_credentials SET active=0 WHERE id=? AND user_id=?",
+                (binding_id, user["id"]),
+            )
+            details = f"Cleared biometric binding {binding_id}"
+        else:
+            db.execute("UPDATE biometric_credentials SET active=0 WHERE user_id=?", (user["id"],))
+            details = "Cleared all biometric bindings"
+        audit(db, user, "biometric_clear", "users", user["id"], details)
+        db.commit()
+        self.send_json({"ok": True})
 
     def api_change_password(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -2455,6 +3559,141 @@ class JawdahHandler(BaseHTTPRequestHandler):
         db.commit()
         self.send_json({"ok": True})
 
+    def api_daily_operations_list(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        from_date = str((params.get("from") or [""])[0] or "").strip()
+        to_date = str((params.get("to") or [""])[0] or "").strip()
+        if not from_date:
+            from_date = (date.today() - timedelta(days=14)).isoformat()
+        if not to_date:
+            to_date = date.today().isoformat()
+        rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT
+                    d.id,
+                    d.entry_date,
+                    d.employee_user_id,
+                    d.employee_name,
+                    d.icon,
+                    d.done_text,
+                    d.deferred_text,
+                    d.deferred_to,
+                    d.created_by_user_id,
+                    d.created_by_name,
+                    d.created_at,
+                    eu.username AS employee_username,
+                    cu.username AS created_by_username
+                FROM daily_operations d
+                LEFT JOIN users eu ON eu.id = d.employee_user_id
+                LEFT JOIN users cu ON cu.id = d.created_by_user_id
+                WHERE date(d.entry_date) >= date(?) AND date(d.entry_date) <= date(?)
+                ORDER BY d.entry_date DESC, d.created_at DESC
+                LIMIT 600
+                """,
+                (from_date, to_date),
+            ).fetchall()
+        )
+        for row in rows:
+            icon = str(row.get("icon") or "").strip()
+            if not icon:
+                row["icon"] = default_daily_ops_icon(str(row.get("employee_username") or ""), str(row.get("employee_name") or ""))
+        self.send_json(
+            {
+                "ok": True,
+                "items": rows,
+                "period": {"from": from_date, "to": to_date},
+                "can_manage_all": can_manage_daily_operations(user),
+            }
+        )
+
+    def api_daily_operations_create(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        done_text = str(data.get("done_text") or "").strip()
+        deferred_text = str(data.get("deferred_text") or "").strip()
+        if not done_text and not deferred_text:
+            return self.send_json({"ok": False, "error": "أدخل الأعمال المنجزة أو المؤجلة"}, 400)
+        entry_date = str(data.get("entry_date") or today()).strip() or today()
+        deferred_to = str(data.get("deferred_to") or "").strip() or None
+        target_user_id = str(data.get("employee_user_id") or "").strip()
+        requested_name = str(data.get("employee_name") or "").strip()
+        manager = can_manage_daily_operations(user)
+        actor_id = str(user.get("id") or "")
+        if not target_user_id:
+            target_user_id = "" if (manager and requested_name) else actor_id
+        if not manager and target_user_id != actor_id:
+            return self.send_json({"ok": False, "error": "يمكنك إضافة عملياتك اليومية فقط"}, 403)
+        employee_user_id: Optional[str] = None
+        employee_username = ""
+        employee_name = requested_name
+        emp_row = db.execute("SELECT id, username, name FROM users WHERE id=?", (target_user_id,)).fetchone() if target_user_id else None
+        if emp_row:
+            employee_user_id = str(emp_row["id"])
+            employee_username = str(emp_row["username"] or "")
+            if not employee_name:
+                employee_name = str(emp_row["name"] or "") or employee_username
+        elif manager and requested_name:
+            employee_user_id = None
+            employee_username = ""
+        else:
+            return self.send_json({"ok": False, "error": "الموظف المحدد غير موجود"}, 404)
+        icon = str(data.get("icon") or "").strip() or default_daily_ops_icon(employee_username, employee_name)
+        op_id = uid("DOP")
+        created_by_name = str(user.get("name") or user.get("username") or "System")
+        insert(
+            db,
+            "daily_operations",
+            {
+                "id": op_id,
+                "entry_date": entry_date,
+                "employee_user_id": employee_user_id,
+                "employee_name": employee_name,
+                "icon": icon,
+                "done_text": done_text,
+                "deferred_text": deferred_text or None,
+                "deferred_to": deferred_to,
+                "created_by_user_id": actor_id,
+                "created_by_name": created_by_name,
+                "created_at": now_iso(),
+            },
+        )
+        audit(
+            db,
+            user,
+            "create",
+            "daily_operations",
+            op_id,
+            f"Daily ops entry for {employee_name} on {entry_date}",
+        )
+        db.commit()
+        row = rows_to_dicts(
+            db.execute(
+                """
+                SELECT
+                    d.id,
+                    d.entry_date,
+                    d.employee_user_id,
+                    d.employee_name,
+                    d.icon,
+                    d.done_text,
+                    d.deferred_text,
+                    d.deferred_to,
+                    d.created_by_user_id,
+                    d.created_by_name,
+                    d.created_at,
+                    eu.username AS employee_username,
+                    cu.username AS created_by_username
+                FROM daily_operations d
+                LEFT JOIN users eu ON eu.id = d.employee_user_id
+                LEFT JOIN users cu ON cu.id = d.created_by_user_id
+                WHERE d.id=?
+                LIMIT 1
+                """,
+                (op_id,),
+            ).fetchall()
+        )
+        self.send_json({"ok": True, "item": row[0] if row else None})
+
     def api_property_photo(self, db: sqlite3.Connection, user: Dict[str, Any], property_id: str) -> None:
         row = db.execute("SELECT id, image FROM properties WHERE id=?", (property_id,)).fetchone()
         if not row:
@@ -2572,6 +3811,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": False, "error": "اختر العقار والعميل وأدخل مبلغ إيجار أكبر من صفر"}, 400)
             if not exists(db, "properties", data["property_id"]) or not exists(db, "clients", data["client_id"]):
                 return self.send_json({"ok": False, "error": "العقار أو العميل غير موجود — أضفهما أولاً ثم أعد المحاولة"}, 400)
+            if active_contract_exists_for_property(db, str(data["property_id"]), str(item_id or "")):
+                requested_status = str(data.get("status") or "Draft").strip().lower()
+                if requested_status in ("active", "draft", ""):
+                    return self.send_json({"ok": False, "error": "لا يمكن إنشاء/تعديل عقد لهذه الوحدة لأن هناك عقداً نشطاً بالفعل"}, 400)
             data.setdefault("contract_type", "Residential")
             data.setdefault("contract_no", next_contract_no(db, data.get("contract_type") or "Residential"))
             data.setdefault("deposit_amount", 0)
@@ -2646,13 +3889,227 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if qty <= 0:
                 return self.send_json({"ok": False, "error": "Inventory quantity must be positive"}, 400)
             if method == "POST":
+                item_row = db.execute(
+                    "SELECT id, name, property_id FROM inventory_items WHERE id=?",
+                    (data.get("item_id"),),
+                ).fetchone()
                 sign = 1 if str(data.get("tx_type", "in")).lower() in ("in","purchase","return") else -1
                 db.execute("UPDATE inventory_items SET quantity = quantity + ? WHERE id=?", (sign*qty, data.get("item_id")))
+                if item_row:
+                    tx_cost = float(data.get("unit_cost") or 0) * qty
+                    if tx_cost > 0:
+                        if sign < 0:
+                            insert(
+                                db,
+                                "accounts",
+                                {
+                                    "id": uid("ACC"),
+                                    "entry_date": data.get("tx_date") or today(),
+                                    "type": "expense",
+                                    "category": "Property Stock Consumption",
+                                    "description": f"Inventory OUT {item_row['name']} ({data.get('item_id')})",
+                                    "client_id": None,
+                                    "property_id": item_row["property_id"],
+                                    "invoice_id": None,
+                                    "amount": tx_cost,
+                                },
+                            )
+                        elif str(data.get("tx_type", "in")).lower() in ("purchase", "in"):
+                            insert(
+                                db,
+                                "accounts",
+                                {
+                                    "id": uid("ACC"),
+                                    "entry_date": data.get("tx_date") or today(),
+                                    "type": "expense",
+                                    "category": "Property Stock In",
+                                    "description": f"Inventory IN {item_row['name']} ({data.get('item_id')})",
+                                    "client_id": None,
+                                    "property_id": item_row["property_id"],
+                                    "invoice_id": None,
+                                    "amount": tx_cost,
+                                },
+                            )
+        if table == "inventory_items":
+            pid = str(data.get("property_id") or "").strip()
+            if pid and not exists(db, "properties", pid):
+                return self.send_json({"ok": False, "error": "العقار المرتبط بالمخزن غير موجود"}, 400)
+            data["property_id"] = pid or None
+        if table == "hospitality_rooms":
+            room_code = str(data.get("room_code") or "").strip()
+            if not room_code:
+                return self.send_json({"ok": False, "error": "رقم/رمز الغرفة مطلوب"}, 400)
+            pid = str(data.get("property_id") or "").strip()
+            if pid and not exists(db, "properties", pid):
+                return self.send_json({"ok": False, "error": "العقار المرتبط بالغرفة غير موجود"}, 400)
+            data["property_id"] = pid or None
+            data["room_code"] = room_code
+            data.setdefault("room_type", "Standard")
+            data.setdefault("capacity", 2)
+            data.setdefault("rate_per_night", 0)
+            data.setdefault("status", "available")
+        if table == "hospitality_bookings":
+            current_row = None
+            timeline_change_details = ""
+            if method == "PUT" and item_id:
+                current_row = db.execute("SELECT * FROM hospitality_bookings WHERE id=?", (item_id,)).fetchone()
+                if current_row:
+                    merged = dict(current_row)
+                    merged.update(data)
+                    data = merged
+            if method == "PUT" and current_row:
+                old_checkin = str(current_row["checkin_date"] or "")
+                old_checkout = str(current_row["checkout_date"] or "")
+                new_checkin = str(data.get("checkin_date") or old_checkin)
+                new_checkout = str(data.get("checkout_date") or old_checkout)
+                if (new_checkin != old_checkin or new_checkout != old_checkout) and user.get("role") not in ("owner", "admin", "operations"):
+                    return self.send_json({"ok": False, "error": "تعديل فترة الحجز مسموح للمالك/الإدارة/العمليات فقط"}, 403)
+                if new_checkin != old_checkin or new_checkout != old_checkout:
+                    timeline_change_details = f"{old_checkin}→{new_checkin} | {old_checkout}→{new_checkout}"
+            room_id = str(data.get("room_id") or "").strip()
+            if not room_id:
+                return self.send_json({"ok": False, "error": "اختر الغرفة أولاً"}, 400)
+            room = db.execute("SELECT * FROM hospitality_rooms WHERE id=?", (room_id,)).fetchone()
+            if not room:
+                return self.send_json({"ok": False, "error": "الغرفة غير موجودة"}, 400)
+            guest_name = str(data.get("guest_name") or "").strip()
+            if not guest_name:
+                return self.send_json({"ok": False, "error": "اسم النزيل مطلوب"}, 400)
+            checkin = str(data.get("checkin_date") or "").strip()
+            checkout = str(data.get("checkout_date") or "").strip()
+            if not checkin or not checkout:
+                return self.send_json({"ok": False, "error": "تاريخ الدخول والخروج مطلوب"}, 400)
+            try:
+                in_dt = datetime.fromisoformat(checkin).date()
+                out_dt = datetime.fromisoformat(checkout).date()
+            except Exception:
+                return self.send_json({"ok": False, "error": "تواريخ الحجز غير صحيحة"}, 400)
+            nights = max(1, (out_dt - in_dt).days)
+            seasonal = seasonal_rate_for_booking(
+                db,
+                room["property_id"],
+                room["room_type"],
+                in_dt.isoformat(),
+                out_dt.isoformat(),
+            )
+            rate = float(data.get("rate_per_night") or seasonal or room["rate_per_night"] or 0)
+            total = float(data.get("total_amount") or 0) or (rate * nights)
+            paid = float(data.get("paid_amount") or 0)
+            if total <= 0:
+                return self.send_json({"ok": False, "error": "إجمالي الحجز يجب أن يكون أكبر من صفر"}, 400)
+            balance = round(total - paid, 3)
+            status = str(data.get("status") or "reserved").strip().lower()
+            overlap = db.execute(
+                """
+                SELECT id, guest_name, checkin_date, checkout_date, status
+                FROM hospitality_bookings
+                WHERE room_id=?
+                  AND id != ?
+                  AND lower(status) NOT IN ('checked_out','cancelled')
+                  AND NOT (date(checkout_date) <= date(?) OR date(checkin_date) >= date(?))
+                ORDER BY checkin_date ASC
+                LIMIT 1
+                """,
+                (room_id, str(item_id or ""), in_dt.isoformat(), out_dt.isoformat()),
+            ).fetchone()
+            if overlap:
+                return self.send_json(
+                    {
+                        "ok": False,
+                        "error": f"الغرفة محجوزة بالفعل خلال هذه الفترة (حجز: {overlap['id']} · {overlap['guest_name']})",
+                    },
+                    400,
+                )
+            data["room_id"] = room_id
+            data["property_id"] = room["property_id"]
+            data["guest_name"] = guest_name
+            data["checkin_date"] = in_dt.isoformat()
+            data["checkout_date"] = out_dt.isoformat()
+            data["nights"] = nights
+            data["rate_per_night"] = round(rate, 3)
+            data["total_amount"] = round(total, 3)
+            data["paid_amount"] = round(paid, 3)
+            data["balance_amount"] = round(balance, 3)
+            data["status"] = status
+            data.setdefault("booking_source", "direct")
+            data.setdefault("created_at", now_iso())
+            if status in ("checked_in", "occupied"):
+                db.execute("UPDATE hospitality_rooms SET status='occupied' WHERE id=?", (room_id,))
+            elif status in ("checked_out", "cancelled", "closed"):
+                db.execute("UPDATE hospitality_rooms SET status='available' WHERE id=?", (room_id,))
+            else:
+                db.execute("UPDATE hospitality_rooms SET status='reserved' WHERE id=?", (room_id,))
+            if method == "POST" and paid > 0:
+                insert(
+                    db,
+                    "accounts",
+                    {
+                        "id": uid("ACC"),
+                        "entry_date": data.get("checkin_date") or today(),
+                        "type": "income",
+                        "category": "Hospitality Booking",
+                        "description": f"Hospitality booking {row_id} - {guest_name}",
+                        "client_id": data.get("client_id") or None,
+                        "property_id": room["property_id"],
+                        "invoice_id": None,
+                        "amount": round(paid, 3),
+                    },
+                )
+            if method == "POST":
+                folio_id = uid("HFO")
+                folio_no = next_hospitality_folio_no(db)
+                insert(
+                    db,
+                    "hospitality_folios",
+                    {
+                        "id": folio_id,
+                        "booking_id": row_id,
+                        "folio_no": folio_no,
+                        "issue_date": data.get("checkin_date") or today(),
+                        "total_amount": round(total, 3),
+                        "paid_amount": round(paid, 3),
+                        "balance_amount": round(balance, 3),
+                        "status": "closed" if balance <= 0 else "open",
+                        "notes": data.get("notes"),
+                    },
+                )
+            if method == "PUT" and item_id:
+                f = db.execute("SELECT id FROM hospitality_folios WHERE booking_id=? ORDER BY rowid DESC LIMIT 1", (item_id,)).fetchone()
+                if f:
+                    db.execute(
+                        "UPDATE hospitality_folios SET total_amount=?, paid_amount=?, balance_amount=?, status=? WHERE id=?",
+                        (round(total, 3), round(paid, 3), round(balance, 3), ("closed" if balance <= 0 else "open"), f["id"]),
+                    )
+        if table == "hospitality_season_rates":
+            season_name = str(data.get("season_name") or "").strip()
+            start_date = str(data.get("start_date") or "").strip()
+            end_date = str(data.get("end_date") or "").strip()
+            rate = float(data.get("nightly_rate") or 0)
+            if not season_name or not start_date or not end_date or rate <= 0:
+                return self.send_json({"ok": False, "error": "بيانات الموسم غير مكتملة"}, 400)
+            try:
+                sdt = datetime.fromisoformat(start_date).date()
+                edt = datetime.fromisoformat(end_date).date()
+            except Exception:
+                return self.send_json({"ok": False, "error": "تواريخ الموسم غير صحيحة"}, 400)
+            if edt < sdt:
+                return self.send_json({"ok": False, "error": "تاريخ نهاية الموسم يجب أن يكون بعد البداية"}, 400)
+            pid = str(data.get("property_id") or "").strip()
+            if pid and not exists(db, "properties", pid):
+                return self.send_json({"ok": False, "error": "العقار غير موجود"}, 400)
+            data["property_id"] = pid or None
+            data["season_name"] = season_name
+            data["start_date"] = sdt.isoformat()
+            data["end_date"] = edt.isoformat()
+            data["nightly_rate"] = round(rate, 3)
+            data["active"] = int(bool(data.get("active", 1)))
         cols = [c for c in TABLES[table] if c in data]
         clean = {c: data.get(c) for c in cols}
         if method == "POST":
             insert(db, table, clean)
             audit(db, user, "create", table, row_id, "Created record")
+            if table == "contracts":
+                sync_property_status_for_contract(db, clean.get("property_id") or "", clean.get("status") or "Draft")
             if table == "contracts" and user.get("role") == "operations":
                 create_approval_request(
                     db,
@@ -2673,6 +4130,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
             sql = f"UPDATE {table} SET {','.join([c+'=?' for c in update_cols])} WHERE id=?"
             db.execute(sql, [clean[c] for c in update_cols] + [item_id])
             audit(db, user, "update", table, item_id, "Updated record")
+            if table == "hospitality_bookings" and timeline_change_details:
+                audit(
+                    db,
+                    user,
+                    "timeline_update",
+                    "hospitality_bookings",
+                    item_id,
+                    f"Timeline booking dates changed: {timeline_change_details}",
+                )
+            if table == "contracts":
+                property_id = clean.get("property_id")
+                status = clean.get("status")
+                if property_id and status:
+                    sync_property_status_for_contract(db, property_id, status)
             db.commit()
             return self.send_json({"ok": True})
 
@@ -2682,12 +4153,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
             return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        if not exists(db, "properties", contract["property_id"]) or not exists(db, "clients", contract["client_id"]):
+            return self.send_json({"ok": False, "error": "Contract references missing client/property"}, 400)
         amount = float(data.get("amount") or contract["rent_amount"])
-        inv_type = detect_invoice_type(data.get("description") or "Rent invoice", data.get("invoice_type"))
+        default_desc = contract_invoice_description(db, contract, data.get("due_date"))
+        inv_type = detect_invoice_type(data.get("description") or default_desc, data.get("invoice_type"))
         invoice = build_invoice_row(
             db,
             contract,
-            data.get("description") or ("تأمين عقد / Contract deposit" if inv_type == "deposit" else "Rent invoice"),
+            data.get("description") or ("تأمين عقد / Contract deposit" if inv_type == "deposit" else default_desc),
             amount,
             issue_date=data.get("issue_date"),
             due_date=data.get("due_date"),
@@ -2888,6 +4362,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
         days = int((params.get("days") or ["14"])[0] or 14)
         activity = build_owner_staff_activity(db, days)
         self.send_json({"ok": True, "activity": activity})
+
+    def api_owner_live_hub(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        if not is_primary_owner_user(user):
+            return self.send_json({"ok": False, "error": "لوحة المالك الحية مخصصة لوليد ويعقوب فقط"}, 403)
+        params = urllib.parse.parse_qs(query or "")
+        timeline_days = normalize_timeline_days((params.get("timeline_days") or ["7"])[0], 7)
+        self.send_json({"ok": True, "hub": build_owner_live_hub(db, timeline_days)})
 
     def api_enterprise_status(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         branches = rows_to_dicts(db.execute("SELECT * FROM branches ORDER BY name").fetchall())
@@ -3147,6 +4628,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
         }
         insert(db, "contracts", new_contract)
         db.execute("UPDATE contracts SET status=? WHERE id=?", ("Renewed", contract_id))
+        sync_property_status_for_contract(db, contract["property_id"], "Renewed")
         audit(db, user, "renew", "contracts", contract_id, f"Renewed {prev_no} -> {new_contract['contract_no']}")
         db.commit()
         self.send_json({"ok": True, "contract": new_contract, "previous_contract_id": contract_id})
@@ -3177,6 +4659,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "UPDATE contracts SET status=?, ended_at=?, notes=? WHERE id=?",
             (final_status, ended_at, notes, contract_id),
         )
+        sync_property_status_for_contract(db, contract["property_id"], final_status)
         audit(db, user, "end", "contracts", contract_id, note_line)
         db.commit()
         self.send_json({"ok": True, "status": final_status, "ended_at": ended_at})
@@ -3608,6 +5091,40 @@ class JawdahHandler(BaseHTTPRequestHandler):
         html = build_bank_reconciliation_html(rec_dict, preview, owner)
         self.send_html(html)
 
+    def api_report_hospitality(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        folio_id = (params.get("folio_id") or [""])[0].strip()
+        from_date = (params.get("from") or [date.today().replace(day=1).isoformat()])[0].strip() or date.today().replace(day=1).isoformat()
+        to_date = (params.get("to") or [today()])[0].strip() or today()
+        owner = user.get("name") or user.get("username") or "Launch Quality LLC"
+        if folio_id:
+            folio = db.execute(
+                """
+                SELECT f.*, b.guest_name, b.guest_phone, b.checkin_date, b.checkout_date, b.nights, b.room_id,
+                       r.room_code, r.room_type, p.name AS property_name
+                FROM hospitality_folios f
+                LEFT JOIN hospitality_bookings b ON b.id=f.booking_id
+                LEFT JOIN hospitality_rooms r ON r.id=b.room_id
+                LEFT JOIN properties p ON p.id=b.property_id
+                WHERE f.id=? OR f.folio_no=?
+                """,
+                (folio_id, folio_id),
+            ).fetchone()
+            if not folio:
+                return self.send_json({"ok": False, "error": "Hospitality folio not found"}, 404)
+            html = build_hospitality_folio_html(dict(folio), owner)
+            return self.send_html(html)
+        try:
+            datetime.fromisoformat(from_date)
+            datetime.fromisoformat(to_date)
+        except Exception:
+            return self.send_json({"ok": False, "error": "Invalid date range"}, 400)
+        if from_date > to_date:
+            from_date, to_date = to_date, from_date
+        summary = build_hospitality_summary(db, from_date, to_date)
+        html = build_hospitality_report_html(summary, owner)
+        self.send_html(html)
+
     def api_financial_statements(self, db: sqlite3.Connection) -> None:
         accounts = rows_to_dicts(db.execute("SELECT * FROM accounts").fetchall())
         invoices = rows_to_dicts(db.execute("SELECT * FROM invoices").fetchall())
@@ -3629,6 +5146,62 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "balance_sheet": {"assets": {"cash_bank": bank_balance, "accounts_receivable": ar, "inventory": inventory_value}, "liabilities": {"accounts_payable": ap}, "equity": {"retained_earnings": income-expense}},
             "linked_storage": {"tables": sorted(TABLES.keys()), "backup_ready": True}
         }})
+
+    def api_accounts_insights(self, db: sqlite3.Connection, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        months_limit = max(3, min(18, int((params.get("months") or ["6"])[0] or "6")))
+        rows = rows_to_dicts(db.execute("SELECT entry_date,type,category,amount FROM accounts ORDER BY entry_date ASC").fetchall())
+        month_buckets: Dict[str, Dict[str, float]] = {}
+        expense_by_category: Dict[str, float] = {}
+        income_by_category: Dict[str, float] = {}
+        today_dt = date.today()
+        for i in range(months_limit):
+            dt = (today_dt.replace(day=1) - timedelta(days=31 * i)).replace(day=1)
+            key = dt.strftime("%Y-%m")
+            month_buckets[key] = {"income": 0.0, "expense": 0.0}
+        for row in rows:
+            entry_date = str(row.get("entry_date") or "").strip()
+            amount = float(row.get("amount") or 0)
+            tx_type = str(row.get("type") or "").strip().lower()
+            category = str(row.get("category") or "غير مصنف").strip() or "غير مصنف"
+            month_key = entry_date[:7] if len(entry_date) >= 7 else ""
+            if month_key in month_buckets:
+                if tx_type == "income":
+                    month_buckets[month_key]["income"] += amount
+                elif tx_type == "expense":
+                    month_buckets[month_key]["expense"] += amount
+            if tx_type == "income":
+                income_by_category[category] = income_by_category.get(category, 0.0) + amount
+            elif tx_type == "expense":
+                expense_by_category[category] = expense_by_category.get(category, 0.0) + amount
+        series = []
+        for key in sorted(month_buckets.keys()):
+            m = month_buckets[key]
+            series.append({"month": key, "income": round(m["income"], 3), "expense": round(m["expense"], 3), "net": round(m["income"] - m["expense"], 3)})
+        top_expense = [{"category": k, "amount": round(v, 3)} for k, v in sorted(expense_by_category.items(), key=lambda item: item[1], reverse=True)[:6]]
+        top_income = [{"category": k, "amount": round(v, 3)} for k, v in sorted(income_by_category.items(), key=lambda item: item[1], reverse=True)[:6]]
+        self.send_json(
+            {
+                "ok": True,
+                "months": months_limit,
+                "cashflow_series": series,
+                "top_expense_categories": top_expense,
+                "top_income_categories": top_income,
+            }
+        )
+
+    def api_hospitality_summary(self, db: sqlite3.Connection, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        from_date = str((params.get("from") or [today()])[0]).strip() or today()
+        to_date = str((params.get("to") or [today()])[0]).strip() or today()
+        try:
+            datetime.fromisoformat(from_date)
+            datetime.fromisoformat(to_date)
+        except Exception:
+            return self.send_json({"ok": False, "error": "صيغة التاريخ غير صحيحة"}, 400)
+        if from_date > to_date:
+            from_date, to_date = to_date, from_date
+        self.send_json({"ok": True, "summary": build_hospitality_summary(db, from_date, to_date)})
 
     def api_accountant_reports(self, db: sqlite3.Connection, query: str) -> None:
         params = urllib.parse.parse_qs(query or "")
@@ -3697,6 +5270,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "directory": str(BACKUP_DIR),
                 "last_backup": LAST_AUTO_BACKUP_AT or (recent[0]["created_at"] if recent else None),
             },
+            "storage": storage_status(),
+            "backup_integrity": latest_backup_integrity(),
             "offsite": offsite_config(),
             "recent": recent[:10],
         })
@@ -3758,6 +5333,87 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
+
+    def api_export_timeline_audit_csv(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        if not is_primary_owner_user(user):
+            return self.send_json({"ok": False, "error": "لوحة المالك الحية مخصصة لوليد ويعقوب فقط"}, 403)
+        params = urllib.parse.parse_qs(query or "")
+        timeline_days = normalize_timeline_days((params.get("timeline_days") or ["7"])[0], 7)
+        timeline_cutoff = (datetime.now() - timedelta(days=timeline_days)).strftime("%Y-%m-%d %H:%M:%S") if timeline_days > 0 else ""
+        sql = """
+            SELECT
+                a.created_at,
+                a.username,
+                a.entity_id AS booking_id,
+                r.room_code,
+                b.guest_name,
+                b.checkin_date,
+                b.checkout_date,
+                a.details
+            FROM audit_log a
+            LEFT JOIN hospitality_bookings b ON b.id = a.entity_id
+            LEFT JOIN hospitality_rooms r ON r.id = b.room_id
+            WHERE a.action = 'timeline_update'
+              AND a.entity = 'hospitality_bookings'
+        """
+        args: List[Any] = []
+        if timeline_days > 0:
+            sql += " AND datetime(a.created_at) >= datetime(?)"
+            args.append(timeline_cutoff)
+        sql += " ORDER BY a.created_at DESC LIMIT 1000"
+        rows = rows_to_dicts(db.execute(sql, tuple(args)).fetchall())
+        output = io.StringIO()
+        fieldnames = [
+            "created_at",
+            "username",
+            "booking_id",
+            "room_code",
+            "guest_name",
+            "checkin_date",
+            "checkout_date",
+            "details",
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({k: row.get(k) for k in fieldnames})
+        raw = output.getvalue().encode("utf-8-sig")
+        suffix = "all" if timeline_days == 0 else f"{timeline_days}d"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Content-Disposition", f"attachment; filename=jawdah-timeline-audit-{suffix}.csv")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def api_export_bundle_zip(self, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        files = data.get("files") if isinstance(data, dict) else None
+        if not isinstance(files, dict) or not files:
+            return self.send_json({"ok": False, "error": "No files provided"}, 400)
+        if len(files) > 30:
+            return self.send_json({"ok": False, "error": "Too many files"}, 400)
+        zip_buffer = io.BytesIO()
+        total_bytes = 0
+        with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for name, content in files.items():
+                if not isinstance(name, str) or not isinstance(content, str):
+                    continue
+                safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", name.strip())[:120] or "export.csv"
+                if not re.search(r"\.(csv|json|txt)$", safe_name.lower()):
+                    safe_name += ".csv"
+                raw = content.encode("utf-8-sig")
+                total_bytes += len(raw)
+                if total_bytes > 15 * 1024 * 1024:
+                    return self.send_json({"ok": False, "error": "Export bundle too large"}, 400)
+                zf.writestr(safe_name, raw)
+        out = zip_buffer.getvalue()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/zip")
+        self.send_header("Content-Disposition", f'attachment; filename="jawdah-filtered-bundle-{date.today().isoformat()}.zip"')
+        self.send_header("Content-Length", str(len(out)))
+        self.end_headers()
+        self.wfile.write(out)
 
     def api_operations_check(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         checks: List[Dict[str, Any]] = []
@@ -3937,6 +5593,26 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_permissions_ui(self, user: Dict[str, Any]) -> None:
         self.send_json({"ok": True, **ui_permissions_for_role(user.get("role", "viewer"))})
 
+    def api_permissions_audit(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        role_rows = db.execute("SELECT role, COUNT(*) as c FROM users WHERE active=1 GROUP BY role").fetchall()
+        role_counts = {str(r["role"]): int(r["c"] or 0) for r in role_rows}
+        matrix = {}
+        for role, perms in ROLE_PERMISSIONS.items():
+            ui = ui_permissions_for_role(role)
+            matrix[role] = {
+                "active_users": role_counts.get(role, 0),
+                "permission_count": len(perms),
+                "sensitive": {
+                    "approve_contract": has_permission({"role": role}, "approvals"),
+                    "backup_write": has_permission({"role": role}, "backup"),
+                    "users_write": has_permission({"role": role}, "admin"),
+                    "delete_invoices": has_permission({"role": role}, "invoices:delete"),
+                },
+                "ui_sections": ui.get("sections", []),
+                "ui_write_sections": ui.get("write_sections", []),
+            }
+        self.send_json({"ok": True, "version": APP_VERSION, "roles": matrix})
+
     def api_report_executive(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         dash = build_dashboard(db)
         owner = user.get("name") or "Launch Quality LLC"
@@ -3994,14 +5670,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
 
 UI_SECTIONS_ALL = [
-    "dashboard", "owner-staff", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
+    "dashboard", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
     "admin-expenses", "maintenance", "reports", "messages", "walid", "enterprise",
     "production", "timeline", "backup", "settings", "accounts", "purchases", "payroll",
     "inventory", "bank", "chart-accounts", "statements", "bank-reconciliation",
     "financial-periods", "approvals", "users", "qa",
 ]
 UI_WRITE_SECTIONS_ALL = [
-    "properties", "clients", "contracts", "invoices", "maintenance", "inventory",
+    "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
     "accounts", "purchases", "payroll", "revenues", "admin-expenses", "bank",
     "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
     "users", "approvals", "backup",
@@ -4016,7 +5692,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     "admin": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
     "accountant": {
         "sections": [
-            "dashboard", "properties", "clients", "contracts", "invoices", "revenues",
+            "dashboard", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "revenues",
             "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
             "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
             "reports", "backup", "messages", "timeline", "walid", "approvals",
@@ -4028,19 +5704,19 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     },
     "operations": {
         "sections": [
-            "dashboard", "properties", "tasks", "clients", "contracts", "invoices",
+            "dashboard", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
             "maintenance", "inventory", "reports", "messages", "timeline", "backup",
             "walid", "approvals", "production",
         ],
         "kpis": ["properties", "rented", "vacant", "occupancy", "maintenance", "expiring", "health"],
     },
     "maintenance": {
-        "sections": ["dashboard", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
+        "sections": ["dashboard", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
         "kpis": ["maintenance", "properties", "vacant", "inventory_value", "health"],
     },
     "viewer": {
         "sections": [
-            "dashboard", "properties", "clients", "contracts", "invoices", "reports",
+            "dashboard", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
             "maintenance", "messages", "timeline", "backup",
         ],
         "kpis": ["properties", "occupancy", "health", "overdue", "net"],
@@ -4050,12 +5726,12 @@ UI_WRITE_BY_ROLE: Dict[str, List[str]] = {
     "owner": list(UI_WRITE_SECTIONS_ALL),
     "admin": list(UI_WRITE_SECTIONS_ALL),
     "accountant": [
-        "invoices", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
+        "invoices", "hospitality", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
         "bank", "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
         "approvals", "backup",
     ],
     "operations": [
-        "properties", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
+        "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
     ],
     "maintenance": ["maintenance", "inventory"],
     "viewer": [],
@@ -5482,6 +7158,94 @@ def build_bank_reconciliation_html(
 </html>"""
 
 
+def build_hospitality_report_html(summary: Dict[str, Any], owner: str) -> str:
+    k = summary.get("kpis") or {}
+    period = summary.get("period") or {}
+    rows = summary.get("room_type_breakdown") or []
+    rows_html = "".join(
+        f"<tr><td>{html_escape(str(r.get('room_type') or 'Standard'))}</td><td>{int(r.get('bookings') or 0)}</td><td>{fmt_omr(float(r.get('revenue') or 0))}</td></tr>"
+        for r in rows
+    ) or "<tr><td colspan='3'>لا توجد بيانات</td></tr>"
+    return f"""<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>تقرير أداء الضيافة</title>
+<style>
+  @page{{size:A4;margin:14mm}}
+  body{{font-family:Tajawal,Segoe UI,Arial,sans-serif;margin:24px;color:#111;background:#fff;line-height:1.6}}
+  .head{{border-bottom:4px solid #c9a227;padding-bottom:14px;margin-bottom:18px}}
+  h1{{margin:0;color:#0b1220;font-size:22px}}
+  h2{{color:#8f631b;font-size:15px}}
+  .kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0 18px}}
+  .kpi{{border:1px solid #e5d39a;border-radius:12px;padding:10px;background:#fffdf7}}
+  .kpi b{{display:block;font-size:17px;color:#071426;margin-top:4px}}
+  table{{width:100%;border-collapse:collapse;margin-top:12px}}
+  th,td{{border:1px solid #e5e7eb;padding:8px;text-align:right}}
+  th{{background:#0b1220;color:#f5d76e}}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>تقرير أداء الضيافة</h1>
+  <h2>Launch Quality LLC · {html_escape(str(period.get('from') or ''))} → {html_escape(str(period.get('to') or ''))}</h2>
+</div>
+<p>أُعد بواسطة: <strong>{html_escape(owner)}</strong> · {html_escape(now_iso())}</p>
+<div class="kpis">
+  <div class="kpi"><span>الغرف</span><b>{int(k.get('rooms') or 0)}</b></div>
+  <div class="kpi"><span>الإشغال</span><b>{float(k.get('occupancy_pct') or 0):.2f}%</b></div>
+  <div class="kpi"><span>ADR</span><b>{fmt_omr(float(k.get('adr') or 0))}</b></div>
+  <div class="kpi"><span>RevPAR</span><b>{fmt_omr(float(k.get('revpar') or 0))}</b></div>
+  <div class="kpi"><span>الإيراد الكلي</span><b>{fmt_omr(float(k.get('total_revenue') or 0))}</b></div>
+  <div class="kpi"><span>المدفوع</span><b>{fmt_omr(float(k.get('paid_revenue') or 0))}</b></div>
+  <div class="kpi"><span>المتبقي</span><b>{fmt_omr(float(k.get('balance_revenue') or 0))}</b></div>
+  <div class="kpi"><span>الليالي المباعة</span><b>{int(k.get('sold_nights') or 0)}</b></div>
+</div>
+<h3>توزيع الإيراد حسب نوع الغرفة</h3>
+<table><thead><tr><th>نوع الغرفة</th><th>عدد الحجوزات</th><th>الإيراد</th></tr></thead><tbody>{rows_html}</tbody></table>
+<p style="margin-top:26px"><button onclick="window.print()">طباعة / حفظ PDF</button></p>
+</body>
+</html>"""
+
+
+def build_hospitality_folio_html(folio: Dict[str, Any], owner: str) -> str:
+    return f"""<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>فوليو ضيافة {html_escape(str(folio.get('folio_no') or folio.get('id') or ''))}</title>
+<style>
+  @page{{size:A4;margin:14mm}}
+  body{{font-family:Tajawal,Segoe UI,Arial,sans-serif;margin:24px;color:#111;background:#fff}}
+  .head{{border-bottom:4px solid #c9a227;padding-bottom:12px;margin-bottom:16px}}
+  .box{{border:1px solid #e5d39a;border-radius:10px;padding:12px;margin:8px 0;background:#fffdf7}}
+  .line{{display:flex;justify-content:space-between;gap:8px;padding:4px 0}}
+  .tot{{font-size:18px;font-weight:700}}
+</style>
+</head>
+<body>
+<div class="head"><h1>فوليو/فاتورة ضيافة</h1><h2>{html_escape(str(folio.get('folio_no') or folio.get('id') or ''))}</h2></div>
+<p>أُعد بواسطة: <strong>{html_escape(owner)}</strong> · {html_escape(str(folio.get('issue_date') or now_iso()))}</p>
+<div class="box">
+  <div class="line"><span>النزيل</span><b>{html_escape(str(folio.get('guest_name') or ''))}</b></div>
+  <div class="line"><span>الهاتف</span><b>{html_escape(str(folio.get('guest_phone') or ''))}</b></div>
+  <div class="line"><span>العقار</span><b>{html_escape(str(folio.get('property_name') or ''))}</b></div>
+  <div class="line"><span>الغرفة</span><b>{html_escape(str(folio.get('room_code') or ''))} · {html_escape(str(folio.get('room_type') or ''))}</b></div>
+  <div class="line"><span>الدخول</span><b>{html_escape(str(folio.get('checkin_date') or ''))}</b></div>
+  <div class="line"><span>الخروج</span><b>{html_escape(str(folio.get('checkout_date') or ''))}</b></div>
+  <div class="line"><span>الليالي</span><b>{int(folio.get('nights') or 0)}</b></div>
+</div>
+<div class="box">
+  <div class="line tot"><span>الإجمالي</span><b>{fmt_omr(float(folio.get('total_amount') or 0))}</b></div>
+  <div class="line"><span>المدفوع</span><b>{fmt_omr(float(folio.get('paid_amount') or 0))}</b></div>
+  <div class="line"><span>المتبقي</span><b>{fmt_omr(float(folio.get('balance_amount') or 0))}</b></div>
+  <div class="line"><span>الحالة</span><b>{html_escape(str(folio.get('status') or 'open'))}</b></div>
+</div>
+<p style="margin-top:22px"><button onclick="window.print()">طباعة / حفظ PDF</button></p>
+</body>
+</html>"""
+
+
 def html_escape(s: str) -> str:
     return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
@@ -5597,8 +7361,16 @@ def main() -> None:
     ensure_upload_dirs()
     init_db()
     start_auto_backup_scheduler()
+    with connect() as db:
+        schema_overview = {
+            "properties_cols": len(db.execute("PRAGMA table_info(properties)").fetchall()),
+            "contracts_cols": len(db.execute("PRAGMA table_info(contracts)").fetchall()),
+            "invoices_cols": len(db.execute("PRAGMA table_info(invoices)").fetchall()),
+        }
+    print(f"Schema overview: {schema_overview}")
     print(f"Launch Quality LLC {APP_VERSION} running on http://{HOST}:{PORT}")
     print(f"Database: {DB_PATH}")
+    print(f"Data dir: {DATA_DIR} | Backup dir: {BACKUP_DIR}")
     print("Health check: /api/health")
     ThreadingHTTPServer((HOST, PORT), JawdahHandler).serve_forever()
 

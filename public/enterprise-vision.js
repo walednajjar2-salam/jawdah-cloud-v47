@@ -179,34 +179,67 @@
   }
 
   async function sendOtpCode(){
+    const btn = $('#otpSendBtn');
+    if(btn?.dataset.loading==='1') return;
     const username=($('#otpUser')?.value||$('#loginUser')?.value||'').trim();
     const status=$('#otpStatus');
     if(!username){ if(status) status.textContent='أدخل اسم المستخدم'; return; }
     try{
+      if(btn){
+        btn.dataset.loading='1';
+        btn.disabled=true;
+        btn.classList.add('is-loading');
+      }
+      if(status) status.textContent='جاري إرسال الرمز...';
       const res=await fetch('/api/otp/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});
       const data=await res.json();
       if(status) status.textContent=data.message||data.error||'—';
       if(typeof toastOk==='function' && data.ok) toastOk('تم إرسال رمز OTP');
     }catch(e){ if(status) status.textContent='تعذر إرسال الرمز'; }
+    finally{
+      if(btn){
+        btn.dataset.loading='0';
+        btn.disabled=false;
+        btn.classList.remove('is-loading');
+      }
+    }
   }
 
   async function tryOtpLogin(){
+    const btn = $('#otpLoginBtn');
+    if(btn?.dataset.loading==='1') return;
     const username=($('#otpUser')?.value||$('#loginUser')?.value||'').trim();
     const code=$$('.ev-otp-input').map(i=>i.value).join('');
+    const status=$('#otpStatus');
     if(!username||code.length<6) return;
     try{
+      if(btn){
+        btn.dataset.loading='1';
+        btn.disabled=true;
+        btn.classList.add('is-loading');
+      }
+      if(status) status.textContent='جاري التحقق من رمز OTP...';
       const res=await fetch('/api/login/otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,code,remember_device:true})});
       const data=await res.json();
       if(!res.ok||!data.token) throw new Error(data.error||'OTP failed');
       localStorage.setItem('jawdah_cloud_token', data.token);
       localStorage.setItem('jawdah_last_user', username);
+      if(status) status.textContent='تم التحقق بنجاح';
       if(typeof toastOk==='function') toastOk('دخول ذكي · OTP');
       if(window.Jawdah) window.Jawdah.token=data.token;
       if(typeof showAppShell==='function') showAppShell();
       if(typeof loadAll==='function') await loadAll();
       else location.href='/app.html';
     }catch(e){
+      if(status) status.textContent='رمز OTP غير صحيح أو منتهي';
       if(typeof toastErr==='function') toastErr(e.message||'رمز غير صحيح');
+    }
+    finally{
+      if(btn){
+        btn.dataset.loading='0';
+        btn.disabled=false;
+        btn.classList.remove('is-loading');
+      }
     }
   }
 

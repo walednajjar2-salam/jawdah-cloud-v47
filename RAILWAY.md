@@ -1,66 +1,53 @@
-# Launch Quality LLC — Railway Deployment
+# Launch Quality LLC v49 — Railway Production Runbook
 
-## Quick deploy
+## Quick Deploy
 
-1. Push this folder to GitHub: `walednajjar2-salam/jawdah-cloud-v47`
-2. Railway → **New Project** → **Deploy from GitHub**
-3. Select the repo and wait for build
-4. Add variables (see below)
-5. **Settings → Networking → Generate Domain**
-6. Open `https://YOUR-APP.up.railway.app/api/health`
+1. Push branch to GitHub repo `walednajjar2-salam/jawdah-cloud-v47`
+2. Railway -> **Deploy from GitHub**
+3. Add/verify environment variables below
+4. Confirm Volume mount on `/app/data`
+5. Trigger deploy and verify:
+   - `GET /api/health`
+   - `GET /api/backup/status`
+   - `GET /api/permissions/audit` (admin)
 
-## Required variables
+## Required Environment Variables
 
 | Variable | Value |
-|----------|-------|
+|---|---|
 | `JAWDAH_HOST` | `0.0.0.0` |
 | `JAWDAH_DATA_DIR` | `/app/data` |
+| `JAWDAH_BACKUP_DIR` | `/app/data/backups` |
+| `ADMIN_PASSWORD` | `<strong password>` |
 
-Railway sets `PORT` automatically — do not override it.
+Railway sets `PORT` automatically.
 
-## Persistent database (recommended)
+## Backup + Storage (v49)
 
-1. Railway project → **+ New** → **Volume**
-2. Mount path: `/app/data`
-3. Redeploy
+- Auto backup switch: `JAWDAH_AUTO_BACKUP=1`
+- Interval hours: `JAWDAH_BACKUP_INTERVAL_HOURS=24`
+- Retention count: `JAWDAH_BACKUP_RETENTION=30`
+- Low space warning threshold (GB): `JAWDAH_STORAGE_WARN_GB=2`
+- Backup files are saved as:
+  - `jawdah-YYYYMMDD-HHMMSS.json`
+  - `jawdah-YYYYMMDD-HHMMSS.sqlite3`
 
-SQLite database path: `/app/data/jawdah.sqlite3`
+Operational endpoints:
+- `POST /api/backup/run` (manual backup)
+- `GET /api/backup/status` (storage + integrity summary)
+- `POST /api/backup/verify` (restore simulation)
 
-## Automatic daily backup (enabled by default)
+## Volume Sizing Guidance
 
-Backups are stored on the same persistent volume:
+- Minimum: `20GB`
+- Recommended for production: `50GB` when property photos and long retention are enabled
+- Mount path must remain `/app/data` to keep SQLite + uploads + backups persistent
 
-- Directory: `/app/data/backups/daily/`
-- Contents per archive: `jawdah.sqlite3`, `export.json`, `company_settings.json`, `manifest.json`
-- Schedule: daily around **03:00 Asia/Muscat**
-- Retention: **14 days** (older archives are removed automatically)
+## Health / Smoke Checklist
 
-Optional variables:
-
-| Variable | Default |
-|----------|---------|
-| `JAWDAH_AUTO_BACKUP` | `1` |
-| `JAWDAH_BACKUP_HOUR` | `3` |
-| `JAWDAH_BACKUP_RETAIN_DAYS` | `14` |
-| `JAWDAH_BACKUP_TZ` | `Asia/Muscat` |
-
-Status API (authenticated): `GET /api/backup/auto`  
-Manual run (admin): `POST /api/backup/run`
-
-## Health check
-
-- Path: `/api/health`
-- Configured in `railway.toml`
-
-## Login (seed data)
-
-- `admin` — set `ADMIN_PASSWORD` in Railway variables (required for admin login)
-- `razan.accounting` / `Jawdeh123`
-
-## Start command
-
-```
-python server.py
-```
-
-Also defined in `Procfile` and `railway.toml`.
+After each production deploy:
+1. Login with admin
+2. Create client -> create contract draft -> approve contract
+3. Generate invoice from contract -> collect payment
+4. Run backup now -> download JSON + SQLite
+5. Confirm no critical alerts in `/api/backup/status` storage section

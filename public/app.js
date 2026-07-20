@@ -8,12 +8,33 @@ const Jawdah = {
   invoiceForPrint: null,
   uiPermissions: null,
   liveStream: null,
-  fieldMode: localStorage.getItem('jawdah_field_mode') === '1'
+  fieldMode: localStorage.getItem('jawdah_field_mode') === '1',
+  theme: localStorage.getItem('jawdah_theme') || 'luxury-light'
 };
+let nizwaLeafletMap = null;
+let nizwaMarkers = null;
+let ownerLiveTimer = null;
+let ownerTimelineFilterDays = Number(localStorage.getItem('jawdah_owner_timeline_days') || 7);
+let hospitalityTimelineState = { month:'', year:0, m:0, days:0 };
+let propertyTimelineDays = Number(localStorage.getItem('jawdah_property_timeline_days') || 90);
+let propertyTimelineType = localStorage.getItem('jawdah_property_timeline_type') || 'all';
+const NIZWA_DEFAULT = { lat: 22.9333, lng: 57.5333, zoom: 11 };
 function haptic(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||12); }catch(e){} }
+function normalizeOwnerTimelineDays(v){
+  const n = Number(v);
+  return [0,1,7,30,90].includes(n) ? n : 7;
+}
+function ownerTimelineFilterLabel(v){
+  const n = normalizeOwnerTimelineDays(v);
+  if(n===0) return 'كل الفترات';
+  if(n===1) return 'آخر 24 ساعة';
+  return `آخر ${n} يوم`;
+}
 const PROPERTY_STATUSES = ['شاغرة', 'محجوزة', 'مستأجرة', 'صيانة'];
 const NAV_SAAS_ITEMS = [
   ['dashboard','لوحة التحكم','🏠'],
+  ['daily-ops','العمليات اليومية','🗂️'],
+  ['hospitality','الضيافة','🏨'],
   ['properties','المشاريع','🏢'],
   ['tasks','المهام','📋'],
   ['clients','العملاء','👥'],
@@ -32,7 +53,7 @@ const NAV_SAAS_ITEMS = [
   ['settings','الإعدادات','⚙️']
 ];
 const SECTION_TITLES = {
-  dashboard:'لوحة التحكم','owner-staff':'متابعة الموظفين',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
+  dashboard:'لوحة التحكم','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'الضيافة',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
   revenues:'الإيرادات',invoices:'المدفوعات','admin-expenses':'المصروفات',maintenance:'الصيانة',
   reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي',production:'المتابعة',timeline:'الجدول الزمني',
   backup:'المستندات',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
@@ -53,6 +74,25 @@ const APP_UI_VERSION = '2026.2';
 const DISPLAY_OWNER_NAME = 'يعقوب فاضل حمد الخصيبي';
 const DISPLAY_OWNER_ROLE = 'المالك العام';
 const OWNER_USERNAMES = new Set(['owner','yaqoub.khasibi','yaqoub','waleed.najjar']);
+const PRIMARY_OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','owner']);
+const DAILY_OPS_MANAGER_USERNAMES = new Set(['razan','owner','yaqoub.khasibi','yaqoub','waleed.najjar']);
+const DAILY_OPS_ICON_BY_USERNAME = {
+  'owner': '👑',
+  'waleed.najjar': '👑',
+  'yaqoub.khasibi': '🛰️',
+  'yaqoub': '🛰️',
+  'razan': '🗂️',
+  'admin': '🛡️',
+  'operations': '📋',
+  'maintenance': '🛠️',
+  'accountant': '💼',
+};
+const OWNER_NAME_BY_USERNAME = {
+  'owner': 'يعقوب فاضل حمد الخصيبي',
+  'yaqoub.khasibi': 'يعقوب فاضل حمد الخصيبي',
+  'yaqoub': 'يعقوب فاضل حمد الخصيبي',
+  'waleed.najjar': 'وليد نجار',
+};
 const DASH_EXEC_COMMANDS = [
   {label:'إضافة عميل', section:'clients', icon:'👥'},
   {label:'إضافة عقار / بناية', section:'properties', icon:'🏢'},
@@ -159,7 +199,15 @@ function openKpiInsightPanel(key){
   haptic(12);
 }
 function closeKpiInsightPanel(){ const p=$('#kpiInsightPanel'); if(p) p.classList.remove('show'); }
-function uiAllowedSection(id){ const s=Jawdah.uiPermissions?.sections; return !s||!s.length||s.includes(id); }
+function isPrimaryOwnerUser(){
+  const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
+  return PRIMARY_OWNER_USERNAMES.has(uname);
+}
+function uiAllowedSection(id){
+  if(id==='hospitality' || id==='owner-live') return true;
+  const s=Jawdah.uiPermissions?.sections;
+  return !s||!s.length||s.includes(id);
+}
 function uiAllowedKpi(key){ const k=Jawdah.uiPermissions?.kpis; return !k||!k.length||k.includes(key); }
 function dashDecisions(){ return Jawdah.dashboard?.decisions || []; }
 function canAccessSection(id){
@@ -168,6 +216,7 @@ function canAccessSection(id){
   if(FINANCE_SECTIONS.has(id) && id!=='inventory' && !canSeeFinance()) return false;
   if(id==='users' && !['admin','owner'].includes(Jawdah.user?.role)) return false;
   if(id==='owner-staff' && !['admin','owner'].includes(Jawdah.user?.role)) return false;
+  if(id==='owner-live' && !isPrimaryOwnerUser()) return false;
   if(id==='approvals' && !canSeeApprovals()) return false;
   return true;
 }
@@ -358,7 +407,9 @@ const byId = (table,id) => (Jawdah.data[table]||[]).find(x=>x.id===id) || {};
 const roleName = r => ({owner:DISPLAY_OWNER_ROLE,admin:'مدير تنفيذي',accountant:'محاسب',operations:'العمليات',maintenance:'الصيانة',viewer:'مشاهد'}[r]||r);
 function displayUserName(u){
   if(!u) return '';
-  if(u.role==='owner' || OWNER_USERNAMES.has(String(u.username||'').toLowerCase())) return DISPLAY_OWNER_NAME;
+  const uname=String(u.username||'').toLowerCase();
+  if(OWNER_NAME_BY_USERNAME[uname]) return OWNER_NAME_BY_USERNAME[uname];
+  if(u.role==='owner' || OWNER_USERNAMES.has(uname)) return DISPLAY_OWNER_NAME;
   return u.name || u.username || '';
 }
 function displayUserRole(u){
@@ -402,17 +453,36 @@ function ensureEnglishDigits(root=document.body){
   $$('input,textarea').forEach(el=>{ if(rx.test(el.value)) el.value=convert(el.value); });
 }
 async function login(){
+  const btn = $('#loginBtn');
+  if(btn?.dataset.loading === '1') return;
+  const originalLabel = btn?.textContent || 'Sign In · تسجيل الدخول';
   try{
+    if(btn){
+      btn.dataset.loading = '1';
+      btn.classList.add('is-loading');
+      btn.disabled = true;
+      btn.textContent = 'جاري تسجيل الدخول...';
+    }
     const username=$('#loginUser').value.trim(); const password=$('#loginPass').value;
-    const res=await api('login',{method:'POST',body:JSON.stringify({username,password})});
+    const remember = Boolean($('#loginRemember')?.checked);
+    const res=await api('login',{method:'POST',body:JSON.stringify({username,password,remember_device:remember})});
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
     localStorage.setItem('jawdah_last_user', username);
+    localStorage.setItem('jawdah_last_remember', remember ? '1' : '0');
     if(res.must_change_password) Jawdah.user.must_change_password=true;
     showAppShell();
-    await loadAll(); haptic(12); toast('تم تسجيل الدخول');
+    await loadAll(); renderBiometricHub(); startOwnerLiveAutoRefresh(); applySavedPortalChoice(); openPortalSwitch(true); haptic(12); toast(`مرحباً ${displayUserName(Jawdah.user)} — تم تسجيل الدخول`);
   }catch(e){ toastErr(e,'اسم المستخدم أو كلمة المرور غير صحيحة'); }
+  finally{
+    if(btn){
+      btn.dataset.loading = '0';
+      btn.classList.remove('is-loading');
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  }
 }
-async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; showLoginShell(); }
+async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; if(ownerLiveTimer){ clearInterval(ownerLiveTimer); ownerLiveTimer=null; } showLoginShell(); }
 function ensureDashActive(){
   const dash=$('#sec-dashboard');
   if(!dash) return;
@@ -426,6 +496,7 @@ function showLoginShell(){
   document.body.classList.remove('saas-luxury','dash-pro-active','field-mode','app-ready');
   $('#app')?.classList.add('hidden');
   $('#loginScreen')?.classList.remove('hidden');
+  closePortalSwitch();
   if(typeof window.__lqHideBoot==='function') window.__lqHideBoot();
   if(typeof syncVisionLayers==='function') syncVisionLayers();
 }
@@ -450,6 +521,10 @@ async function checkSession(){
     Jawdah.user=me.user;
     showAppShell();
     await loadAll();
+    renderBiometricHub();
+    startOwnerLiveAutoRefresh();
+    applySavedPortalChoice();
+    openPortalSwitch(true);
   }catch(e){
     localStorage.removeItem('jawdah_cloud_token');
     Jawdah.token='';
@@ -503,6 +578,7 @@ async function loadAll(){
     if(typeof syncEnterpriseVision==='function') syncEnterpriseVision();
     if(window.LQ_FIELD_APP && typeof LQ_FIELD_APP.afterBoot==='function') await LQ_FIELD_APP.afterBoot();
     if(window.LQ_SECURITY && typeof LQ_SECURITY.gateAfterAuth==='function') LQ_SECURITY.gateAfterAuth();
+    renderBiometricHub();
   }catch(e){
     toastErr(e,'تعذر تحميل البيانات');
     ensureDashActive();
@@ -528,6 +604,11 @@ function buildNav(){
     const ob=document.createElement('button'); ob.dataset.section='owner-staff';
     ob.innerHTML='<span class="nav-icon">👑</span><span class="nav-text"><span class="nav-ar">متابعة الموظفين</span></span>';
     ob.onclick=()=>showSection('owner-staff'); nav.appendChild(ob);
+    if(isPrimaryOwnerUser()){
+      const lb=document.createElement('button'); lb.dataset.section='owner-live';
+      lb.innerHTML='<span class="nav-icon">🛰️</span><span class="nav-text"><span class="nav-ar">لوحة المالك الحية</span></span>';
+      lb.onclick=()=>showSection('owner-live'); nav.appendChild(lb);
+    }
   }
   addGroup('Operations · التشغيل');
   NAV_SAAS_ITEMS.forEach(([id,label,icon])=>{
@@ -572,6 +653,7 @@ function renderDashSideMenu(){
     [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
   }
   if(['admin','owner'].includes(Jawdah.user?.role)) items.push({id:'users',label:'المستخدمين',icon:'🛡️'});
+  if(isPrimaryOwnerUser()) items.push({id:'owner-live',label:'لوحة المالك الحية',icon:'🛰️'});
   const active=Jawdah.activeSection||'dashboard';
   host.innerHTML=items.map(x=>`<button type="button" class="saas-dash-menu-btn${active===x.id?' active':''}" onclick="showSection('${x.id}')"><span class="saas-dash-menu-ico">${x.icon}</span><span>${htmlEscape(x.label)}</span></button>`).join('');
 }
@@ -591,7 +673,7 @@ function showSection(id){
     return;
   }
   const resolved=resolveSection(id);
-  const needsSkeleton=!['dashboard','owner-staff','tasks','messages','walid','enterprise','timeline'].includes(resolved);
+  const needsSkeleton=!['dashboard','owner-staff','owner-live','tasks','messages','walid','enterprise','timeline','hospitality'].includes(resolved);
   if(needsSkeleton){ const sk=$('#sec-'+resolved); if(sk && !sk.dataset.rendered) renderSectionSkeleton(id); }
   Jawdah.activeSection=id;
   let s=$('#sec-'+resolved);
@@ -612,7 +694,10 @@ function showSection(id){
   if(resolved==='walid') renderWalidPage();
   if(resolved==='enterprise') renderEnterprisePage();
   if(resolved==='timeline') renderTimelinePage();
+  if(resolved==='daily-ops' && typeof renderDailyOpsPage==='function') renderDailyOpsPage();
   if(resolved==='owner-staff' && window.LQ_OWNER_STAFF) LQ_OWNER_STAFF.render();
+  if(resolved==='owner-live' && typeof renderOwnerLiveHub==='function') renderOwnerLiveHub();
+  if(resolved==='hospitality' && typeof renderHospitalityPortal==='function') renderHospitalityPortal();
   if(resolved==='dashboard') renderDashboard();
   populateSelects();
   if(resolved==='reports' && typeof renderReports === 'function') renderReports();
@@ -630,6 +715,7 @@ function showSection(id){
 function renderAll(){
   try{
     renderProperties(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA();
+    renderHospitalityPortal();
     if(typeof renderFinanceSuite==='function') renderFinanceSuite();
     if($('#sec-dashboard')?.classList.contains('active')) renderDashboard();
   }catch(e){}
@@ -669,6 +755,49 @@ function showMapPopup(p, leftPct, topPct){
   box.innerHTML=`${thumb}<h4>${propertyLabel(p)}</h4><p>${p.location||'Oman'}</p><div class="price">${money(p.price||0)} <small>/ month</small></div>${mapStatusBadge(p.status)}`;
 }
 function showMapPopupById(id, leftPct, topPct){ showMapPopup(byId('properties', id), leftPct, topPct); }
+function ensureNizwaMap(){
+  const host = $('#nizwaMap');
+  if(!host || !window.L) return null;
+  if(!nizwaLeafletMap){
+    nizwaLeafletMap = window.L.map(host, { zoomControl:true }).setView([NIZWA_DEFAULT.lat, NIZWA_DEFAULT.lng], NIZWA_DEFAULT.zoom);
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(nizwaLeafletMap);
+    nizwaMarkers = window.L.layerGroup().addTo(nizwaLeafletMap);
+  }
+  return nizwaLeafletMap;
+}
+function propertyMapCoords(p, i=0){
+  const lat = Number(p?.latitude);
+  const lng = Number(p?.longitude);
+  if(Number.isFinite(lat) && Number.isFinite(lng)) return {lat, lng};
+  const offsets = [
+    [0.018, -0.02], [0.022, 0.015], [0.009, 0.028], [-0.01, 0.021], [0.015, -0.03],
+    [-0.017, -0.018], [0.004, 0.012], [-0.012, 0.032], [0.021, -0.008], [-0.006, -0.025],
+  ];
+  const off = offsets[i % offsets.length];
+  return {lat: NIZWA_DEFAULT.lat + off[0], lng: NIZWA_DEFAULT.lng + off[1]};
+}
+function renderNizwaMap(props){
+  const map = ensureNizwaMap();
+  if(!map || !nizwaMarkers) return;
+  nizwaMarkers.clearLayers();
+  const latLngs = [];
+  props.forEach((p, idx)=>{
+    const c = propertyMapCoords(p, idx);
+    latLngs.push([c.lat, c.lng]);
+    const marker = window.L.marker([c.lat, c.lng]).addTo(nizwaMarkers);
+    marker.bindPopup(`<b>${escapeHtml(propertyLabel(p))}</b><br>${escapeHtml(p.location || 'Nizwa')}<br>${money(p.price||0)}`);
+    marker.on('click', ()=>showMapPopup(p, 50, 50));
+  });
+  if(latLngs.length){
+    const bounds = window.L.latLngBounds(latLngs);
+    map.fitBounds(bounds.pad(0.2));
+  }else{
+    map.setView([NIZWA_DEFAULT.lat, NIZWA_DEFAULT.lng], NIZWA_DEFAULT.zoom);
+  }
+}
 function projectProgress(p){
   const s=String(p.status||'');
   if(s.includes('مستأ')||s.toLowerCase().includes('rent')) return 100;
@@ -730,8 +859,128 @@ function renderMessagesPage(){
 }
 function renderTimelinePage(){
   const box=$('#timelinePageBox'); if(!box) return;
-  const contracts=[...(Jawdah.data.contracts||[])].sort((a,b)=>String(a.end_date).localeCompare(String(b.end_date)));
-  box.innerHTML=`<div class="card"><h3>📅 الجدول الزمني للعقود</h3><div class="saas-timeline">${contracts.slice(0,20).map(c=>{const m=contractRenewalMeta(c); return `<div class="saas-timeline-item"><b>${c.contract_no||c.id}</b> · ${byId('clients',c.client_id).name||''}<br><span class="mini">${propertyLabel(byId('properties',c.property_id))} · ${c.start_date} → ${c.end_date}</span> ${m.label?`<span class="saas-status pending">${m.label}</span>`:''}</div>`;}).join('')||'<p class="mini">لا عقود</p>'}</div></div>`;
+  const normalizeDays = (v)=>[30,90,180,365,0].includes(Number(v)) ? Number(v) : 90;
+  const normalizeType = (v)=>['all','contracts','maintenance','invoices'].includes(String(v||'')) ? String(v) : 'all';
+  propertyTimelineDays = normalizeDays(propertyTimelineDays);
+  propertyTimelineType = normalizeType(propertyTimelineType);
+  const startDate = propertyTimelineDays===0 ? '' : addDaysYmd(today(), -propertyTimelineDays);
+  const allEvents = [];
+  const byUserProp = (pid)=>propertyLabel(byId('properties',pid));
+  (Jawdah.data.contracts||[]).forEach(c=>{
+    const clientName = byId('clients', c.client_id).name || c.client_id || 'عميل';
+    const propName = byUserProp(c.property_id);
+    const m = contractRenewalMeta(c);
+    if(c.start_date){
+      allEvents.push({
+        date: String(c.start_date),
+        type: 'contracts',
+        tone: 'ok',
+        icon: '📄',
+        title: `بداية عقد ${c.contract_no||c.id}`,
+        subtitle: `${propName} · ${clientName}`,
+        meta: `الإيجار ${money(c.rent_amount||0)}`,
+        go: 'contracts',
+      });
+    }
+    if(c.end_date){
+      const tone = m.tone==='high' ? 'danger' : (m.tone==='med' ? 'warn' : 'ok');
+      allEvents.push({
+        date: String(c.end_date),
+        type: 'contracts',
+        tone,
+        icon: '⏳',
+        title: `نهاية عقد ${c.contract_no||c.id}`,
+        subtitle: `${propName} · ${clientName}`,
+        meta: m.label || 'انتهاء العقد',
+        go: 'contracts',
+      });
+    }
+  });
+  (Jawdah.data.maintenance||[]).forEach(m=>{
+    const st = String(m.status||'').toLowerCase();
+    const tone = st.includes('closed') || st.includes('done') ? 'ok' : 'warn';
+    allEvents.push({
+      date: String(m.request_date||today()),
+      type: 'maintenance',
+      tone,
+      icon: '🛠️',
+      title: m.title || 'طلب صيانة',
+      subtitle: `${byUserProp(m.property_id)} · ${m.priority||'Priority'}`,
+      meta: m.status || 'Open',
+      go: 'maintenance',
+    });
+  });
+  (Jawdah.data.invoices||[]).forEach(inv=>{
+    const remaining = Math.max(0, Number(inv.amount||0) - Number(inv.paid_amount||0));
+    if(remaining<=0) return;
+    const due = String(inv.due_date||'');
+    const overdue = due && due < today();
+    allEvents.push({
+      date: due || String(inv.issue_date||today()),
+      type: 'invoices',
+      tone: overdue ? 'danger' : 'warn',
+      icon: overdue ? '🚨' : '💳',
+      title: `استحقاق فاتورة ${inv.invoice_no||inv.id}`,
+      subtitle: `${byUserProp(inv.property_id)} · ${byId('clients',inv.client_id).name||'عميل'}`,
+      meta: `المتبقي ${money(remaining)}`,
+      go: 'invoices',
+    });
+  });
+  const events = allEvents
+    .filter(e=>e.date && (/^\d{4}-\d{2}-\d{2}/.test(e.date)))
+    .filter(e=>propertyTimelineType==='all' ? true : e.type===propertyTimelineType)
+    .filter(e=>!startDate || e.date>=startDate)
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date)))
+    .slice(0,220);
+  const stats = {
+    all: events.length,
+    contracts: events.filter(e=>e.type==='contracts').length,
+    maintenance: events.filter(e=>e.type==='maintenance').length,
+    invoices: events.filter(e=>e.type==='invoices').length,
+  };
+  box.innerHTML = `
+    <div class="card">
+      <h3>📅 Timeline العقارات</h3>
+      <p class="mini">عرض زمني احترافي لحركة العقود والصيانة والاستحقاقات العقارية.</p>
+      <div class="toolbar" style="gap:8px;align-items:flex-end">
+        <label class="mini">الفترة
+          <select id="propTlDays" onchange="setPropertyTimelineFilters()">
+            <option value="30" ${propertyTimelineDays===30?'selected':''}>آخر 30 يوم</option>
+            <option value="90" ${propertyTimelineDays===90?'selected':''}>آخر 90 يوم</option>
+            <option value="180" ${propertyTimelineDays===180?'selected':''}>آخر 180 يوم</option>
+            <option value="365" ${propertyTimelineDays===365?'selected':''}>آخر سنة</option>
+            <option value="0" ${propertyTimelineDays===0?'selected':''}>كل الفترات</option>
+          </select>
+        </label>
+        <label class="mini">النوع
+          <select id="propTlType" onchange="setPropertyTimelineFilters()">
+            <option value="all" ${propertyTimelineType==='all'?'selected':''}>الكل</option>
+            <option value="contracts" ${propertyTimelineType==='contracts'?'selected':''}>العقود</option>
+            <option value="maintenance" ${propertyTimelineType==='maintenance'?'selected':''}>الصيانة</option>
+            <option value="invoices" ${propertyTimelineType==='invoices'?'selected':''}>الاستحقاقات</option>
+          </select>
+        </label>
+        <button class="ghost" type="button" onclick="renderTimelinePage()">تحديث</button>
+        <span class="badge">إجمالي ${fmt(stats.all)}</span>
+        <span class="badge active">عقود ${fmt(stats.contracts)}</span>
+        <span class="badge pending">صيانة ${fmt(stats.maintenance)}</span>
+        <span class="badge overdue">استحقاقات ${fmt(stats.invoices)}</span>
+      </div>
+    </div>
+    <div class="prop-tl-list">
+      ${events.map(e=>`<article class="prop-tl-item ${e.tone}"><div class="prop-tl-date"><b>${htmlEscape(String(e.date||''))}</b><span>${e.icon}</span></div><div class="prop-tl-body"><h4>${htmlEscape(e.title||'')}</h4><p>${htmlEscape(e.subtitle||'')}</p><div class="status-line"><span class="badge">${htmlEscape(e.meta||'')}</span><button type="button" class="ghost" onclick="showSection('${e.go||'dashboard'}')">فتح</button></div></div></article>`).join('') || '<div class="card"><p class="mini">لا توجد أحداث ضمن الفلتر الحالي.</p></div>'}
+    </div>
+  `;
+  if(typeof ensureEnglishDigits==='function') ensureEnglishDigits(box);
+}
+function setPropertyTimelineFilters(){
+  const d = Number($('#propTlDays')?.value || 90);
+  const t = String($('#propTlType')?.value || 'all');
+  propertyTimelineDays = [30,90,180,365,0].includes(d) ? d : 90;
+  propertyTimelineType = ['all','contracts','maintenance','invoices'].includes(t) ? t : 'all';
+  localStorage.setItem('jawdah_property_timeline_days', String(propertyTimelineDays));
+  localStorage.setItem('jawdah_property_timeline_type', propertyTimelineType);
+  renderTimelinePage();
 }
 function dashGreeting(){
   const h=new Date().getHours();
@@ -1019,15 +1268,8 @@ function renderDashboard(){
   const welcome=$('#dashWelcomeMeta');
   if(welcome) welcome.innerHTML=`<span class="saas-chip">إشغال ${fmt(k.occupancy)}%</span><span class="saas-chip">صافي ${money(k.net||0)}</span><span class="saas-chip">عقود ${fmt(contracts.length)}</span><span class="saas-chip">عملاء ${fmt(clients.length)}</span><span class="saas-chip ${Number(k.overdue||0)>0?'danger':''}">متأخر ${money(k.overdue||0)}</span>`;
 
-  const positions=[[18,24],[43,42],[68,58],[28,70],[78,32],[52,22],[36,61],[22,84],[84,54],[61,76]];
-  const gis=$('#gisPins');
-  if(gis) gis.innerHTML=props.map((p,i)=>{
-    const st=String(p.status||'');
-    const cls=st.includes('صيان')||st.toLowerCase().includes('maint')?'red':(st.includes('شاغ')||st.toLowerCase().includes('vacant')?'blue':(st.includes('محج')||st.toLowerCase().includes('pend')?'orange':'gold'));
-    const [left,top]=positions[i%positions.length];
-    return `<button type="button" class="pin ${cls}" title="${propertyLabel(p)}" style="left:${left}%;top:${top}%" onclick="showMapPopupById('${p.id}',${left},${top})"></button>`;
-  }).join('');
-  if(props[0]) showMapPopup(props[0], positions[0][0], positions[0][1]);
+  renderNizwaMap(props);
+  if(props[0]) showMapPopup(props[0], 50, 50);
 
   const projGrid=$('#saasProjectsGrid');
   if(projGrid) projGrid.innerHTML=props.slice(0,12).map(p=>{
@@ -1074,8 +1316,16 @@ function tableHtml(cols, rows, actions){
   return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}${actions?'<th>إجراء</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??'')}</td>`).join('')}${actions?`<td>${actions(r)}</td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
 }
 function renderProperties(){
+  const allProps = Jawdah.data.properties||[];
+  const total = allProps.length;
+  const activeCount = allProps.filter(p=>Boolean(activeContractForPropertyLocal(p.id).id)).length;
+  const noContractCount = total - activeCount;
   const rows=filterRows('properties',['building_no','apartment_no','room_no','name','status','location','notes']);
-  $('#propertiesTable').innerHTML=tableHtml([['البناية','building_no'],['الشقة','apartment_no'],['الغرفة','room_no'],['الحالة','status',(v)=>statusBadge(v)],['السعر','price',(v)=>money(v)],['الموقع','location'],['الوحدة','id',(_,r)=>propertyLabel(r)]],rows,r=>`<button class="ghost" onclick="editRecord('properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('properties','${r.id}')">حذف</button>`);
+  const stats = $('#propQuickStats');
+  if(stats){
+    stats.innerHTML = `<span class="badge">إجمالي الوحدات: ${fmt(total)}</span><span class="badge active">عليها عقد نشط: ${fmt(activeCount)}</span><span class="badge">بدون عقد نشط: ${fmt(noContractCount)}</span><span class="badge">نتيجة الفلتر: ${fmt(rows.length)}</span>`;
+  }
+  $('#propertiesTable').innerHTML=tableHtml([['الصورة','id',(_,r)=>typeof lqPropertyThumbHtml==='function'?lqPropertyThumbHtml(r,{compact:true}):'🏠'],['البناية','building_no'],['الشقة','apartment_no'],['الغرفة','room_no'],['الحالة','status',(v)=>statusBadge(v)],['العقد النشط','id',(_,r)=>{const c=activeContractForPropertyLocal(r.id); return c.id?`<span class="badge active">${c.contract_no||c.id}</span>`:'—';}],['السعر','price',(v)=>money(v)],['الموقع','location'],['الإحداثيات','id',(_,r)=>((r.latitude&&r.longitude)?`${r.latitude}, ${r.longitude}`:'—')],['الوحدة','id',(_,r)=>propertyLabel(r)]],rows,r=>{const c=activeContractForPropertyLocal(r.id); const quick=c.id?`<button class="gold-btn" onclick="openActiveContractFromProperty('${r.id}')">العقد النشط</button> `:''; return `${quick}<button class="ghost" onclick="editRecord('properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('properties','${r.id}')">حذف</button>`;});
   fillSelect('#propStatusFilter',['',...PROPERTY_STATUSES],false);
 }
 function renderClients(){
@@ -1139,6 +1389,12 @@ function renderBackup(){
     if(st.auto_backup?.enabled){
       html += `<p class="mini" style="margin-top:12px">نسخ احتياطي تلقائي: كل ${fmt(st.auto_backup.interval_hours)} ساعة — آخر نسخة: ${st.auto_backup.last_backup||'لم تُنشأ بعد'} — يحتفظ بـ ${fmt(st.auto_backup.retention)} نسخة</p>`;
       html += `<p class="mini">Off-site: ${st.offsite?.enabled?'مفعّل':'فعّل LQ_OFFSITE_BACKUP_URL'} — آخر دفع: ${st.offsite?.last_push||'—'}</p>`;
+      if(st.storage){
+        html += `<p class="mini">Storage: متاح ${fmt(st.storage.free_gb)}GB من ${fmt(st.storage.total_gb)}GB ${st.storage.warning?'⚠️ منخفض':'✅'}</p>`;
+      }
+      if(st.backup_integrity){
+        html += `<p class="mini">سلامة آخر نسخة: ${st.backup_integrity.ok?'✅ سليمة':'⚠️ تحتاج فحص'} (${st.backup_integrity.timestamp||'—'})</p>`;
+      }
       if(st.recent?.length){
         html += st.recent.slice(0,5).map(b=>`<span class="badge">${b.created_at||b.timestamp}</span>`).join(' ');
       }
@@ -1147,6 +1403,7 @@ function renderBackup(){
     }
     $('#backupStatus').innerHTML=html;
   }).catch(()=>{ $('#backupStatus').innerHTML=html; });
+  renderExportHub();
 }
 async function runAutoBackup(){
   try{
@@ -1162,9 +1419,25 @@ function populateSelects(){
   fillSelect('#pBranch', Jawdah.data.branches||[], true, 'id', 'name');
   fillSelect('#contractProperty', Jawdah.data.properties||[], true, 'id', 'name', propertyLabel);
   fillSelect('#contractClient', Jawdah.data.clients||[], true, 'id', 'name');
+  fillSelect('#invoiceContractSelect', (Jawdah.data.contracts||[]), true, 'id', 'contract_no', (c)=>{
+    const contractNo = c.contract_no || c.id;
+    const client = byId('clients', c.client_id).name || '';
+    return `${contractNo} — ${client}`;
+  });
   fillSelect('#accClient', Jawdah.data.clients||[], true, 'id', 'name');
   fillSelect('#accProperty', Jawdah.data.properties||[], true, 'id', 'name', propertyLabel);
   fillSelect('#maintProperty', Jawdah.data.properties||[], true, 'id', 'name', propertyLabel);
+  fillSelect('#itemProperty', Jawdah.data.properties||[], true, 'id', 'name', propertyLabel);
+  const invFilter=$('#inventoryPropertyFilter');
+  if(invFilter){
+    const old=invFilter.value||'';
+    invFilter.innerHTML='<option value="">كل العقارات</option>'+(Jawdah.data.properties||[]).map(p=>`<option value="${p.id}">${propertyLabel(p)}</option>`).join('');
+    if([...invFilter.options].some(o=>o.value===old)) invFilter.value=old;
+    if(!invFilter.dataset.bound){
+      invFilter.dataset.bound='1';
+      invFilter.addEventListener('change', ()=>{ if(typeof renderInventory==='function') renderInventory(); });
+    }
+  }
   const propOpts='<option value="">بدون عقار</option>'+(Jawdah.data.properties||[]).map(p=>`<option value="${p.id}">${propertyLabel(p)}</option>`).join('');
   ['#piProperty','#revProperty','#gaProperty'].forEach(s=>{ if($(s)) $(s).innerHTML=propOpts; });
   const clientOpts='<option value="">بدون عميل</option>'+(Jawdah.data.clients||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
@@ -1177,12 +1450,527 @@ function populateSelects(){
   if($('#coaParent')) $('#coaParent').innerHTML=coaParentOpts;
   ['piDate','revDate','salDate','gaDate','stockDate','bankDate','fpStart','fpEnd','accDate'].forEach(id=>{ if($('#'+id) && !$('#'+id).value) $('#'+id).value=today(); });
   if($('#salMonth') && !$('#salMonth').value) $('#salMonth').value=today().slice(0,7);
+  bindContractAutofill();
+  updateContractPropertyWarning();
+  bindInvoiceContractAutofill();
 }
 function filterRows(table, fields){
   let rows=[...(Jawdah.data[table]||[])]; const q=($('#globalSearch')?.value||'').toLowerCase().trim();
   if(q) rows=rows.filter(r=>fields.some(f=>String(r[f]??'').toLowerCase().includes(q)));
-  if(table==='properties'){ const s=$('#propStatusFilter')?.value; if(s) rows=rows.filter(r=>r.status===s); const b=($('#propBuildingFilter')?.value||'').trim(); if(b) rows=rows.filter(r=>String(r.building_no||'').includes(b)); }
+  if(table==='properties'){
+    const s=$('#propStatusFilter')?.value;
+    if(s) rows=rows.filter(r=>r.status===s);
+    const b=($('#propBuildingFilter')?.value||'').trim();
+    if(b) rows=rows.filter(r=>String(r.building_no||'').includes(b));
+    const contractFilter=$('#propContractFilter')?.value||'';
+    if(contractFilter==='active') rows=rows.filter(r=>Boolean(activeContractForPropertyLocal(r.id).id));
+    if(contractFilter==='none') rows=rows.filter(r=>!activeContractForPropertyLocal(r.id).id);
+  }
   return rows;
+}
+function csvCell(v){
+  const s = String(v ?? '');
+  if(/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+function csvFromRows(headers, rows){
+  const lines = [headers.join(',')];
+  rows.forEach(r=>lines.push(r.map(csvCell).join(',')));
+  return lines.join('\n');
+}
+function buildFilteredCsvBundle(){
+  const day = today();
+  const files = {};
+  const counts = {};
+  const sizes = {};
+  const enc = new TextEncoder();
+  const filterSnapshot = {
+    global_search: ($('#globalSearch')?.value || '').trim(),
+    property_filters: {
+      building_no: ($('#propBuildingFilter')?.value || '').trim(),
+      status: ($('#propStatusFilter')?.value || '').trim(),
+      contract: ($('#propContractFilter')?.value || '').trim(),
+    },
+  };
+  const props = filterRows('properties',['building_no','apartment_no','room_no','name','status','location','notes']);
+  if(props.length){
+    const fn = `properties-filtered-${day}.csv`;
+    files[fn] = csvFromRows(
+      ['id','building_no','apartment_no','room_no','name','status','price','location','latitude','longitude','has_active_contract','active_contract_no','notes'],
+      props.map(r=>{ const active=activeContractForPropertyLocal(r.id); return [r.id,r.building_no,r.apartment_no,r.room_no,r.name,r.status,r.price,r.location,r.latitude,r.longitude,active.id?'1':'0',active.contract_no||active.id||'',r.notes]; })
+    );
+    counts[fn] = props.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const clients = filterRows('clients',['name','phone','email','national_id']);
+  if(clients.length){
+    const fn = `clients-filtered-${day}.csv`;
+    files[fn] = csvFromRows(['id','name','phone','email','national_id','balance','notes'], clients.map(r=>[r.id,r.name,r.phone,r.email,r.national_id,r.balance,r.notes]));
+    counts[fn] = clients.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const contracts = filterRows('contracts',['id','status','notes']);
+  if(contracts.length){
+    const fn = `contracts-filtered-${day}.csv`;
+    files[fn] = csvFromRows(
+      ['id','contract_no','contract_type','property_id','property_label','client_id','client_name','start_date','end_date','rent_amount','deposit_amount','payment_cycle','status','approved_at','notes'],
+      contracts.map(r=>{ const prop=byId('properties', r.property_id); const client=byId('clients', r.client_id); return [r.id,r.contract_no,r.contract_type,r.property_id,propertyLabel(prop),r.client_id,client.name||'',r.start_date,r.end_date,r.rent_amount,r.deposit_amount,r.payment_cycle,r.status,r.approved_at,r.notes]; })
+    );
+    counts[fn] = contracts.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const invoices = filterRows('invoices',['invoice_no','description','status']);
+  if(invoices.length){
+    const fn = `invoices-filtered-${day}.csv`;
+    files[fn] = csvFromRows(
+      ['id','invoice_no','contract_id','client_id','client_name','property_id','property_label','issue_date','due_date','description','invoice_type','subtotal','vat_rate','vat_amount','amount','paid_amount','remaining','status'],
+      invoices.map(r=>{ const c=byId('clients',r.client_id); const p=byId('properties',r.property_id); return [r.id,r.invoice_no,r.contract_id,r.client_id,c.name||'',r.property_id,propertyLabel(p),r.issue_date,r.due_date,r.description,r.invoice_type,r.subtotal,r.vat_rate,r.vat_amount,r.amount,r.paid_amount,Number(r.amount||0)-Number(r.paid_amount||0),r.status]; })
+    );
+    counts[fn] = invoices.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const rawAccounts = filterRows('accounts',['description','category','type']);
+  const accounts = typeof window.getFilteredAccountsRows === 'function' ? window.getFilteredAccountsRows(rawAccounts) : rawAccounts;
+  if(accounts.length){
+    const fn = `accounts-filtered-${day}.csv`;
+    files[fn] = csvFromRows(
+      ['id','entry_date','type','category','description','client_id','client_name','property_id','property_label','invoice_id','invoice_no','amount'],
+      accounts.map(r=>{ const c=byId('clients',r.client_id); const p=byId('properties',r.property_id); const i=byId('invoices',r.invoice_id); return [r.id,r.entry_date,r.type,r.category,r.description,r.client_id,c.name||'',r.property_id,propertyLabel(p),r.invoice_id,i.invoice_no||'',r.amount]; })
+    );
+    counts[fn] = accounts.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const revenues = filterRows('revenues',['source','category','description']);
+  if(revenues.length){
+    const fn = `revenues-filtered-${day}.csv`;
+    files[fn] = csvFromRows(
+      ['id','revenue_no','revenue_date','source','category','description','amount','client_id','client_name','property_id','property_label'],
+      revenues.map(r=>{ const c=byId('clients',r.client_id); const p=byId('properties',r.property_id); return [r.id,r.revenue_no,r.revenue_date,r.source,r.category,r.description,r.amount,r.client_id,c.name||'',r.property_id,propertyLabel(p)]; })
+    );
+    counts[fn] = revenues.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const purchases = filterRows('purchase_invoices',['supplier','category','description','status']);
+  if(purchases.length){
+    const fn = `purchases-filtered-${day}.csv`;
+    files[fn] = csvFromRows(
+      ['id','purchase_no','supplier','invoice_date','due_date','category','description','amount','paid_amount','remaining','status','property_id','property_label'],
+      purchases.map(r=>{ const p=byId('properties',r.property_id); return [r.id,r.purchase_no,r.supplier,r.invoice_date,r.due_date,r.category,r.description,r.amount,r.paid_amount,Number(r.amount||0)-Number(r.paid_amount||0),r.status,r.property_id,propertyLabel(p)]; })
+    );
+    counts[fn] = purchases.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const payroll = filterRows('salaries',['employee_name','salary_month','status']);
+  if(payroll.length){
+    const fn = `payroll-filtered-${day}.csv`;
+    files[fn] = csvFromRows(['id','employee_name','salary_month','basic_salary','allowances','deductions','net_salary','status','payment_date'], payroll.map(r=>[r.id,r.employee_name,r.salary_month,r.basic_salary,r.allowances,r.deductions,r.net_salary,r.status,r.payment_date]));
+    counts[fn] = payroll.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const adminExp = filterByGlobalSearchRows((Jawdah.data.admin_expenses||[]), ['expense_date','category','description','supplier']);
+  if(adminExp.length){
+    const fn = `admin-expenses-filtered-${day}.csv`;
+    files[fn] = csvFromRows(
+      ['id','expense_date','category','description','supplier','property_id','property_label','amount'],
+      adminExp.map(r=>{ const p=byId('properties',r.property_id); return [r.id,r.expense_date,r.category,r.description,r.supplier,r.property_id,propertyLabel(p),r.amount]; })
+    );
+    counts[fn] = adminExp.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const invBase = filterByGlobalSearchRows((Jawdah.data.inventory_items||[]), ['sku','name','category','location']);
+  const invPid = String($('#inventoryPropertyFilter')?.value||'').trim();
+  const invItems = invPid ? invBase.filter(r=>String(r.property_id||'')===invPid) : invBase;
+  if(invItems.length){
+    const fn = `inventory-filtered-${day}.csv`;
+    files[fn] = csvFromRows(
+      ['id','sku','name','category','property_id','property_label','unit','quantity','min_quantity','unit_cost','stock_value','location','status'],
+      invItems.map(r=>{ const q=Number(r.quantity||0), m=Number(r.min_quantity||0), c=Number(r.unit_cost||0); const p=byId('properties',r.property_id); return [r.id,r.sku,r.name,r.category,r.property_id||'',r.property_id?propertyLabel(p):'مخزن عام',r.unit,q,m,c,q*c,r.location,q<=m?'LOW_STOCK':'OK']; })
+    );
+    counts[fn] = invItems.length;
+    sizes[fn] = enc.encode(files[fn]).length;
+  }
+  const totalRecords = Object.values(counts).reduce((s, n)=>s + Number(n||0), 0);
+  const totalBytes = Object.values(sizes).reduce((s, n)=>s + Number(n||0), 0);
+  files['manifest.json'] = JSON.stringify({
+    generated_at: new Date().toISOString(),
+    app_ui_version: APP_UI_VERSION,
+    generated_by: Jawdah.user?.username || Jawdah.user?.name || 'unknown',
+    generated_by_role: Jawdah.user?.role || 'unknown',
+    active_section: Jawdah.activeSection || 'unknown',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+    total_files: Object.keys(counts).length,
+    total_records: totalRecords,
+    total_bytes: totalBytes,
+    filters: filterSnapshot,
+    file_sizes_bytes: sizes,
+    record_counts: counts,
+  }, null, 2);
+  return files;
+}
+function renderExportHub(){
+  const host = $('#exportHubButtons');
+  if(!host) return;
+  const actions = [
+    ['تصدير ZIP واحد (مفلتر)', 'exportAllFilteredZip'],
+    ['تصدير الكل (مفلتر)', 'exportAllFilteredCsvBatch'],
+    ['العقارات (مفلتر)', 'exportFilteredPropertiesCsv'],
+    ['العملاء (مفلتر)', 'exportFilteredClientsCsv'],
+    ['العقود (مفلتر)', 'exportFilteredContractsCsv'],
+    ['الفواتير (مفلتر)', 'exportFilteredInvoicesCsv'],
+    ['الحسابات (مفلتر)', 'exportFilteredAccountsCsv'],
+    ['الإيرادات (مفلتر)', 'exportFilteredRevenuesCsv'],
+    ['المشتريات (مفلتر)', 'exportFilteredPurchasesCsv'],
+    ['الرواتب (مفلتر)', 'exportFilteredPayrollCsv'],
+    ['المصاريف الإدارية (مفلتر)', 'exportFilteredAdminExpensesCsv'],
+    ['المخزن (مفلتر)', 'exportFilteredInventoryCsv'],
+  ];
+  host.innerHTML = actions
+    .map(([label, fn])=>`<button class="ghost" onclick="${fn}()">${label}</button>`)
+    .join('');
+}
+function exportAllFilteredCsvBatch(){
+  const fnNames = [
+    'exportFilteredPropertiesCsv',
+    'exportFilteredClientsCsv',
+    'exportFilteredContractsCsv',
+    'exportFilteredInvoicesCsv',
+    'exportFilteredAccountsCsv',
+    'exportFilteredRevenuesCsv',
+    'exportFilteredPurchasesCsv',
+    'exportFilteredPayrollCsv',
+    'exportFilteredAdminExpensesCsv',
+    'exportFilteredInventoryCsv',
+  ];
+  const originalToast = window.toast;
+  const originalToastNotice = window.toastNotice;
+  window.toast = ()=>{};
+  window.toastNotice = ()=>{};
+  fnNames.forEach((name, idx)=>{
+    const fn = window[name];
+    if(typeof fn === 'function'){
+      setTimeout(()=>{ try{ fn(); }catch(_e){} }, idx * 180);
+    }
+  });
+  setTimeout(()=>{
+    window.toast = originalToast;
+    window.toastNotice = originalToastNotice;
+    toast('تم تنزيل حزمة التصدير المفلترة');
+  }, fnNames.length * 180 + 300);
+}
+async function exportAllFilteredZip(){
+  try{
+    const files = buildFilteredCsvBundle();
+    const names = Object.keys(files);
+    if(!names.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+    const headers = {'Content-Type':'application/json'};
+    if(Jawdah.token) headers.Authorization = 'Bearer ' + Jawdah.token;
+    const res = await fetch('/api/export/bundle', {
+      method:'POST',
+      headers,
+      body: JSON.stringify({files})
+    });
+    if(!res.ok){
+      const msg = await res.text();
+      throw new Error(msg || 'فشل إنشاء ملف ZIP');
+    }
+    const blob = await res.blob();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`jawdah-filtered-bundle-${today()}.zip`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast(`تم تنزيل ZIP مفلتر (${names.length} ملفات)`);
+  }catch(e){ toastErr(e); }
+}
+function filterByGlobalSearchRows(rows, fields){
+  const q = ($('#globalSearch')?.value||'').toLowerCase().trim();
+  if(!q) return rows;
+  return rows.filter(r=>fields.some(f=>String(r?.[f]??'').toLowerCase().includes(q)));
+}
+function exportFilteredPropertiesCsv(){
+  const rows = filterRows('properties',['building_no','apartment_no','room_no','name','status','location','notes']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','building_no','apartment_no','room_no','name','status','price','location','latitude','longitude','has_active_contract','active_contract_no','notes'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const active = activeContractForPropertyLocal(r.id);
+    const row = [
+      r.id,
+      r.building_no,
+      r.apartment_no,
+      r.room_no,
+      r.name,
+      r.status,
+      r.price,
+      r.location,
+      r.latitude,
+      r.longitude,
+      active.id ? '1' : '0',
+      active.contract_no || active.id || '',
+      r.notes,
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`properties-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredClientsCsv(){
+  const rows = filterRows('clients',['name','phone','email','national_id']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','name','phone','email','national_id','balance','notes'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const row = [r.id, r.name, r.phone, r.email, r.national_id, r.balance, r.notes];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`clients-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredContractsCsv(){
+  const rows = filterRows('contracts',['id','status','notes']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','contract_no','contract_type','property_id','property_label','client_id','client_name','start_date','end_date','rent_amount','deposit_amount','payment_cycle','status','approved_at','notes'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const prop = byId('properties', r.property_id);
+    const client = byId('clients', r.client_id);
+    const row = [
+      r.id,
+      r.contract_no,
+      r.contract_type,
+      r.property_id,
+      propertyLabel(prop),
+      r.client_id,
+      client.name || '',
+      r.start_date,
+      r.end_date,
+      r.rent_amount,
+      r.deposit_amount,
+      r.payment_cycle,
+      r.status,
+      r.approved_at,
+      r.notes,
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`contracts-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredInvoicesCsv(){
+  const rows = filterRows('invoices',['invoice_no','description','status']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','invoice_no','contract_id','client_id','client_name','property_id','property_label','issue_date','due_date','description','invoice_type','subtotal','vat_rate','vat_amount','amount','paid_amount','remaining','status'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const client = byId('clients', r.client_id);
+    const prop = byId('properties', r.property_id);
+    const row = [
+      r.id,
+      r.invoice_no,
+      r.contract_id,
+      r.client_id,
+      client.name || '',
+      r.property_id,
+      propertyLabel(prop),
+      r.issue_date,
+      r.due_date,
+      r.description,
+      r.invoice_type,
+      r.subtotal,
+      r.vat_rate,
+      r.vat_amount,
+      r.amount,
+      r.paid_amount,
+      Number(r.amount||0)-Number(r.paid_amount||0),
+      r.status,
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`invoices-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredMaintenanceCsv(){
+  const rows = filterRows('maintenance',['title','priority','status','notes']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','property_id','property_label','title','priority','status','request_date','cost','notes'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const prop = byId('properties', r.property_id);
+    const row = [
+      r.id,
+      r.property_id,
+      propertyLabel(prop),
+      r.title,
+      r.priority,
+      r.status,
+      r.request_date,
+      r.cost,
+      r.notes,
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`maintenance-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredAccountsCsv(){
+  const baseRows = filterRows('accounts',['description','category','type']);
+  const rows = typeof window.getFilteredAccountsRows === 'function' ? window.getFilteredAccountsRows(baseRows) : baseRows;
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','entry_date','type','category','description','client_id','client_name','property_id','property_label','invoice_id','invoice_no','amount'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const client = byId('clients', r.client_id);
+    const prop = byId('properties', r.property_id);
+    const inv = byId('invoices', r.invoice_id);
+    const row = [
+      r.id,
+      r.entry_date,
+      r.type,
+      r.category,
+      r.description,
+      r.client_id,
+      client.name || '',
+      r.property_id,
+      propertyLabel(prop),
+      r.invoice_id,
+      inv.invoice_no || '',
+      r.amount,
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`accounts-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredRevenuesCsv(){
+  const rows = filterRows('revenues',['source','category','description']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','revenue_no','revenue_date','source','category','description','amount','client_id','client_name','property_id','property_label'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const client = byId('clients', r.client_id);
+    const prop = byId('properties', r.property_id);
+    const row = [
+      r.id,
+      r.revenue_no,
+      r.revenue_date,
+      r.source,
+      r.category,
+      r.description,
+      r.amount,
+      r.client_id,
+      client.name || '',
+      r.property_id,
+      propertyLabel(prop),
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`revenues-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredPurchasesCsv(){
+  const rows = filterRows('purchase_invoices',['supplier','category','description','status']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','purchase_no','supplier','invoice_date','due_date','category','description','amount','paid_amount','remaining','status','property_id','property_label'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const prop = byId('properties', r.property_id);
+    const row = [
+      r.id,
+      r.purchase_no,
+      r.supplier,
+      r.invoice_date,
+      r.due_date,
+      r.category,
+      r.description,
+      r.amount,
+      r.paid_amount,
+      Number(r.amount||0)-Number(r.paid_amount||0),
+      r.status,
+      r.property_id,
+      propertyLabel(prop),
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`purchases-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredPayrollCsv(){
+  const rows = filterRows('salaries',['employee_name','salary_month','status']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','employee_name','salary_month','basic_salary','allowances','deductions','net_salary','status','payment_date'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const row = [
+      r.id,
+      r.employee_name,
+      r.salary_month,
+      r.basic_salary,
+      r.allowances,
+      r.deductions,
+      r.net_salary,
+      r.status,
+      r.payment_date,
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`payroll-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredAdminExpensesCsv(){
+  const source = (Jawdah.data.admin_expenses||[]);
+  const rows = filterByGlobalSearchRows(source, ['expense_date','category','description','supplier']);
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','expense_date','category','description','supplier','property_id','property_label','amount'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const prop = byId('properties', r.property_id);
+    const row = [
+      r.id,
+      r.expense_date,
+      r.category,
+      r.description,
+      r.supplier,
+      r.property_id,
+      propertyLabel(prop),
+      r.amount,
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`admin-expenses-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
+}
+function exportFilteredInventoryCsv(){
+  const source = (Jawdah.data.inventory_items||[]);
+  const baseRows = filterByGlobalSearchRows(source, ['sku','name','category','location']);
+  const pid = String($('#inventoryPropertyFilter')?.value||'').trim();
+  const rows = pid ? baseRows.filter(r=>String(r.property_id||'')===pid) : baseRows;
+  if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
+  const headers = ['id','sku','name','category','property_id','property_label','unit','quantity','min_quantity','unit_cost','stock_value','location','status'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const quantity = Number(r.quantity||0);
+    const minQty = Number(r.min_quantity||0);
+    const unitCost = Number(r.unit_cost||0);
+    const p = byId('properties', r.property_id);
+    const row = [
+      r.id,
+      r.sku,
+      r.name,
+      r.category,
+      r.property_id || '',
+      r.property_id ? propertyLabel(p) : 'مخزن عام',
+      r.unit,
+      quantity,
+      minQty,
+      unitCost,
+      quantity * unitCost,
+      r.location,
+      quantity<=minQty ? 'LOW_STOCK' : 'OK',
+    ];
+    lines.push(row.map(csvCell).join(','));
+  });
+  downloadFile(`inventory-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+  toast('تم تصدير نتائج الفلتر');
 }
 function badge(v){ return statusBadge(v); }
 function contractDaysLeft(endDate){
@@ -1212,6 +2000,104 @@ function fillSelect(sel, data, objects=false, valueKey='id', textKey='name', lab
   if(objects) html+=data.map(x=>`<option value="${x[valueKey]}">${labelFn?labelFn(x):(x[textKey]??'')}</option>`).join(''); else html+=data.map(x=>`<option value="${x}">${x||'الكل'}</option>`).join('');
   el.innerHTML=html; if([...el.options].some(o=>o.value===old)) el.value=old;
 }
+function contractInvoiceDescriptionLocal(contract){
+  const prop = byId('properties', contract.property_id);
+  const client = byId('clients', contract.client_id);
+  const unit = propertyLabel(prop) || 'وحدة';
+  return `إيجار ${unit} للعميل ${(client.name||'عميل')}`;
+}
+function hasActiveContractForPropertyLocal(propertyId, excludeContractId=''){
+  if(!propertyId) return false;
+  return (Jawdah.data.contracts||[]).some(c=>{
+    if(excludeContractId && String(c.id)===String(excludeContractId)) return false;
+    return String(c.property_id)===String(propertyId) && String(c.status||'').toLowerCase()==='active';
+  });
+}
+function activeContractForPropertyLocal(propertyId, excludeContractId=''){
+  if(!propertyId) return {};
+  return (Jawdah.data.contracts||[]).find(c=>{
+    if(excludeContractId && String(c.id)===String(excludeContractId)) return false;
+    return String(c.property_id)===String(propertyId) && String(c.status||'').toLowerCase()==='active';
+  }) || {};
+}
+function openActiveContractFromProperty(propertyId){
+  const c = activeContractForPropertyLocal(propertyId);
+  if(!c.id){ toastNotice('لا يوجد عقد نشط لهذه الوحدة'); return; }
+  showSection('contracts');
+  contractDocument(c.id);
+}
+function updateContractPropertyWarning(){
+  const warn = $('#contractPropertyWarning');
+  const propertyId = val('contractProperty');
+  if(!warn) return;
+  if(propertyId && hasActiveContractForPropertyLocal(propertyId)){
+    warn.textContent = 'تنبيه: هذه الوحدة لديها عقد نشط حالياً. لا يمكن إنشاء مسودة جديدة لها قبل إنهاء/تجديد العقد الحالي.';
+    warn.classList.remove('hidden');
+  }else{
+    warn.textContent = '';
+    warn.classList.add('hidden');
+  }
+}
+function suggestedDueDateForContract(contract){
+  const cycle = String(contract?.payment_cycle || 'monthly').toLowerCase();
+  const days = cycle.includes('quarter') ? 90 : (cycle.includes('year') ? 365 : 30);
+  return new Date(Date.now() + days*86400000).toISOString().slice(0,10);
+}
+function bindInvoiceContractAutofill(){
+  const sel = $('#invoiceContractSelect');
+  if(!sel || sel.dataset.bound) return;
+  sel.dataset.bound = '1';
+  sel.addEventListener('change', ()=>{
+    const c = byId('contracts', sel.value);
+    if(!c.id) return;
+    const due = suggestedDueDateForContract(c);
+    if($('#invoiceDueDate') && !$('#invoiceDueDate').value) $('#invoiceDueDate').value = due;
+    if($('#invoiceAmount')) $('#invoiceAmount').value = Number(c.rent_amount||0) ? Number(c.rent_amount).toFixed(3) : '';
+    if($('#invoiceDesc')) $('#invoiceDesc').value = contractInvoiceDescriptionLocal(c);
+    if($('#invoiceType')) $('#invoiceType').value = 'rent';
+  });
+}
+async function createInvoiceFromSelectedContract(){
+  const contractId = val('invoiceContractSelect');
+  if(!contractId){ toastNotice('اختر العقد أولاً'); return; }
+  const c = byId('contracts', contractId);
+  const payload = {
+    contract_id: contractId,
+    due_date: val('invoiceDueDate') || suggestedDueDateForContract(c),
+    amount: num('invoiceAmount') || Number(c.rent_amount||0),
+    description: val('invoiceDesc') || contractInvoiceDescriptionLocal(c),
+    invoice_type: (val('invoiceType') || 'rent').toLowerCase(),
+  };
+  try{
+    const res = await api('invoice_from_contract', {method:'POST', body:JSON.stringify(payload)});
+    toast('تم إنشاء الفاتورة '+(res.item?.invoice_no||''));
+    await loadAll();
+    showSection('invoices');
+  }catch(e){ toastErr(e); }
+}
+function bindContractAutofill(){
+  const propSel = $('#contractProperty');
+  const clientSel = $('#contractClient');
+  if(propSel && !propSel.dataset.autofillBound){
+    propSel.dataset.autofillBound = '1';
+    propSel.addEventListener('change', ()=>{
+      const p = byId('properties', propSel.value);
+      updateContractPropertyWarning();
+      if(!p.id) return;
+      if($('#unitDetails') && !$('#unitDetails').value) $('#unitDetails').value = `${propertyLabel(p)}${p.location?` - ${p.location}`:''}`;
+      if($('#contractRent') && !Number($('#contractRent').value||0)) $('#contractRent').value = Number(p.price||0) ? Number(p.price).toFixed(3) : '';
+    });
+  }
+  if(clientSel && !clientSel.dataset.autofillBound){
+    clientSel.dataset.autofillBound = '1';
+    clientSel.addEventListener('change', ()=>{
+      const c = byId('clients', clientSel.value);
+      if(!c.id) return;
+      if($('#tenantIdNo') && !$('#tenantIdNo').value) $('#tenantIdNo').value = c.national_id || '';
+      if($('#contractNotes') && !$('#contractNotes').value) $('#contractNotes').value = `الهاتف: ${c.phone||'—'} | الرصيد: ${money(c.balance||0)}`;
+    });
+  }
+}
 async function createClient(){
   const name=val('cName');
   if(!name){ toastNotice('اسم العميل مطلوب'); return; }
@@ -1222,15 +2108,16 @@ async function createContract(){
   const client_id=val('contractClient');
   const rent=num('contractRent');
   if(!property_id||!client_id){ toastNotice('اختر العقار والعميل من القائمة'); return; }
+  if(hasActiveContractForPropertyLocal(property_id)){ toastNotice('لا يمكن إنشاء عقد جديد لأن الوحدة مرتبطة بعقد نشط حالياً'); return; }
   if(!rent||rent<=0){ toastNotice('مبلغ الإيجار الشهري مطلوب وأكبر من صفر'); return; }
-  await saveNew('contracts',{contract_type:val('contractType')||'Residential',property_id,client_id,tenant_nationality:val('tenantNationality'),tenant_id_no:val('tenantIdNo'),unit_details:val('unitDetails'),start_date:val('contractStart')||today(),end_date:val('contractEnd')||today(),rent_amount:rent,deposit_amount:num('contractDeposit'),late_fee:num('contractLateFee'),grace_days:num('contractGraceDays')||5,renewal_notice_days:num('contractRenewalDays')||30,status:'Draft',payment_cycle:'monthly',legal_terms:val('contractLegalTerms'),notes:val('contractNotes')});
+  await saveNew('contracts',{contract_type:val('contractType')||'Residential',property_id,client_id,tenant_nationality:val('tenantNationality'),tenant_id_no:val('tenantIdNo'),unit_details:val('unitDetails'),start_date:val('contractStart')||today(),end_date:val('contractEnd')||today(),rent_amount:rent,deposit_amount:num('contractDeposit'),late_fee:num('contractLateFee'),grace_days:num('contractGraceDays')||5,renewal_notice_days:num('contractRenewalDays')||30,status:'Draft',payment_cycle:val('contractPaymentCycle')||'monthly',legal_terms:val('contractLegalTerms'),notes:val('contractNotes')});
 }
 async function createProperty(){
   const building=val('pBuilding'), apartment=val('pApartment'), room=val('pRoom'), location=val('pLocation');
   if(!building||!apartment||!room||!location){ toastNotice('أكمل: رقم البناية، الشقة، الغرفة، والموقع'); return; }
   const photoFile=$('#pPhoto')?.files?.[0];
   try{
-    const res=await api('properties',{method:'POST',body:JSON.stringify({branch_id:val('pBranch')||null,building_no:building,apartment_no:apartment,room_no:room,status:val('pStatus'),price:num('pPrice'),location,notes:val('pNotes'),image:'🏠',last_update:today()})});
+    const res=await api('properties',{method:'POST',body:JSON.stringify({branch_id:val('pBranch')||null,building_no:building,apartment_no:apartment,room_no:room,status:val('pStatus'),price:num('pPrice'),location,latitude:val('pLat')||null,longitude:val('pLng')||null,notes:val('pNotes'),image:'🏠',last_update:today()})});
     const propertyId=res.item?.id;
     if(photoFile&&propertyId&&typeof lqUploadPropertyPhoto==='function'){
       await lqUploadPropertyPhoto(propertyId, photoFile);
@@ -1266,17 +2153,24 @@ function editOptions(field, row, table=''){
   if(table === 'chart_accounts' && field === 'type') return ['Asset','Liability','Equity','Revenue','Expense'].map(x=>[x,x]);
   if(table === 'financial_periods' && field === 'status') return ['Open','Closed'].map(x=>[x,x]);
   if(table === 'bank_reconciliations' && field === 'status') return ['Pending','Reconciled','Variance'].map(x=>[x,x]);
+  if(table === 'hospitality_rooms' && field === 'status') return ['available','reserved','occupied','maintenance'].map(x=>[x,x]);
+  if(table === 'hospitality_bookings' && field === 'status') return ['reserved','checked_in','checked_out','cancelled'].map(x=>[x,x]);
+  if(table === 'hospitality_bookings' && field === 'room_id') return (Jawdah.data.hospitality_rooms||[]).map(x=>[x.id, `${x.room_code||x.id} · ${propertyLabel(byId('properties',x.property_id))}`]);
+  if(table === 'hospitality_season_rates' && field === 'active') return [['1','Active'],['0','Inactive']];
   if(field === 'deposit_received') return [['1','نعم — تم الاستلام'],['0','لا — لم يُستلم']];
   if(opts[field]) return opts[field].map(x=>[x, field==='role'?roleName(x):(x==='1'?'نعم':x==='0'?'لا':x)]);
   return null;
 }
 const EDIT_CONFIG = {
-  properties: {title:'تعديل عقار', fields:[['building_no','رقم البناية','text'],['apartment_no','رقم الشقة','text'],['room_no','رقم الغرفة','text'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['name','اسم العرض (اختياري)','text'],['type','النوع','select'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
+  properties: {title:'تعديل عقار', fields:[['building_no','رقم البناية','text'],['apartment_no','رقم الشقة','text'],['room_no','رقم الغرفة','text'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['latitude','Latitude','number'],['longitude','Longitude','number'],['name','اسم العرض (اختياري)','text'],['type','النوع','select'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
   clients: {title:'تعديل عميل', fields:[['name','اسم العميل','text'],['phone','الهاتف','text'],['email','البريد','text'],['national_id','الهوية/السجل','text'],['balance','الرصيد الافتتاحي','number'],['notes','ملاحظات','textarea']]},
   contracts: {title:'تعديل عقد', fields:[['contract_no','رقم العقد','text'],['contract_type','نوع العقد','select'],['property_id','العقار','select'],['client_id','العميل','select'],['tenant_nationality','جنسية المستأجر','text'],['tenant_id_no','رقم الهوية/السجل','text'],['unit_details','تفاصيل الوحدة','textarea'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['rent_amount','قيمة الإيجار','number'],['deposit_amount','التأمين','number'],['deposit_received','استلام التأمين المالي','select'],['deposit_received_at','تاريخ استلام التأمين','date'],['deposit_received_amount','مبلغ التأمين المستلم','number'],['late_fee','غرامة التأخير','number'],['grace_days','مهلة السداد بالأيام','number'],['renewal_notice_days','تنبيه التجديد بالأيام','number'],['status','الحالة','select'],['payment_cycle','دورة الدفع','select'],['legal_terms','الشروط القانونية','textarea'],['notes','ملاحظات','textarea']]},
   accounts: {title:'تعديل حركة مالية', fields:[['entry_date','التاريخ','date'],['type','النوع','select'],['category','التصنيف','text'],['description','الوصف','text'],['client_id','العميل','select'],['property_id','العقار','select'],['invoice_id','الفاتورة','select'],['amount','المبلغ','number']]},
   maintenance: {title:'تعديل طلب صيانة', fields:[['property_id','العقار','select'],['title','عنوان الطلب','text'],['priority','الأولوية','select'],['status','الحالة','select'],['request_date','تاريخ الطلب','date'],['cost','التكلفة','number'],['notes','ملاحظات','textarea']]},
   chart_accounts: {title:'تعديل حساب في الدليل', fields:[['code','رمز الحساب','text'],['name','اسم الحساب','text'],['type','نوع الحساب','select'],['parent_code','الحساب الأب','select'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
+  hospitality_rooms: {title:'تعديل غرفة ضيافة', fields:[['property_id','العقار','select'],['room_code','رمز الغرفة','text'],['room_type','النوع','text'],['capacity','السعة','number'],['rate_per_night','سعر الليلة','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
+  hospitality_bookings: {title:'تعديل حجز ضيافة', fields:[['room_id','الغرفة','select'],['client_id','العميل','select'],['guest_name','اسم النزيل','text'],['guest_phone','الهاتف','text'],['checkin_date','الدخول','date'],['checkout_date','الخروج','date'],['rate_per_night','سعر الليلة','number'],['total_amount','الإجمالي','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['booking_source','المصدر','text'],['notes','ملاحظات','textarea']]},
+  hospitality_season_rates: {title:'تعديل تسعير موسمي', fields:[['property_id','العقار','select'],['room_type','نوع الغرفة','text'],['season_name','اسم الموسم','text'],['start_date','بداية الموسم','date'],['end_date','نهاية الموسم','date'],['nightly_rate','سعر الليلة','number'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
   financial_periods: {title:'تعديل فترة مالية', fields:[['period_name','اسم الفترة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   bank_reconciliations: {title:'تعديل تسوية بنك', fields:[['bank_name','البنك','text'],['period_name','الفترة','text'],['book_balance','رصيد الدفاتر','number'],['bank_balance','رصيد كشف البنك','number'],['difference','الفرق','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   users: {title:'تعديل مستخدم', fields:[['username','اسم المستخدم','text'],['name','الاسم','text'],['role','الدور','select'],['active','نشط','select'],['password','كلمة مرور جديدة - اختياري','password']]}
@@ -1312,7 +2206,20 @@ async function submitEditRecord(table,id){
     await loadAll();
   }catch(e){ toastErr(e); }
 }
-async function invoiceFromContract(contractId){ try{ const due=prompt('تاريخ الاستحقاق YYYY-MM-DD', today()); const desc=prompt('وصف الفاتورة','Rent invoice'); const res=await api('invoice_from_contract',{method:'POST',body:JSON.stringify({contract_id:contractId,due_date:due||today(),description:desc||'Rent invoice'})}); toast('تم إنشاء الفاتورة '+res.item.invoice_no); await loadAll(); showSection('invoices'); }catch(e){toastErr(e)} }
+async function invoiceFromContract(contractId){
+  try{
+    const contract = byId('contracts', contractId);
+    const cycle = String(contract.payment_cycle || 'monthly').toLowerCase();
+    const cycleDays = cycle.includes('quarter') ? 90 : (cycle.includes('year') ? 365 : 30);
+    const dueDefault = new Date(Date.now() + cycleDays*86400000).toISOString().slice(0,10);
+    const due=prompt('تاريخ الاستحقاق YYYY-MM-DD', dueDefault);
+    const desc=prompt('وصف الفاتورة', contractInvoiceDescriptionLocal(contract));
+    const res=await api('invoice_from_contract',{method:'POST',body:JSON.stringify({contract_id:contractId,due_date:due||dueDefault,description:desc||contractInvoiceDescriptionLocal(contract)})});
+    toast('تم إنشاء الفاتورة '+res.item.invoice_no);
+    await loadAll();
+    showSection('invoices');
+  }catch(e){toastErr(e)}
+}
 async function approveContract(contractId){ try{ if(!confirm('اعتماد العقد سيولد جدول الفواتير الشهرية حسب مدة العقد. هل تريد المتابعة؟')) return; const res=await api('approve_contract',{method:'POST',body:JSON.stringify({contract_id:contractId})}); toast('تم اعتماد العقد وتوليد '+(res.created_invoices||[]).length+' فاتورة'); await loadAll(); showSection('contracts'); }catch(e){toastErr(e)} }
 async function renewContract(contractId){
   const c = byId('contracts', contractId);
@@ -1598,6 +2505,9 @@ function applyLiveEvent(payload){
     backupEl.textContent='Backup · '+String(payload.last_backup).slice(0,16);
     backupEl.classList.remove('hidden');
   }
+  if($('#sec-owner-live')?.classList.contains('active') && isPrimaryOwnerUser()){
+    renderOwnerLiveHub();
+  }
 }
 function toggleFieldMode(){
   Jawdah.fieldMode=!Jawdah.fieldMode;
@@ -1734,10 +2644,679 @@ function initDashboardCharts(){
   }
   window.addEventListener('resize',()=>{ if(dash.classList.contains('active')) scheduleDrawCharts(); });
 }
+function initLoginUx(){
+  const user = $('#loginUser');
+  const pass = $('#loginPass');
+  const toggle = $('#loginPassToggle');
+  const caps = $('#capsHint');
+  const remember = $('#loginRemember');
+  if(user && !user.value) user.value = localStorage.getItem('jawdah_last_user') || '';
+  if(remember) remember.checked = (localStorage.getItem('jawdah_last_remember') || '1') === '1';
+  if(toggle && pass){
+    toggle.onclick = ()=> {
+      const show = pass.type === 'password';
+      pass.type = show ? 'text' : 'password';
+      toggle.textContent = show ? '🙈' : '👁️';
+    };
+  }
+  if(pass && caps){
+    const syncCaps = (ev)=>{
+      const on = !!ev.getModifierState && ev.getModifierState('CapsLock');
+      caps.classList.toggle('hidden', !on);
+    };
+    pass.addEventListener('keydown', syncCaps);
+    pass.addEventListener('keyup', syncCaps);
+    pass.addEventListener('blur', ()=>caps.classList.add('hidden'));
+  }
+}
+function applyTheme(theme){
+  const t = ['luxury-light','luxury-dark','luxury-pink'].includes(theme) ? theme : 'luxury-light';
+  Jawdah.theme = t;
+  localStorage.setItem('jawdah_theme', t);
+  document.body.setAttribute('data-theme', t);
+  const sel = $('#themeSelect');
+  if(sel) sel.value = t;
+}
+function initThemeUx(){
+  applyTheme(Jawdah.theme || 'luxury-light');
+  const sel = $('#themeSelect');
+  if(sel && !sel.dataset.bound){
+    sel.dataset.bound = '1';
+    sel.value = Jawdah.theme || 'luxury-light';
+    sel.addEventListener('change', ()=>applyTheme(sel.value));
+  }
+}
+function b64urlFromArrayBuffer(buf){
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for(let i=0;i<bytes.length;i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function arrayBufferFromB64url(b64url){
+  const b64 = String(b64url || '').replace(/-/g,'+').replace(/_/g,'/');
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob(b64 + pad);
+  const out = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+  return out.buffer;
+}
+function serializeCredential(cred){
+  const out = {
+    id: cred?.id || '',
+    type: cred?.type || 'public-key',
+    rawId: cred?.rawId ? b64urlFromArrayBuffer(cred.rawId) : '',
+    response: {},
+  };
+  if(cred?.response?.clientDataJSON) out.response.clientDataJSON = b64urlFromArrayBuffer(cred.response.clientDataJSON);
+  if(cred?.response?.attestationObject) out.response.attestationObject = b64urlFromArrayBuffer(cred.response.attestationObject);
+  if(cred?.response?.authenticatorData) out.response.authenticatorData = b64urlFromArrayBuffer(cred.response.authenticatorData);
+  if(cred?.response?.signature) out.response.signature = b64urlFromArrayBuffer(cred.response.signature);
+  if(cred?.response?.userHandle) out.response.userHandle = b64urlFromArrayBuffer(cred.response.userHandle);
+  if(typeof cred?.response?.getTransports === 'function'){
+    try{ out.response.transports = cred.response.getTransports() || []; }catch(_e){}
+  }
+  return out;
+}
+async function renderBiometricHub(){
+  const host = $('#biometricHubStatus');
+  if(!host) return;
+  const hasPlatform = !!window.PublicKeyCredential;
+  if(!Jawdah.token){
+    host.innerHTML = `<span class="badge pending">الحالة: تسجيل الدخول مطلوب</span><span class="badge">WebAuthn: ${hasPlatform?'متاح':'غير مدعوم'}</span>`;
+    return;
+  }
+  try{
+    const res = await api('biometric/status');
+    const status = (res.active_count || 0) > 0 ? 'مربوط' : 'غير مربوط';
+    const latest = (res.items || [])[0];
+    const latestLabel = latest?.label || latest?.credential_hint || '—';
+    host.innerHTML = `<span class="badge ${res.active_count>0?'active':'pending'}">الحالة: ${status}</span><span class="badge">WebAuthn: ${hasPlatform?'متاح':'غير مدعوم'}</span><span class="badge">${res.fido2_available?'FIDO2: فعال':'FIDO2: يحتاج مكتبة'}</span><span class="badge">الاعتمادات: ${res.active_count||0}</span><span class="badge">آخر جهاز: ${latestLabel}</span><span class="badge">المستخدم: ${Jawdah.user?.username||localStorage.getItem('jawdah_last_user')||'—'}</span>`;
+  }catch(e){
+    host.innerHTML = `<span class="badge pending">تعذر جلب حالة البصمة</span><span class="badge">WebAuthn: ${hasPlatform?'متاح':'غير مدعوم'}</span>`;
+  }
+}
+async function registerEnterpriseBiometric(){
+  try{
+    if(!window.PublicKeyCredential) throw new Error('WebAuthn غير مدعوم على هذا الجهاز');
+    const opts = await api('biometric/register/options', {method:'POST', body: JSON.stringify({label:'جهاز الموظف'})});
+    const pk = opts.publicKey || {};
+    const cred = await navigator.credentials.create({
+      publicKey:{
+        ...pk,
+        challenge: arrayBufferFromB64url(pk.challenge),
+        user: {...(pk.user||{}), id: arrayBufferFromB64url((pk.user||{}).id || '')},
+        excludeCredentials: (pk.excludeCredentials || []).map(c=>({type:'public-key', id: arrayBufferFromB64url(c.id)})),
+      }
+    });
+    if(!cred) throw new Error('تعذر إنشاء اعتماد البصمة');
+    await api('biometric/register/finish', {method:'POST', body: JSON.stringify({state: opts.state, label:'جهاز الموظف', credential: serializeCredential(cred)})});
+    toast('تم ربط البصمة المؤسسية بنجاح');
+    await renderBiometricHub();
+  }catch(e){ toastErr(e,'تعذر ربط البصمة'); }
+}
+async function verifyEnterpriseBiometric(){
+  try{
+    if(!window.PublicKeyCredential) throw new Error('WebAuthn غير مدعوم');
+    const opts = await api('biometric/auth/options', {method:'POST', body: JSON.stringify({})});
+    const pk = opts.publicKey || {};
+    const cred = await navigator.credentials.get({
+      publicKey:{
+        ...pk,
+        challenge: arrayBufferFromB64url(pk.challenge),
+        allowCredentials:(pk.allowCredentials || []).map(c=>({type:'public-key', id: arrayBufferFromB64url(c.id)})),
+      }
+    });
+    if(!cred) throw new Error('تعذر الحصول على التحقق الحيوي');
+    await api('biometric/auth/finish', {method:'POST', body: JSON.stringify({state: opts.state, credential: serializeCredential(cred)})});
+    toast('تم التحقق من البصمة بنجاح');
+    await renderBiometricHub();
+  }catch(e){ toastErr(e,'فشل التحقق من البصمة'); }
+}
+async function clearEnterpriseBiometric(){
+  try{
+    await api('biometric/clear', {method:'POST', body: JSON.stringify({})});
+    toast('تم فك ربط البصمة');
+    await renderBiometricHub();
+  }catch(e){ toastErr(e,'تعذر فك الربط'); }
+}
+function openPortalSwitch(force=false){
+  const ov = $('#portalSwitchOverlay');
+  if(!ov) return;
+  if(!force && localStorage.getItem('jawdah_portal_choice')) return;
+  ov.classList.remove('hidden');
+}
+function closePortalSwitch(){
+  $('#portalSwitchOverlay')?.classList.add('hidden');
+}
+function choosePortal(portal){
+  const choice = portal==='hospitality' ? 'hospitality' : 'realestate';
+  localStorage.setItem('jawdah_portal_choice', choice);
+  closePortalSwitch();
+  if(choice==='hospitality') showSection('hospitality');
+  else showSection('dashboard');
+}
+function applySavedPortalChoice(){
+  const choice = localStorage.getItem('jawdah_portal_choice') || 'realestate';
+  if(choice==='hospitality') showSection('hospitality');
+}
+function canManageDailyOps(){
+  const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
+  return DAILY_OPS_MANAGER_USERNAMES.has(uname) || isPrimaryOwnerUser();
+}
+function dailyOpsIconForRow(row){
+  const uname = String(row?.employee_username || row?.created_by_username || '').trim().toLowerCase();
+  if(uname && DAILY_OPS_ICON_BY_USERNAME[uname]) return DAILY_OPS_ICON_BY_USERNAME[uname];
+  const custom = String(row?.icon||'').trim();
+  if(custom) return custom;
+  const name = String(row?.employee_name || row?.created_by_name || '').trim();
+  return name ? name.slice(0,1) : '•';
+}
+function renderDailyOpsTimeline(items){
+  if(!items.length) return '<div class="card"><p class="mini">لا توجد عمليات يومية ضمن الفترة المحددة.</p></div>';
+  return `<div class="daily-ops-timeline">${items.map((row)=>{
+    const done = htmlEscape(String(row.done_text||'')).replace(/\n/g,'<br>');
+    const deferred = htmlEscape(String(row.deferred_text||'')).replace(/\n/g,'<br>');
+    const deferredChip = row.deferred_to ? `<span class="badge pending">مؤجل إلى ${htmlEscape(String(row.deferred_to))}</span>` : '';
+    return `<article class="daily-ops-item saas-glass"><div class="daily-ops-avatar">${htmlEscape(dailyOpsIconForRow(row))}</div><div class="daily-ops-content"><div class="daily-ops-head"><b>${htmlEscape(String(row.employee_name||'موظف'))}</b><span class="mini">${htmlEscape(String(row.entry_date||''))}</span><span class="mini">أضيف بواسطة: ${htmlEscape(String(row.created_by_name||'—'))}</span></div><div class="daily-ops-block"><h4>المنجز</h4><p>${done||'—'}</p></div><div class="daily-ops-block"><h4>المؤجل</h4><p>${deferred||'—'}</p>${deferredChip}</div></div></article>`;
+  }).join('')}</div>`;
+}
+async function createDailyOperation(){
+  try{
+    const doneText = val('dopDoneText').trim();
+    const deferredText = val('dopDeferredText').trim();
+    if(!doneText && !deferredText){ toastOk('أدخل المنجز أو المؤجل أولاً'); return; }
+    const payload = {
+      entry_date: val('dopEntryDate') || today(),
+      employee_user_id: val('dopEmployeeUser') || '',
+      employee_name: val('dopEmployeeName') || '',
+      done_text: doneText,
+      deferred_text: deferredText,
+      deferred_to: val('dopDeferredTo') || '',
+      icon: val('dopIcon') || '',
+    };
+    await api('daily_operations', { method:'POST', body: JSON.stringify(payload) });
+    toast('تم تسجيل العملية اليومية');
+    const doneEl = $('#dopDoneText'); if(doneEl) doneEl.value = '';
+    const deferredEl = $('#dopDeferredText'); if(deferredEl) deferredEl.value = '';
+    const deferredToEl = $('#dopDeferredTo'); if(deferredToEl) deferredToEl.value = '';
+    await renderDailyOpsPage();
+  }catch(e){ toastErr(e,'تعذر حفظ العملية اليومية'); }
+}
+async function renderDailyOpsPage(){
+  const host = $('#dailyOpsBox');
+  if(!host) return;
+  const canManage = canManageDailyOps();
+  const fromInput = $('#dopFilterFrom');
+  const toInput = $('#dopFilterTo');
+  const defaultFrom = addDaysYmd(today(), -7);
+  const fromDate = (fromInput?.value || localStorage.getItem('jawdah_dop_from') || defaultFrom);
+  const toDate = (toInput?.value || localStorage.getItem('jawdah_dop_to') || today());
+  localStorage.setItem('jawdah_dop_from', fromDate);
+  localStorage.setItem('jawdah_dop_to', toDate);
+  host.innerHTML = '<div class="card"><p class="mini">جاري تحميل العمليات اليومية…</p></div>';
+  try{
+    const users = (Jawdah.data.users || []).filter(u=>Number(u.active||1)===1);
+    const res = await api(`daily_operations?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`);
+    const items = (res.items || []);
+    const employeeOptions = users.map(u=>`<option value="${htmlEscape(u.id)}">${htmlEscape(u.name||u.username)} · ${htmlEscape(u.role||'')}</option>`).join('');
+    const timelineHtml = renderDailyOpsTimeline(items);
+    host.innerHTML = `
+      <div class="card">
+        <h3>العمليات اليومية</h3>
+        <p class="mini">سجل يومي موحد للأعمال المنجزة والمؤجلة لكل فريق العمل.</p>
+        <div class="toolbar" style="gap:8px;align-items:flex-end">
+          <label class="mini">من <input id="dopFilterFrom" type="date" value="${htmlEscape(fromDate)}"></label>
+          <label class="mini">إلى <input id="dopFilterTo" type="date" value="${htmlEscape(toDate)}"></label>
+          <button class="ghost" type="button" onclick="renderDailyOpsPage()">تحديث</button>
+          <span class="badge">${items.length} سجل</span>
+        </div>
+      </div>
+      ${canManage || Jawdah.user ? `
+      <div class="card">
+        <h3>إضافة عملية يومية</h3>
+        <div class="grid dop-grid-3">
+          <label>التاريخ<input id="dopEntryDate" type="date" value="${today()}"></label>
+          <label>الموظف<select id="dopEmployeeUser"><option value="">نفسي</option>${employeeOptions}</select></label>
+          <label>أيقونة الاسم<input id="dopIcon" placeholder="👑 / 🛠️ / 💼"></label>
+        </div>
+        <label style="margin-top:8px">اسم الموظف (اختياري)<input id="dopEmployeeName" placeholder="يُستخدم عند الإدخال اليدوي"></label>
+        <div class="grid dop-grid-2" style="margin-top:8px">
+          <label>المنجز<textarea id="dopDoneText" rows="4" placeholder="ما الذي تم إنجازه اليوم؟"></textarea></label>
+          <label>المؤجل<textarea id="dopDeferredText" rows="4" placeholder="ما الذي تم تأجيله؟ ولماذا؟"></textarea></label>
+        </div>
+        <div class="toolbar" style="margin-top:8px">
+          <label>تاريخ التأجيل<input id="dopDeferredTo" type="date"></label>
+          <button class="gold-btn" type="button" onclick="createDailyOperation()">حفظ العملية</button>
+          <span class="mini">${canManage ? 'تستطيع الإضافة للجميع.' : 'يمكنك الإضافة لسجلك فقط.'}</span>
+        </div>
+      </div>` : ''}
+      ${timelineHtml}
+    `;
+    if(!canManage){
+      const sel = $('#dopEmployeeUser');
+      if(sel){ sel.value = ''; sel.disabled = true; }
+      const nm = $('#dopEmployeeName');
+      if(nm) nm.disabled = true;
+    }
+    if(typeof ensureEnglishDigits==='function') ensureEnglishDigits(host);
+  }catch(e){
+    host.innerHTML = '<div class="card"><p class="mini">تعذر تحميل قسم العمليات اليومية.</p></div>';
+  }
+}
+async function renderOwnerLiveHub(){
+  const host = $('#ownerLiveHubBox');
+  if(!host) return;
+  ownerTimelineFilterDays = normalizeOwnerTimelineDays(ownerTimelineFilterDays);
+  if(!isPrimaryOwnerUser()){
+    host.innerHTML = '<div class="card"><p class="mini">هذه اللوحة مخصصة للمالك وليد + يعقوب فقط.</p></div>';
+    return;
+  }
+  host.innerHTML = '<div class="card"><p class="mini">جاري تحميل لوحة المالك الحية…</p></div>';
+  try{
+    const res = await api(`owner/live_hub?timeline_days=${encodeURIComponent(ownerTimelineFilterDays)}`);
+    const hub = res.hub || {};
+    const k = hub.kpis || {};
+    const ch = hub.channels || {};
+    const pf = (hub.property_finance || []).slice(0,8);
+    const journals = (hub.recent_staff_journal || []).slice(0,8);
+    const actions = (hub.recent_staff_actions || []).slice(0,10);
+    const timelineUpdates = (hub.recent_timeline_updates || []).slice(0,10);
+    const timelineDaysFromApi = normalizeOwnerTimelineDays((hub.timeline_filter || {}).days);
+    host.innerHTML = `
+      <div class="card accounting-hero">
+        <h3>لوحة المالك الحية · LIVE</h3>
+        <p class="mini">مرتبطة مباشرة بإدخالات الموظفين من العقارات والحسابات.</p>
+        <div class="status-line">
+          <span class="badge">عقارات ${fmt(k.properties||0)}</span>
+          <span class="badge">إشغال ${fmt(k.occupancy||0)}%</span>
+          <span class="badge">إيراد ${money(k.income||0)}</span>
+          <span class="badge">صافي ${money(k.net||0)}</span>
+          <span class="badge ${Number(k.overdue||0)>0?'overdue':'paid'}">متأخر ${money(k.overdue||0)}</span>
+        </div>
+      </div>
+      <div class="layout">
+        <div class="card"><h3>قناة العقارات</h3><div class="status-line"><span class="badge">وحدات ${fmt(ch.realestate?.units||0)}</span><span class="badge">عقود نشطة ${fmt(ch.realestate?.active_contracts||0)}</span><span class="badge">مخزون عقاري ${fmt(ch.realestate?.property_stock_items||0)}</span></div></div>
+        <div class="card"><h3>قناة الضيافة</h3><div class="status-line"><span class="badge">وحدات ${fmt(ch.hospitality?.units||0)}</span><span class="badge">حجوزات نشطة ${fmt(ch.hospitality?.active_bookings||0)}</span><span class="badge">Occupancy ${fmt(ch.hospitality?.occupancy_pct||0)}%</span><span class="badge">ADR ${money(ch.hospitality?.adr||0)}</span><span class="badge">RevPAR ${money(ch.hospitality?.revpar||0)}</span><span class="badge">إيراد ${money(ch.hospitality?.income||0)}</span><span class="badge">${htmlEscape(ch.hospitality?.note||'—')}</span></div></div>
+      </div>
+      <div class="layout">
+        <div class="card"><h3>ربحية العقارات (مالية + مخزن)</h3>${tableHtml([['العقار','property_name'],['إيراد','income',v=>money(v)],['مصروف','expense',v=>money(v)],['صافي','net',v=>money(v)],['قيمة المخزون','inventory_value',v=>money(v)]],pf)}</div>
+        <div class="card"><h3>SALAM · ايجنت تشغيلي</h3><div class="status-line"><span class="badge">يوصي بالتحصيل السريع عند المتأخرات</span><span class="badge">يراقب صافي الربحية لكل عقار</span><span class="badge">يتابع المخزون المرتبط بالعقار</span></div><div class="toolbar" style="margin-top:10px"><button class="gold-btn" type="button" onclick="showSection('accounts')">تنفيذ مالي</button><button class="ghost" type="button" onclick="showSection('inventory')">مخزن العقارات</button><button class="ghost" type="button" onclick="showSection('owner-staff')">متابعة الموظفين</button></div></div>
+      </div>
+      <div class="layout">
+        <div class="card"><h3>آخر يوميات الموظفين</h3>${tableHtml([['الموظف','user_name'],['التاريخ','work_date'],['الوقت','created_at',v=>String(v||'').slice(11,16)],['العمل','text']],journals)}</div>
+        <div class="card"><h3>آخر الإجراءات</h3>${tableHtml([['الوقت','created_at',v=>String(v||'').slice(0,16)],['المستخدم','username'],['الإجراء','action'],['الكيان','entity'],['التفاصيل','details']],actions)}</div>
+      </div>
+      <div class="layout">
+        <div class="card"><h3>سجل تعديل Timeline الحجوزات</h3><div class="toolbar" style="margin-bottom:8px;gap:8px"><span class="mini">الفترة:</span><select id="ownerTimelineFilter" onchange="setOwnerTimelineFilter(this.value)"><option value="1" ${timelineDaysFromApi===1?'selected':''}>آخر 24 ساعة</option><option value="7" ${timelineDaysFromApi===7?'selected':''}>آخر 7 أيام</option><option value="30" ${timelineDaysFromApi===30?'selected':''}>آخر 30 يوم</option><option value="90" ${timelineDaysFromApi===90?'selected':''}>آخر 90 يوم</option><option value="0" ${timelineDaysFromApi===0?'selected':''}>كل الفترات</option></select><span class="badge">${htmlEscape(ownerTimelineFilterLabel(timelineDaysFromApi))}</span><button class="ghost" type="button" onclick="exportOwnerTimelineCsv()">تصدير CSV</button></div>${tableHtml([['الوقت','created_at',v=>String(v||'').slice(0,16)],['المستخدم','username'],['الغرفة','room_code'],['النزيل','guest_name'],['فترة الحجز الحالية','checkin_date',(v,r)=>`${htmlEscape(String(v||'—'))} → ${htmlEscape(String(r.checkout_date||'—'))}`],['التعديل','details']],timelineUpdates)}</div>
+      </div>`;
+    if(typeof ensureEnglishDigits==='function') ensureEnglishDigits(host);
+  }catch(e){
+    host.innerHTML = '<div class="card"><p class="mini">تعذر تحميل لوحة المالك الحية.</p></div>';
+  }
+}
+function setOwnerTimelineFilter(v){
+  ownerTimelineFilterDays = normalizeOwnerTimelineDays(v);
+  localStorage.setItem('jawdah_owner_timeline_days', String(ownerTimelineFilterDays));
+  if($('#sec-owner-live')?.classList.contains('active')) renderOwnerLiveHub();
+}
+async function exportOwnerTimelineCsv(){
+  try{
+    ownerTimelineFilterDays = normalizeOwnerTimelineDays(ownerTimelineFilterDays);
+    const qs = new URLSearchParams({ timeline_days: String(ownerTimelineFilterDays) }).toString();
+    const res = await fetch('/api/export/timeline_audit?'+qs, { headers:{ Authorization:'Bearer '+(Jawdah.token||'') } });
+    if(!res.ok) throw new Error('');
+    const blob = await res.blob();
+    const suffix = ownerTimelineFilterDays===0 ? 'all' : `${ownerTimelineFilterDays}d`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `jawdah-timeline-audit-${suffix}-${today()}.csv`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  }catch(e){ toastErr(e,'تعذر تصدير سجل Timeline'); }
+}
+function startOwnerLiveAutoRefresh(){
+  if(ownerLiveTimer){ clearInterval(ownerLiveTimer); ownerLiveTimer = null; }
+  if(!isPrimaryOwnerUser()) return;
+  ownerLiveTimer = setInterval(()=>{
+    if($('#sec-owner-live')?.classList.contains('active')) renderOwnerLiveHub();
+  }, 10000);
+}
+function ymdFromDate(dt){
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+function addDaysYmd(ymd, delta){
+  const d = new Date(ymd+'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  return ymdFromDate(d);
+}
+function dayDiff(a,b){
+  const da = new Date(a+'T00:00:00');
+  const db = new Date(b+'T00:00:00');
+  return Math.floor((db-da)/(1000*60*60*24));
+}
+function canEditHospitalityTimeline(){
+  const role = String(Jawdah.user?.role||'').toLowerCase();
+  return ['owner','admin','operations'].includes(role);
+}
+function renderHospitalityTimeline(rooms, bookings){
+  const host = $('#hospitalityTimelineBox');
+  if(!host) return;
+  const monthVal = val('hCalMonth') || today().slice(0,7);
+  const [yy,mm] = monthVal.split('-').map(Number);
+  if(!yy || !mm){ host.innerHTML=''; return; }
+  const monthStart = `${yy}-${String(mm).padStart(2,'0')}-01`;
+  const daysInMonth = new Date(yy, mm, 0).getDate();
+  const monthEnd = `${yy}-${String(mm).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
+  hospitalityTimelineState = { month: monthVal, year: yy, m: mm, days: daysInMonth };
+  const dayCells = Array.from({length:daysInMonth},(_,i)=>`<div class="hosp-tl-day">${i+1}</div>`).join('');
+  const editable = canEditHospitalityTimeline();
+  const modeHint = editable
+    ? '<p class="mini">وضع التعديل مفعل: يمكنك سحب الحجز أو تمديد الحواف.</p>'
+    : '<p class="mini">وضع العرض فقط: التعديل مسموح للمالك/الإدارة/العمليات.</p>';
+  const rows = (rooms||[]).map(r=>{
+    const rowBookings = (bookings||[]).filter(b=>b.room_id===r.id && !['cancelled','checked_out'].includes(String(b.status||'').toLowerCase()));
+    const bars = rowBookings.map(b=>{
+      const start = String(b.checkin_date||monthStart);
+      const end = String(b.checkout_date||start);
+      const startClamped = start < monthStart ? monthStart : start;
+      const endClamped = end > monthEnd ? monthEnd : end;
+      const leftDays = Math.max(0, dayDiff(monthStart, startClamped));
+      const spanDays = Math.max(1, dayDiff(startClamped, endClamped)+1);
+      const leftPct = (leftDays/daysInMonth)*100;
+      const widthPct = (spanDays/daysInMonth)*100;
+      const handles = editable ? '<span class="handle left"></span><span class="handle right"></span>' : '';
+      const cursor = editable ? 'cursor:grab;' : 'cursor:default;';
+      return `<div class="hosp-tl-item" data-booking-id="${b.id}" data-status="${htmlEscape(String(b.status||''))}" style="left:${leftPct}%;width:${widthPct}%;${cursor}">${handles}<span>${htmlEscape(r.room_code||'Room')} · ${htmlEscape(b.guest_name||'')}</span></div>`;
+    }).join('');
+    return `<div class="hosp-tl-row"><div class="hosp-tl-room">${htmlEscape(r.room_code||r.id)} · ${htmlEscape(propertyLabel(byId('properties',r.property_id))||'')}</div><div class="hosp-tl-track" data-room-id="${r.id}" style="--days:${daysInMonth}"><div class="hosp-tl-grid">${Array.from({length:daysInMonth},()=>'<i></i>').join('')}</div>${bars}</div></div>`;
+  }).join('');
+  host.innerHTML = `${modeHint}<div class="hosp-tl-wrap"><div class="hosp-tl-head"><div></div><div class="hosp-tl-days" style="--days:${daysInMonth}">${dayCells}</div></div>${rows||'<p class="mini">لا توجد غرف ضيافة بعد</p>'}</div>`;
+  bindHospitalityTimelineInteractions(monthStart, monthEnd, daysInMonth);
+}
+function bindHospitalityTimelineInteractions(monthStart, monthEnd, daysInMonth){
+  const host = $('#hospitalityTimelineBox');
+  if(!host) return;
+  if(!canEditHospitalityTimeline()) return;
+  if(host.dataset.bound==='1') return;
+  host.dataset.bound='1';
+  host.addEventListener('pointerdown',(ev)=>{
+    const item = ev.target.closest('.hosp-tl-item');
+    if(!item) return;
+    const track = item.closest('.hosp-tl-track');
+    if(!track) return;
+    const bookingId = item.dataset.bookingId;
+    const booking = (Jawdah.data?.hospitality_bookings||[]).find(b=>b.id===bookingId);
+    if(!booking) return;
+    const trackRect = track.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const pxPerDay = trackRect.width / daysInMonth;
+    let mode = 'move';
+    if(ev.target.classList.contains('left')) mode='resize-left';
+    if(ev.target.classList.contains('right')) mode='resize-right';
+    const startX = ev.clientX;
+    const origCheckin = String(booking.checkin_date||monthStart);
+    const origCheckout = String(booking.checkout_date||origCheckin);
+    const move = (e)=>{
+      const deltaPx = e.clientX - startX;
+      const deltaDays = Math.round(deltaPx / pxPerDay);
+      let newIn = origCheckin;
+      let newOut = origCheckout;
+      if(mode==='move'){
+        newIn = addDaysYmd(origCheckin, deltaDays);
+        newOut = addDaysYmd(origCheckout, deltaDays);
+      }else if(mode==='resize-left'){
+        newIn = addDaysYmd(origCheckin, deltaDays);
+        if(newIn > newOut) newIn = newOut;
+      }else{
+        newOut = addDaysYmd(origCheckout, deltaDays);
+        if(newOut < newIn) newOut = newIn;
+      }
+      const s = newIn < monthStart ? monthStart : newIn;
+      const t = newOut > monthEnd ? monthEnd : newOut;
+      const leftDays = Math.max(0, dayDiff(monthStart, s));
+      const spanDays = Math.max(1, dayDiff(s, t)+1);
+      item.style.left = `${(leftDays/daysInMonth)*100}%`;
+      item.style.width = `${(spanDays/daysInMonth)*100}%`;
+      item.dataset.newCheckin = s;
+      item.dataset.newCheckout = t;
+    };
+    const up = async ()=>{
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      const newCheckin = item.dataset.newCheckin;
+      const newCheckout = item.dataset.newCheckout;
+      if(!newCheckin || !newCheckout) return;
+      try{
+        await api(`hospitality_bookings/${bookingId}`, {method:'PUT', body: JSON.stringify({checkin_date:newCheckin, checkout_date:newCheckout})});
+        toast('تم تحديث فترة الحجز');
+        await loadAll();
+      }catch(e){
+        toastErr(e,'تعذر تعديل الفترة (قد يكون هناك تعارض)');
+        renderHospitalityPortal(true);
+      }finally{
+        delete item.dataset.newCheckin;
+        delete item.dataset.newCheckout;
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up, {once:true});
+  });
+}
+async function renderHospitalityPortal(force=false){
+  const host = $('#hospitalityQuickBox');
+  if(!host) return;
+  const props = Jawdah.data?.properties || [];
+  const rooms = Jawdah.data?.hospitality_rooms || [];
+  const bookings = Jawdah.data?.hospitality_bookings || [];
+  const seasons = Jawdah.data?.hospitality_season_rates || [];
+  const folios = Jawdah.data?.hospitality_folios || [];
+  const clients = Jawdah.data?.clients || [];
+  const hRows = props.filter(r=>['hospitality','hotel','resort','short-term'].includes(String(r.type||'').toLowerCase()));
+  const occupied = rooms.filter(r=>String(r.status||'').toLowerCase()==='occupied').length;
+  const activeBookings = bookings.filter(b=>['reserved','checked_in'].includes(String(b.status||'').toLowerCase())).length;
+  const paid = bookings.reduce((s,b)=>s+Number(b.paid_amount||0),0);
+  host.innerHTML = `<span class="badge">وحدات ضيافة: ${fmt(hRows.length)}</span><span class="badge">غرف: ${fmt(rooms.length)}</span><span class="badge">مشغولة: ${fmt(occupied)}</span><span class="badge">حجوزات نشطة: ${fmt(activeBookings)}</span><span class="badge">تحصيل: ${money(paid)}</span><span class="badge">مواسم: ${fmt(seasons.length)}</span>`;
+
+  fillSelect('#hRoomProperty', props, true, 'id', 'name', propertyLabel);
+  fillSelect('#hSeasonProperty', props, true, 'id', 'name', propertyLabel);
+  fillSelect('#hBookingClient', clients, true, 'id', 'name');
+  const roomOpts = (rooms||[]).map(r=>`<option value="${r.id}">${htmlEscape(r.room_code||r.id)} · ${htmlEscape(byId('properties',r.property_id).name||'')}</option>`).join('');
+  if($('#hBookingRoom')) $('#hBookingRoom').innerHTML = '<option value="">اختر غرفة</option>' + roomOpts;
+  if($('#hBookingCheckin') && !$('#hBookingCheckin').value) $('#hBookingCheckin').value = today();
+  if($('#hBookingCheckout') && !$('#hBookingCheckout').value) $('#hBookingCheckout').value = today();
+  if($('#hSummaryFrom') && !$('#hSummaryFrom').value) $('#hSummaryFrom').value = today().slice(0,8)+'01';
+  if($('#hSummaryTo') && !$('#hSummaryTo').value) $('#hSummaryTo').value = today();
+  if($('#hCalMonth') && !$('#hCalMonth').value) $('#hCalMonth').value = today().slice(0,7);
+  if($('#hSeasonStart') && !$('#hSeasonStart').value) $('#hSeasonStart').value = today();
+  if($('#hSeasonEnd') && !$('#hSeasonEnd').value) $('#hSeasonEnd').value = today();
+  if($('#hRoomCapacity') && !$('#hRoomCapacity').value) $('#hRoomCapacity').value = '2';
+
+  const alertsHost = $('#hospitalityCheckoutAlerts');
+  if(alertsHost){
+    const soon = bookings.filter(b=>{
+      const st = String(b.status||'').toLowerCase();
+      if(!['reserved','checked_in'].includes(st)) return false;
+      if(!b.checkout_date) return false;
+      const diff = Math.floor((new Date(b.checkout_date+'T00:00:00') - new Date())/(1000*60*60*24));
+      return diff >= 0 && diff <= 2;
+    }).sort((a,b)=>String(a.checkout_date||'').localeCompare(String(b.checkout_date||'')));
+    alertsHost.innerHTML = soon.length
+      ? soon.slice(0,8).map(b=>`<span class="badge overdue">Check-out قريب: ${htmlEscape(b.guest_name||'')||'نزيل'} · ${htmlEscape(b.checkout_date||'')}</span>`).join('')
+      : '<span class="badge paid">لا توجد عمليات Check-out عاجلة خلال 48 ساعة</span>';
+  }
+
+  const calHost = $('#hospitalityCalendarBox');
+  if(calHost){
+    const monthVal = val('hCalMonth') || today().slice(0,7);
+    const [yy,mm] = monthVal.split('-').map(Number);
+    const monthStart = new Date(yy, (mm||1)-1, 1);
+    const monthEnd = new Date(yy, (mm||1), 0);
+    const firstWeekday = monthStart.getDay();
+    const daysInMonth = monthEnd.getDate();
+    const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const cellItems = [];
+    for(let i=0;i<firstWeekday;i++) cellItems.push('<div class="hcal-cell muted"></div>');
+    for(let d=1; d<=daysInMonth; d++){
+      const ds = `${yy}-${String(mm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dayBookings = bookings.filter(b=>{
+        const st = String(b.status||'').toLowerCase();
+        if(['cancelled','checked_out'].includes(st)) return false;
+        return (String(b.checkin_date||'') <= ds) && (String(b.checkout_date||'') >= ds);
+      });
+      const chips = dayBookings.slice(0,2).map(b=>`<span class="hcal-chip">${htmlEscape((rooms.find(r=>r.id===b.room_id)?.room_code)||'غرفة')} · ${htmlEscape(b.guest_name||'')}</span>`).join('');
+      const more = dayBookings.length>2 ? `<span class="hcal-more">+${dayBookings.length-2}</span>` : '';
+      cellItems.push(`<div class="hcal-cell"><div class="hcal-day">${d}</div>${chips}${more}</div>`);
+    }
+    calHost.innerHTML = `<div class="hcal-grid hcal-head">${dayLabels.map(x=>`<div class="hcal-head-cell">${x}</div>`).join('')}</div><div class="hcal-grid">${cellItems.join('')}</div>`;
+  }
+  const tlHost = $('#hospitalityTimelineBox');
+  if(tlHost){
+    const mode = canEditHospitalityTimeline() ? 'تعديل مباشر (Drag/Resize) مفعل' : 'عرض فقط — التعديل للمالك/الإدارة/العمليات';
+    tlHost.setAttribute('data-mode', mode);
+  }
+
+  const roomsTable = $('#hospitalityRoomsTable');
+  if(roomsTable) roomsTable.innerHTML = tableHtml(
+    [['العقار','property_id',v=>v?propertyLabel(byId('properties',v)):'—'],['الغرفة','room_code'],['النوع','room_type'],['السعة','capacity',v=>fmt(v)],['سعر الليلة','rate_per_night',v=>money(v)],['الحالة','status',v=>badge(v)]],
+    rooms,
+    r=>`<button class="ghost" onclick="editRecord('hospitality_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('hospitality_rooms','${r.id}')">حذف</button>`
+  );
+  const bookingsTable = $('#hospitalityBookingsTable');
+  if(bookingsTable) bookingsTable.innerHTML = tableHtml(
+    [['الغرفة','room_id',v=>(rooms.find(x=>x.id===v)?.room_code)||v],['النزيل','guest_name'],['الهاتف','guest_phone'],['الدخول','checkin_date'],['الخروج','checkout_date'],['ليالٍ','nights',v=>fmt(v)],['الإجمالي','total_amount',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['المتبقي','balance_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],
+    bookings,
+    r=>`<button class="ghost" onclick="setHospitalityBookingStatus('${r.id}','checked_in')">Check-in</button> <button class="ghost" onclick="setHospitalityBookingStatus('${r.id}','checked_out')">Check-out</button> <button class="ghost" onclick="editRecord('hospitality_bookings','${r.id}')">تعديل</button>`
+  );
+  renderHospitalityTimeline(rooms, bookings);
+  const seasonsTable = $('#hospitalitySeasonsTable');
+  if(seasonsTable) seasonsTable.innerHTML = tableHtml(
+    [['العقار','property_id',v=>v?propertyLabel(byId('properties',v)):'كل العقارات'],['النوع','room_type',v=>v||'كل الأنواع'],['الموسم','season_name'],['من','start_date'],['إلى','end_date'],['سعر الليلة','nightly_rate',v=>money(v)],['نشط','active',v=>v?badge('active'):badge('inactive')]],
+    seasons,
+    r=>`<button class="ghost" onclick="editRecord('hospitality_season_rates','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('hospitality_season_rates','${r.id}')">حذف</button>`
+  );
+  const foliosTable = $('#hospitalityFoliosTable');
+  if(foliosTable) foliosTable.innerHTML = tableHtml(
+    [['رقم الفوليو','folio_no'],['الحجز','booking_id'],['تاريخ الإصدار','issue_date'],['الإجمالي','total_amount',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['المتبقي','balance_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],
+    folios,
+    r=>`<button class="gold-btn" onclick="printHospitalityFolio('${r.id}')">PDF</button>`
+  );
+  const sumHost = $('#hospitalitySummaryBox');
+  const typeHost = $('#hospitalityTypeBox');
+  if(sumHost){
+    try{
+      const from = val('hSummaryFrom') || (today().slice(0,8)+'01');
+      const to = val('hSummaryTo') || today();
+      const res = await api(`hospitality_summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+      const s = res.summary || {};
+      const k = s.kpis || {};
+      sumHost.innerHTML = `<span class="badge">Occupancy: ${fmt(k.occupancy_pct||0)}%</span><span class="badge">ADR: ${money(k.adr||0)}</span><span class="badge">RevPAR: ${money(k.revpar||0)}</span><span class="badge">إجمالي إيراد: ${money(k.total_revenue||0)}</span><span class="badge">مدفوع: ${money(k.paid_revenue||0)}</span><span class="badge">متبقي: ${money(k.balance_revenue||0)}</span><span class="badge">Sold Nights: ${fmt(k.sold_nights||0)}</span>`;
+      if(typeHost){
+        typeHost.innerHTML = tableHtml([['نوع الغرفة','room_type'],['عدد الحجوزات','bookings',v=>fmt(v)],['الإيراد','revenue',v=>money(v)]], s.room_type_breakdown || []);
+      }
+    }catch(e){
+      sumHost.innerHTML = '<span class="badge pending">تعذر تحميل ملخص الضيافة</span>';
+      if(typeHost) typeHost.innerHTML = '';
+    }
+  }
+}
+async function createHospitalityRoom(){
+  try{
+    await api('hospitality_rooms',{method:'POST',body:JSON.stringify({
+      property_id: val('hRoomProperty') || null,
+      room_code: val('hRoomCode'),
+      room_type: val('hRoomType') || 'Standard',
+      capacity: num('hRoomCapacity') || 2,
+      rate_per_night: num('hRoomRate'),
+      status: val('hRoomStatus') || 'available',
+      notes: val('hRoomNotes'),
+    })});
+    toast('تم حفظ الغرفة');
+    await loadAll();
+  }catch(e){ toastErr(e); }
+}
+async function createHospitalityBooking(){
+  try{
+    await api('hospitality_bookings',{method:'POST',body:JSON.stringify({
+      room_id: val('hBookingRoom'),
+      client_id: val('hBookingClient') || null,
+      guest_name: val('hBookingGuest'),
+      guest_phone: val('hBookingPhone'),
+      checkin_date: val('hBookingCheckin') || today(),
+      checkout_date: val('hBookingCheckout') || today(),
+      rate_per_night: num('hBookingRate'),
+      paid_amount: num('hBookingPaid'),
+      status: val('hBookingStatus') || 'reserved',
+      booking_source: val('hBookingSource') || 'direct',
+      notes: val('hBookingNotes'),
+    })});
+    toast('تم حفظ الحجز');
+    await loadAll();
+  }catch(e){ toastErr(e); }
+}
+async function createHospitalitySeasonRate(){
+  try{
+    await api('hospitality_season_rates',{method:'POST',body:JSON.stringify({
+      property_id: val('hSeasonProperty') || null,
+      room_type: val('hSeasonRoomType') || null,
+      season_name: val('hSeasonName'),
+      start_date: val('hSeasonStart') || today(),
+      end_date: val('hSeasonEnd') || today(),
+      nightly_rate: num('hSeasonRate'),
+      active: Number(val('hSeasonActive')||'1'),
+      notes: val('hSeasonNotes'),
+    })});
+    toast('تم حفظ تسعير الموسم');
+    await loadAll();
+  }catch(e){ toastErr(e); }
+}
+async function setHospitalityBookingStatus(bookingId,status){
+  try{
+    await api(`hospitality_bookings/${bookingId}`,{method:'PUT',body:JSON.stringify({status})});
+    toast('تم تحديث حالة الحجز');
+    await loadAll();
+  }catch(e){ toastErr(e); }
+}
+function openHospitalityReport(){
+  const from = val('hSummaryFrom') || (today().slice(0,8)+'01');
+  const to = val('hSummaryTo') || today();
+  const url='/api/report/hospitality?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to)+'&token='+encodeURIComponent(Jawdah.token||'');
+  const w=window.open(url,'_blank','noopener');
+  if(!w) toastNotice('تعذر فتح التقرير — فعّل النوافذ المنبثقة');
+}
+function printHospitalityFolio(folioId){
+  const url='/api/report/hospitality?folio_id='+encodeURIComponent(folioId)+'&token='+encodeURIComponent(Jawdah.token||'');
+  const w=window.open(url,'_blank','noopener');
+  if(!w) toastNotice('تعذر فتح الفوليو — فعّل النوافذ المنبثقة');
+}
+function runSalamAgent(){
+  const host = $('#salamAgentBox');
+  if(!host) return;
+  const invoices = Jawdah.data?.invoices || [];
+  const inventory = Jawdah.data?.inventory_items || [];
+  const properties = Jawdah.data?.properties || [];
+  const accounts = Jawdah.data?.accounts || [];
+  const overdue = invoices.filter(i=>String(i.status||'').toLowerCase()!=='paid' && i.due_date && i.due_date < today());
+  const lowStock = inventory.filter(i=>Number(i.quantity||0)<=Number(i.min_quantity||0));
+  const negativeProperties = properties.filter(p=>{
+    const pRows = accounts.filter(a=>a.property_id===p.id);
+    const income = pRows.filter(a=>String(a.type||'').toLowerCase()==='income').reduce((s,a)=>s+Number(a.amount||0),0);
+    const expense = pRows.filter(a=>String(a.type||'').toLowerCase()==='expense').reduce((s,a)=>s+Number(a.amount||0),0);
+    return expense > income && (income+expense)>0;
+  });
+  const actions = [];
+  if(overdue.length) actions.push(`<span class="badge overdue">تحصيل عاجل: ${fmt(overdue.length)} فاتورة متأخرة</span><button class="ghost" type="button" onclick="showSection('invoices')">فتح الفواتير</button>`);
+  if(lowStock.length) actions.push(`<span class="badge">مخزون منخفض: ${fmt(lowStock.length)} صنف</span><button class="ghost" type="button" onclick="showSection('inventory')">فتح المخزن</button>`);
+  if(negativeProperties.length) actions.push(`<span class="badge">عقارات بصافي سلبي: ${fmt(negativeProperties.length)}</span><button class="ghost" type="button" onclick="showSection('accounts')">تحليل الحسابات</button>`);
+  if(!actions.length) actions.push('<span class="badge paid">الوضع المالي والتشغيلي مستقر حالياً</span>');
+  host.innerHTML = actions.map(a=>`<div class="toolbar">${a}</div>`).join('');
+}
 function bind(){
   $('#loginBtn').onclick=login; $('#logoutBtn').onclick=logout; $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open'); $('#globalSearch').oninput=()=>renderAll();
   $('#fieldModeBtn')?.addEventListener('click', toggleFieldMode);
+  $('#portalSwitchBtn')?.addEventListener('click', ()=>openPortalSwitch(true));
   initLoginCinema();
+  initLoginUx();
+  initThemeUx();
   initDashboardCharts();
   initFabDock();
   if(typeof initEnterpriseVision==='function') initEnterpriseVision();
@@ -1750,9 +3329,28 @@ function bind(){
   });
 }
 window.LAUNCH_QUALITY_CHECK=()=>({system:'Launch Quality LLC',user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});
-window.addEventListener('load',()=>{ syncLoginOwnerBranding(); bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); });
+window.addEventListener('load',()=>{ syncLoginOwnerBranding(); bind(); initClock(); checkSession(); renderBiometricHub(); setInterval(()=>ensureEnglishDigits(),3000); });
 window.addEventListener('error',()=>true);
 window.addEventListener('unhandledrejection',e=>{ e.preventDefault(); });
+window.registerEnterpriseBiometric = registerEnterpriseBiometric;
+window.verifyEnterpriseBiometric = verifyEnterpriseBiometric;
+window.clearEnterpriseBiometric = clearEnterpriseBiometric;
+window.choosePortal = choosePortal;
+window.closePortalSwitch = closePortalSwitch;
+window.renderOwnerLiveHub = renderOwnerLiveHub;
+window.renderDailyOpsPage = renderDailyOpsPage;
+window.createDailyOperation = createDailyOperation;
+window.setPropertyTimelineFilters = setPropertyTimelineFilters;
+window.setOwnerTimelineFilter = setOwnerTimelineFilter;
+window.exportOwnerTimelineCsv = exportOwnerTimelineCsv;
+window.renderHospitalityPortal = renderHospitalityPortal;
+window.runSalamAgent = runSalamAgent;
+window.createHospitalityRoom = createHospitalityRoom;
+window.createHospitalityBooking = createHospitalityBooking;
+window.setHospitalityBookingStatus = setHospitalityBookingStatus;
+window.createHospitalitySeasonRate = createHospitalitySeasonRate;
+window.openHospitalityReport = openHospitalityReport;
+window.printHospitalityFolio = printHospitalityFolio;
 
 
 /* Launch Quality LLC - production experience layer */
@@ -1824,10 +3422,76 @@ window.addEventListener('unhandledrejection',e=>{ e.preventDefault(); });
   function miniKpi(label, value, hint=''){
     return `<div class="kpi"><span>${label}</span><strong>${value}</strong>${hint?`<small class="mini">${hint}</small>`:''}</div>`;
   }
+  let accountsInsightsCache = null;
+  let accountsInsightsCachedAt = 0;
+  function syncAccountCategoryFilter(rows){
+    const sel = document.getElementById('accFilterCategory');
+    if(!sel) return;
+    const prev = sel.value || '';
+    const cats = Array.from(new Set((rows||[]).map(r=>String(r.category||'').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = `<option value="">كل التصنيفات</option>` + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    if(cats.includes(prev)) sel.value = prev;
+  }
+  function filteredAccountsRows(baseRows){
+    const typeVal = (document.getElementById('accFilterType')?.value || '').trim();
+    const catVal = (document.getElementById('accFilterCategory')?.value || '').trim();
+    const fromVal = (document.getElementById('accFilterFrom')?.value || '').trim();
+    const toVal = (document.getElementById('accFilterTo')?.value || '').trim();
+    return (baseRows || []).filter(r=>{
+      if(typeVal && String(r.type||'').trim() !== typeVal) return false;
+      if(catVal && String(r.category||'').trim() !== catVal) return false;
+      const d = String(r.entry_date || '').trim();
+      if(fromVal && d && d < fromVal) return false;
+      if(toVal && d && d > toVal) return false;
+      return true;
+    });
+  }
+  window.getFilteredAccountsRows = filteredAccountsRows;
+  async function loadAccountsInsights(force=false){
+    const now = Date.now();
+    if(!force && accountsInsightsCache && (now - accountsInsightsCachedAt) < 45000) return accountsInsightsCache;
+    const res = await api('accounts_insights?months=6');
+    accountsInsightsCache = res;
+    accountsInsightsCachedAt = now;
+    return res;
+  }
+  function renderAccountsInsightsBox(payload){
+    const host = document.getElementById('accountsInsightsBox');
+    if(!host) return;
+    if(!payload || !payload.ok){
+      host.innerHTML = '<span class="badge pending">تعذر تحميل التحليلات الآن</span>';
+      return;
+    }
+    const topIn = (payload.top_income_categories || []).slice(0,3).map(x=>`${x.category}: ${money(x.amount)}`).join(' | ') || 'لا توجد بيانات';
+    const topOut = (payload.top_expense_categories || []).slice(0,3).map(x=>`${x.category}: ${money(x.amount)}`).join(' | ') || 'لا توجد بيانات';
+    const series = payload.cashflow_series || [];
+    const last = series[series.length-1] || {month:'-',net:0};
+    host.innerHTML = `<span class="badge">آخر شهر: ${last.month}</span><span class="badge ${Number(last.net||0)>=0?'paid':'overdue'}">صافي: ${money(last.net||0)}</span><span class="badge">أعلى إيرادات: ${topIn}</span><span class="badge">أعلى مصروفات: ${topOut}</span>`;
+  }
+  function bindAccountsFilters(){
+    ['accFilterType','accFilterCategory','accFilterFrom','accFilterTo'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el && !el.dataset.bound){
+        el.dataset.bound = '1';
+        el.addEventListener('change', ()=>window.renderAccounts && window.renderAccounts());
+      }
+    });
+  }
+  window.clearAccountsFilters = function(){
+    const ids = ['accFilterType','accFilterCategory','accFilterFrom','accFilterTo'];
+    ids.forEach(id=>{ const el = document.getElementById(id); if(el) el.value=''; });
+    if(window.renderAccounts) window.renderAccounts();
+  };
+  window.refreshAccountsInsights = async function(){
+    try{ renderAccountsInsightsBox(await loadAccountsInsights(true)); }
+    catch(e){ renderAccountsInsightsBox(null); }
+  };
   window.renderAccounts = function(){
     const e = accEngine();
+    bindAccountsFilters();
     fillSelect('#accClient', Jawdah.data.clients||[], true);
     fillSelect('#accProperty', Jawdah.data.properties||[], true);
+    syncAccountCategoryFilter(Jawdah.data.accounts||[]);
     const exec = document.getElementById('accountingExecutive');
     if(exec){
       exec.innerHTML = [
@@ -1847,10 +3511,13 @@ window.addEventListener('unhandledrejection',e=>{ e.preventDefault(); });
     if(tenant) tenant.innerHTML = tableHtml([['المستأجر','client',(v,r)=>r.client.name],['الفواتير','invoices',(v)=>fmt(v)],['إجمالي','total',(v)=>money(v)],['مدفوع','paid',(v)=>money(v)],['متبقي','outstanding',(v)=>money(v)]], e.tenantBalances.slice(0,8), r=>`<button class="ghost" onclick="clientStatement('${r.client.id}')">كشف</button>`);
     const profit = document.getElementById('propertyProfitBox');
     if(profit) profit.innerHTML = tableHtml([['العقار','property',(v,r)=>r.property.name],['إيراد','revenue',(v)=>money(v)],['مصروف','cost',(v)=>money(v)],['صافي','net',(v)=>money(v)],['متبقي','outstanding',(v)=>money(v)]], e.propertyProfit.slice(0,8));
-    const rows = filterRows('accounts',['entry_date','type','category','description','amount']);
+    const baseRows = filterRows('accounts',['entry_date','type','category','description','amount']);
+    const rows = filteredAccountsRows(baseRows);
     const tbl = document.getElementById('accountsTable');
     if(tbl) tbl.innerHTML = tableHtml([['التاريخ','entry_date'],['النوع','type'],['التصنيف','category'],['الوصف','description'],['العميل','client_id',(v)=>byId('clients',v).name||''],['العقار','property_id',(v)=>byId('properties',v).name||''],['الفاتورة','invoice_id',(v)=>byId('invoices',v).invoice_no||''],['المبلغ','amount',(v)=>money(v)]], rows, r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`);
     drawBar('expenseChart',(Jawdah.dashboard?.series||[]).map(x=>x.expense));
+    loadAccountsInsights(false).then(renderAccountsInsightsBox).catch(()=>renderAccountsInsightsBox(null));
+    runSalamAgent();
     ensureEnglishDigits(document.getElementById('sec-accounts'));
   };
   window.renderReports = function(){
@@ -1904,7 +3571,12 @@ window.addEventListener('unhandledrejection',e=>{ e.preventDefault(); });
   window.renderRevenues=function(){ const rows=safe(Jawdah.data.revenues); if($('#revenuesTable')) $('#revenuesTable').innerHTML=tableHtml([['رقم','revenue_no'],['التاريخ','revenue_date'],['المصدر','source'],['التصنيف','category'],['الوصف','description'],['المبلغ','amount',v=>money(v)]],rows); };
   window.renderSalaries=function(){ const rows=safe(Jawdah.data.salaries); if($('#salariesTable')) $('#salariesTable').innerHTML=tableHtml([['الموظف','employee_name'],['الشهر','salary_month'],['أساسي','basic_salary',v=>money(v)],['بدلات','allowances',v=>money(v)],['استقطاعات','deductions',v=>money(v)],['الصافي','net_salary',v=>money(v)],['الحالة','status',v=>badge(v)]],rows); };
   window.renderAdminExpenses=function(){ const rows=safe(Jawdah.data.admin_expenses); if($('#adminExpensesTable')) $('#adminExpensesTable').innerHTML=tableHtml([['التاريخ','expense_date'],['التصنيف','category'],['الوصف','description'],['المورد','supplier'],['العقار','property_id',v=>byId('properties',v).name||''],['المبلغ','amount',v=>money(v)]],rows); };
-  window.renderInventory=function(){ const rows=safe(Jawdah.data.inventory_items); if($('#inventoryTable')) $('#inventoryTable').innerHTML=tableHtml([['SKU','sku'],['الصنف','name'],['التصنيف','category'],['الكمية','quantity',v=>fmt(v)],['الحد الأدنى','min_quantity',v=>fmt(v)],['تكلفة الوحدة','unit_cost',v=>money(v)],['القيمة','id',(_,r)=>money(Number(r.quantity||0)*Number(r.unit_cost||0))],['الحالة','id',(_,r)=>Number(r.quantity||0)<=Number(r.min_quantity||0)?'<span class="low-stock">إعادة طلب</span>':'<span class="linked-ok">جيد</span>']],rows); };
+  window.renderInventory=function(){
+    const all=safe(Jawdah.data.inventory_items);
+    const pid = String($('#inventoryPropertyFilter')?.value||'').trim();
+    const rows = pid ? all.filter(r=>String(r.property_id||'')===pid) : all;
+    if($('#inventoryTable')) $('#inventoryTable').innerHTML=tableHtml([['SKU','sku'],['الصنف','name'],['التصنيف','category'],['العقار','property_id',v=>v?(propertyLabel(byId('properties',v))):'مخزن عام'],['الكمية','quantity',v=>fmt(v)],['الحد الأدنى','min_quantity',v=>fmt(v)],['تكلفة الوحدة','unit_cost',v=>money(v)],['القيمة','id',(_,r)=>money(Number(r.quantity||0)*Number(r.unit_cost||0))],['الحالة','id',(_,r)=>Number(r.quantity||0)<=Number(r.min_quantity||0)?'<span class="low-stock">إعادة طلب</span>':'<span class="linked-ok">جيد</span>']],rows);
+  };
   window.renderBank=function(){ const rows=safe(Jawdah.data.bank_transactions); if($('#bankTable')) $('#bankTable').innerHTML=tableHtml([['التاريخ','bank_date'],['البنك','bank_name'],['المرجع','reference'],['النوع','type'],['الوصف','description'],['المبلغ','amount',v=>money(v)],['فاتورة','matched_invoice_id',(v,r)=>byId('invoices',v).invoice_no||'—'],['المطابقة','status',v=>badge(v)]],rows); };
   const coaTypeLabel = t=>({Asset:'أصول',Liability:'خصوم',Equity:'حقوق ملكية',Revenue:'إيرادات',Expense:'مصروفات'}[t]||t);
   const coaTypeClass = t=>String(t||'').toLowerCase();
@@ -1992,7 +3664,7 @@ window.addEventListener('unhandledrejection',e=>{ e.preventDefault(); });
   window.createRevenue=()=>postTable('revenues',{revenue_date:val('revDate')||today(),source:val('revSource')||'Other',category:val('revCategory')||'Other Revenue',description:val('revDesc'),amount:num('revAmount'),client_id:val('revClient')||null,property_id:val('revProperty')||null});
   window.createSalary=()=>{const basic=num('salBasic'),allow=num('salAllow'),ded=num('salDeduct'); return postTable('salaries',{employee_name:val('salEmployee'),salary_month:val('salMonth')||today().slice(0,7),basic_salary:basic,allowances:allow,deductions:ded,net_salary:basic+allow-ded,status:val('salStatus'),payment_date:val('salDate')||today()});};
   window.createAdminExpense=()=>postTable('admin_expenses',{expense_date:val('gaDate')||today(),category:val('gaCategory')||'General & Administrative',description:val('gaDesc'),amount:num('gaAmount'),supplier:val('gaSupplier'),property_id:val('gaProperty')||null});
-  window.createInventoryItem=()=>postTable('inventory_items',{sku:val('itemSku'),name:val('itemName'),category:val('itemCategory'),unit:val('itemUnit')||'pcs',quantity:num('itemQty'),min_quantity:num('itemMin'),unit_cost:num('itemCost'),location:val('itemLocation')});
+  window.createInventoryItem=()=>postTable('inventory_items',{sku:val('itemSku'),name:val('itemName'),category:val('itemCategory'),unit:val('itemUnit')||'pcs',quantity:num('itemQty'),min_quantity:num('itemMin'),unit_cost:num('itemCost'),location:val('itemLocation'),property_id:val('itemProperty')||null});
   window.createInventoryTransaction=()=>postTable('inventory_transactions',{item_id:val('stockItem'),tx_date:val('stockDate')||today(),tx_type:val('stockType'),quantity:num('stockQty'),unit_cost:num('stockCost'),reference:val('stockRef')});
   window.createBankTransaction=()=>postTable('bank_transactions',{bank_date:val('bankDate')||today(),bank_name:val('bankName')||'Main Bank',reference:val('bankRef'),type:val('bankType'),description:val('bankDesc'),amount:num('bankAmount'),matched_account_id:val('bankMatch')||null,status:val('bankMatch')?'Matched':'Unmatched'});
   window.loadFinancialStatements=async function(){ try{ const res=await api('financial_statements'); const s=res.statements; $('#statementsBox').innerHTML=`<div class="statement-grid"><div class="statement-card"><h3>قائمة الدخل</h3><div class="statement-row"><span>الإيرادات</span><b>${money(s.income_statement.revenue)}</b></div><div class="statement-row"><span>المصروفات</span><b>${money(s.income_statement.expenses)}</b></div><div class="statement-row"><span>الرواتب</span><b>${money(s.income_statement.payroll)}</b></div><div class="statement-row"><span>إدارية وعمومية</span><b>${money(s.income_statement.general_admin)}</b></div><div class="statement-row"><span>صافي الدخل</span><b>${money(s.income_statement.net_income)}</b></div></div><div class="statement-card"><h3>الميزانية</h3><div class="statement-row"><span>البنك</span><b>${money(s.balance_sheet.assets.cash_bank)}</b></div><div class="statement-row"><span>الذمم المدينة</span><b>${money(s.balance_sheet.assets.accounts_receivable)}</b></div><div class="statement-row"><span>المخزون</span><b>${money(s.balance_sheet.assets.inventory)}</b></div><div class="statement-row"><span>الذمم الدائنة</span><b>${money(s.balance_sheet.liabilities.accounts_payable)}</b></div><div class="statement-row"><span>الأرباح المحتجزة</span><b>${money(s.balance_sheet.equity.retained_earnings)}</b></div></div><div class="statement-card"><h3>ربط التخزين</h3><p class="linked-ok">Backup / CSV / Restore يشمل الجداول المالية الجديدة.</p><p>${s.linked_storage.tables.join(' · ')}</p></div></div>`; ensureEnglishDigits($('#statementsBox')); }catch(e){toastErr(e)} };

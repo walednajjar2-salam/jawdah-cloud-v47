@@ -54,6 +54,40 @@ def main() -> int:
     code, dash = call("GET", "/dashboard", token=staff)
     add("/api/dashboard staff Bearer", code == 200 and dash.get("ok") is True, f"occupancy={dash.get('dashboard', {}).get('kpis', {}).get('occupancy')}")
 
+    code, backup_status = call("GET", "/backup/status", token=staff)
+    add(
+        "/api/backup/status includes storage telemetry",
+        code == 200 and backup_status.get("ok") is True and isinstance(backup_status.get("storage"), dict),
+        f"storage_warning={backup_status.get('storage', {}).get('warning')}",
+    )
+    add(
+        "/api/backup/status integrity check",
+        code == 200 and isinstance(backup_status.get("backup_integrity"), dict),
+        f"integrity_ok={backup_status.get('backup_integrity', {}).get('ok')}",
+    )
+
+    code, pa = call("GET", "/permissions/audit", token=staff)
+    add(
+        "/api/permissions/audit admin matrix",
+        code == 200 and pa.get("ok") is True and bool((pa.get("roles") or {}).get("admin")),
+        f"roles={len(pa.get('roles') or {})}",
+    )
+
+    code, contracts_res = call("GET", "/contracts", token=staff)
+    code2, invoices_res = call("GET", "/invoices", token=staff)
+    contracts = {c.get("id"): c for c in (contracts_res.get("items") or [])}
+    broken_links = []
+    if code == 200 and code2 == 200:
+        for inv in invoices_res.get("items") or []:
+            cid = inv.get("contract_id")
+            if cid and cid not in contracts:
+                broken_links.append(inv.get("invoice_no") or inv.get("id"))
+    add(
+        "invoice->contract linking integrity",
+        code == 200 and code2 == 200 and not broken_links,
+        "broken=" + str(len(broken_links)),
+    )
+
     code, bad = call("GET", "/portal/dashboard?token=invalid-token-probe")
     add(
         "/api/portal/dashboard route exists",

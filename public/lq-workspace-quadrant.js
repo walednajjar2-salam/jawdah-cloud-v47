@@ -68,18 +68,18 @@
         <div class="lq-zone-head"><h3>① لوحة التحكم والأوامر</h3><span>Commands</span></div>
         <div id="lqZoneCommandsBody"></div>
       </article>
-      <article class="lq-zone lq-zone-2" id="lqZoneOrg">
-        <div class="lq-zone-head"><h3>② الهيكل الوظيفي</h3><span>اضغط اسم الموظف</span></div>
-        <div id="lqZoneOrgBody"></div>
-        <div id="lqZoneOrgTools" class="lq-org-tools"></div>
-      </article>
-      <article class="lq-zone lq-zone-3" id="lqZoneFlow">
-        <div class="lq-zone-head"><h3>③ مسار العمل التوضيحي</h3><span>يتحدث مع كل إضافة</span></div>
+      <article class="lq-zone lq-zone-2" id="lqZoneFlow">
+        <div class="lq-zone-head"><h3>② مسار العمل التوضيحي</h3><span>يتحدث مع كل إضافة</span></div>
         <div id="lqZoneFlowBody"></div>
       </article>
-      <article class="lq-zone lq-zone-4" id="lqZoneToday">
-        <div class="lq-zone-head"><h3>④ أعمال اليوم</h3><span>محفوظ على الخادم</span></div>
+      <article class="lq-zone lq-zone-3" id="lqZoneToday">
+        <div class="lq-zone-head"><h3>③ أعمال اليوم</h3><span>محفوظ على الخادم</span></div>
         <div id="lqZoneTodayBody"></div>
+      </article>
+      <article class="lq-zone lq-zone-4" id="lqZoneOrg">
+        <div class="lq-zone-head"><h3>④ الهيكل الوظيفي</h3><span>اضغط اسم الموظف</span></div>
+        <div id="lqZoneOrgBody"></div>
+        <div id="lqZoneOrgTools" class="lq-org-tools"></div>
       </article>`;
     const hub = $("#lqHubBoard");
     if (hub) dash.insertBefore(ws, hub);

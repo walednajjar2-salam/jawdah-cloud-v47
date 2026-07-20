@@ -17,6 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css?v=ultra15">
   <link rel="stylesheet" href="lq-shell.css?v=shell17">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui2">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
 </head>
@@ -163,7 +164,13 @@
                 <span class="login-field-label" dir="ltr">Password</span>
                 <span class="login-field-icon" aria-hidden="true">🔒</span>
                 <input id="loginPass" placeholder="Enter password · كلمة المرور" type="password" autocomplete="current-password">
+                <button type="button" id="loginPassToggle" class="login-pass-toggle" aria-label="إظهار أو إخفاء كلمة المرور">👁️</button>
               </label>
+              <div id="capsHint" class="login-caps-hint hidden">⚠️ يبدو أن زر Caps Lock مفعّل</div>
+              <div class="login-inline-tools">
+                <label class="login-remember-check"><input id="loginRemember" type="checkbox"> تذكرني على هذا الجهاز</label>
+                <button type="button" class="ghost login-help-btn" onclick="window.open('tel:+96871924089','_self')">الدعم الفني</button>
+              </div>
               <button id="loginBtn" class="gold-btn login-submit" type="button">Sign In · تسجيل الدخول</button>
             </div>
             <div id="authPaneFace" class="ev-auth-pane ev-auth-alt hidden" role="tabpanel">
@@ -259,6 +266,7 @@
           <span class="login-owner-item" aria-hidden="true"><em>يعقوب فاضل حمد الخصيبي</em> · <strong>نحو التميز والتقدم في عالم الضيافة والعقارات</strong></span>
         </div>
       </div>
+      <div class="login-dev-credit">اعداد وبرمجة وليد نجار · +96871924089 · +96879022201</div>
     </div>
   </main>
 
@@ -279,6 +287,28 @@
       <button type="button" id="visionAiSend" class="gold-btn">✦</button>
     </div>
   </aside>
+
+  <div id="portalSwitchOverlay" class="portal-switch-overlay hidden">
+    <div class="portal-switch-card">
+      <h3>اختر مسار العمل</h3>
+      <p class="mini">منصة موحّدة بمسارين: العقارات والضيافة.</p>
+      <div class="portal-switch-grid">
+        <button type="button" class="portal-tile" onclick="choosePortal('realestate')">
+          <span class="portal-icon">🏢</span>
+          <b>العقارات</b>
+          <small>الإدارة العقارية والمالية</small>
+        </button>
+        <button type="button" class="portal-tile" onclick="choosePortal('hospitality')">
+          <span class="portal-icon">🏨</span>
+          <b>الضيافة</b>
+          <small>تشغيل الضيافة (قيد التطوير)</small>
+        </button>
+      </div>
+      <div class="toolbar" style="justify-content:center;margin-top:12px">
+        <button type="button" class="ghost" onclick="closePortalSwitch()">لاحقاً</button>
+      </div>
+    </div>
+  </div>
 
   <main id="app" class="app hidden">
     <div class="lq-app-bg-parity" aria-hidden="true">
@@ -320,6 +350,12 @@
           <div class="search search-pro"><input id="globalSearch" placeholder="بحث في المشاريع والعملاء والعقود..."></div>
           <div class="app-header-actions">
             <button id="fieldModeBtn" class="tb-icon field-mode-btn" type="button" title="وضع الميدان · Field mode">🧰</button>
+            <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة">🧭</button>
+            <select id="themeSelect" class="theme-select" title="مظهر المنصة">
+              <option value="luxury-light">Luxury Light</option>
+              <option value="luxury-dark">Luxury Dark</option>
+              <option value="luxury-pink">Luxury Pink</option>
+            </select>
             <span id="topBackupStatus" class="top-pill top-backup-pill hidden" title="آخر نسخة احتياطية">Backup</span>
             <button class="tb-icon tb-bell" type="button" title="التنبيهات" onclick="showSection('messages')"><span class="bell-glyph">🔔</span><span id="bellDot" class="bell-dot hidden"></span></button>
             <button class="tb-icon" type="button" title="الرسائل" onclick="showSection('messages')">📨</button>
@@ -395,7 +431,7 @@
           <div class="saas-section-head"><h3>🏢 المشاريع والخريطة</h3><button type="button" class="saas-link-btn" onclick="showSection('properties')">عرض الكل ←</button></div>
           <div class="saas-split-grid">
             <div id="saasProjectsGrid" class="saas-projects-grid"></div>
-            <div class="saas-glass saas-map-panel"><div class="gis-pro"><div class="ev-map-grid-lines" aria-hidden="true"></div><canvas id="evCityDashboard" class="ev-city-overlay"></canvas><div id="gisPins" class="gis-pins-layer"></div><div id="mapPopup" class="map-popup hidden"></div></div></div>
+            <div class="saas-glass saas-map-panel"><div class="gis-pro"><div id="nizwaMap" class="nizwa-map"></div><div id="gisPins" class="gis-pins-layer hidden"></div><div id="mapPopup" class="map-popup hidden"></div></div></div>
           </div>
         </div>
 
@@ -434,30 +470,66 @@
       </section>
 
       <section id="sec-owner-staff" class="section"><div id="ownerStaffBox"></div></section>
+      <section id="sec-owner-live" class="section"><div id="ownerLiveHubBox"></div></section>
+      <section id="sec-daily-ops" class="section"><div id="dailyOpsBox"></div></section>
       <section id="sec-tasks" class="section"><div id="tasksPageBox"></div></section>
       <section id="sec-messages" class="section"><div id="messagesPageBox"></div></section>
       <section id="sec-walid" class="section"><div id="walidIntelBox"></div></section>
       <section id="sec-enterprise" class="section"><div id="enterpriseBox"></div></section>
       <section id="sec-timeline" class="section"><div id="timelinePageBox"></div></section>
+      <section id="sec-hospitality" class="section">
+        <div class="card accounting-hero">
+          <h3>قسم الضيافة</h3>
+          <p class="mini">تشغيل ضيافة فعلي: غرف، حجوزات، تحصيل، وربط مباشر بلوحة المالك الحية.</p>
+          <div id="hospitalityQuickBox" class="status-line"></div>
+        </div>
+        <div class="card"><h3>تحليلات الضيافة</h3><div class="toolbar"><input id="hSummaryFrom" type="date"><input id="hSummaryTo" type="date"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التحليل</button><button class="gold-btn" type="button" onclick="openHospitalityReport()">تقرير الضيافة PDF</button></div><div id="hospitalitySummaryBox" class="status-line"></div><div id="hospitalityTypeBox"></div></div>
+        <div class="card"><h3>تنبيهات Check-out</h3><div id="hospitalityCheckoutAlerts" class="status-line"></div></div>
+        <div class="card"><h3>تقويم حجوزات الضيافة</h3><div class="toolbar"><input id="hCalMonth" type="month"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التقويم</button></div><div id="hospitalityCalendarBox"></div></div>
+        <div class="card"><h3>Timeline الغرف والحجوزات</h3><p class="mini">اسحب الحجز بالكامل لتحريك الفترة، أو اسحب الحافة لتعديل تاريخ الدخول/الخروج.</p><div id="hospitalityTimelineBox"></div></div>
+        <div class="card"><h3>تسعير موسمي</h3><div class="form"><select id="hSeasonProperty"></select><input id="hSeasonRoomType" placeholder="نوع الغرفة (اختياري)"><input id="hSeasonName" placeholder="اسم الموسم"><input id="hSeasonStart" type="date"><input id="hSeasonEnd" type="date"><input id="hSeasonRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><select id="hSeasonActive"><option value="1">Active</option><option value="0">Inactive</option></select><textarea id="hSeasonNotes" placeholder="ملاحظات الموسم"></textarea></div><button class="gold-btn" onclick="createHospitalitySeasonRate()">حفظ التسعير</button></div>
+        <div class="card"><h3>إضافة غرفة ضيافة</h3><div class="form"><select id="hRoomProperty"></select><input id="hRoomCode" placeholder="رمز/رقم الغرفة"><input id="hRoomType" placeholder="نوع الغرفة"><input id="hRoomCapacity" placeholder="السعة" type="number"><input id="hRoomRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><select id="hRoomStatus"><option value="available">available</option><option value="reserved">reserved</option><option value="occupied">occupied</option><option value="maintenance">maintenance</option></select><textarea id="hRoomNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createHospitalityRoom()">حفظ الغرفة</button></div>
+        <div class="card"><h3>حجز ضيافة</h3><div class="form"><select id="hBookingRoom"></select><select id="hBookingClient"></select><input id="hBookingGuest" placeholder="اسم النزيل"><input id="hBookingPhone" placeholder="هاتف النزيل"><input id="hBookingCheckin" type="date"><input id="hBookingCheckout" type="date"><input id="hBookingRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><input id="hBookingPaid" placeholder="المدفوع OMR" type="number" step="0.001"><select id="hBookingStatus"><option value="reserved">reserved</option><option value="checked_in">checked_in</option><option value="checked_out">checked_out</option><option value="cancelled">cancelled</option></select><input id="hBookingSource" placeholder="مصدر الحجز"><textarea id="hBookingNotes" placeholder="ملاحظات الحجز"></textarea></div><button class="gold-btn" onclick="createHospitalityBooking()">حفظ الحجز</button></div>
+        <div class="layout">
+          <div class="card"><h3>الغرف</h3><div id="hospitalityRoomsTable"></div></div>
+          <div class="card"><h3>الحجوزات</h3><div id="hospitalityBookingsTable"></div></div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>أسعار المواسم</h3><div id="hospitalitySeasonsTable"></div></div>
+          <div class="card"><h3>فوليو/فواتير الضيافة</h3><div id="hospitalityFoliosTable"></div></div>
+        </div>
+      </section>
 
       <section id="sec-properties" class="section">
-        <div class="card"><h3>إضافة عقار / وحدة</h3><div class="form"><select id="pBranch"></select><input id="pBuilding" placeholder="رقم البناية"><input id="pApartment" placeholder="رقم الشقة"><input id="pRoom" placeholder="رقم الغرفة"><select id="pStatus"><option value="شاغرة">شاغرة</option><option value="محجوزة">محجوزة</option><option value="مستأجرة">مستأجرة</option><option value="صيانة">صيانة</option></select><input id="pPrice" placeholder="السعر OMR" type="number" step="0.001"><input id="pLocation" placeholder="الموقع"><div class="lq-prop-upload-box"><label for="pPhoto">📷 صورة العقار (اختياري)</label><input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><img id="pPhotoPreview" class="lq-prop-upload-preview hidden" alt="معاينة الصورة"><span class="mini">تُحفظ على الخادم — JPG/PNG/WebP حتى 5MB</span></div><textarea id="pNotes" placeholder="ملاحظات (اختياري)"></textarea></div><button class="gold-btn" onclick="createProperty()">حفظ العقار</button></div>
-        <div class="card"><div class="toolbar"><input id="propBuildingFilter" placeholder="فلتر رقم البناية" oninput="renderProperties()"><select id="propStatusFilter" onchange="renderProperties()"></select><button class="ghost" onclick="exportCsv('properties')">تصدير CSV</button></div><div id="propertiesTable"></div></div>
+        <div class="card"><h3>إضافة عقار / وحدة</h3><div class="form"><select id="pBranch"></select><input id="pBuilding" placeholder="رقم البناية"><input id="pApartment" placeholder="رقم الشقة"><input id="pRoom" placeholder="رقم الغرفة"><select id="pStatus"><option value="شاغرة">شاغرة</option><option value="محجوزة">محجوزة</option><option value="مستأجرة">مستأجرة</option><option value="صيانة">صيانة</option></select><input id="pPrice" placeholder="السعر OMR" type="number" step="0.001"><input id="pLocation" placeholder="الموقع"><input id="pLat" placeholder="Latitude (اختياري)" type="number" step="0.000001"><input id="pLng" placeholder="Longitude (اختياري)" type="number" step="0.000001"><div class="lq-prop-upload-box"><label for="pPhoto">📷 صورة العقار (اختياري)</label><input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><img id="pPhotoPreview" class="lq-prop-upload-preview hidden" alt="معاينة الصورة"><span class="mini">تُحفظ على الخادم — JPG/PNG/WebP حتى 5MB</span></div><textarea id="pNotes" placeholder="ملاحظات (اختياري)"></textarea></div><button class="gold-btn" onclick="createProperty()">حفظ العقار</button></div>
+        <div class="card"><div class="toolbar"><input id="propBuildingFilter" placeholder="فلتر رقم البناية" oninput="renderProperties()"><select id="propStatusFilter" onchange="renderProperties()"></select><select id="propContractFilter" onchange="renderProperties()"><option value="">كل الوحدات</option><option value="active">عليها عقد نشط</option><option value="none">بدون عقد نشط</option></select><button class="ghost" onclick="exportCsv('properties')">تصدير CSV</button><button class="ghost" onclick="exportFilteredPropertiesCsv()">تصدير نتائج الفلتر</button></div><div id="propQuickStats" class="status-line" style="margin-bottom:10px"></div><div id="propertiesTable"></div></div>
       </section>
 
       <section id="sec-clients" class="section">
         <div class="card"><h3>إضافة عميل</h3><div class="form"><input id="cName" placeholder="اسم العميل"><input id="cPhone" placeholder="الهاتف"><input id="cEmail" placeholder="البريد"><input id="cNational" placeholder="الهوية/السجل"><textarea id="cNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createClient()">حفظ العميل</button></div>
-        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('clients')">تصدير CSV</button></div><div id="clientsTable"></div></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('clients')">تصدير CSV</button><button class="ghost" onclick="exportFilteredClientsCsv()">تصدير نتائج الفلتر</button></div><div id="clientsTable"></div></div>
       </section>
 
       <section id="sec-contracts" class="section">
         <div id="renewalQueueBox"></div>
-        <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة: رقم الشقة، المبنى، الطابق، المواقف"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractDeposit" placeholder="التأمين OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="30"><input id="contractAttachments" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" aria-label="مرفقات العقد"><textarea id="contractLegalTerms" placeholder="الشروط القانونية وحماية الشركة"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
-        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('contracts')">تصدير CSV</button></div><div id="contractsTable"></div></div>
+        <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><select id="contractPaymentCycle"><option value="monthly">شهري</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option><option value="once">مرة واحدة</option></select><div id="contractPropertyWarning" class="lq-inline-warning hidden"></div><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة: رقم الشقة، المبنى، الطابق، المواقف"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractDeposit" placeholder="التأمين OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="30"><input id="contractAttachments" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" aria-label="مرفقات العقد"><textarea id="contractLegalTerms" placeholder="الشروط القانونية وحماية الشركة"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('contracts')">تصدير CSV</button><button class="ghost" onclick="exportFilteredContractsCsv()">تصدير نتائج الفلتر</button></div><div id="contractsTable"></div></div>
       </section>
 
       <section id="sec-invoices" class="section">
-        <div class="card"><h3>الفواتير والتحصيل</h3><p class="mini">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id="invoicesTable"></div></div>
+        <div class="card">
+          <h3>إنشاء فاتورة من عقد</h3>
+          <p class="mini">اختيار العقد يملأ المبلغ والوصف والاستحقاق المقترح تلقائيًا.</p>
+          <div class="form">
+            <select id="invoiceContractSelect"></select>
+            <input id="invoiceDueDate" type="date">
+            <input id="invoiceAmount" placeholder="المبلغ OMR" type="number" step="0.001">
+            <input id="invoiceDesc" placeholder="وصف الفاتورة">
+            <input id="invoiceType" placeholder="نوع الفاتورة (rent/deposit)" value="rent">
+          </div>
+          <button class="gold-btn" onclick="createInvoiceFromSelectedContract()">إنشاء الفاتورة</button>
+        </div>
+        <div class="card"><h3>الفواتير والتحصيل</h3><p class="mini">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div class="toolbar"><button class="ghost" onclick="exportFilteredInvoicesCsv()">تصدير نتائج الفلتر</button></div><div id="invoicesTable"></div></div>
       </section>
 
       <section id="sec-accounts" class="section">
@@ -467,39 +539,58 @@
           <div class="card"><h3>الإيرادات والمصروفات</h3><div id="accountSummary" class="status-line"></div><div class="canvas-wrap"><canvas id="expenseChart"></canvas></div></div>
           <div class="card"><h3>أعمار الذمم المدينة</h3><div id="agingBox"></div></div>
         </div>
+        <div class="card"><h3>تحليلات الحسابات الذكية</h3><div id="accountsInsightsBox" class="status-line"></div></div>
+        <div class="card">
+          <h3>SALAM Agent · الدائرة المالية</h3>
+          <p class="mini">ايجنت تشغيلي يفحص المتأخرات والربحية والمخزون ويقترح إجراءات فورية قابلة للتنفيذ.</p>
+          <div class="toolbar"><button class="gold-btn" type="button" onclick="runSalamAgent()">تشغيل SALAM الآن</button></div>
+          <div id="salamAgentBox" class="status-line" style="margin-top:10px"></div>
+        </div>
         <div class="layout">
           <div class="card"><h3>كشف أرصدة المستأجرين</h3><div id="tenantBalanceBox"></div></div>
           <div class="card"><h3>ربحية العقارات</h3><div id="propertyProfitBox"></div></div>
         </div>
-        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('accounts')">تصدير CSV</button><button class="ghost" onclick="downloadFinancialReport()">تنزيل تقرير مالي HTML</button></div><div id="accountsTable"></div></div>
+        <div class="card">
+          <div class="toolbar">
+            <select id="accFilterType"><option value="">كل الأنواع</option><option value="income">إيراد</option><option value="expense">مصروف</option></select>
+            <select id="accFilterCategory"><option value="">كل التصنيفات</option></select>
+            <input id="accFilterFrom" type="date" title="من تاريخ">
+            <input id="accFilterTo" type="date" title="إلى تاريخ">
+            <button class="ghost" type="button" onclick="clearAccountsFilters()">مسح فلاتر الحسابات</button>
+            <button class="ghost" onclick="exportCsv('accounts')">تصدير CSV</button>
+            <button class="ghost" onclick="exportFilteredAccountsCsv()">تصدير نتائج الفلتر</button>
+            <button class="ghost" onclick="downloadFinancialReport()">تنزيل تقرير مالي HTML</button>
+          </div>
+          <div id="accountsTable"></div>
+        </div>
       </section>
 
       <section id="sec-maintenance" class="section">
         <div class="card"><h3>طلب صيانة</h3><div class="form"><select id="maintProperty"></select><input id="maintTitle" placeholder="عنوان الطلب"><select id="maintPriority"><option>High</option><option>Medium</option><option>Low</option></select><input id="maintCost" placeholder="التكلفة المتوقعة"><textarea id="maintNotes" placeholder="تفاصيل"></textarea></div><button class="gold-btn" onclick="createMaintenance()">حفظ الطلب</button></div>
-        <div class="grid" id="maintenanceGrid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))"></div>
+        <div class="toolbar"><button class="ghost" onclick="exportFilteredMaintenanceCsv()">تصدير نتائج الفلتر</button></div><div class="grid" id="maintenanceGrid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))"></div>
       </section>
 
 
       <section id="sec-purchases" class="section">
         <div class="card"><h3>فواتير المشتريات</h3><div class="form"><input id="piSupplier" placeholder="المورد"><input id="piDate" type="date"><input id="piDue" type="date"><input id="piCategory" placeholder="التصنيف"><input id="piDesc" placeholder="الوصف"><input id="piAmount" placeholder="المبلغ"><input id="piPaid" placeholder="المدفوع"><select id="piProperty"></select></div><button class="gold-btn" onclick="createPurchaseInvoice()">حفظ فاتورة مشتريات</button></div>
-        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('purchase_invoices')">تصدير CSV</button></div><div id="purchaseInvoicesTable"></div></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('purchase_invoices')">تصدير CSV</button><button class="ghost" onclick="exportFilteredPurchasesCsv()">تصدير نتائج الفلتر</button></div><div id="purchaseInvoicesTable"></div></div>
       </section>
       <section id="sec-revenues" class="section">
         <div class="card"><h3>الإيرادات الأخرى</h3><div class="form"><input id="revDate" type="date"><input id="revSource" placeholder="المصدر"><input id="revCategory" placeholder="التصنيف"><input id="revDesc" placeholder="الوصف"><input id="revAmount" placeholder="المبلغ"><select id="revClient"></select><select id="revProperty"></select></div><button class="gold-btn" onclick="createRevenue()">حفظ الإيراد</button></div>
-        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('revenues')">تصدير CSV</button></div><div id="revenuesTable"></div></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('revenues')">تصدير CSV</button><button class="ghost" onclick="exportFilteredRevenuesCsv()">تصدير نتائج الفلتر</button></div><div id="revenuesTable"></div></div>
       </section>
       <section id="sec-payroll" class="section">
         <div class="card"><h3>الرواتب</h3><div class="form"><input id="salEmployee" placeholder="اسم الموظف"><input id="salMonth" type="month"><input id="salBasic" placeholder="الراتب الأساسي"><input id="salAllow" placeholder="بدلات"><input id="salDeduct" placeholder="استقطاعات"><input id="salDate" type="date"><select id="salStatus"><option>Pending</option><option>Paid</option></select></div><button class="gold-btn" onclick="createSalary()">حفظ الراتب</button></div>
-        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('salaries')">تصدير CSV</button></div><div id="salariesTable"></div></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('salaries')">تصدير CSV</button><button class="ghost" onclick="exportFilteredPayrollCsv()">تصدير نتائج الفلتر</button></div><div id="salariesTable"></div></div>
       </section>
       <section id="sec-admin-expenses" class="section">
         <div class="card"><h3>المصاريف الإدارية والعمومية</h3><div class="form"><input id="gaDate" type="date"><input id="gaCategory" placeholder="التصنيف"><input id="gaDesc" placeholder="الوصف"><input id="gaSupplier" placeholder="المورد"><input id="gaAmount" placeholder="المبلغ"><select id="gaProperty"></select></div><button class="gold-btn" onclick="createAdminExpense()">حفظ المصروف</button></div>
-        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('admin_expenses')">تصدير CSV</button></div><div id="adminExpensesTable"></div></div>
+        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('admin_expenses')">تصدير CSV</button><button class="ghost" onclick="exportFilteredAdminExpensesCsv()">تصدير نتائج الفلتر</button></div><div id="adminExpensesTable"></div></div>
       </section>
       <section id="sec-inventory" class="section">
-        <div class="card"><h3>المخزن</h3><div class="form"><input id="itemSku" placeholder="SKU"><input id="itemName" placeholder="اسم الصنف"><input id="itemCategory" placeholder="التصنيف"><input id="itemUnit" placeholder="الوحدة" value="pcs"><input id="itemQty" placeholder="الكمية"><input id="itemMin" placeholder="الحد الأدنى"><input id="itemCost" placeholder="تكلفة الوحدة"><input id="itemLocation" placeholder="الموقع"></div><button class="gold-btn" onclick="createInventoryItem()">حفظ الصنف</button></div>
+        <div class="card"><h3>مخزن العقارات</h3><div class="form"><input id="itemSku" placeholder="SKU"><input id="itemName" placeholder="اسم الصنف"><input id="itemCategory" placeholder="التصنيف"><input id="itemUnit" placeholder="الوحدة" value="pcs"><input id="itemQty" placeholder="الكمية"><input id="itemMin" placeholder="الحد الأدنى"><input id="itemCost" placeholder="تكلفة الوحدة"><input id="itemLocation" placeholder="الموقع"><select id="itemProperty"></select></div><button class="gold-btn" onclick="createInventoryItem()">حفظ الصنف</button></div>
         <div class="card"><h3>حركة مخزون</h3><div class="form"><select id="stockItem"></select><input id="stockDate" type="date"><select id="stockType"><option value="in">in</option><option value="out">out</option></select><input id="stockQty" placeholder="الكمية"><input id="stockCost" placeholder="تكلفة الوحدة"><input id="stockRef" placeholder="المرجع"></div><button class="gold-btn" onclick="createInventoryTransaction()">حفظ الحركة</button></div>
-        <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('inventory_items')">تصدير الأصناف</button><button class="ghost" onclick="exportCsv('inventory_transactions')">تصدير الحركات</button></div><div id="inventoryTable"></div></div>
+        <div class="card"><div class="toolbar"><select id="inventoryPropertyFilter"></select><button class="ghost" onclick="exportCsv('inventory_items')">تصدير الأصناف</button><button class="ghost" onclick="exportFilteredInventoryCsv()">تصدير نتائج الفلتر</button><button class="ghost" onclick="exportCsv('inventory_transactions')">تصدير الحركات</button></div><div id="inventoryTable"></div></div>
       </section>
       <section id="sec-bank" class="section">
         <div class="card"><h3>كشف البنك</h3><div class="form"><input id="bankDate" type="date"><input id="bankName" placeholder="البنك"><input id="bankRef" placeholder="المرجع"><select id="bankType"><option value="deposit">deposit</option><option value="withdrawal">withdrawal</option></select><input id="bankDesc" placeholder="الوصف"><input id="bankAmount" placeholder="المبلغ"><select id="bankMatch"></select></div><button class="gold-btn" onclick="createBankTransaction()">حفظ حركة البنك</button></div>
@@ -535,11 +626,22 @@
 
       <section id="sec-users" class="section">
         <div class="card"><h3>إضافة مستخدم</h3><div class="form"><input id="uUsername" placeholder="اسم المستخدم"><input id="uName" placeholder="الاسم"><select id="uRole"><option value="admin">admin</option><option value="accountant">accountant</option><option value="operations">operations</option><option value="maintenance">maintenance</option><option value="viewer">viewer</option></select><input id="uPassword" placeholder="كلمة المرور"></div><button class="gold-btn" onclick="createUser()">حفظ المستخدم</button></div>
+        <div class="card">
+          <h3>منصة ربط البصمة المؤسسية</h3>
+          <p class="mini">ربط جهاز الموظف (Face/Fingerprint) مع الحساب الحالي لرفع أمان الدخول في التطبيق.</p>
+          <div class="toolbar">
+            <button class="gold-btn" type="button" onclick="registerEnterpriseBiometric()">تفعيل البصمة للجهاز</button>
+            <button class="ghost" type="button" onclick="verifyEnterpriseBiometric()">اختبار التحقق</button>
+            <button class="ghost" type="button" onclick="clearEnterpriseBiometric()">فك الربط</button>
+          </div>
+          <div id="biometricHubStatus" class="status-line" style="margin-top:10px"></div>
+        </div>
         <div class="card"><div id="usersTable"></div></div>
       </section>
 
       <section id="sec-backup" class="section">
         <div class="card"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id="backupStatus" class="status-line"></div><div class="toolbar" style="margin-top:16px"><button class="gold-btn" onclick="downloadBackup()">تنزيل Backup JSON</button><button class="gold-btn" onclick="downloadBackupFile('json')">تنزيل آخر نسخة JSON</button><button class="gold-btn" onclick="downloadBackupFile('sqlite')">تنزيل آخر نسخة SQLite</button><button class="ghost" onclick="runAutoBackup()">نسخ احتياطي تلقائي الآن</button><button class="ghost" onclick="exportCsv('properties')">عقارات CSV</button><button class="ghost" onclick="exportCsv('clients')">عملاء CSV</button><button class="ghost" onclick="exportCsv('contracts')">عقود CSV</button><button class="ghost" onclick="exportCsv('invoices')">فواتير CSV</button><button class="ghost" onclick="exportCsv('accounts')">حسابات CSV</button></div><p class="mini" style="margin-top:12px">للنسخ خارج Railway: نزّل JSON + SQLite واحفظهما في OneDrive شهرياً، أو شغّل <code>scripts\download_offsite_backup.ps1</code>.</p></div>
+        <div class="card"><h3>مركز التصدير — نتائج الفلاتر</h3><p class="mini">تصدير سريع للبيانات الظاهرة حسب الفلاتر الحالية بكل قسم.</p><div id="exportHubButtons" class="toolbar" style="margin-top:12px"></div></div>
       </section>
 
 
@@ -586,6 +688,7 @@
   <script src="lq-walid-intel.js?v=wi2" defer></script>
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="app.js?v=saas50" defer></script>
   <script src="enterprise-vision.js?v=ev10" defer></script>
   <script src="historic-upgrade.js?v=historic14" defer></script>
