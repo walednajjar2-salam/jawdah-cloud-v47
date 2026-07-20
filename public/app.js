@@ -93,6 +93,11 @@ const OWNER_NAME_BY_USERNAME = {
   'yaqoub': 'القائد يعقوب بن فاضل الخصيبي',
   'waleed.najjar': 'وليد نجار',
 };
+function shouldForceClassicMode(user){
+  const role = String(user?.role||'').toLowerCase();
+  const uname = String(user?.username||'').toLowerCase();
+  return ['owner','admin','accountant'].includes(role) || OWNER_USERNAMES.has(uname);
+}
 const DASH_EXEC_COMMANDS = [
   {label:'إضافة عميل', section:'clients', icon:'👥'},
   {label:'إضافة عقار / بناية', section:'properties', icon:'🏢'},
@@ -589,6 +594,17 @@ async function loadAll(){
       };
     }catch(e){ Jawdah.uiPermissions=null; }
     if(typeof window.lqApplyRoleUi==='function') window.lqApplyRoleUi();
+    if(shouldForceClassicMode(Jawdah.user)){
+      Jawdah.fieldMode = false;
+      localStorage.setItem('jawdah_field_mode','0');
+      try{
+        const u = new URL(window.location.href);
+        if(u.searchParams.get('field')==='1'){
+          u.searchParams.delete('field');
+          history.replaceState({},'',u.toString());
+        }
+      }catch(_e){}
+    }
     applyUserHeader();
     if(window.LQ_STAFF_FIELD) window.LQ_STAFF_FIELD.autoFieldForRole();
     applyFieldMode();
