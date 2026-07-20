@@ -5496,6 +5496,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
         verify = verify_backup_restore(db)
         offsite = offsite_config()
         backup_recent = list_automatic_backups()
+        audit_total = int(db.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0] or 0)
+        audit_today = int(
+            db.execute("SELECT COUNT(*) FROM audit_log WHERE created_at>=?", (today() + " 00:00:00",)).fetchone()[0] or 0
+        )
+        timeline_updates = int(
+            db.execute("SELECT COUNT(*) FROM audit_log WHERE action='timeline_update'").fetchone()[0] or 0
+        )
 
         def add(name: str, ok: bool, value: Any = "", hint: str = "") -> None:
             checks.append({"name": name, "ok": ok, "value": value, "hint": hint})
@@ -5511,6 +5518,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         add("فحص الاستعادة", verify.get("ok"), f"{verify.get('score')}%", "backup/verify")
         add("Off-site", offsite.get("enabled"), offsite.get("last_push") or "غير مفعّل", "LQ_OFFSITE_BACKUP_URL")
         add("متأخرات", overdue <= 0, f"{fmt_omr(float(overdue or 0))}", "راجع الفواتير")
+        add("سجل العمليات", audit_total > 0, audit_total, "audit_log")
+        add("عمليات اليوم", audit_today > 0, audit_today, "تحقق من إدخال العمليات اليومي")
+        add("ربط Timeline", timeline_updates >= 0, timeline_updates, "timeline_update audit events")
         score = round(sum(1 for c in checks if c["ok"]) / max(len(checks), 1) * 100, 1)
         self.send_json({
             "ok": True,
@@ -5519,6 +5529,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "user_role": user.get("role"),
             "recent_backup": backup_recent[0] if backup_recent else None,
             "offsite": offsite,
+            "audit": {
+                "total": audit_total,
+                "today": audit_today,
+                "timeline_updates": timeline_updates,
+            },
         })
 
     def api_operational_intel(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
@@ -5695,10 +5710,31 @@ class JawdahHandler(BaseHTTPRequestHandler):
         prev: Optional[Dict[str, float]] = None
         try:
             for _ in range(120):
+                audit_total = int(db.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0] or 0)
+                latest_row = db.execute(
+                    """
+                    SELECT created_at, username, action, entity, entity_id, details
+                    FROM audit_log
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """
+                ).fetchone()
+                latest_audit = None
+                if latest_row:
+                    latest_audit = {
+                        "created_at": latest_row["created_at"],
+                        "username": latest_row["username"],
+                        "action": latest_row["action"],
+                        "entity": latest_row["entity"],
+                        "entity_id": latest_row["entity_id"],
+                        "details": latest_row["details"],
+                    }
                 if public_only:
                     payload = {
                         "type": "health",
                         "health": 100,
+                        "audit_total": audit_total,
+                        "latest_audit": latest_audit,
                         "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
                         "ts": now_iso(),
                     }
@@ -5719,6 +5755,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "type": "kpis",
                         "kpis": cur,
                         "deltas": deltas,
+                        "audit_total": audit_total,
+                        "latest_audit": latest_audit,
                         "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
                         "ts": now_iso(),
                     }

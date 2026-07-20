@@ -18,6 +18,11 @@ let ownerTimelineFilterDays = Number(localStorage.getItem('jawdah_owner_timeline
 let hospitalityTimelineState = { month:'', year:0, m:0, days:0 };
 let propertyTimelineDays = Number(localStorage.getItem('jawdah_property_timeline_days') || 90);
 let propertyTimelineType = localStorage.getItem('jawdah_property_timeline_type') || 'all';
+let timelineAutoTimer = null;
+let liveSyncPending = false;
+let liveLastSyncAt = 0;
+let liveSyncScheduled = null;
+let liveKnownAuditTotal = null;
 const NIZWA_DEFAULT = { lat: 22.9333, lng: 57.5333, zoom: 11 };
 function haptic(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||12); }catch(e){} }
 function normalizeOwnerTimelineDays(v){
@@ -517,7 +522,16 @@ async function login(){
     }
   }
 }
-async function logout(){ try{await api('logout',{method:'POST'});}catch(e){} localStorage.removeItem('jawdah_cloud_token'); Jawdah.token=''; if(ownerLiveTimer){ clearInterval(ownerLiveTimer); ownerLiveTimer=null; } showLoginShell(); }
+async function logout(){
+  try{await api('logout',{method:'POST'});}catch(e){}
+  localStorage.removeItem('jawdah_cloud_token');
+  Jawdah.token='';
+  if(ownerLiveTimer){ clearInterval(ownerLiveTimer); ownerLiveTimer=null; }
+  if(timelineAutoTimer){ clearInterval(timelineAutoTimer); timelineAutoTimer=null; }
+  if(liveSyncScheduled){ clearTimeout(liveSyncScheduled); liveSyncScheduled=null; }
+  liveKnownAuditTotal = null;
+  showLoginShell();
+}
 function ensureDashActive(){
   const dash=$('#sec-dashboard');
   if(!dash) return;
@@ -633,6 +647,56 @@ async function loadAll(){
   }finally{
     if(typeof window.__lqHideBoot==='function') window.__lqHideBoot();
   }
+}
+async function syncLiveData(reason='live'){
+  if(!Jawdah.token || liveSyncPending) return;
+  liveSyncPending = true;
+  try{
+    const res = await api('bootstrap');
+    Jawdah.data = res.data || Jawdah.data;
+    Jawdah.dashboard = res.dashboard || Jawdah.dashboard;
+    Jawdah.user = res.user || Jawdah.user;
+    const active = resolveSection(Jawdah.activeSection || 'dashboard');
+    if(active==='dashboard') renderDashboard();
+    else if(active==='timeline') renderTimelinePage();
+    else if(active==='owner-live' && typeof renderOwnerLiveHub==='function') renderOwnerLiveHub();
+    else if(active==='messages') renderMessagesPage();
+    if(typeof syncOpsBar==='function') syncOpsBar();
+    if(typeof syncFabDock==='function') syncFabDock();
+    if(window.LQ_ALERT_CENTER && Jawdah.dashboard?.kpis){
+      window.LQ_ALERT_CENTER.updateBell({ total: Jawdah.dashboard.kpis.alert_center_total });
+    }
+  }catch(_e){
+    // Live sync runs in background; avoid noisy UI errors.
+  }finally{
+    liveSyncPending = false;
+    liveLastSyncAt = Date.now();
+    if(liveSyncScheduled){
+      clearTimeout(liveSyncScheduled);
+      liveSyncScheduled = null;
+    }
+  }
+}
+function scheduleLiveSync(reason='live'){
+  if(!Jawdah.token) return;
+  const minGapMs = 7000;
+  const elapsed = Date.now() - liveLastSyncAt;
+  if(elapsed >= minGapMs){
+    syncLiveData(reason);
+    return;
+  }
+  if(liveSyncScheduled) return;
+  liveSyncScheduled = setTimeout(()=>{
+    liveSyncScheduled = null;
+    syncLiveData(reason);
+  }, Math.max(1000, minGapMs - elapsed));
+}
+function startTimelineAutoRefresh(){
+  if(timelineAutoTimer) return;
+  timelineAutoTimer = setInterval(()=>{
+    if(!Jawdah.token) return;
+    if($('#sec-timeline')?.classList.contains('active')) renderTimelinePage();
+  }, 15000);
 }
 function renderSidebarUser(){
   const el=$('#sidebarUser'); if(!el||!Jawdah.user) return;
@@ -1024,8 +1088,44 @@ function renderTimelinePage(){
     <div class="prop-tl-list">
       ${events.map(e=>`<article class="prop-tl-item ${e.tone}"><div class="prop-tl-date"><b>${htmlEscape(String(e.date||''))}</b><span>${e.icon}</span></div><div class="prop-tl-body"><h4>${htmlEscape(e.title||'')}</h4><p>${htmlEscape(e.subtitle||'')}</p><div class="status-line"><span class="badge">${htmlEscape(e.meta||'')}</span><button type="button" class="ghost" onclick="showSection('${e.go||'dashboard'}')">فتح</button></div></div></article>`).join('') || '<div class="card"><p class="mini">لا توجد أحداث ضمن الفلتر الحالي.</p></div>'}
     </div>
+    <div class="card" style="margin-top:16px">
+      <h3>🧾 سجل العمليات الحي</h3>
+      <p class="mini">أي إضافة أو تعديل أو حذف يظهر هنا تلقائياً، ويغذي لوحة التحكم والـ Timeline.</p>
+      <div id="timelineAuditFeed"><p class="mini">جاري تحميل السجل...</p></div>
+    </div>
   `;
+  startTimelineAutoRefresh();
+  renderTimelineAuditFeed();
   if(typeof ensureEnglishDigits==='function') ensureEnglishDigits(box);
+}
+async function renderTimelineAuditFeed(){
+  const host = $('#timelineAuditFeed');
+  if(!host || !Jawdah.token) return;
+  try{
+    const res = await api('audit_feed?limit=80');
+    const rows = Array.isArray(res.events) ? res.events : [];
+    const filtered = rows.filter(r=>{
+      const entity = String(r.entity||'').toLowerCase();
+      if(propertyTimelineType==='all') return true;
+      if(propertyTimelineType==='contracts') return entity==='contracts';
+      if(propertyTimelineType==='maintenance') return entity==='maintenance';
+      if(propertyTimelineType==='invoices') return entity==='invoices' || entity==='payments';
+      return true;
+    });
+    host.innerHTML = tableHtml(
+      [
+        ['الوقت','created_at',v=>String(v||'').slice(0,16)],
+        ['المستخدم','username',v=>htmlEscape(String(v||'system'))],
+        ['الإجراء','action',v=>statusBadge(String(v||''))],
+        ['الوحدة','entity'],
+        ['التفاصيل','details',v=>htmlEscape(String(v||''))],
+      ],
+      filtered.slice(0,60),
+      null
+    );
+  }catch(_e){
+    host.innerHTML = '<p class="mini">تعذر تحميل سجل العمليات حالياً.</p>';
+  }
 }
 function setPropertyTimelineFilters(){
   const d = Number($('#propTlDays')?.value || 90);
@@ -1354,8 +1454,16 @@ function renderDashboard(){
   }
   const actBox=$('#saasActivityBox .saas-timeline');
   if(actBox){
-    const acts=[...dashDecisions().map(d=>({t:d.text,d:today()})),...openMaint.slice(0,3).map(m=>({t:'صيانة: '+(m.title||''),d:m.request_date||today()}))].slice(0,6);
-    actBox.innerHTML=acts.map(a=>`<div class="saas-timeline-item"><b>${a.t}</b><br><span class="mini">${a.d}</span></div>`).join('')||'<p class="mini">لا نشاط</p>';
+    const acts=[...dashDecisions().map(d=>({t:d.text,d:today()})),...openMaint.slice(0,3).map(m=>({t:'صيانة: '+(m.title||''),d:m.request_date||today()}))];
+    if(Jawdah.liveLatestAudit){
+      const a = Jawdah.liveLatestAudit;
+      acts.unshift({
+        t:`${a.username||'system'} · ${a.action||'update'} · ${a.entity||'record'}`,
+        d:String(a.created_at||today()).slice(0,16),
+      });
+    }
+    const topActs = acts.slice(0,6);
+    actBox.innerHTML=topActs.map(a=>`<div class="saas-timeline-item"><b>${a.t}</b><br><span class="mini">${a.d}</span></div>`).join('')||'<p class="mini">لا نشاط</p>';
   }
 
   const recentPay=invoices.filter(i=>Number(i.paid_amount||0)>0).slice(-3).reverse();
@@ -2576,6 +2684,14 @@ function connectLiveStream(){
 function applyLiveEvent(payload){
   if(!payload) return;
   const k=payload.kpis||{};
+  if(Number.isFinite(Number(payload.audit_total))){
+    const currentAuditTotal = Number(payload.audit_total);
+    if(liveKnownAuditTotal != null && currentAuditTotal > liveKnownAuditTotal){
+      scheduleLiveSync('audit-change');
+    }
+    liveKnownAuditTotal = currentAuditTotal;
+  }
+  if(payload.latest_audit) Jawdah.liveLatestAudit = payload.latest_audit;
   const host=$('#dashLiveTicker');
   if(host && payload.type==='kpis'){
     const parts=[];
@@ -2595,6 +2711,9 @@ function applyLiveEvent(payload){
   if(backupEl && payload.last_backup){
     backupEl.textContent='Backup · '+String(payload.last_backup).slice(0,16);
     backupEl.classList.remove('hidden');
+  }
+  if($('#sec-timeline')?.classList.contains('active') && payload.latest_audit){
+    renderTimelineAuditFeed();
   }
   if($('#sec-owner-live')?.classList.contains('active') && isPrimaryOwnerUser()){
     renderOwnerLiveHub();
