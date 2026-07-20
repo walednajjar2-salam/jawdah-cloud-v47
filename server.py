@@ -69,8 +69,12 @@ DB_PATH = Path(os.environ.get("JAWDAH_DB_PATH", str(DATA_DIR / "jawdah.sqlite3")
 UPLOAD_DIR = Path(os.environ.get("JAWDAH_UPLOAD_DIR", str(DATA_DIR / "uploads"))).resolve()
 PROPERTY_PHOTO_DIR = UPLOAD_DIR / "properties"
 WORK_JOURNAL_DIR = UPLOAD_DIR / "work_journal"
+CLIENT_CARD_DIR = UPLOAD_DIR / "client_cards"
+PAYMENT_PROOF_DIR = UPLOAD_DIR / "payment_proofs"
 MAX_PROPERTY_PHOTO_BYTES = int(os.environ.get("JQ_MAX_PROPERTY_PHOTO_BYTES", "5242880") or "5242880")
 MAX_JOURNAL_FILE_BYTES = int(os.environ.get("LQ_MAX_JOURNAL_FILE_BYTES", "2097152") or "2097152")
+MAX_CLIENT_CARD_BYTES = int(os.environ.get("LQ_MAX_CLIENT_CARD_BYTES", "5242880") or "5242880")
+MAX_PAYMENT_PROOF_BYTES = int(os.environ.get("LQ_MAX_PAYMENT_PROOF_BYTES", "5242880") or "5242880")
 MAX_JOURNAL_FILES_PER_ENTRY = 5
 HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
@@ -117,10 +121,10 @@ ROLE_PERMISSIONS = {
 TABLES = {
     "branches": ["id", "code", "name", "city", "address", "manager", "active", "notes", "created_at"],
     "properties": ["id", "name", "type", "status", "price", "location", "building_no", "apartment_no", "room_no", "latitude", "longitude", "image", "last_update", "notes", "branch_id"],
-    "clients": ["id", "name", "phone", "email", "national_id", "balance", "notes"],
+    "clients": ["id", "name", "phone", "email", "national_id", "id_card_image", "balance", "notes"],
     "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "deposit_received", "deposit_received_at", "deposit_received_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "ended_at", "attachments", "notes"],
     "invoices": ["id", "invoice_no", "contract_id", "client_id", "property_id", "issue_date", "due_date", "description", "invoice_type", "subtotal", "vat_rate", "vat_amount", "grand_total", "amount", "paid_amount", "status", "is_void", "void_reason", "voided_at", "sequence_year", "sequence_no", "reissued_from"],
-    "payments": ["id", "invoice_id", "client_id", "property_id", "contract_id", "payment_date", "amount", "method", "note"],
+    "payments": ["id", "invoice_id", "client_id", "property_id", "contract_id", "payment_date", "amount", "method", "note", "payment_proof_image"],
     "accounts": ["id", "entry_date", "type", "category", "description", "client_id", "property_id", "invoice_id", "amount"],
     "purchase_invoices": ["id", "purchase_no", "supplier", "invoice_date", "due_date", "category", "description", "amount", "paid_amount", "status", "property_id", "account_id"],
     "revenues": ["id", "revenue_no", "revenue_date", "source", "category", "description", "amount", "client_id", "property_id", "account_id"],
@@ -1074,6 +1078,8 @@ def init_db() -> None:
             ("password_changed_at", "TEXT"),
         ]:
             ensure_column(db, "users", col, definition)
+        ensure_column(db, "clients", "id_card_image", "TEXT")
+        ensure_column(db, "payments", "payment_proof_image", "TEXT")
         for col, definition in [
             ("matched_invoice_id", "TEXT"),
             ("matched_payment_id", "TEXT"),
@@ -1808,6 +1814,7 @@ def execute_invoice_payment(
     note: str = "Invoice payment",
     payment_date: Optional[str] = None,
     bank_name: str = "Main Bank",
+    payment_proof_image: Optional[str] = None,
 ) -> Dict[str, Any]:
     invoice = db.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
     if not invoice:
@@ -1831,6 +1838,7 @@ def execute_invoice_payment(
         "amount": amount,
         "method": method or "Cash",
         "note": note or "Invoice payment",
+        "payment_proof_image": payment_proof_image or None,
     }
     account = {
         "id": uid("ACC"),
@@ -2249,6 +2257,8 @@ def prepare_property_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str, A
 def ensure_upload_dirs() -> None:
     PROPERTY_PHOTO_DIR.mkdir(parents=True, exist_ok=True)
     WORK_JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
+    CLIENT_CARD_DIR.mkdir(parents=True, exist_ok=True)
+    PAYMENT_PROOF_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def is_stored_property_image(value: Any) -> bool:
@@ -2324,6 +2334,23 @@ def save_property_photo_file(property_id: str, file_bytes: bytes, content_type: 
     target = PROPERTY_PHOTO_DIR / filename
     target.write_bytes(file_bytes)
     return f"/uploads/properties/{filename}"
+
+
+def save_named_image_upload(folder: str, prefix: str, file_bytes: bytes, content_type: str, max_bytes: int) -> str:
+    if len(file_bytes) > max_bytes:
+        raise ValueError(f"حجم الصورة كبير — الحد الأقصى {max_bytes // (1024 * 1024)}MB")
+    if not content_type.startswith("image/"):
+        raise ValueError("نوع الملف غير مدعوم (صور فقط)")
+    ensure_upload_dirs()
+    digest = hashlib.sha256(file_bytes).hexdigest()[:10]
+    safe_prefix = re.sub(r"[^A-Za-z0-9_-]", "", str(prefix or "upload"))[:40] or "upload"
+    ext = extension_for_image_type(content_type)
+    filename = f"{safe_prefix}-{digest}{ext}"
+    target_dir = (UPLOAD_DIR / folder).resolve()
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / filename
+    target.write_bytes(file_bytes)
+    return f"/uploads/{folder}/{filename}"
 
 
 def is_stored_upload_url(value: Any, folder: str) -> bool:
@@ -2516,11 +2543,11 @@ def ensure_user(
 
 def ensure_team_users(db: sqlite3.Connection) -> None:
     team = [
-        ("owner", "يعقوب فاضل حمد الخصيبي", "owner", "owner2015"),
+        ("owner", "القائد يعقوب بن فاضل الخصيبي", "owner", "owner2015"),
         ("ahmed.najjar", "أحمد محمد النجار", "admin", "Ahmed2026!"),
         ("waleed.najjar", "وليد محمد النجار", "owner", "Waleed2026!"),
         ("ahoud.shuaili", "عهود سعيد الشعيلي", "operations", "Ahoud2026!"),
-        ("properties.manager", "محمد حمد الربعاني", "operations", "Properties2026!"),
+        ("amjad.jamoudi", "أمجد محمد الجامودي", "operations", "1122334455"),
         ("operations", "محمد مجدول أسلم", "viewer", "Operations2026!"),
         ("ali.hospitality", "علي محمد النديش", "maintenance", "Ali2026!"),
         ("maintenance", "محمد صالح سراج النور", "viewer", "Maintenance2026!"),
@@ -2531,6 +2558,7 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
     ]
     for username, name, role, password in team:
         ensure_user(db, username, name, role, password)
+    db.execute("UPDATE users SET active=0 WHERE username='properties.manager'")
 
 
 class JawdahHandler(BaseHTTPRequestHandler):
@@ -3795,6 +3823,19 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if table == "clients":
             if not str(data.get("name") or "").strip():
                 return self.send_json({"ok": False, "error": "اسم العميل مطلوب"}, 400)
+            upload = data.get("id_card_upload")
+            if isinstance(upload, dict) and (upload.get("image") or upload.get("data") or upload.get("base64")):
+                try:
+                    file_bytes, content_type = decode_upload_payload(upload)
+                    data["id_card_image"] = save_named_image_upload(
+                        "client_cards",
+                        f"client-{row_id}",
+                        file_bytes,
+                        content_type,
+                        MAX_CLIENT_CARD_BYTES,
+                    )
+                except ValueError as exc:
+                    return self.send_json({"ok": False, "error": str(exc)}, 400)
         if table == "branches":
             if not str(data.get("name") or "").strip() or not str(data.get("code") or "").strip():
                 return self.send_json({"ok": False, "error": "رمز الفرع والاسم مطلوبان"}, 400)
@@ -4259,6 +4300,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
         data = self.read_json()
         invoice_id = data.get("invoice_id")
         amount = float(data.get("amount") or 0)
+        payment_proof_image: Optional[str] = None
+        proof_payload = data.get("payment_proof_upload")
+        if isinstance(proof_payload, dict) and (proof_payload.get("image") or proof_payload.get("data") or proof_payload.get("base64")):
+            try:
+                file_bytes, content_type = decode_upload_payload(proof_payload)
+                payment_proof_image = save_named_image_upload(
+                    "payment_proofs",
+                    f"pay-{invoice_id}",
+                    file_bytes,
+                    content_type,
+                    MAX_PAYMENT_PROOF_BYTES,
+                )
+            except ValueError as exc:
+                return self.send_json({"ok": False, "error": str(exc)}, 400)
         invoice = db.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
         if not invoice:
             return self.send_json({"ok": False, "error": "Invoice not found"}, 404)
@@ -4307,6 +4362,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 note=str(data.get("note") or "Invoice payment"),
                 payment_date=data.get("payment_date"),
                 bank_name=str(data.get("bank_name") or "Main Bank"),
+                payment_proof_image=payment_proof_image,
             )
         except ValueError as exc:
             return self.send_json({"ok": False, "error": str(exc)}, 400)

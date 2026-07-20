@@ -71,7 +71,7 @@ function canSeeFinanceSection(id){
 }
 const FINANCE_SECTIONS = new Set(['revenues','admin-expenses','accounts','purchases','payroll','inventory','bank','chart-accounts','statements','bank-reconciliation','financial-periods']);
 const APP_UI_VERSION = '2026.2';
-const DISPLAY_OWNER_NAME = 'يعقوب فاضل حمد الخصيبي';
+const DISPLAY_OWNER_NAME = 'القائد يعقوب بن فاضل الخصيبي';
 const DISPLAY_OWNER_ROLE = 'المالك العام';
 const OWNER_USERNAMES = new Set(['owner','yaqoub.khasibi','yaqoub','waleed.najjar']);
 const PRIMARY_OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','owner']);
@@ -88,14 +88,15 @@ const DAILY_OPS_ICON_BY_USERNAME = {
   'accountant': '💼',
 };
 const OWNER_NAME_BY_USERNAME = {
-  'owner': 'يعقوب فاضل حمد الخصيبي',
-  'yaqoub.khasibi': 'يعقوب فاضل حمد الخصيبي',
-  'yaqoub': 'يعقوب فاضل حمد الخصيبي',
+  'owner': 'القائد يعقوب بن فاضل الخصيبي',
+  'yaqoub.khasibi': 'القائد يعقوب بن فاضل الخصيبي',
+  'yaqoub': 'القائد يعقوب بن فاضل الخصيبي',
   'waleed.najjar': 'وليد نجار',
 };
 const DASH_EXEC_COMMANDS = [
   {label:'إضافة عميل', section:'clients', icon:'👥'},
   {label:'إضافة عقار / بناية', section:'properties', icon:'🏢'},
+  {label:'الدخول للمحاسبة', section:'accounts', icon:'💼'},
   {label:'إدارة الوحدات', section:'properties', icon:'🏠'},
   {label:'إنشاء عقد', section:'contracts', icon:'📄'},
   {label:'فاتورة من عقد', section:'invoices', icon:'🧾'},
@@ -323,6 +324,33 @@ function propertyUnitLine(p){
   if(!p || !p.id) return '';
   const bits = [p.building_no && ('ب'+p.building_no), p.apartment_no && ('ش'+p.apartment_no), p.room_no && ('غ'+p.room_no)].filter(Boolean);
   return bits.join(' / ');
+}
+function imagePreviewHtml(url, alt='صورة'){
+  const u = String(url||'').trim();
+  if(!u) return '—';
+  if(!(u.startsWith('/uploads/') || u.startsWith('http://') || u.startsWith('https://') || u.startsWith('data:image/'))) return '—';
+  return `<img class="lq-prop-photo lq-prop-photo-thumb" src="${htmlEscape(u)}" alt="${htmlEscape(alt)}">`;
+}
+function readFileAsDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(String(r.result||''));
+    r.onerror = ()=>reject(new Error('تعذر قراءة الملف'));
+    r.readAsDataURL(file);
+  });
+}
+function bindImagePreview(inputId, previewId){
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  if(!input || !preview || input.dataset.bound==='1') return;
+  input.dataset.bound = '1';
+  input.addEventListener('change', ()=>{
+    const f = input.files?.[0];
+    if(!f){ preview.classList.add('hidden'); preview.removeAttribute('src'); return; }
+    const r = new FileReader();
+    r.onload = ()=>{ preview.src = String(r.result||''); preview.classList.remove('hidden'); };
+    r.readAsDataURL(f);
+  });
 }
 function statusBadge(v){
   const raw = String(v ?? '');
@@ -592,9 +620,17 @@ function renderSidebarUser(){
   const el=$('#sidebarUser'); if(!el||!Jawdah.user) return;
   const name=displayUserName(Jawdah.user);
   const role=displayUserRole(Jawdah.user);
+  const greet=employeeGreeting(name);
   const initial=(name||'ي').trim().charAt(0);
-  el.innerHTML=`<div class="su-avatar">${initial}</div><div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div><button type="button" class="su-logout">Sign Out · خروج</button></div>`;
+  el.innerHTML=`<div class="su-avatar">${initial}</div><div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div><div class="mini">${htmlEscape(greet)}</div><button type="button" class="su-logout">Sign Out · خروج</button></div>`;
   el.querySelector('.su-logout').onclick=logout;
+}
+function employeeGreeting(name){
+  const h = new Date().getHours();
+  const who = String(name||'زميلنا').trim();
+  if(h < 12) return `صباح الخير ${who}`;
+  if(h < 18) return `مساء الخير ${who}`;
+  return `مساء النور ${who}`;
 }
 function buildNav(){
   const nav=$('#nav'); if(!nav) return; nav.innerHTML='';
@@ -1189,6 +1225,19 @@ function renderDashMegaCockpit(k,data,eng){
   const riskHtml=eng.risks.length?eng.risks.map(r=>`<div class="risk-pill ${r.s} glow-pulse"><b>${htmlEscape(r.l)}</b><span>${htmlEscape(r.v)}</span></div>`).join(''):'<p class="mini">لا مخاطر حرجة</p>';
   const clientsHtml=eng.clientScores.slice(0,6).map((x,i)=>`<div class="rank-row" onclick="showSection('clients')"><span class="rank-no">${i+1}</span><div><b>${htmlEscape(x.client.name||'')}</b><small>${fmt(x.count)} فاتورة</small></div><strong>${money(x.paid)}</strong></div>`).join('')||'<p class="mini">لا عملاء</p>';
   const propsHtml=eng.propScores.slice(0,6).map((x,i)=>`<div class="rank-row" onclick="showSection('properties')"><span class="rank-no">${i+1}</span><div><b>${htmlEscape(propertyLabel(x.property))}</b><small>${htmlEscape(x.status)}</small></div><strong>${money(x.paid||x.rent)}</strong></div>`).join('')||'<p class="mini">لا عقارات</p>';
+  const hRooms = data.hospitality_rooms||[];
+  const hBookings = data.hospitality_bookings||[];
+  const activeBookings = hBookings.filter(b=>['reserved','checked_in'].includes(String(b.status||'').toLowerCase()));
+  const occupiedRooms = hRooms.filter(r=>String(r.status||'').toLowerCase()==='occupied').length;
+  const hOcc = hRooms.length ? Math.round((occupiedRooms / hRooms.length) * 100) : 0;
+  const hCards = (data.properties||[])
+    .filter(p=>['hospitality','hotel','resort','short-term'].includes(String(p.type||'').toLowerCase()))
+    .slice(0,4)
+    .map(p=>{
+      const img = (typeof lqPropertyImageUrl==='function' ? lqPropertyImageUrl(p) : null) || 'assets/login-portal-bg.png';
+      const pBookings = activeBookings.filter(b=>b.property_id===p.id).length;
+      return `<article class="hotel-card" onclick="showSection('hospitality')"><div class="hotel-card-photo" style="background-image:url('${htmlEscape(img)}')"></div><div class="hotel-card-meta"><b>${htmlEscape(propertyLabel(p))}</b><small>حجوزات نشطة ${fmt(pBookings)}</small></div></article>`;
+    }).join('') || '<p class="mini">لا توجد وحدات ضيافة مصنفة بعد.</p>';
   const pipeMax=Math.max(...eng.pipeline.map(x=>x.v),1);
   const pipeHtml=eng.pipeline.map(x=>`<div class="pipe-item"><div class="pipe-top"><span>${x.l}</span><b>${fmt(x.v)}</b></div><div class="pipe-track ${x.c}"><i style="width:${Math.round((x.v/pipeMax)*100)}%"></i></div></div>`).join('');
   const agingMax=Math.max(...Object.values(eng.aging),1);
@@ -1206,6 +1255,7 @@ function renderDashMegaCockpit(k,data,eng){
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>👥 أفضل العملاء</h4><button type="button" class="saas-link-btn" onclick="showSection('clients')">الكل</button></div><div class="rank-list">${clientsHtml}</div></article>
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>🏢 أداء العقارات</h4><button type="button" class="saas-link-btn" onclick="showSection('properties')">الكل</button></div><div class="rank-list">${propsHtml}</div></article>
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>🔧 عمليات الصيانة</h4></div><div class="maint-ops"><div><b>${fmt(eng.openMaintCount)}</b><span>مفتوحة</span></div><div><b>${fmt(eng.closedMaintCount)}</b><span>مغلقة</span></div><div><b>${fmt(eng.slaPct)}%</b><span>SLA</span></div></div><button type="button" class="ghost" onclick="showSection('maintenance')">إدارة الصيانة</button></article>
+    <article class="bento-tile bento-span-12 saas-glass hotel-hero"><div class="bento-head"><h4>🏨 معرض الضيافة الفاخر</h4><button type="button" class="saas-link-btn" onclick="showSection('hospitality')">دخول الضيافة</button></div><div class="status-line"><span class="badge">غرف ${fmt(hRooms.length)}</span><span class="badge">حجوزات نشطة ${fmt(activeBookings.length)}</span><span class="badge">${fmt(hOcc)}% إشغال</span></div><div class="hotel-grid">${hCards}</div></article>
     <article class="bento-tile bento-span-12 saas-glass"><div class="bento-head"><h4>📅 الأحداث القادمة</h4><button type="button" class="saas-link-btn" onclick="showSection('timeline')">الجدول</button></div><div class="event-list">${eventsHtml}</div></article>`;
 }
 function renderDashRecentInvoices(invoices){
@@ -1330,7 +1380,7 @@ function renderProperties(){
 }
 function renderClients(){
   const rows=filterRows('clients',['name','phone','email','national_id']);
-  $('#clientsTable').innerHTML=tableHtml([['الاسم','name'],['الهاتف','phone'],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['ملاحظات','notes']],rows,r=>`<button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
+  $('#clientsTable').innerHTML=tableHtml([['صورة البطاقة','id_card_image',(v,r)=>imagePreviewHtml(v, `بطاقة ${r.name||''}`)],['الاسم','name'],['الهاتف','phone'],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['ملاحظات','notes']],rows,r=>`<button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
 }
 function renderContracts(){
   fillSelect('#contractProperty',Jawdah.data.properties||[],true,'id','name',propertyLabel); fillSelect('#contractClient',Jawdah.data.clients||[],true,'id','name');
@@ -1505,7 +1555,7 @@ function buildFilteredCsvBundle(){
   const clients = filterRows('clients',['name','phone','email','national_id']);
   if(clients.length){
     const fn = `clients-filtered-${day}.csv`;
-    files[fn] = csvFromRows(['id','name','phone','email','national_id','balance','notes'], clients.map(r=>[r.id,r.name,r.phone,r.email,r.national_id,r.balance,r.notes]));
+    files[fn] = csvFromRows(['id','name','phone','email','national_id','id_card_image','balance','notes'], clients.map(r=>[r.id,r.name,r.phone,r.email,r.national_id,r.id_card_image||'',r.balance,r.notes]));
     counts[fn] = clients.length;
     sizes[fn] = enc.encode(files[fn]).length;
   }
@@ -1717,10 +1767,10 @@ function exportFilteredPropertiesCsv(){
 function exportFilteredClientsCsv(){
   const rows = filterRows('clients',['name','phone','email','national_id']);
   if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
-  const headers = ['id','name','phone','email','national_id','balance','notes'];
+  const headers = ['id','name','phone','email','national_id','id_card_image','balance','notes'];
   const lines = [headers.join(',')];
   rows.forEach(r=>{
-    const row = [r.id, r.name, r.phone, r.email, r.national_id, r.balance, r.notes];
+    const row = [r.id, r.name, r.phone, r.email, r.national_id, r.id_card_image||'', r.balance, r.notes];
     lines.push(row.map(csvCell).join(','));
   });
   downloadFile(`clients-filtered-${today()}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
@@ -2101,7 +2151,15 @@ function bindContractAutofill(){
 async function createClient(){
   const name=val('cName');
   if(!name){ toastNotice('اسم العميل مطلوب'); return; }
-  await saveNew('clients',{name,phone:val('cPhone'),email:val('cEmail'),national_id:val('cNational'),balance:0,notes:val('cNotes')});
+  let idCardUpload = null;
+  const cardFile = $('#cCardImage')?.files?.[0];
+  if(cardFile){
+    if(!String(cardFile.type||'').startsWith('image/')){ toastNotice('ملف بطاقة العميل يجب أن يكون صورة'); return; }
+    idCardUpload = { image: await readFileAsDataUrl(cardFile), content_type: cardFile.type, name: cardFile.name };
+  }
+  await saveNew('clients',{name,phone:val('cPhone'),email:val('cEmail'),national_id:val('cNational'),id_card_upload:idCardUpload,balance:0,notes:val('cNotes')});
+  if($('#cCardImage')) $('#cCardImage').value='';
+  if($('#cCardPreview')){ $('#cCardPreview').classList.add('hidden'); $('#cCardPreview').removeAttribute('src'); }
 }
 async function createContract(){
   const property_id=val('contractProperty');
@@ -2163,7 +2221,7 @@ function editOptions(field, row, table=''){
 }
 const EDIT_CONFIG = {
   properties: {title:'تعديل عقار', fields:[['building_no','رقم البناية','text'],['apartment_no','رقم الشقة','text'],['room_no','رقم الغرفة','text'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['latitude','Latitude','number'],['longitude','Longitude','number'],['name','اسم العرض (اختياري)','text'],['type','النوع','select'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
-  clients: {title:'تعديل عميل', fields:[['name','اسم العميل','text'],['phone','الهاتف','text'],['email','البريد','text'],['national_id','الهوية/السجل','text'],['balance','الرصيد الافتتاحي','number'],['notes','ملاحظات','textarea']]},
+  clients: {title:'تعديل عميل', fields:[['name','اسم العميل','text'],['phone','الهاتف','text'],['email','البريد','text'],['national_id','الهوية/السجل','text'],['id_card_image','رابط صورة البطاقة','text'],['balance','الرصيد الافتتاحي','number'],['notes','ملاحظات','textarea']]},
   contracts: {title:'تعديل عقد', fields:[['contract_no','رقم العقد','text'],['contract_type','نوع العقد','select'],['property_id','العقار','select'],['client_id','العميل','select'],['tenant_nationality','جنسية المستأجر','text'],['tenant_id_no','رقم الهوية/السجل','text'],['unit_details','تفاصيل الوحدة','textarea'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['rent_amount','قيمة الإيجار','number'],['deposit_amount','التأمين','number'],['deposit_received','استلام التأمين المالي','select'],['deposit_received_at','تاريخ استلام التأمين','date'],['deposit_received_amount','مبلغ التأمين المستلم','number'],['late_fee','غرامة التأخير','number'],['grace_days','مهلة السداد بالأيام','number'],['renewal_notice_days','تنبيه التجديد بالأيام','number'],['status','الحالة','select'],['payment_cycle','دورة الدفع','select'],['legal_terms','الشروط القانونية','textarea'],['notes','ملاحظات','textarea']]},
   accounts: {title:'تعديل حركة مالية', fields:[['entry_date','التاريخ','date'],['type','النوع','select'],['category','التصنيف','text'],['description','الوصف','text'],['client_id','العميل','select'],['property_id','العقار','select'],['invoice_id','الفاتورة','select'],['amount','المبلغ','number']]},
   maintenance: {title:'تعديل طلب صيانة', fields:[['property_id','العقار','select'],['title','عنوان الطلب','text'],['priority','الأولوية','select'],['status','الحالة','select'],['request_date','تاريخ الطلب','date'],['cost','التكلفة','number'],['notes','ملاحظات','textarea']]},
@@ -2281,8 +2339,23 @@ async function contractDocument(contractId){
   }
 }
 
-function openPayment(id){ const inv=byId('invoices',id); const remaining=Number(inv.amount)-Number(inv.paid_amount); $('#payInvoiceId').value=id; $('#payAmount').value=remaining.toFixed(2); $('#payInfo').textContent=`${inv.invoice_no} - المتبقي ${money(remaining)}`; openModal('paymentModal'); }
-async function submitPayment(){ try{ const res=await api('pay_invoice',{method:'POST',body:JSON.stringify({invoice_id:val('payInvoiceId'),amount:num('payAmount'),method:val('payMethod'),note:val('payNote')})}); closeModal('paymentModal'); toast(res.approval_required?'تم إرسال طلب اعتماد للتحصيل — راجع مركز الاعتمادات':'تم التحصيل وتحديث الحسابات'); await loadAll(); }catch(e){toastErr(e)} }
+function openPayment(id){ const inv=byId('invoices',id); const remaining=Number(inv.amount)-Number(inv.paid_amount); $('#payInvoiceId').value=id; $('#payAmount').value=remaining.toFixed(2); $('#payInfo').textContent=`${inv.invoice_no} - المتبقي ${money(remaining)}`; if($('#payProofFile')) $('#payProofFile').value=''; if($('#payProofPreview')){ $('#payProofPreview').classList.add('hidden'); $('#payProofPreview').removeAttribute('src'); } openModal('paymentModal'); }
+async function submitPayment(){
+  try{
+    let proofUpload = null;
+    const proofFile = $('#payProofFile')?.files?.[0];
+    if(proofFile){
+      if(!String(proofFile.type||'').startsWith('image/')){ toastNotice('مرفق التحصيل يجب أن يكون صورة'); return; }
+      proofUpload = { image: await readFileAsDataUrl(proofFile), content_type: proofFile.type, name: proofFile.name };
+    }
+    const res=await api('pay_invoice',{method:'POST',body:JSON.stringify({invoice_id:val('payInvoiceId'),amount:num('payAmount'),method:val('payMethod'),note:val('payNote'),payment_proof_upload:proofUpload})});
+    closeModal('paymentModal');
+    if($('#payProofFile')) $('#payProofFile').value='';
+    if($('#payProofPreview')){ $('#payProofPreview').classList.add('hidden'); $('#payProofPreview').removeAttribute('src'); }
+    toast(res.approval_required?'تم إرسال طلب اعتماد للتحصيل — راجع مركز الاعتمادات':'تم التحصيل وتحديث الحسابات');
+    await loadAll();
+  }catch(e){toastErr(e)}
+}
 function printInvoice(id){
   const inv=byId('invoices',id);
   if(!inv) return;
@@ -2940,7 +3013,7 @@ async function renderOwnerLiveHub(){
       </div>
       <div class="layout">
         <div class="card"><h3>ربحية العقارات (مالية + مخزن)</h3>${tableHtml([['العقار','property_name'],['إيراد','income',v=>money(v)],['مصروف','expense',v=>money(v)],['صافي','net',v=>money(v)],['قيمة المخزون','inventory_value',v=>money(v)]],pf)}</div>
-        <div class="card"><h3>SALAM · ايجنت تشغيلي</h3><div class="status-line"><span class="badge">يوصي بالتحصيل السريع عند المتأخرات</span><span class="badge">يراقب صافي الربحية لكل عقار</span><span class="badge">يتابع المخزون المرتبط بالعقار</span></div><div class="toolbar" style="margin-top:10px"><button class="gold-btn" type="button" onclick="showSection('accounts')">تنفيذ مالي</button><button class="ghost" type="button" onclick="showSection('inventory')">مخزن العقارات</button><button class="ghost" type="button" onclick="showSection('owner-staff')">متابعة الموظفين</button></div></div>
+        <div class="card"><h3>SALAM</h3><div class="status-line"><span class="badge">يوصي بالتحصيل السريع عند المتأخرات</span><span class="badge">يراقب صافي الربحية لكل عقار</span><span class="badge">يتابع المخزون المرتبط بالعقار</span></div><div class="toolbar" style="margin-top:10px"><button class="gold-btn" type="button" onclick="showSection('accounts')">تنفيذ مالي</button><button class="ghost" type="button" onclick="showSection('inventory')">مخزن العقارات</button><button class="ghost" type="button" onclick="showSection('owner-staff')">متابعة الموظفين</button></div></div>
       </div>
       <div class="layout">
         <div class="card"><h3>آخر يوميات الموظفين</h3>${tableHtml([['الموظف','user_name'],['التاريخ','work_date'],['الوقت','created_at',v=>String(v||'').slice(11,16)],['العمل','text']],journals)}</div>
@@ -3317,6 +3390,8 @@ function bind(){
   initLoginCinema();
   initLoginUx();
   initThemeUx();
+  bindImagePreview('cCardImage','cCardPreview');
+  bindImagePreview('payProofFile','payProofPreview');
   initDashboardCharts();
   initFabDock();
   if(typeof initEnterpriseVision==='function') initEnterpriseVision();
@@ -3686,7 +3761,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   renderAll=function(){ oldRenderAll2(); renderProductionUsers(); };
   window.renderProductionUsers=function(){
     const users=Jawdah.data.users||[];
-    const required=['owner','ahmed.najjar','waleed.najjar','ahoud.shuaili','properties.manager','operations','ali.hospitality','maintenance','viewer','accountant','razan.accounting','razan.shuaili'];
+    const required=['owner','ahmed.najjar','waleed.najjar','ahoud.shuaili','amjad.jamoudi','operations','ali.hospitality','maintenance','viewer','accountant','razan.accounting','razan.shuaili'];
     const host=$('#productionUsersBox');
     if(!host) return;
     host.innerHTML=required.map(u=>{
