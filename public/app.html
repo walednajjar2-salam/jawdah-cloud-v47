@@ -158,12 +158,12 @@
               <label class="login-field">
                 <span class="login-field-label" dir="ltr">Username</span>
                 <span class="login-field-icon" aria-hidden="true">👤</span>
-                <input id="loginUser" placeholder="Enter username · اسم المستخدم" autocomplete="username">
+                <input id="loginUser" placeholder="👤 Enter username · اسم المستخدم" autocomplete="username">
               </label>
               <label class="login-field">
                 <span class="login-field-label" dir="ltr">Password</span>
                 <span class="login-field-icon" aria-hidden="true">🔒</span>
-                <input id="loginPass" placeholder="Enter password · كلمة المرور" type="password" autocomplete="current-password">
+                <input id="loginPass" placeholder="🔒 Enter password · كلمة المرور" type="password" autocomplete="current-password">
                 <button type="button" id="loginPassToggle" class="login-pass-toggle" aria-label="إظهار أو إخفاء كلمة المرور">👁️</button>
               </label>
               <div id="capsHint" class="login-caps-hint hidden">⚠️ يبدو أن زر Caps Lock مفعّل</div>
@@ -188,7 +188,7 @@
             <div id="authPaneOtp" class="ev-auth-pane ev-auth-alt hidden" role="tabpanel">
               <label class="login-field">
                 <span class="login-field-label" dir="ltr">Username</span>
-                <input id="otpUser" placeholder="اسم المستخدم" autocomplete="username">
+                <input id="otpUser" placeholder="👤 اسم المستخدم" autocomplete="username">
               </label>
               <button type="button" id="otpSendBtn" class="ghost login-submit" style="margin-bottom:10px">إرسال رمز OTP · Send code</button>
               <p dir="ltr">One-Time Password · 6-digit code</p>
@@ -347,7 +347,7 @@
               <small dir="ltr">Launch Quality · ERP</small>
             </div>
           </div>
-          <div class="search search-pro"><input id="globalSearch" placeholder="بحث في المشاريع والعملاء والعقود..."></div>
+          <div class="search search-pro"><input id="globalSearch" placeholder="🔎 بحث في المشاريع والعملاء والعقود..."></div>
           <div class="app-header-actions">
             <button id="fieldModeBtn" class="tb-icon field-mode-btn" type="button" title="وضع الميدان · Field mode">🧰</button>
             <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة">🧭</button>
@@ -501,7 +501,7 @@
       </section>
 
       <section id="sec-properties" class="section">
-        <div class="card"><h3>إضافة عقار / وحدة</h3><div class="form"><select id="pBranch"></select><input id="pBuilding" placeholder="رقم البناية"><input id="pApartment" placeholder="رقم الشقة"><input id="pRoom" placeholder="رقم الغرفة"><select id="pStatus"><option value="شاغرة">شاغرة</option><option value="محجوزة">محجوزة</option><option value="مستأجرة">مستأجرة</option><option value="صيانة">صيانة</option></select><input id="pPrice" placeholder="السعر OMR" type="number" step="0.001"><input id="pLocation" placeholder="الموقع"><input id="pLat" placeholder="Latitude (اختياري)" type="number" step="0.000001"><input id="pLng" placeholder="Longitude (اختياري)" type="number" step="0.000001"><div class="lq-prop-upload-box"><label for="pPhoto">📷 صورة العقار (اختياري)</label><input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><img id="pPhotoPreview" class="lq-prop-upload-preview hidden" alt="معاينة الصورة"><span class="mini">تُحفظ على الخادم — JPG/PNG/WebP حتى 5MB</span></div><textarea id="pNotes" placeholder="ملاحظات (اختياري)"></textarea></div><button class="gold-btn" onclick="createProperty()">حفظ العقار</button></div>
+        <div class="card"><h3>إضافة عقار / وحدة</h3><div class="form"><select id="pBranch"></select><input id="pBuilding" placeholder="رقم البناية"><input id="pApartment" placeholder="رقم الشقة"><input id="pRoom" placeholder="رقم الغرفة"><select id="pStatus"><option value="شاغرة">شاغرة</option><option value="محجوزة">محجوزة</option><option value="مستأجرة">مستأجرة</option><option value="صيانة">صيانة</option></select><input id="pPrice" placeholder="السعر OMR" type="number" step="0.001"><input id="pLocation" placeholder="📍 الموقع"><input id="pLat" placeholder="🧭 Latitude (اختياري)" type="number" step="0.000001"><input id="pLng" placeholder="🧭 Longitude (اختياري)" type="number" step="0.000001"><div class="lq-prop-upload-box"><label for="pPhoto">📷 صورة العقار (اختياري)</label><input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><img id="pPhotoPreview" class="lq-prop-upload-preview hidden" alt="معاينة الصورة"><span class="mini">تُحفظ على الخادم — JPG/PNG/WebP حتى 5MB</span></div><textarea id="pNotes" placeholder="ملاحظات (اختياري)"></textarea></div><button class="gold-btn" onclick="createProperty()">حفظ العقار</button></div>
         <div class="card"><div class="toolbar"><input id="propBuildingFilter" placeholder="فلتر رقم البناية" oninput="renderProperties()"><select id="propStatusFilter" onchange="renderProperties()"></select><select id="propContractFilter" onchange="renderProperties()"><option value="">كل الوحدات</option><option value="active">عليها عقد نشط</option><option value="none">بدون عقد نشط</option></select><button class="ghost" onclick="exportCsv('properties')">تصدير CSV</button><button class="ghost" onclick="exportFilteredPropertiesCsv()">تصدير نتائج الفلتر</button></div><div id="propQuickStats" class="status-line" style="margin-bottom:10px"></div><div id="propertiesTable"></div></div>
       </section>
 

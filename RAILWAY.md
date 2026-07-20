@@ -1,5 +1,7 @@
 # Launch Quality LLC — Railway Deploy
 
+> Production-ready guide with live links, map, and media placeholders.
+
 ## Quick deploy
 
 1. Push this folder to GitHub (repository root = these files).
@@ -17,6 +19,20 @@
 5. **Settings -> Networking -> Generate Domain** to get a public URL like:
    `https://your-app.up.railway.app`
 6. Open that URL in the browser. Login works immediately on the same domain.
+
+## Live experience links (website + map + images)
+
+Use your Railway domain and keep this section at the top for quick sharing:
+
+- 🌐 **Live Website**: `https://your-app.up.railway.app`
+- 🗺️ **Live Map (Nizwa example)**: `https://www.openstreetmap.org/?mlat=22.9333&mlon=57.5333#map=13/22.9333/57.5333`
+- 📸 **Live Images (public assets)**:
+  - `https://your-app.up.railway.app/assets/brand-logo-gold.png`
+  - `https://your-app.up.railway.app/assets/login-portal-bg.png`
+  - `https://your-app.up.railway.app/assets/app-icon-512.png`
+
+For dynamic property photos uploaded from the app:
+- 🏠 `https://your-app.up.railway.app/uploads/properties/<photo-file-name>`
 
 ## Health check
 
@@ -79,3 +95,13 @@ https://YOUR-USER.github.io/YOUR-REPO/?api=https://your-app.up.railway.app
 | `404` on `/` | Redeploy latest code; fallback HTML is embedded in `server.py` |
 | Login fails on GitHub Pages | Add `?api=https://your-railway-domain` |
 | Data lost after redeploy | Add Railway volume at `/app/data` |
+
+## UI polish checklist (icons + inputs + emoji)
+
+To keep the product experience premium in production:
+
+- ✅ Use icon-first placeholders in critical fields (login/search/location).
+- ✅ Keep emoji semantic and functional, not decorative noise.
+- ✅ Maintain bilingual clarity (Arabic + English) in the same input when useful.
+- ✅ Preserve high contrast for icons/placeholders on dark backgrounds.
+- ✅ Keep map and media links visible in docs for demo/readiness.
