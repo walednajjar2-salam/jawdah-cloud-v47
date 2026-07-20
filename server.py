@@ -2679,6 +2679,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_header("Location", "/app.html")
             self.end_headers()
             return
+        if path in ("/app", "/app/", "/app/app.html"):
+            self.send_response(302)
+            self.send_header("Location", "/app.html")
+            self.end_headers()
+            return
         if path == "/index.html":
             self.send_response(302)
             self.send_header("Location", "/app.html")

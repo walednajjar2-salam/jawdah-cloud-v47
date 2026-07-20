@@ -96,6 +96,8 @@ const OWNER_NAME_BY_USERNAME = {
 function shouldForceClassicMode(user){
   const role = String(user?.role||'').toLowerCase();
   const uname = String(user?.username||'').toLowerCase();
+  const desktop = !window.matchMedia || !window.matchMedia('(max-width: 900px)').matches;
+  if(desktop) return true;
   return ['owner','admin','accountant'].includes(role) || OWNER_USERNAMES.has(uname);
 }
 const DASH_EXEC_COMMANDS = [

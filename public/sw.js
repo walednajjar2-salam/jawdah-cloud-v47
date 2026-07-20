@@ -1,4 +1,4 @@
-const CACHE = 'lq-shell-v22';
+const CACHE = 'lq-shell-v23';
 const APP_SHELL = [
   '/manifest.webmanifest',
   '/assets/app-icon-192.png',
