@@ -35,7 +35,7 @@ function ownerTimelineFilterLabel(v){
   if(n===1) return 'آخر 24 ساعة';
   return `آخر ${n} يوم`;
 }
-const PROPERTY_STATUSES = ['شاغرة', 'محجوزة', 'مستأجرة', 'صيانة'];
+const PROPERTY_STATUSES = ['شاغرة', 'محجوزة', 'مستأجرة', 'تحت الصيانة', 'موقوفة'];
 const NAV_SAAS_ITEMS = [
   ['dashboard','لوحة التحكم','🏠'],
   ['daily-ops','العمليات اليومية','🗂️'],
@@ -69,6 +69,7 @@ const SECTION_TITLES = {
 function resolveSection(id){ return id==='settings' ? (['admin','owner'].includes(Jawdah.user?.role) ? 'users' : 'backup') : id; }
 function canSeeApprovals(){ return Jawdah.user && ['admin','owner','accountant','operations'].includes(Jawdah.user.role); }
 function canDecideApprovals(){ return Jawdah.user && ['admin','owner','accountant'].includes(Jawdah.user.role); }
+function canActivateContracts(){ return Jawdah.user && ['admin','owner'].includes(Jawdah.user.role); }
 function canSeeInventory(){ return Jawdah.user && ['admin','owner','accountant','operations','maintenance'].includes(Jawdah.user.role); }
 function canSeeFinanceSection(id){
   if(id==='inventory') return canSeeInventory();
@@ -326,21 +327,31 @@ function propertyLabel(p){
   if(p.building_no || p.apartment_no || p.room_no){
     const parts = [];
     if(p.building_no) parts.push('بناية '+p.building_no);
-    if(p.apartment_no) parts.push('شقة '+p.apartment_no);
-    if(p.room_no) parts.push('غرفة '+p.room_no);
+    if(p.apartment_no) parts.push('وحدة '+p.apartment_no);
+    if((p.unit_kind||'') === 'غرفة مستقلة' && p.room_no) parts.push('غرفة '+p.room_no);
+    if((p.unit_kind||'') === 'شقة كاملة' && p.unit_rooms_count) parts.push(`${p.unit_rooms_count} غرف`);
+    if(p.unit_kind) parts.push(p.unit_kind);
     return parts.join(' · ');
   }
   return p.name || p.id;
 }
 function propertyUnitLine(p){
   if(!p || !p.id) return '';
-  const bits = [p.building_no && ('ب'+p.building_no), p.apartment_no && ('ش'+p.apartment_no), p.room_no && ('غ'+p.room_no)].filter(Boolean);
-  return bits.join(' / ');
+  const bits = [p.building_no && ('ب'+p.building_no), p.apartment_no && ('و'+p.apartment_no)];
+  if((p.unit_kind||'') === 'غرفة مستقلة' && p.room_no) bits.push('غ'+p.room_no);
+  bits.push(p.unit_kind || '');
+  if((p.unit_kind||'') === 'شقة كاملة' && p.unit_rooms_count) bits.push(`${p.unit_rooms_count}غ`);
+  const clean = bits.filter(Boolean);
+  return clean.join(' / ');
 }
 function imagePreviewHtml(url, alt='صورة'){
-  const u = String(url||'').trim();
+  let u = String(url||'').trim();
   if(!u) return '—';
   if(!(u.startsWith('/uploads/') || u.startsWith('http://') || u.startsWith('https://') || u.startsWith('data:image/'))) return '—';
+  if(u.startsWith('/uploads/') && Jawdah.token){
+    const sep = u.includes('?') ? '&' : '?';
+    u = `${u}${sep}token=${encodeURIComponent(Jawdah.token)}`;
+  }
   return `<img class="lq-prop-photo lq-prop-photo-thumb" src="${htmlEscape(u)}" alt="${htmlEscape(alt)}">`;
 }
 function readFileAsDataUrl(file){
@@ -1501,7 +1512,7 @@ function renderProperties(){
   if(stats){
     stats.innerHTML = `<span class="badge">إجمالي الوحدات: ${fmt(total)}</span><span class="badge active">عليها عقد نشط: ${fmt(activeCount)}</span><span class="badge">بدون عقد نشط: ${fmt(noContractCount)}</span><span class="badge">نتيجة الفلتر: ${fmt(rows.length)}</span>`;
   }
-  $('#propertiesTable').innerHTML=tableHtml([['الصورة','id',(_,r)=>typeof lqPropertyThumbHtml==='function'?lqPropertyThumbHtml(r,{compact:true}):'🏠'],['البناية','building_no'],['الشقة','apartment_no'],['الغرفة','room_no'],['الحالة','status',(v)=>statusBadge(v)],['العقد النشط','id',(_,r)=>{const c=activeContractForPropertyLocal(r.id); return c.id?`<span class="badge active">${c.contract_no||c.id}</span>`:'—';}],['السعر','price',(v)=>money(v)],['الموقع','location'],['الإحداثيات','id',(_,r)=>((r.latitude&&r.longitude)?`${r.latitude}, ${r.longitude}`:'—')],['الوحدة','id',(_,r)=>propertyLabel(r)]],rows,r=>{const c=activeContractForPropertyLocal(r.id); const quick=c.id?`<button class="gold-btn" onclick="openActiveContractFromProperty('${r.id}')">العقد النشط</button> `:''; return `${quick}<button class="ghost" onclick="editRecord('properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('properties','${r.id}')">حذف</button>`;});
+  $('#propertiesTable').innerHTML=tableHtml([['الصورة','id',(_,r)=>typeof lqPropertyThumbHtml==='function'?lqPropertyThumbHtml(r,{compact:true}):'🏠'],['البناية','building_no'],['الوحدة','apartment_no'],['نوع الوحدة','unit_kind'],['رقم الغرفة','room_no',(v,r)=>((r.unit_kind||'')==='غرفة مستقلة' ? (v||'—') : '—')],['عدد غرف الشقة','unit_rooms_count',(v,r)=>((r.unit_kind||'')==='شقة كاملة' ? (v||'—') : '—')],['الحالة','status',(v)=>statusBadge(v)],['العقد النشط','id',(_,r)=>{const c=activeContractForPropertyLocal(r.id); return c.id?`<span class="badge active">${c.contract_no||c.id}</span>`:'—';}],['السعر','price',(v)=>money(v)],['الموقع','location'],['الإحداثيات','id',(_,r)=>((r.latitude&&r.longitude)?`${r.latitude}, ${r.longitude}`:'—')],['اسم الوحدة','id',(_,r)=>propertyLabel(r)]],rows,r=>{const c=activeContractForPropertyLocal(r.id); const quick=c.id?`<button class="gold-btn" onclick="openActiveContractFromProperty('${r.id}')">العقد النشط</button> `:''; return `${quick}<button class="ghost" onclick="editRecord('properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('properties','${r.id}')">حذف</button>`;});
   fillSelect('#propStatusFilter',['',...PROPERTY_STATUSES],false);
 }
 function renderClients(){
@@ -1518,10 +1529,15 @@ function renderContracts(){
       ? `<div class="renewal-panel"><h3>🔁 قرارات التجديد (${queue.length})</h3><p class="mini">عقود نشطة تقترب من تاريخ النهاية أو منتهية وتحتاج قرار تجديد قبل تحولها إلى شغور.</p>${queue.map(({contract:c, meta})=>`<div class="renewal-row"><div><b>${c.contract_no||c.id}</b> · ${byId('clients',c.client_id).name||c.client_id}<br><span class="mini">${propertyLabel(byId('properties',c.property_id))} · ينتهي ${c.end_date}</span></div><span class="badge ${meta.tone}">${meta.label}</span><button class="gold-btn" onclick="renewContract('${c.id}')">تجديد</button></div>`).join('')}</div>`
       : `<div class="renewal-panel renewal-ok"><h3>🔁 التجديد</h3><p class="mini">لا توجد عقود تحتاج قرار تجديد حالياً.</p></div>`;
   }
-  $('#contractsTable').innerHTML=tableHtml([['رقم العقد','contract_no',(v,r)=>v||r.id],['النوع','contract_type'],['الوحدة','property_id',(v)=>propertyLabel(byId('properties',v))],['العميل','client_id',(v)=>byId('clients',v).name||v],['البداية','start_date'],['النهاية','end_date'],['التجديد','id',(_,r)=>{const m=contractRenewalMeta(r); return m.label?`<span class="badge ${m.tone}">${m.label}</span>`:'—';}],['الإيجار','rent_amount',(v)=>money(v)],['التأمين','deposit_amount',(v)=>money(v)],['الحالة','status',(v)=>statusBadge(v)]],rows,r=>{
+  $('#contractsTable').innerHTML=tableHtml([['رقم العقد','contract_no',(v,r)=>v||r.id],['النوع','contract_type'],['الوحدة المؤجرة','property_id',(v)=>propertyLabel(byId('properties',v))],['المستأجر','client_id',(v)=>byId('clients',v).name||v],['البداية','start_date'],['النهاية','end_date'],['التجديد','id',(_,r)=>{const m=contractRenewalMeta(r); return m.label?`<span class="badge ${m.tone}">${m.label}</span>`:'—';}],['الإيجار','rent_amount',(v)=>money(v)],['الحالة','status',(v)=>statusBadge(v)]],rows,r=>{
     const meta = contractRenewalMeta(r);
+    const st = String(r.status||'').toLowerCase();
     const renewBtn = meta.renewable ? `<button class="gold-btn" onclick="renewContract('${r.id}')">تجديد</button> ` : '';
-    return `${renewBtn}${String(r.status||'').toLowerCase()==='active'?'':(canDecideApprovals()?`<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button>`:`<button class="gold-btn" onclick="requestContractApproval('${r.id}')">طلب اعتماد</button>`)} <button class="ghost" onclick="contractDocument('${r.id}')">العقد</button> <button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> <button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
+    const requestBtn = (st==='draft' || !st) ? `<button class="gold-btn" onclick="requestContractApproval('${r.id}')">طلب اعتماد</button> ` : '';
+    const approveBtn = (st==='approvalrequested' && canDecideApprovals()) ? `<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button> ` : '';
+    const activateBtn = (st==='approved' && canActivateContracts()) ? `<button class="gold-btn" onclick="activateContract('${r.id}')">تفعيل العقد</button> ` : '';
+    const invoiceBtn = (st==='active' || st==='activated') ? `<button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> ` : '';
+    return `${renewBtn}${requestBtn}${approveBtn}${activateBtn}<button class="ghost" onclick="contractDocument('${r.id}')">العقد</button> ${invoiceBtn}<button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
   });
 }
 function renderInvoices(){
@@ -1595,7 +1611,11 @@ function populateSelects(){
   fillSelect('#pBranch', Jawdah.data.branches||[], true, 'id', 'name');
   fillSelect('#contractProperty', Jawdah.data.properties||[], true, 'id', 'name', propertyLabel);
   fillSelect('#contractClient', Jawdah.data.clients||[], true, 'id', 'name');
-  fillSelect('#invoiceContractSelect', (Jawdah.data.contracts||[]), true, 'id', 'contract_no', (c)=>{
+  const invoiceEligibleContracts = (Jawdah.data.contracts||[]).filter(c=>{
+    const st = String(c.status||'').toLowerCase();
+    return st==='active' || st==='activated';
+  });
+  fillSelect('#invoiceContractSelect', invoiceEligibleContracts, true, 'id', 'contract_no', (c)=>{
     const contractNo = c.contract_no || c.id;
     const client = byId('clients', c.client_id).name || '';
     return `${contractNo} — ${client}`;
@@ -1689,8 +1709,8 @@ function buildFilteredCsvBundle(){
   if(contracts.length){
     const fn = `contracts-filtered-${day}.csv`;
     files[fn] = csvFromRows(
-      ['id','contract_no','contract_type','property_id','property_label','client_id','client_name','start_date','end_date','rent_amount','deposit_amount','payment_cycle','status','approved_at','notes'],
-      contracts.map(r=>{ const prop=byId('properties', r.property_id); const client=byId('clients', r.client_id); return [r.id,r.contract_no,r.contract_type,r.property_id,propertyLabel(prop),r.client_id,client.name||'',r.start_date,r.end_date,r.rent_amount,r.deposit_amount,r.payment_cycle,r.status,r.approved_at,r.notes]; })
+      ['id','contract_no','contract_type','property_id','property_label','client_id','client_name','start_date','end_date','rent_amount','payment_cycle','status','approved_at','activated_at','notes'],
+      contracts.map(r=>{ const prop=byId('properties', r.property_id); const client=byId('clients', r.client_id); return [r.id,r.contract_no,r.contract_type,r.property_id,propertyLabel(prop),r.client_id,client.name||'',r.start_date,r.end_date,r.rent_amount,r.payment_cycle,r.status,r.approved_at,r.activated_at,r.notes]; })
     );
     counts[fn] = contracts.length;
     sizes[fn] = enc.encode(files[fn]).length;
@@ -1905,7 +1925,7 @@ function exportFilteredClientsCsv(){
 function exportFilteredContractsCsv(){
   const rows = filterRows('contracts',['id','status','notes']);
   if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
-  const headers = ['id','contract_no','contract_type','property_id','property_label','client_id','client_name','start_date','end_date','rent_amount','deposit_amount','payment_cycle','status','approved_at','notes'];
+  const headers = ['id','contract_no','contract_type','property_id','property_label','client_id','client_name','start_date','end_date','rent_amount','payment_cycle','status','approved_at','activated_at','notes'];
   const lines = [headers.join(',')];
   rows.forEach(r=>{
     const prop = byId('properties', r.property_id);
@@ -1921,10 +1941,10 @@ function exportFilteredContractsCsv(){
       r.start_date,
       r.end_date,
       r.rent_amount,
-      r.deposit_amount,
       r.payment_cycle,
       r.status,
       r.approved_at,
+      r.activated_at,
       r.notes,
     ];
     lines.push(row.map(csvCell).join(','));
@@ -2237,6 +2257,8 @@ async function createInvoiceFromSelectedContract(){
   const contractId = val('invoiceContractSelect');
   if(!contractId){ toastNotice('اختر العقد أولاً'); return; }
   const c = byId('contracts', contractId);
+  const st = String(c.status||'').toLowerCase();
+  if(!(st==='active' || st==='activated')){ toastNotice('لا يمكن إصدار فاتورة قبل اعتماد وتفعيل العقد'); return; }
   const payload = {
     contract_id: contractId,
     due_date: val('invoiceDueDate') || suggestedDueDateForContract(c),
@@ -2294,14 +2316,25 @@ async function createContract(){
   if(!property_id||!client_id){ toastNotice('اختر العقار والعميل من القائمة'); return; }
   if(hasActiveContractForPropertyLocal(property_id)){ toastNotice('لا يمكن إنشاء عقد جديد لأن الوحدة مرتبطة بعقد نشط حالياً'); return; }
   if(!rent||rent<=0){ toastNotice('مبلغ الإيجار الشهري مطلوب وأكبر من صفر'); return; }
-  await saveNew('contracts',{contract_type:val('contractType')||'Residential',property_id,client_id,tenant_nationality:val('tenantNationality'),tenant_id_no:val('tenantIdNo'),unit_details:val('unitDetails'),start_date:val('contractStart')||today(),end_date:val('contractEnd')||today(),rent_amount:rent,deposit_amount:num('contractDeposit'),late_fee:num('contractLateFee'),grace_days:num('contractGraceDays')||5,renewal_notice_days:num('contractRenewalDays')||30,status:'Draft',payment_cycle:val('contractPaymentCycle')||'monthly',legal_terms:val('contractLegalTerms'),notes:val('contractNotes')});
+  const sDate = val('contractStart') || today();
+  const eDate = val('contractEnd') || today();
+  if(eDate < sDate){ toastNotice('تاريخ نهاية العقد لا يمكن أن يكون قبل البداية'); return; }
+  const attachmentFiles = Array.from($('#contractAttachments')?.files || []);
+  const attachments_upload = [];
+  for(const f of attachmentFiles.slice(0,8)){
+    attachments_upload.push({ image: await readFileAsDataUrl(f), content_type: f.type, name: f.name });
+  }
+  await saveNew('contracts',{contract_type:val('contractType')||'Residential',property_id,client_id,tenant_nationality:val('tenantNationality'),tenant_id_no:val('tenantIdNo'),unit_details:val('unitDetails'),start_date:sDate,end_date:eDate,rent_amount:rent,deposit_amount:0,late_fee:num('contractLateFee'),grace_days:num('contractGraceDays')||5,renewal_notice_days:num('contractRenewalDays')||30,status:'Draft',payment_cycle:val('contractPaymentCycle')||'monthly',legal_terms:val('contractLegalTerms'),notes:val('contractNotes'),attachments_upload});
 }
 async function createProperty(){
   const building=val('pBuilding'), apartment=val('pApartment'), room=val('pRoom'), location=val('pLocation');
-  if(!building||!apartment||!room||!location){ toastNotice('أكمل: رقم البناية، الشقة، الغرفة، والموقع'); return; }
+  const unitKind = val('pUnitKind') || 'شقة كاملة';
+  const unitRoomsCount = Number(val('pUnitRoomsCount') || 0);
+  if(!building||!apartment||!location){ toastNotice('أكمل: رقم البناية، الوحدة، والموقع'); return; }
+  if(unitKind==='غرفة مستقلة' && !room){ toastNotice('رقم الغرفة مطلوب للوحدة من نوع غرفة مستقلة'); return; }
   const photoFile=$('#pPhoto')?.files?.[0];
   try{
-    const res=await api('properties',{method:'POST',body:JSON.stringify({branch_id:val('pBranch')||null,building_no:building,apartment_no:apartment,room_no:room,status:val('pStatus'),price:num('pPrice'),location,latitude:val('pLat')||null,longitude:val('pLng')||null,notes:val('pNotes'),image:'🏠',last_update:today()})});
+    const res=await api('properties',{method:'POST',body:JSON.stringify({branch_id:val('pBranch')||null,building_no:building,apartment_no:apartment,room_no:room,status:val('pStatus'),unit_kind:unitKind,unit_rooms_count:(unitKind==='شقة كاملة'&&unitRoomsCount>0)?unitRoomsCount:null,price:num('pPrice'),location,latitude:val('pLat')||null,longitude:val('pLng')||null,notes:val('pNotes'),image:'🏠',last_update:today()})});
     const propertyId=res.item?.id;
     if(photoFile&&propertyId&&typeof lqUploadPropertyPhoto==='function'){
       await lqUploadPropertyPhoto(propertyId, photoFile);
@@ -2322,7 +2355,7 @@ async function delRecord(table,id){ if(!confirm('تأكيد الحذف؟')) retu
 function escapeHtml(v){ return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function editOptions(field, row, table=''){
   const opts = {
-    status: ['Rented','Vacant','Maintenance','Active','Closed','Renewed','Expired','Draft','Open','In Progress','Completed','Pending'],
+    status: ['Rented','Vacant','Maintenance','Active','Approved','ApprovalRequested','Closed','Renewed','Expired','Draft','Open','In Progress','Completed','Pending','شاغرة','محجوزة','مستأجرة','تحت الصيانة','موقوفة'],
     type: ['Villa','Apartment','Office','Compound','income','expense'],
     role: ['admin','accountant','operations','maintenance','viewer'],
     priority: ['Low','Medium','High','Urgent'],
@@ -2331,6 +2364,7 @@ function editOptions(field, row, table=''){
   };
   if(field === 'property_id') return (Jawdah.data.properties||[]).map(x=>[x.id, propertyLabel(x)]);
   if(table === 'properties' && field === 'status') return PROPERTY_STATUSES.map(x=>[x,x]);
+  if(table === 'properties' && field === 'unit_kind') return [['غرفة مستقلة','غرفة مستقلة'],['شقة كاملة','شقة كاملة']];
   if(field === 'client_id') return (Jawdah.data.clients||[]).map(x=>[x.id,x.name]);
   if(field === 'invoice_id') return [['','بدون فاتورة'], ...(Jawdah.data.invoices||[]).map(x=>[x.id,x.invoice_no])];
   if(field === 'parent_code') return [['','بدون حساب أب'], ...(Jawdah.data.chart_accounts||[]).map(x=>[x.code, `${x.code} - ${x.name}`])];
@@ -2346,9 +2380,9 @@ function editOptions(field, row, table=''){
   return null;
 }
 const EDIT_CONFIG = {
-  properties: {title:'تعديل عقار', fields:[['building_no','رقم البناية','text'],['apartment_no','رقم الشقة','text'],['room_no','رقم الغرفة','text'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['latitude','Latitude','number'],['longitude','Longitude','number'],['name','اسم العرض (اختياري)','text'],['type','النوع','select'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
+  properties: {title:'تعديل عقار', fields:[['building_no','رقم البناية','text'],['apartment_no','رقم الوحدة','text'],['unit_kind','نوع الوحدة','select'],['room_no','رقم الغرفة (للغرفة المستقلة)','text'],['unit_rooms_count','عدد غرف الشقة','number'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['latitude','Latitude','number'],['longitude','Longitude','number'],['name','اسم العرض (اختياري)','text'],['type','النوع','select'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
   clients: {title:'تعديل عميل', fields:[['name','اسم العميل','text'],['phone','الهاتف','text'],['email','البريد','text'],['national_id','الهوية/السجل','text'],['id_card_image','رابط صورة البطاقة','text'],['balance','الرصيد الافتتاحي','number'],['notes','ملاحظات','textarea']]},
-  contracts: {title:'تعديل عقد', fields:[['contract_no','رقم العقد','text'],['contract_type','نوع العقد','select'],['property_id','العقار','select'],['client_id','العميل','select'],['tenant_nationality','جنسية المستأجر','text'],['tenant_id_no','رقم الهوية/السجل','text'],['unit_details','تفاصيل الوحدة','textarea'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['rent_amount','قيمة الإيجار','number'],['deposit_amount','التأمين','number'],['deposit_received','استلام التأمين المالي','select'],['deposit_received_at','تاريخ استلام التأمين','date'],['deposit_received_amount','مبلغ التأمين المستلم','number'],['late_fee','غرامة التأخير','number'],['grace_days','مهلة السداد بالأيام','number'],['renewal_notice_days','تنبيه التجديد بالأيام','number'],['status','الحالة','select'],['payment_cycle','دورة الدفع','select'],['legal_terms','الشروط القانونية','textarea'],['notes','ملاحظات','textarea']]},
+  contracts: {title:'تعديل عقد', fields:[['contract_no','رقم العقد','text'],['contract_type','نوع العقد','select'],['property_id','الوحدة المؤجرة','select'],['client_id','المستأجر','select'],['tenant_nationality','جنسية المستأجر','text'],['tenant_id_no','رقم الهوية/السجل','text'],['unit_details','تفاصيل الوحدة','textarea'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['rent_amount','قيمة الإيجار','number'],['late_fee','غرامة التأخير','number'],['grace_days','مهلة السداد بالأيام','number'],['renewal_notice_days','تنبيه التجديد بالأيام','number'],['status','الحالة','select'],['payment_cycle','دورة الدفع','select'],['legal_terms','الشروط القانونية','textarea'],['notes','ملاحظات','textarea']]},
   accounts: {title:'تعديل حركة مالية', fields:[['entry_date','التاريخ','date'],['type','النوع','select'],['category','التصنيف','text'],['description','الوصف','text'],['client_id','العميل','select'],['property_id','العقار','select'],['invoice_id','الفاتورة','select'],['amount','المبلغ','number']]},
   maintenance: {title:'تعديل طلب صيانة', fields:[['property_id','العقار','select'],['title','عنوان الطلب','text'],['priority','الأولوية','select'],['status','الحالة','select'],['request_date','تاريخ الطلب','date'],['cost','التكلفة','number'],['notes','ملاحظات','textarea']]},
   chart_accounts: {title:'تعديل حساب في الدليل', fields:[['code','رمز الحساب','text'],['name','اسم الحساب','text'],['type','نوع الحساب','select'],['parent_code','الحساب الأب','select'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
@@ -2393,6 +2427,8 @@ async function submitEditRecord(table,id){
 async function invoiceFromContract(contractId){
   try{
     const contract = byId('contracts', contractId);
+    const st = String(contract.status||'').toLowerCase();
+    if(!(st==='active' || st==='activated')){ toastNotice('لا يمكن إصدار فاتورة قبل اعتماد وتفعيل العقد'); return; }
     const cycle = String(contract.payment_cycle || 'monthly').toLowerCase();
     const cycleDays = cycle.includes('quarter') ? 90 : (cycle.includes('year') ? 365 : 30);
     const dueDefault = new Date(Date.now() + cycleDays*86400000).toISOString().slice(0,10);
@@ -2404,7 +2440,25 @@ async function invoiceFromContract(contractId){
     showSection('invoices');
   }catch(e){toastErr(e)}
 }
-async function approveContract(contractId){ try{ if(!confirm('اعتماد العقد سيولد جدول الفواتير الشهرية حسب مدة العقد. هل تريد المتابعة؟')) return; const res=await api('approve_contract',{method:'POST',body:JSON.stringify({contract_id:contractId})}); toast('تم اعتماد العقد وتوليد '+(res.created_invoices||[]).length+' فاتورة'); await loadAll(); showSection('contracts'); }catch(e){toastErr(e)} }
+async function approveContract(contractId){ try{ if(!confirm('اعتماد العقد يعني قبوله رسميًا، ثم يلزم تفعيل منفصل قبل إصدار الفواتير. متابعة؟')) return; await api('approve_contract',{method:'POST',body:JSON.stringify({contract_id:contractId})}); toast('تم اعتماد العقد بنجاح'); await loadAll(); showSection('contracts'); }catch(e){toastErr(e)} }
+async function requestContractApproval(contractId){
+  try{
+    const notes = prompt('ملاحظات طلب الاعتماد (اختياري)','طلب اعتماد عقد جديد');
+    const res = await api('request_approval',{method:'POST',body:JSON.stringify({entity:'contracts',entity_id:contractId,request_type:'contract',notes:notes||'طلب اعتماد عقد'})});
+    toast(res.message || 'تم إرسال طلب الاعتماد');
+    await loadAll();
+    showSection('contracts');
+  }catch(e){ toastErr(e); }
+}
+async function activateContract(contractId){
+  try{
+    if(!confirm('تفعيل العقد سيحوّل الوحدة إلى مؤجرة ويُنشئ جدول الفواتير. متابعة؟')) return;
+    const res = await api('activate_contract',{method:'POST',body:JSON.stringify({contract_id:contractId})});
+    toast('تم تفعيل العقد وتوليد '+(res.created_invoices||[]).length+' فاتورة');
+    await loadAll();
+    showSection('contracts');
+  }catch(e){ toastErr(e); }
+}
 async function renewContract(contractId){
   const c = byId('contracts', contractId);
   if(!c.id) return toastNotice('لم يتم العثور على العقد');
@@ -2525,7 +2579,23 @@ async function showInvoiceAudit(id){
 }
 window.voidInvoice=voidInvoice;
 window.showInvoiceAudit=showInvoiceAudit;
-function clientStatement(id){ const c=byId('clients',id); const inv=(Jawdah.data.invoices||[]).filter(x=>x.client_id===id); const acc=(Jawdah.data.accounts||[]).filter(x=>x.client_id===id); const total=inv.reduce((s,x)=>s+Number(x.amount||0),0), paid=inv.reduce((s,x)=>s+Number(x.paid_amount||0),0); $('#genericModalBody').innerHTML=`<h2>كشف حساب ${escapeHtml(c.name)}</h2><p>إجمالي الفواتير: ${money(total)} | المدفوع: ${money(paid)} | المتبقي: ${money(total-paid)}</p><div class="toolbar"><button class="gold-btn" onclick="printClientStatement('${id}')">كشف PDF / طباعة</button></div>${tableHtml([['رقم','invoice_no'],['تاريخ','issue_date'],['إجمالي','amount',(v)=>money(v)],['مدفوع','paid_amount',(v)=>money(v)],['حالة','status',(v)=>badge(v)]],inv)}<h3>الحركات</h3>${tableHtml([['تاريخ','entry_date'],['نوع','type'],['وصف','description'],['مبلغ','amount',(v)=>money(v)]],acc)}`; openModal('genericModal'); }
+async function clientStatement(id){
+  try{
+    const res = await api('tenant_statement?client_id='+encodeURIComponent(id));
+    const c = res.client || byId('clients',id);
+    const summary = res.summary || {};
+    const inv = res.invoices || [];
+    const contracts = res.contracts || [];
+    const payments = res.payments || [];
+    $('#genericModalBody').innerHTML=`<h2>كشف حساب ${escapeHtml(c.name||'المستأجر')}</h2>
+    <p>الإيجار المطلوب: ${money(summary.rent_required||0)} | إجمالي المدفوع: ${money(summary.total_paid||0)} | المتبقي: ${money(summary.remaining||0)}</p>
+    <div class="toolbar"><button class="gold-btn" onclick="printClientStatement('${id}')">كشف PDF / طباعة</button></div>
+    <h3>العقود</h3>${tableHtml([['رقم العقد','contract_no',(v,r)=>v||r.id],['الوحدة','property_id',(v)=>propertyLabel(byId('properties',v))],['البداية','start_date'],['النهاية','end_date'],['الحالة','status',(v)=>statusBadge(v)]],contracts)}
+    <h3>الفواتير</h3>${tableHtml([['رقم','invoice_no'],['تاريخ','issue_date'],['الإجمالي','amount',(v)=>money(v)],['المدفوع','paid_amount',(v)=>money(v)],['المتبقي','amount',(v,r)=>money(Number(r.amount||0)-Number(r.paid_amount||0))],['حالة','status',(v)=>badge(v)]],inv)}
+    <h3>الدفعات</h3>${tableHtml([['تاريخ','payment_date'],['الفاتورة','invoice_id',(v)=>byId('invoices',v).invoice_no||v],['القيمة','amount',(v)=>money(v)],['طريقة الدفع','method'],['ملاحظات','note'],['المستلم','received_by']],payments)}</div>`;
+    openModal('genericModal');
+  }catch(e){ toastErr(e); }
+}
 function openModal(id){ $('#'+id).classList.add('show'); ensureEnglishDigits($('#'+id)); } function closeModal(id){ $('#'+id).classList.remove('show'); }
 async function downloadBackup(){ try{ const res=await api('backup'); downloadFile('jawdah-cloud-backup.json', JSON.stringify(res.backup,null,2), 'application/json'); }catch(e){toastErr(e)} }
 window.downloadBackup = downloadBackup;

@@ -530,7 +530,7 @@
             start_date: fieldValue("contractStart") || today(),
             end_date: fieldValue("contractEnd") || today(),
             rent_amount: fieldNumber("contractRent"),
-            deposit_amount: fieldNumber("contractDeposit"),
+            deposit_amount: 0,
             late_fee: fieldNumber("contractLateFee"),
             grace_days: fieldNumber("contractGraceDays") || 5,
             renewal_notice_days: fieldNumber("contractRenewalDays") || 30,
@@ -671,7 +671,7 @@
             <td>${esc(contractClientName(c.client_id))}</td>
             <td>${esc(contractPropertyLabel(c.property_id))}</td>
             <td>${esc(contractDuration(c).label)}<br><small>${esc(c.start_date)} - ${esc(c.end_date)}</small></td>
-            <td>${safeMoney(c.rent_amount)}<br><small>تأمين ${safeMoney(c.deposit_amount)}</small></td>
+            <td>${safeMoney(c.rent_amount)}</td>
             <td>${safeMoney(total)}<br><small>محصل ${safeMoney(paid)}</small></td>
             <td><span class="badge">${safeFmt(attachments.length)}</span></td>
             <td><span class="badge ${status.tone}">${status.label}</span></td>

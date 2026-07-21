@@ -140,12 +140,19 @@
           const renewBtn = meta.renewable
             ? `<button class="gold-btn" onclick="renewContract('${r.id}')">تجديد</button>`
             : "";
-          const approveBtn =
-            String(r.status || "").toLowerCase() === "active"
-              ? ""
-              : canDecideApprovals()
-                ? `<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button>`
-                : `<button class="gold-btn" onclick="requestContractApproval('${r.id}')">طلب اعتماد</button>`;
+          const st = String(r.status || "").toLowerCase();
+          const requestBtn = st === "draft"
+            ? `<button class="gold-btn" onclick="requestContractApproval('${r.id}')">طلب اعتماد</button>`
+            : "";
+          const approveBtn = st === "approvalrequested" && canDecideApprovals()
+            ? `<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button>`
+            : "";
+          const activateBtn = st === "approved" && (typeof canActivateContracts === "function" && canActivateContracts())
+            ? `<button class="gold-btn" onclick="activateContract('${r.id}')">تفعيل</button>`
+            : "";
+          const invoiceBtn = (st === "active" || st === "activated")
+            ? `<button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button>`
+            : "";
           return `
         <article class="lq-record-card lq-cine-tile">
           <div class="lq-record-head">
@@ -164,9 +171,11 @@
           </div>
           <div class="lq-record-actions">
             ${renewBtn}
+            ${requestBtn}
             ${approveBtn}
+            ${activateBtn}
             <button class="ghost" onclick="contractDocument('${r.id}')">العقد</button>
-            <button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button>
+            ${invoiceBtn}
             <button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button>
             <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>
           </div>
