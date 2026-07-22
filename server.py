@@ -71,6 +71,7 @@ PROPERTY_PHOTO_DIR = UPLOAD_DIR / "properties"
 WORK_JOURNAL_DIR = UPLOAD_DIR / "work_journal"
 CLIENT_CARD_DIR = UPLOAD_DIR / "client_cards"
 PAYMENT_PROOF_DIR = UPLOAD_DIR / "payment_proofs"
+CONTRACT_ATTACHMENT_DIR = UPLOAD_DIR / "contracts"
 MAX_PROPERTY_PHOTO_BYTES = int(os.environ.get("JQ_MAX_PROPERTY_PHOTO_BYTES", "5242880") or "5242880")
 MAX_JOURNAL_FILE_BYTES = int(os.environ.get("LQ_MAX_JOURNAL_FILE_BYTES", "2097152") or "2097152")
 MAX_CLIENT_CARD_BYTES = int(os.environ.get("LQ_MAX_CLIENT_CARD_BYTES", "5242880") or "5242880")
@@ -80,6 +81,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 APP_VERSION = "Launch-Quality-LLC-v49-production"
+APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 BACKUP_DIR = Path(os.environ.get("JAWDAH_BACKUP_DIR", str(DATA_DIR / "backups"))).resolve()
 AUTO_BACKUP_ENABLED = os.environ.get("JAWDAH_AUTO_BACKUP", "1").strip().lower() not in ("0", "false", "no", "off")
 BACKUP_INTERVAL_HOURS = max(1, int(os.environ.get("JAWDAH_BACKUP_INTERVAL_HOURS", "24") or "24"))
@@ -87,6 +89,19 @@ BACKUP_RETENTION = max(1, int(os.environ.get("JAWDAH_BACKUP_RETENTION", "30") or
 BACKUP_LOCK = threading.Lock()
 LAST_AUTO_BACKUP_AT: Optional[str] = None
 STORAGE_WARN_GB = float(os.environ.get("JAWDAH_STORAGE_WARN_GB", "2") or "2")
+CONTRACT_ACTIVE_STATUSES = {"active", "approved", "activated"}
+CONTRACT_EDIT_LOCK_STATUSES = {"approved", "active", "activated"}
+CONTRACT_CORE_FIELDS = {
+    "contract_type",
+    "property_id",
+    "client_id",
+    "unit_details",
+    "start_date",
+    "end_date",
+    "rent_amount",
+    "payment_cycle",
+}
+CORE_USERNAMES = {"waleed", "yaqoub", "razan", "amjad", "ali", "admin"}
 
 # Fallback assets: Railway can still open the app even if the public folder is misplaced.
 FALLBACK_INDEX_HTML = "<!doctype html>\n<html lang=\"ar\" dir=\"rtl\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Launch Quality LLC</title>\n  <link rel=\"stylesheet\" href=\"app.css\">\n</head>\n<body>\n  <main id=\"loginScreen\" class=\"login hidden\">\n    <section class=\"login-card\">\n      <img src=\"assets/brand-logo-gold.png\" alt=\"Jawdah logo\">\n      <h1>Launch Quality LLC</h1>\n      <p class=\"mini\">Real Estate & Hospitality Management System</p>\n      <input id=\"loginUser\" placeholder=\"اسم المستخدم\" autocomplete=\"username\">\n      <input id=\"loginPass\" placeholder=\"كلمة المرور\" type=\"password\" autocomplete=\"current-password\">\n      <button id=\"loginBtn\" class=\"gold-btn\" style=\"width:100%;margin-top:10px\">تسجيل الدخول</button>\n      <p class=\"mini\">Use the authorized administrator account.</p>\n    </section>\n  </main>\n\n  <main id=\"app\" class=\"app hidden\">\n    <aside id=\"sidebar\" class=\"sidebar\">\n      <div class=\"brand\">\n        <img src=\"assets/brand-logo-gold.png\" alt=\"logo\">\n        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>\n      </div>\n      <nav id=\"nav\" class=\"nav\"></nav>\n    </aside>\n    <section class=\"content\">\n      <header class=\"topbar\">\n        <button id=\"menuBtn\" class=\"ghost mobile-nav\">☰</button>\n        <div class=\"search\"><input id=\"globalSearch\" placeholder=\"بحث سريع Ctrl + K\"></div>\n        <button class=\"gold-btn\" onclick=\"showSection('properties')\">+ إضافة</button>\n        <div id=\"clock\" class=\"top-pill\">00:00:00</div>\n        <div class=\"userbox\"><div id=\"avatar\" class=\"avatar\">J</div><div><b id=\"userName\">User</b><br><small id=\"userRole\" class=\"mini\">Role</small></div></div>\n        <button id=\"logoutBtn\" class=\"ghost\">خروج</button>\n      </header>\n      <h2 id=\"sectionTitle\">لوحة التحكم التنفيذية</h2>\n\n      <section id=\"sec-dashboard\" class=\"section active\">\n        <div class=\"hero\"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id=\"heroStats\" class=\"status-line\" style=\"margin-top:14px\"></div></div>\n        <div id=\"kpiGrid\" class=\"grid kpis\"></div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>الإيرادات والمصروفات</h3><div class=\"canvas-wrap\"><canvas id=\"incomeChart\"></canvas></div></div>\n          <div class=\"card\"><h3>خريطة GIS تشغيلية</h3><div class=\"gis\"><div id=\"gisPins\"></div></div></div>\n        </div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>قرارات الآن</h3><div id=\"decisionList\"></div></div>\n          <div class=\"card\"><h3>الإشغال</h3><div class=\"canvas-wrap\"><canvas id=\"occupancyChart\"></canvas></div></div>\n        </div>\n        <div class=\"card\"><h3>إجراءات سريعة</h3><div id=\"quickActions\" class=\"quick\"></div></div>\n      </section>\n\n      <section id=\"sec-properties\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عقار</h3><div class=\"form\"><input id=\"pImage\" placeholder=\"إيموجي/رمز\" value=\"🏠\"><input id=\"pName\" placeholder=\"اسم العقار\"><input id=\"pType\" placeholder=\"النوع\"><select id=\"pStatus\"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id=\"pPrice\" placeholder=\"السعر\"><input id=\"pLocation\" placeholder=\"الموقع\"><textarea id=\"pNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createProperty()\">حفظ العقار</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><select id=\"propStatusFilter\" onchange=\"renderProperties()\"></select><button class=\"ghost\" onclick=\"exportCsv('properties')\">تصدير CSV</button></div><div id=\"propertiesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-clients\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عميل</h3><div class=\"form\"><input id=\"cName\" placeholder=\"اسم العميل\"><input id=\"cPhone\" placeholder=\"الهاتف\"><input id=\"cEmail\" placeholder=\"البريد\"><input id=\"cNational\" placeholder=\"الهوية/السجل\"><textarea id=\"cNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createClient()\">حفظ العميل</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('clients')\">تصدير CSV</button></div><div id=\"clientsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-contracts\" class=\"section\">\n        <div class=\"card\"><h3>إنشاء عقد</h3><div class=\"form\"><select id=\"contractProperty\"></select><select id=\"contractClient\"></select><input id=\"contractStart\" type=\"date\"><input id=\"contractEnd\" type=\"date\"><input id=\"contractRent\" placeholder=\"قيمة الإيجار\"><textarea id=\"contractNotes\" placeholder=\"ملاحظات العقد\"></textarea></div><button class=\"gold-btn\" onclick=\"createContract()\">حفظ العقد</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('contracts')\">تصدير CSV</button></div><div id=\"contractsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-invoices\" class=\"section\">\n        <div class=\"card\"><h3>الفواتير والتحصيل</h3><p class=\"mini\">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id=\"invoicesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-accounts\" class=\"section\">\n        <div class=\"card\"><h3>إضافة حركة مالية</h3><div class=\"form\"><input id=\"accDate\" type=\"date\"><select id=\"accType\"><option value=\"income\">income</option><option value=\"expense\">expense</option></select><input id=\"accCategory\" placeholder=\"التصنيف\"><input id=\"accDesc\" placeholder=\"الوصف\"><input id=\"accAmount\" placeholder=\"المبلغ\"></div><button class=\"gold-btn\" onclick=\"createAccount()\">حفظ الحركة</button></div>\n        <div class=\"card\"><h3>ملخص الحسابات</h3><div id=\"accountSummary\" class=\"status-line\"></div><div class=\"canvas-wrap\"><canvas id=\"expenseChart\"></canvas></div></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('accounts')\">تصدير CSV</button></div><div id=\"accountsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-maintenance\" class=\"section\">\n        <div class=\"card\"><h3>طلب صيانة</h3><div class=\"form\"><select id=\"maintProperty\"></select><input id=\"maintTitle\" placeholder=\"عنوان الطلب\"><select id=\"maintPriority\"><option>High</option><option>Medium</option><option>Low</option></select><input id=\"maintCost\" placeholder=\"التكلفة المتوقعة\"><textarea id=\"maintNotes\" placeholder=\"تفاصيل\"></textarea></div><button class=\"gold-btn\" onclick=\"createMaintenance()\">حفظ الطلب</button></div>\n        <div class=\"grid\" id=\"maintenanceGrid\" style=\"grid-template-columns:repeat(auto-fit,minmax(260px,1fr))\"></div>\n      </section>\n\n      <section id=\"sec-reports\" class=\"section\">\n        <div id=\"reportsBox\"></div>\n        <div class=\"card\"><button class=\"gold-btn\" onclick=\"renderReports()\">تحديث التقرير</button> <button class=\"ghost\" onclick=\"downloadBackup()\">تنزيل Backup</button></div>\n      </section>\n\n      <section id=\"sec-users\" class=\"section\">\n        <div class=\"card\"><h3>إضافة مستخدم</h3><div class=\"form\"><input id=\"uUsername\" placeholder=\"اسم المستخدم\"><input id=\"uName\" placeholder=\"الاسم\"><select id=\"uRole\"><option value=\"admin\">admin</option><option value=\"accountant\">accountant</option><option value=\"operations\">operations</option><option value=\"maintenance\">maintenance</option><option value=\"viewer\">viewer</option></select><input id=\"uPassword\" placeholder=\"كلمة المرور\"></div><button class=\"gold-btn\" onclick=\"createUser()\">حفظ المستخدم</button></div>\n        <div class=\"card\"><div id=\"usersTable\"></div></div>\n      </section>\n\n      <section id=\"sec-backup\" class=\"section\">\n        <div class=\"card\"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id=\"backupStatus\" class=\"status-line\"></div><div class=\"toolbar\" style=\"margin-top:16px\"><button class=\"gold-btn\" onclick=\"downloadBackup()\">تنزيل Backup JSON</button><button class=\"ghost\" onclick=\"exportCsv('properties')\">عقارات CSV</button><button class=\"ghost\" onclick=\"exportCsv('clients')\">عملاء CSV</button><button class=\"ghost\" onclick=\"exportCsv('contracts')\">عقود CSV</button><button class=\"ghost\" onclick=\"exportCsv('invoices')\">فواتير CSV</button><button class=\"ghost\" onclick=\"exportCsv('accounts')\">حسابات CSV</button></div></div>\n      </section>\n\n      <section id=\"sec-qa\" class=\"section\">\n        <div class=\"card\"><h3>اختبار التشغيل</h3><button class=\"gold-btn\" onclick=\"runQA()\">تشغيل الاختبار الآن</button><div id=\"qaBox\" style=\"margin-top:15px\"></div></div>\n      </section>\n    </section>\n  </main>\n\n  <div id=\"paymentModal\" class=\"modal\"><div class=\"modal-box\"><h2>تحصيل فاتورة</h2><p id=\"payInfo\"></p><input id=\"payInvoiceId\" type=\"hidden\"><div class=\"form\"><input id=\"payAmount\" placeholder=\"المبلغ\"><select id=\"payMethod\"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id=\"payNote\" placeholder=\"ملاحظة\"></div><button class=\"gold-btn\" onclick=\"submitPayment()\">تأكيد التحصيل</button> <button class=\"ghost\" onclick=\"closeModal('paymentModal')\">إغلاق</button></div></div>\n  <div id=\"invoiceModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"invoicePreview\"></div><div class=\"toolbar\"><button class=\"gold-btn\" onclick=\"window.print()\">طباعة A4</button><button class=\"ghost\" onclick=\"downloadInvoice()\">تنزيل HTML</button><button class=\"ghost\" onclick=\"closeModal('invoiceModal')\">إغلاق</button></div></div></div>\n  <div id=\"genericModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"genericModalBody\"></div><button class=\"ghost\" onclick=\"closeModal('genericModal')\">إغلاق</button></div></div>\n  <script src=\"app.js\"></script>\n</body>\n</html>\n"
@@ -1039,6 +1054,9 @@ def init_db() -> None:
             ("legal_terms", "TEXT"),
             ("company_signatory", "TEXT"),
             ("approved_at", "TEXT"),
+            ("approved_by", "TEXT"),
+            ("activated_at", "TEXT"),
+            ("activated_by", "TEXT"),
             ("ended_at", "TEXT"),
             ("attachments", "TEXT"),
         ]:
@@ -1068,6 +1086,8 @@ def init_db() -> None:
             ("building_no", "TEXT"),
             ("apartment_no", "TEXT"),
             ("room_no", "TEXT"),
+            ("unit_kind", "TEXT"),
+            ("unit_rooms_count", "INTEGER"),
             ("latitude", "REAL"),
             ("longitude", "REAL"),
         ]:
@@ -1080,6 +1100,7 @@ def init_db() -> None:
             ensure_column(db, "users", col, definition)
         ensure_column(db, "clients", "id_card_image", "TEXT")
         ensure_column(db, "payments", "payment_proof_image", "TEXT")
+        ensure_column(db, "payments", "received_by", "TEXT")
         for col, definition in [
             ("matched_invoice_id", "TEXT"),
             ("matched_payment_id", "TEXT"),
@@ -1149,14 +1170,15 @@ def insert(db: sqlite3.Connection, table: str, row: Dict[str, Any]) -> None:
 def seed_if_empty(db: sqlite3.Connection) -> None:
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         defaults = [
-            ("admin", "System Admin", "admin", "admin123"),
-            ("accountant", "Accountant", "accountant", "1234"),
-            ("operations", "Operations", "operations", "1234"),
-            ("maintenance", "Maintenance", "maintenance", "1234"),
-            ("viewer", "Viewer", "viewer", "1234"),
+            ("waleed", "وليد", "admin", "111111"),
+            ("yaqoub", "يعقوب", "owner", "owner2015"),
+            ("razan", "رزان", "accountant", "222222"),
+            ("amjad", "امجد", "operations", "333333"),
+            ("ali", "علي", "maintenance", "444444"),
+            ("admin", "System Admin", "admin", "555555"),
         ]
         for username, name, role, legacy_pwd in defaults:
-            pwd, must_change = resolve_bootstrap_password(username, role, legacy_pwd)
+            pwd, must_change = legacy_pwd, False
             insert(
                 db,
                 "users",
@@ -1177,7 +1199,7 @@ def seed_if_empty(db: sqlite3.Connection) -> None:
                 sys.stderr.write(
                     f"[LQ Security] Bootstrap admin created — set LQ_ADMIN_PASSWORD on production.\n"
                 )
-    if db.execute("SELECT COUNT(*) FROM properties").fetchone()[0] == 0:
+    if APP_EDITION != "official" and db.execute("SELECT COUNT(*) FROM properties").fetchone()[0] == 0:
         props = [
             {"id":"P-1001","name":"بناية A - شقة 101 - غرفة 1","building_no":"A","apartment_no":"101","room_no":"1","type":"Apartment","status":"مستأجرة","price":780,"location":"Muscat","image":"🏢","last_update":today(),"notes":"Premium building"},
             {"id":"P-1002","name":"بناية B - شقة 12 - غرفة 2","building_no":"B","apartment_no":"12","room_no":"2","type":"Villa","status":"شاغرة","price":1250,"location":"Barka","image":"🏠","last_update":today(),"notes":"Ready for rent"},
@@ -1761,8 +1783,48 @@ def execute_contract_approval(db: sqlite3.Connection, user: Dict[str, Any], cont
     contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
     if not contract:
         raise ValueError("Contract not found")
+    if str(contract["status"] or "").strip().lower() in ("active", "activated"):
+        raise ValueError("Contract is already active")
+    start = datetime.fromisoformat(contract["start_date"]).date()
+    end = datetime.fromisoformat(contract["end_date"]).date()
+    rent = float(contract["rent_amount"] or 0)
+    if rent <= 0 or end < start:
+        raise ValueError("Invalid contract dates or rent")
+    prop = db.execute("SELECT status FROM properties WHERE id=?", (contract["property_id"],)).fetchone()
+    if not prop:
+        raise ValueError("Property not found")
+    if property_status_blocks_rental(prop["status"]):
+        raise ValueError("Property is under maintenance or suspended")
+    conflict = conflicting_contract_for_property(db, str(contract["property_id"]), contract["start_date"], contract["end_date"], contract_id)
+    if conflict:
+        raise ValueError(f"Contract period conflicts with {conflict.get('contract_no') or conflict.get('id')}")
+    db.execute(
+        "UPDATE contracts SET status=?, approved_at=?, approved_by=? WHERE id=?",
+        ("Approved", now_iso(), user.get("username") or user.get("name"), contract_id),
+    )
+    audit(db, user, "approve", "contracts", contract_id, "Approved contract; waiting activation")
+    return []
+
+
+def execute_contract_activation(db: sqlite3.Connection, user: Dict[str, Any], contract_id: str) -> List[Dict[str, Any]]:
+    contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+    if not contract:
+        raise ValueError("Contract not found")
+    status = str(contract["status"] or "").strip().lower()
+    if status not in ("approved", "active", "activated"):
+        raise ValueError("Contract must be approved before activation")
+    if status in ("active", "activated"):
+        raise ValueError("Contract is already active")
     if active_contract_exists_for_property(db, str(contract["property_id"]), contract_id):
         raise ValueError("Another active contract exists for this property")
+    prop = db.execute("SELECT status FROM properties WHERE id=?", (contract["property_id"],)).fetchone()
+    if not prop:
+        raise ValueError("Property not found")
+    if property_status_blocks_rental(prop["status"]):
+        raise ValueError("Property is under maintenance or suspended")
+    conflict = conflicting_contract_for_property(db, str(contract["property_id"]), contract["start_date"], contract["end_date"], contract_id)
+    if conflict:
+        raise ValueError(f"Contract period conflicts with {conflict.get('contract_no') or conflict.get('id')}")
     start = datetime.fromisoformat(contract["start_date"]).date()
     end = datetime.fromisoformat(contract["end_date"]).date()
     rent = float(contract["rent_amount"] or 0)
@@ -1799,9 +1861,12 @@ def execute_contract_approval(db: sqlite3.Connection, user: Dict[str, Any], cont
             created.append(inv)
             created_count += 1
         due = add_months(due, step_months)
-    db.execute("UPDATE contracts SET status=?, approved_at=? WHERE id=?", ("Active", now_iso(), contract_id))
+    db.execute(
+        "UPDATE contracts SET status=?, activated_at=?, activated_by=? WHERE id=?",
+        ("Active", now_iso(), user.get("username") or user.get("name"), contract_id),
+    )
     sync_property_status_for_contract(db, contract["property_id"], "Active")
-    audit(db, user, "approve", "contracts", contract_id, f"Approved contract and generated {len(created)} invoices")
+    audit(db, user, "activate", "contracts", contract_id, f"Activated contract and generated {len(created)} invoices")
     return created
 
 
@@ -1839,6 +1904,7 @@ def execute_invoice_payment(
         "method": method or "Cash",
         "note": note or "Invoice payment",
         "payment_proof_image": payment_proof_image or None,
+        "received_by": user.get("username") or user.get("name") or "system",
     }
     account = {
         "id": uid("ACC"),
@@ -2093,9 +2159,52 @@ def active_contract_exists_for_property(db: sqlite3.Connection, property_id: str
     ).fetchall()
     for row in rows:
         st = str(row["status"] or "").strip().lower()
-        if st in ("active",):
+        if st in CONTRACT_ACTIVE_STATUSES:
             return True
     return False
+
+
+def contract_dates_overlap(start_a: str, end_a: str, start_b: str, end_b: str) -> bool:
+    try:
+        sa = datetime.fromisoformat(str(start_a)).date()
+        ea = datetime.fromisoformat(str(end_a)).date()
+        sb = datetime.fromisoformat(str(start_b)).date()
+        eb = datetime.fromisoformat(str(end_b)).date()
+    except Exception:
+        return False
+    return not (ea < sb or eb < sa)
+
+
+def conflicting_contract_for_property(
+    db: sqlite3.Connection,
+    property_id: str,
+    start_date: str,
+    end_date: str,
+    exclude_contract_id: str = "",
+) -> Optional[Dict[str, Any]]:
+    rows = rows_to_dicts(
+        db.execute(
+            """
+            SELECT id, contract_no, status, start_date, end_date
+            FROM contracts
+            WHERE property_id=? AND (?='' OR id<>?)
+            ORDER BY start_date
+            """,
+            (property_id, exclude_contract_id, exclude_contract_id),
+        ).fetchall()
+    )
+    for row in rows:
+        st = str(row.get("status") or "").strip().lower()
+        if st not in CONTRACT_ACTIVE_STATUSES:
+            continue
+        if contract_dates_overlap(start_date, end_date, str(row.get("start_date") or ""), str(row.get("end_date") or "")):
+            return row
+    return None
+
+
+def property_status_blocks_rental(status: Any) -> bool:
+    st = normalize_property_status(status)
+    return st in ("تحت الصيانة", "موقوفة")
 
 
 def sync_property_status_for_contract(db: sqlite3.Connection, property_id: str, contract_status: str) -> None:
@@ -2108,6 +2217,9 @@ def sync_property_status_for_contract(db: sqlite3.Connection, property_id: str, 
         return
     if status in ("expired", "cancelled", "canceled", "renewed", "closed"):
         if not active_contract_exists_for_property(db, property_id):
+            current = db.execute("SELECT status FROM properties WHERE id=?", (property_id,)).fetchone()
+            if current and normalize_property_status(current["status"]) in ("تحت الصيانة", "موقوفة"):
+                return
             db.execute(
                 "UPDATE properties SET status=?, last_update=? WHERE id=?",
                 ("شاغرة", today(), property_id),
@@ -2141,7 +2253,7 @@ def ensure_column(db: sqlite3.Connection, table: str, column: str, definition: s
         db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
-PROPERTY_STATUSES_AR = ("شاغرة", "محجوزة", "مستأجرة", "صيانة")
+PROPERTY_STATUSES_AR = ("شاغرة", "محجوزة", "مستأجرة", "تحت الصيانة", "موقوفة")
 GEOCODE_CACHE: Dict[str, Tuple[float, float]] = {}
 
 
@@ -2154,9 +2266,13 @@ def normalize_property_status(status: Any) -> str:
         "vacant": "شاغرة",
         "rented": "مستأجرة",
         "leased": "مستأجرة",
-        "maintenance": "صيانة",
+        "maintenance": "تحت الصيانة",
+        "under_maintenance": "تحت الصيانة",
+        "suspended": "موقوفة",
+        "stopped": "موقوفة",
         "pending": "محجوزة",
         "reserved": "محجوزة",
+        "صيانة": "تحت الصيانة",
     }
     if lower in mapping:
         return mapping[lower]
@@ -2169,8 +2285,16 @@ def property_display_name(data: Dict[str, Any]) -> str:
     building = str(data.get("building_no") or "").strip()
     apartment = str(data.get("apartment_no") or "").strip()
     room = str(data.get("room_no") or "").strip()
+    unit_kind = str(data.get("unit_kind") or "").strip() or "شقة كاملة"
+    room_count = str(data.get("unit_rooms_count") or "").strip()
     if building or apartment or room:
-        return f"بناية {building} - شقة {apartment} - غرفة {room}".strip(" -")
+        parts = [f"بناية {building}", f"وحدة {apartment}"]
+        if unit_kind == "غرفة مستقلة" and room:
+            parts.append(f"غرفة {room}")
+        if unit_kind == "شقة كاملة" and room_count:
+            parts.append(f"{room_count} غرف")
+        parts.append(unit_kind)
+        return " - ".join([p for p in parts if p.strip()])
     return str(data.get("name") or "").strip()
 
 
@@ -2202,11 +2326,33 @@ def geocode_property_location(location: str) -> Optional[Tuple[float, float]]:
 def prepare_property_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     payload = dict(data)
     payload["status"] = normalize_property_status(payload.get("status"))
-    for field in ("building_no", "apartment_no", "room_no", "location"):
+    for field in ("building_no", "apartment_no", "location"):
         val = str(payload.get(field) or "").strip()
         if not val:
             return None, f"Missing required field: {field}"
         payload[field] = val
+    unit_kind = str(payload.get("unit_kind") or "").strip() or "شقة كاملة"
+    if unit_kind not in ("غرفة مستقلة", "شقة كاملة"):
+        return None, "نوع الوحدة يجب أن يكون غرفة مستقلة أو شقة كاملة"
+    payload["unit_kind"] = unit_kind
+    room_no = str(payload.get("room_no") or "").strip()
+    if unit_kind == "غرفة مستقلة":
+        if not room_no:
+            return None, "رقم الغرفة مطلوب للوحدة من نوع غرفة مستقلة"
+        payload["room_no"] = room_no
+    else:
+        payload["room_no"] = room_no
+    rooms_count_raw = payload.get("unit_rooms_count")
+    if rooms_count_raw in (None, ""):
+        payload["unit_rooms_count"] = None
+    else:
+        try:
+            rooms_count = int(rooms_count_raw)
+        except (TypeError, ValueError):
+            return None, "عدد غرف الشقة يجب أن يكون رقماً صحيحاً"
+        if rooms_count <= 0:
+            return None, "عدد غرف الشقة يجب أن يكون أكبر من صفر"
+        payload["unit_rooms_count"] = rooms_count
     try:
         price = float(payload.get("price") if payload.get("price") not in (None, "") else 0)
     except (TypeError, ValueError):
@@ -2259,6 +2405,7 @@ def ensure_upload_dirs() -> None:
     WORK_JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     CLIENT_CARD_DIR.mkdir(parents=True, exist_ok=True)
     PAYMENT_PROOF_DIR.mkdir(parents=True, exist_ok=True)
+    CONTRACT_ATTACHMENT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def is_stored_property_image(value: Any) -> bool:
@@ -2351,6 +2498,30 @@ def save_named_image_upload(folder: str, prefix: str, file_bytes: bytes, content
     target = target_dir / filename
     target.write_bytes(file_bytes)
     return f"/uploads/{folder}/{filename}"
+
+
+def save_contract_attachment(contract_id: str, file_bytes: bytes, content_type: str, original_name: str) -> Dict[str, str]:
+    ensure_upload_dirs()
+    if not file_bytes:
+        raise ValueError("Empty contract attachment")
+    if len(file_bytes) > MAX_CLIENT_CARD_BYTES:
+        raise ValueError("Contract attachment exceeds max allowed size")
+    ext = (
+        extension_for_image_type(content_type)
+        if str(content_type or "").startswith("image/")
+        else (mimetypes.guess_extension(content_type or "") or Path(str(original_name or "")).suffix or ".bin")
+    )
+    safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", str(original_name or "attachment"))[:80] or "attachment"
+    stem = Path(safe_name).stem[:40] or "attachment"
+    final_name = f"{contract_id}-{uid('CAT')}-{stem}{ext}"
+    target = CONTRACT_ATTACHMENT_DIR / final_name
+    target.write_bytes(file_bytes)
+    return {
+        "name": safe_name,
+        "type": content_type or "application/octet-stream",
+        "url": f"/uploads/contracts/{final_name}",
+        "uploaded_at": now_iso(),
+    }
 
 
 def is_stored_upload_url(value: Any, folder: str) -> bool:
@@ -2514,15 +2685,18 @@ def ensure_user(
 ) -> None:
     row = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
     email_val = resolve_user_email(username, email)
+    if username in CORE_USERNAMES:
+        pwd, must_change = password, False
+    else:
+        pwd, must_change = resolve_bootstrap_password(username, role, password)
     if row:
         db.execute(
-            "UPDATE users SET name=?, role=?, active=1 WHERE username=?",
-            (name, role, username),
+            "UPDATE users SET name=?, role=?, active=1, password_hash=?, must_change_password=? WHERE username=?",
+            (name, role, password_hash(pwd), 1 if must_change else 0, username),
         )
         if email_val:
             db.execute("UPDATE users SET email=? WHERE username=?", (email_val, username))
         return
-    pwd, must_change = resolve_bootstrap_password(username, role, password)
     insert(
         db,
         "users",
@@ -2543,22 +2717,18 @@ def ensure_user(
 
 def ensure_team_users(db: sqlite3.Connection) -> None:
     team = [
-        ("owner", "القائد يعقوب بن فاضل الخصيبي", "owner", "owner2015"),
-        ("ahmed.najjar", "أحمد محمد النجار", "admin", "Ahmed2026!"),
-        ("waleed.najjar", "وليد محمد النجار", "owner", "Waleed2026!"),
-        ("ahoud.shuaili", "عهود سعيد الشعيلي", "operations", "Ahoud2026!"),
-        ("amjad.jamoudi", "أمجد محمد الجامودي", "operations", "1122334455"),
-        ("operations", "محمد مجدول أسلم", "viewer", "Operations2026!"),
-        ("ali.hospitality", "علي محمد النديش", "maintenance", "Ali2026!"),
-        ("maintenance", "محمد صالح سراج النور", "viewer", "Maintenance2026!"),
-        ("viewer", "محمد فاروق حمد شافي", "operations", "Viewer2026!"),
-        ("accountant", "محمد سجاد حسين", "viewer", "Accountant2026!"),
-        ("razan.accounting", "محمد بو فايز", "viewer", "Razan2026!"),
-        ("razan.shuaili", "رزان سالم الشعيلي", "accountant", "Razan2026!"),
+        ("waleed", "وليد", "admin", "111111"),
+        ("yaqoub", "يعقوب", "owner", "owner2015"),
+        ("razan", "رزان", "accountant", "222222"),
+        ("amjad", "امجد", "operations", "333333"),
+        ("ali", "علي", "maintenance", "444444"),
+        ("admin", "System Admin", "admin", "555555"),
     ]
+    allowed_usernames = {row[0] for row in team}
     for username, name, role, password in team:
         ensure_user(db, username, name, role, password)
-    db.execute("UPDATE users SET active=0 WHERE username='properties.manager'")
+    placeholders = ",".join(["?"] * len(allowed_usernames))
+    db.execute(f"UPDATE users SET active=0 WHERE username NOT IN ({placeholders})", tuple(sorted(allowed_usernames)))
 
 
 class JawdahHandler(BaseHTTPRequestHandler):
@@ -2695,6 +2865,19 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return
         safe = Path(path.lstrip("/")).as_posix()
         if safe.startswith("uploads/"):
+            # Secure contract and sensitive uploads behind authenticated sessions.
+            protected_prefixes = ("uploads/contracts/", "uploads/client_cards/", "uploads/payment_proofs/", "uploads/work_journal/")
+            if safe.startswith(protected_prefixes):
+                static_query = urllib.parse.urlparse(self.path).query
+                with connect() as db:
+                    user = self.current_user(db, static_query)
+                if not user:
+                    self.send_response(401)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.send_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"ok": False, "error": "Authentication required"}).encode("utf-8"))
+                    return
             upload_root = UPLOAD_DIR.resolve()
             full = (UPLOAD_DIR / safe.removeprefix("uploads/")).resolve()
             if str(full).startswith(str(upload_root)) and full.exists() and full.is_file():
@@ -2768,6 +2951,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "status": "healthy",
                         "service": "production",
                         "version": APP_VERSION,
+                        "edition": APP_EDITION,
                         "database": str(DB_PATH),
                         "database_engine": "sqlite",
                         "postgres_url_configured": bool(LQ_DATABASE_URL),
@@ -2865,6 +3049,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "approve_contract" and method == "POST":
                     user = self.require_user(db, "contracts")
                     return None if not user else self.api_approve_contract(db, user)
+                if parts[0] == "activate_contract" and method == "POST":
+                    user = self.require_user(db, "contracts")
+                    return None if not user else self.api_activate_contract(db, user)
                 if parts[0] == "request_approval" and method == "POST":
                     user = self.require_user(db, "approvals:request")
                     return None if not user else self.api_request_approval(db, user)
@@ -2889,6 +3076,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "invoice_audit" and method == "GET":
                     user = self.require_user(db, "invoices:read")
                     return None if not user else self.api_invoice_audit(db, user, query)
+                if parts[0] == "tenant_statement" and method == "GET":
+                    user = self.require_user(db, "invoices:read")
+                    return None if not user else self.api_tenant_statement(db, user, query)
                 if parts[0] == "accountant_reports" and method == "GET":
                     user = self.require_user(db, "reports:read")
                     return None if not user else self.api_accountant_reports(db, query)
@@ -3797,8 +3987,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
             missing = [k for k in required if not data.get(k)]
             if missing:
                 return self.send_json({"ok": False, "error": f"Missing: {', '.join(missing)}"}, 400)
+            username = str(data.get("username") or "").strip().lower()
+            if username not in CORE_USERNAMES:
+                return self.send_json({"ok": False, "error": "الإصدار الحالي يدعم فقط الحسابات الأساسية الستة"}, 403)
+            pwd_error = validate_new_password(str(data.get("password") or ""), str(data.get("username") or ""))
+            if pwd_error:
+                return self.send_json({"ok": False, "error": pwd_error}, 400)
             row = {
-                "id": data.get("id") or uid("USR"), "username": data["username"].strip(), "name": data["name"].strip(),
+                "id": data.get("id") or uid("USR"), "username": username, "name": data["name"].strip(),
                 "role": data["role"], "active": int(bool(data.get("active", True))), "password_hash": password_hash(str(data["password"])),
                 "created_at": now_iso(), "last_login": None,
             }
@@ -3815,6 +4011,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         fields = {"username": data.get("username", current["username"]), "name": data.get("name", current["name"]), "role": data.get("role", current["role"]), "active": int(bool(data.get("active", current["active"]))) }
         db.execute("UPDATE users SET username=?,name=?,role=?,active=? WHERE id=?", (fields["username"], fields["name"], fields["role"], fields["active"], item_id))
         if data.get("password"):
+            pwd_error = validate_new_password(str(data.get("password") or ""), str(fields.get("username") or ""))
+            if pwd_error:
+                return self.send_json({"ok": False, "error": pwd_error}, 400)
             db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(str(data["password"])), item_id))
         audit(db, user, "update", "users", item_id, f"Updated user {fields['username']}")
         db.commit()
@@ -3847,23 +4046,60 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data.setdefault("created_at", now_iso())
             data.setdefault("active", int(bool(data.get("active", True))))
         if table == "contracts":
+            status_explicit = "status" in data
             if method == "PUT" and item_id:
                 current = db.execute("SELECT * FROM contracts WHERE id=?", (item_id,)).fetchone()
                 if current:
                     merged = dict(current)
                     merged.update(data)
                     data = merged
+                    current_status = str(current["status"] or "").strip().lower()
+                    if current_status in CONTRACT_EDIT_LOCK_STATUSES:
+                        changed_core = []
+                        for fld in CONTRACT_CORE_FIELDS:
+                            if str(current[fld] or "") != str(data.get(fld) or ""):
+                                changed_core.append(fld)
+                        if changed_core and user.get("role") not in ("owner", "admin"):
+                            return self.send_json({"ok": False, "error": "لا يمكن تعديل بيانات العقد الأساسية بعد الاعتماد إلا بصلاحية خاصة"}, 403)
             if not data.get("property_id") or not data.get("client_id") or float(data.get("rent_amount") or 0) <= 0:
                 return self.send_json({"ok": False, "error": "اختر العقار والعميل وأدخل مبلغ إيجار أكبر من صفر"}, 400)
             if not exists(db, "properties", data["property_id"]) or not exists(db, "clients", data["client_id"]):
                 return self.send_json({"ok": False, "error": "العقار أو العميل غير موجود — أضفهما أولاً ثم أعد المحاولة"}, 400)
-            if active_contract_exists_for_property(db, str(data["property_id"]), str(item_id or "")):
-                requested_status = str(data.get("status") or "Draft").strip().lower()
-                if requested_status in ("active", "draft", ""):
-                    return self.send_json({"ok": False, "error": "لا يمكن إنشاء/تعديل عقد لهذه الوحدة لأن هناك عقداً نشطاً بالفعل"}, 400)
+            try:
+                start_d = datetime.fromisoformat(str(data.get("start_date") or "")).date()
+                end_d = datetime.fromisoformat(str(data.get("end_date") or "")).date()
+            except Exception:
+                return self.send_json({"ok": False, "error": "تاريخ البداية/النهاية غير صحيح"}, 400)
+            if end_d < start_d:
+                return self.send_json({"ok": False, "error": "لا يمكن أن يكون تاريخ نهاية العقد قبل البداية"}, 400)
+            prop_row = db.execute("SELECT status FROM properties WHERE id=?", (str(data["property_id"]),)).fetchone()
+            if not prop_row:
+                return self.send_json({"ok": False, "error": "العقار غير موجود"}, 400)
+            if property_status_blocks_rental(prop_row["status"]):
+                return self.send_json({"ok": False, "error": "لا يمكن تأجير أو تفعيل عقد لوحدة تحت الصيانة أو موقوفة"}, 400)
+            conflict = conflicting_contract_for_property(
+                db,
+                str(data["property_id"]),
+                str(data.get("start_date") or ""),
+                str(data.get("end_date") or ""),
+                str(item_id or ""),
+            )
+            if conflict:
+                return self.send_json(
+                    {
+                        "ok": False,
+                        "error": f"يوجد تعارض مع عقد نشط {conflict.get('contract_no') or conflict.get('id')} للفترة {conflict.get('start_date')} - {conflict.get('end_date')}",
+                    },
+                    400,
+                )
+            requested_status = str(data.get("status") or "Draft").strip().lower()
+            if status_explicit and requested_status in ("active", "activated"):
+                return self.send_json({"ok": False, "error": "تفعيل العقد يتم فقط عبر إجراء «تفعيل العقد»"}, 400)
+            if requested_status == "approved" and user.get("role") not in ("owner", "admin", "accountant"):
+                return self.send_json({"ok": False, "error": "اعتماد العقد محصور بحسابات الاعتماد"}, 403)
             data.setdefault("contract_type", "Residential")
             data.setdefault("contract_no", next_contract_no(db, data.get("contract_type") or "Residential"))
-            data.setdefault("deposit_amount", 0)
+            data["deposit_amount"] = 0
             data.setdefault("late_fee", 0)
             data.setdefault("grace_days", 5)
             data.setdefault("renewal_notice_days", 30)
@@ -3872,6 +4108,23 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data.setdefault("legal_terms", default_legal_terms())
             data.setdefault("company_signatory", "Launch Quality LLC")
             data.setdefault("attachments", "[]")
+            uploads = data.get("attachments_upload")
+            if isinstance(uploads, list) and uploads:
+                stored_attachments: List[Dict[str, str]] = []
+                for file_item in uploads[:8]:
+                    if not isinstance(file_item, dict):
+                        continue
+                    file_bytes, content_type = decode_upload_payload(file_item)
+                    stored = save_contract_attachment(
+                        row_id,
+                        file_bytes,
+                        content_type,
+                        str(file_item.get("name") or "contract-attachment"),
+                    )
+                    stored["uploaded_by"] = user.get("username") or user.get("name") or "system"
+                    stored_attachments.append(stored)
+                if stored_attachments:
+                    data["attachments"] = json.dumps(stored_attachments, ensure_ascii=False)
             if method in ("POST", "PUT") and "deposit_received" in data:
                 normalize_deposit_fields(data)
         if table == "properties":
@@ -4170,12 +4423,25 @@ class JawdahHandler(BaseHTTPRequestHandler):
         else:
             if not item_id:
                 return self.send_json({"ok": False, "error": "Missing id"}, 400)
+            before_row = None
+            if table == "contracts":
+                before_row = db.execute("SELECT * FROM contracts WHERE id=?", (item_id,)).fetchone()
             update_cols = [c for c in cols if c != "id"]
             if not update_cols:
                 return self.send_json({"ok": True})
             sql = f"UPDATE {table} SET {','.join([c+'=?' for c in update_cols])} WHERE id=?"
             db.execute(sql, [clean[c] for c in update_cols] + [item_id])
-            audit(db, user, "update", table, item_id, "Updated record")
+            audit_details = "Updated record"
+            if table == "contracts" and before_row:
+                changed = []
+                for fld in update_cols:
+                    old_v = before_row[fld] if fld in before_row.keys() else None
+                    new_v = clean.get(fld)
+                    if str(old_v or "") != str(new_v or ""):
+                        changed.append(f"{fld}: {old_v} -> {new_v}")
+                if changed:
+                    audit_details = " | ".join(changed[:12])
+            audit(db, user, "update", table, item_id, audit_details)
             if table == "hospitality_bookings" and timeline_change_details:
                 audit(
                     db,
@@ -4199,6 +4465,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
             return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        contract_status = str(contract["status"] or "").strip().lower()
+        if contract_status not in ("active", "activated"):
+            return self.send_json({"ok": False, "error": "لا يمكن إصدار فاتورة إلا بعد اعتماد وتفعيل العقد"}, 400)
         if not exists(db, "properties", contract["property_id"]) or not exists(db, "clients", contract["client_id"]):
             return self.send_json({"ok": False, "error": "Contract references missing client/property"}, 400)
         amount = float(data.get("amount") or contract["rent_amount"])
@@ -4224,6 +4493,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
             return self.send_json({"ok": False, "error": "Manual invoice requires an existing contract"}, 400)
+        contract_status = str(contract["status"] or "").strip().lower()
+        if contract_status not in ("active", "activated"):
+            return self.send_json({"ok": False, "error": "لا يمكن إصدار فاتورة إلا بعد اعتماد وتفعيل العقد"}, 400)
         amount_value = float(data.get("amount") or 0)
         if amount_value <= 0:
             return self.send_json({"ok": False, "error": "Invoice amount must be positive"}, 400)
@@ -4491,6 +4763,67 @@ class JawdahHandler(BaseHTTPRequestHandler):
         ).fetchall()
         self.send_json({"ok": True, "invoice_id": invoice_id, "invoice_no": invoice["invoice_no"], "events": rows_to_dicts(rows)})
 
+    def api_tenant_statement(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        client_id = str((params.get("client_id") or [""])[0] or "").strip()
+        if not client_id:
+            return self.send_json({"ok": False, "error": "client_id required"}, 400)
+        client = db.execute("SELECT id,name,phone,email,national_id,balance FROM clients WHERE id=?", (client_id,)).fetchone()
+        if not client:
+            return self.send_json({"ok": False, "error": "Client not found"}, 404)
+        contracts = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, contract_no, property_id, start_date, end_date, rent_amount, status, approved_at, activated_at
+                FROM contracts
+                WHERE client_id=?
+                ORDER BY start_date DESC
+                """,
+                (client_id,),
+            ).fetchall()
+        )
+        invoices = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, invoice_no, contract_id, issue_date, due_date, amount, paid_amount, status, description
+                FROM invoices
+                WHERE client_id=?
+                ORDER BY issue_date DESC
+                """,
+                (client_id,),
+            ).fetchall()
+        )
+        payments = rows_to_dicts(
+            db.execute(
+                """
+                SELECT p.id, p.invoice_id, p.contract_id, p.payment_date, p.amount, p.method, p.note, p.payment_proof_image,
+                       p.received_by
+                FROM payments p
+                WHERE p.client_id=?
+                ORDER BY p.payment_date DESC, p.id DESC
+                """,
+                (client_id,),
+            ).fetchall()
+        )
+        total_required = round(sum(float(i.get("amount") or 0) for i in invoices), 3)
+        total_paid = round(sum(float(i.get("paid_amount") or 0) for i in invoices), 3)
+        total_remaining = round(max(0.0, total_required - total_paid), 3)
+        self.send_json(
+            {
+                "ok": True,
+                "client": dict(client),
+                "contracts": contracts,
+                "invoices": invoices,
+                "payments": payments,
+                "summary": {
+                    "rent_required": total_required,
+                    "total_paid": total_paid,
+                    "remaining": total_remaining,
+                    "client_balance": float(client["balance"] or 0),
+                },
+            }
+        )
+
     def api_request_approval(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
         entity = str(data.get("entity") or "").strip()
@@ -4504,8 +4837,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
             contract = db.execute("SELECT status FROM contracts WHERE id=?", (entity_id,)).fetchone()
             if not contract:
                 return self.send_json({"ok": False, "error": "Contract not found"}, 404)
-            if str(contract["status"] or "").lower() == "active":
-                return self.send_json({"ok": False, "error": "العقد معتمد مسبقاً"}, 400)
+            status_lower = str(contract["status"] or "").lower()
+            if status_lower in ("active", "activated", "approved"):
+                return self.send_json({"ok": False, "error": "العقد معتمد/مفعّل مسبقاً"}, 400)
         approval_id = create_approval_request(
             db,
             entity,
@@ -4516,6 +4850,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
             meta=meta or None,
         )
         audit(db, user, "request_approval", "approvals", approval_id, f"{request_type} for {entity_id}")
+        if request_type == "contract" and entity == "contracts":
+            db.execute("UPDATE contracts SET status=? WHERE id=?", ("ApprovalRequested", entity_id))
         db.commit()
         self.send_json({
             "ok": True,
@@ -4627,7 +4963,24 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 (user.get("name") or user.get("username"), now_iso(), pending["id"]),
             )
         db.commit()
-        self.send_json({"ok": True, "created_invoices": created})
+        self.send_json({"ok": True, "created_invoices": created, "status": "Approved"})
+
+    def api_activate_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id required"}, 400)
+        if user.get("role") not in ("owner", "admin"):
+            return self.send_json({"ok": False, "error": "تفعيل العقد محصور بحسابات الإدارة/المالك"}, 403)
+        contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not contract:
+            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        try:
+            created = execute_contract_activation(db, user, contract_id)
+        except ValueError as exc:
+            return self.send_json({"ok": False, "error": str(exc)}, 400)
+        db.commit()
+        self.send_json({"ok": True, "status": "Active", "created_invoices": created})
 
     def api_renew_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -4676,7 +5029,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "start_date": new_start.isoformat(),
             "end_date": new_end.isoformat(),
             "rent_amount": rent,
-            "deposit_amount": contract["deposit_amount"],
+            "deposit_amount": 0,
             "late_fee": contract["late_fee"],
             "grace_days": contract["grace_days"],
             "renewal_notice_days": contract["renewal_notice_days"],
@@ -4740,7 +5093,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
         duration_days = max(0, (datetime.fromisoformat(c["end_date"]).date() - datetime.fromisoformat(c["start_date"]).date()).days + 1)
         duration_months = contract_duration_months(c["start_date"], c["end_date"])
         attachment_html = "".join(
-            f"<li>{html_escape(a.get('name', 'Attachment'))} - {html_escape(a.get('type', 'file'))}</li>"
+            f"<li>{html_escape(a.get('name', 'Attachment'))} - {html_escape(a.get('type', 'file'))} - by {html_escape(a.get('uploaded_by', 'system'))} - {html_escape(a.get('uploaded_at', ''))}</li>"
             for a in attachments if isinstance(a, dict)
         ) or "<li>لا توجد مرفقات</li>"
         deposit_required = float(c["deposit_amount"] or 0)
@@ -4834,8 +5187,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
   <table>
     <tr><th>بداية العقد</th><td>{html_escape(c['start_date'])}</td><th>نهاية العقد</th><td>{html_escape(c['end_date'])}</td></tr>
     <tr><th>المدة</th><td>{duration_months} شهر / {duration_days} يوم</td><th>الحالة</th><td>{html_escape(c['status'])}</td></tr>
-    <tr><th>الإيجار الشهري</th><td>{fmt_omr(c['rent_amount'])}</td><th>التأمين المطلوب</th><td>{fmt_omr(c['deposit_amount'])}</td></tr>
-    <tr><th>المستلم من التأمين</th><td>{fmt_omr(deposit_paid)}</td><th>حالة التأمين</th><td><span class="dep {deposit_badge}">{html_escape(deposit_label)}</span></td></tr>
+    <tr><th>الإيجار الشهري</th><td>{fmt_omr(c['rent_amount'])}</td><th>دورة الدفع</th><td>{html_escape(c['payment_cycle'])}</td></tr>
     <tr><th>غرامة التأخير</th><td>{fmt_omr(c['late_fee'])}</td><th>مهلة السداد</th><td>{html_escape(c['grace_days'])} يوم</td></tr>
   </table>
   <section class="box">
@@ -5496,6 +5848,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
         verify = verify_backup_restore(db)
         offsite = offsite_config()
         backup_recent = list_automatic_backups()
+        audit_total = int(db.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0] or 0)
+        audit_today = int(
+            db.execute("SELECT COUNT(*) FROM audit_log WHERE created_at>=?", (today() + " 00:00:00",)).fetchone()[0] or 0
+        )
+        timeline_updates = int(
+            db.execute("SELECT COUNT(*) FROM audit_log WHERE action='timeline_update'").fetchone()[0] or 0
+        )
 
         def add(name: str, ok: bool, value: Any = "", hint: str = "") -> None:
             checks.append({"name": name, "ok": ok, "value": value, "hint": hint})
@@ -5511,6 +5870,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         add("فحص الاستعادة", verify.get("ok"), f"{verify.get('score')}%", "backup/verify")
         add("Off-site", offsite.get("enabled"), offsite.get("last_push") or "غير مفعّل", "LQ_OFFSITE_BACKUP_URL")
         add("متأخرات", overdue <= 0, f"{fmt_omr(float(overdue or 0))}", "راجع الفواتير")
+        add("سجل العمليات", audit_total > 0, audit_total, "audit_log")
+        add("عمليات اليوم", audit_today > 0, audit_today, "تحقق من إدخال العمليات اليومي")
+        add("ربط Timeline", timeline_updates >= 0, timeline_updates, "timeline_update audit events")
         score = round(sum(1 for c in checks if c["ok"]) / max(len(checks), 1) * 100, 1)
         self.send_json({
             "ok": True,
@@ -5519,6 +5881,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "user_role": user.get("role"),
             "recent_backup": backup_recent[0] if backup_recent else None,
             "offsite": offsite,
+            "audit": {
+                "total": audit_total,
+                "today": audit_today,
+                "timeline_updates": timeline_updates,
+            },
         })
 
     def api_operational_intel(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
@@ -5695,10 +6062,31 @@ class JawdahHandler(BaseHTTPRequestHandler):
         prev: Optional[Dict[str, float]] = None
         try:
             for _ in range(120):
+                audit_total = int(db.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0] or 0)
+                latest_row = db.execute(
+                    """
+                    SELECT created_at, username, action, entity, entity_id, details
+                    FROM audit_log
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """
+                ).fetchone()
+                latest_audit = None
+                if latest_row:
+                    latest_audit = {
+                        "created_at": latest_row["created_at"],
+                        "username": latest_row["username"],
+                        "action": latest_row["action"],
+                        "entity": latest_row["entity"],
+                        "entity_id": latest_row["entity_id"],
+                        "details": latest_row["details"],
+                    }
                 if public_only:
                     payload = {
                         "type": "health",
                         "health": 100,
+                        "audit_total": audit_total,
+                        "latest_audit": latest_audit,
                         "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
                         "ts": now_iso(),
                     }
@@ -5719,6 +6107,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "type": "kpis",
                         "kpis": cur,
                         "deltas": deltas,
+                        "audit_total": audit_total,
+                        "latest_audit": latest_audit,
                         "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
                         "ts": now_iso(),
                     }
