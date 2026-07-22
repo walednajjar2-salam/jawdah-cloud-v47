@@ -3165,6 +3165,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "module_integrity" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_module_integrity(db)
+                if parts[0] == "module_integrity_fix" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_module_integrity_fix(db, user)
                 if parts[0] == "operational_intel" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_operational_intel(db, user)
@@ -6168,6 +6171,325 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "by_module": by_module,
             "issues": issues[:300],
         })
+
+    def api_module_integrity_fix(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        payload = self.read_json() if self.command == "POST" else {}
+        dry_run = bool((payload or {}).get("dry_run", True))
+        max_rows = 200
+        actions: List[Dict[str, Any]] = []
+
+        def add_action(name: str, candidates: int, applied: int, notes: str = "") -> None:
+            actions.append(
+                {
+                    "name": name,
+                    "candidates": int(candidates or 0),
+                    "applied": int(applied or 0),
+                    "notes": notes,
+                }
+            )
+
+        # 1) Contracts with invalid date order.
+        bad_contract_dates = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, contract_no, start_date, end_date
+                FROM contracts
+                WHERE IFNULL(start_date,'')<>'' AND IFNULL(end_date,'')<>'' AND end_date < start_date
+                LIMIT ?
+                """,
+                (max_rows,),
+            ).fetchall()
+        )
+        applied_bad_contract_dates = 0
+        if not dry_run:
+            for row in bad_contract_dates:
+                db.execute(
+                    "UPDATE contracts SET start_date=?, end_date=? WHERE id=?",
+                    (row.get("end_date"), row.get("start_date"), row.get("id")),
+                )
+                applied_bad_contract_dates += 1
+                audit(
+                    db,
+                    user,
+                    "autofix_swap_dates",
+                    "contracts",
+                    str(row.get("id")),
+                    f"Auto-fix swapped start/end date for contract {row.get('contract_no') or row.get('id')}",
+                )
+        add_action("contracts.swap_invalid_dates", len(bad_contract_dates), applied_bad_contract_dates)
+
+        # 2) Hospitality bookings with invalid date order.
+        bad_booking_dates = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, checkin_date, checkout_date
+                FROM hospitality_bookings
+                WHERE IFNULL(checkin_date,'')<>'' AND IFNULL(checkout_date,'')<>'' AND checkout_date < checkin_date
+                LIMIT ?
+                """,
+                (max_rows,),
+            ).fetchall()
+        )
+        applied_bad_booking_dates = 0
+        if not dry_run:
+            for row in bad_booking_dates:
+                db.execute(
+                    "UPDATE hospitality_bookings SET checkin_date=?, checkout_date=? WHERE id=?",
+                    (row.get("checkout_date"), row.get("checkin_date"), row.get("id")),
+                )
+                applied_bad_booking_dates += 1
+                audit(
+                    db,
+                    user,
+                    "autofix_swap_dates",
+                    "hospitality_bookings",
+                    str(row.get("id")),
+                    "Auto-fix swapped invalid booking dates",
+                )
+        add_action("hospitality.swap_invalid_dates", len(bad_booking_dates), applied_bad_booking_dates)
+
+        # 3) Payments: orphans and non-positive amounts.
+        orphan_payments = rows_to_dicts(
+            db.execute(
+                """
+                SELECT p.id, p.invoice_id
+                FROM payments p
+                LEFT JOIN invoices i ON i.id=p.invoice_id
+                WHERE i.id IS NULL
+                LIMIT ?
+                """,
+                (max_rows,),
+            ).fetchall()
+        )
+        non_positive_payments = rows_to_dicts(
+            db.execute(
+                """
+                SELECT p.id, p.invoice_id, p.amount
+                FROM payments p
+                JOIN invoices i ON i.id=p.invoice_id
+                WHERE COALESCE(p.amount,0) <= 0
+                LIMIT ?
+                """,
+                (max_rows,),
+            ).fetchall()
+        )
+        affected_invoice_ids: set[str] = set()
+        applied_orphan_payments = 0
+        applied_non_positive_payments = 0
+        if not dry_run:
+            for row in orphan_payments:
+                db.execute("DELETE FROM payments WHERE id=?", (row.get("id"),))
+                applied_orphan_payments += 1
+                audit(
+                    db,
+                    user,
+                    "autofix_delete_orphan",
+                    "payments",
+                    str(row.get("id")),
+                    f"Removed orphan payment invoice_id={row.get('invoice_id')}",
+                )
+            for row in non_positive_payments:
+                db.execute("DELETE FROM payments WHERE id=?", (row.get("id"),))
+                applied_non_positive_payments += 1
+                inv_id = str(row.get("invoice_id") or "").strip()
+                if inv_id:
+                    affected_invoice_ids.add(inv_id)
+                audit(
+                    db,
+                    user,
+                    "autofix_delete_nonpositive",
+                    "payments",
+                    str(row.get("id")),
+                    f"Removed non-positive payment amount={row.get('amount')}",
+                )
+        add_action("payments.delete_orphans", len(orphan_payments), applied_orphan_payments)
+        add_action("payments.delete_non_positive", len(non_positive_payments), applied_non_positive_payments)
+
+        # 4) Inventory transactions: remove orphans and normalize non-positive quantity.
+        orphan_inv_tx = rows_to_dicts(
+            db.execute(
+                """
+                SELECT t.id, t.item_id
+                FROM inventory_transactions t
+                LEFT JOIN inventory_items i ON i.id=t.item_id
+                WHERE i.id IS NULL
+                LIMIT ?
+                """,
+                (max_rows,),
+            ).fetchall()
+        )
+        bad_qty_tx = rows_to_dicts(
+            db.execute(
+                """
+                SELECT t.id, t.quantity
+                FROM inventory_transactions t
+                JOIN inventory_items i ON i.id=t.item_id
+                WHERE COALESCE(t.quantity,0) <= 0
+                LIMIT ?
+                """,
+                (max_rows,),
+            ).fetchall()
+        )
+        applied_orphan_tx = 0
+        applied_bad_qty_tx = 0
+        if not dry_run:
+            for row in orphan_inv_tx:
+                db.execute("DELETE FROM inventory_transactions WHERE id=?", (row.get("id"),))
+                applied_orphan_tx += 1
+                audit(
+                    db,
+                    user,
+                    "autofix_delete_orphan",
+                    "inventory_transactions",
+                    str(row.get("id")),
+                    f"Removed orphan inventory transaction item_id={row.get('item_id')}",
+                )
+            for row in bad_qty_tx:
+                qty = float(row.get("quantity") or 0)
+                new_qty = abs(qty) if abs(qty) > 0.0001 else 1.0
+                db.execute("UPDATE inventory_transactions SET quantity=? WHERE id=?", (round(new_qty, 3), row.get("id")))
+                applied_bad_qty_tx += 1
+                audit(
+                    db,
+                    user,
+                    "autofix_normalize_quantity",
+                    "inventory_transactions",
+                    str(row.get("id")),
+                    f"Normalized quantity {qty} -> {new_qty}",
+                )
+        add_action("inventory_transactions.delete_orphans", len(orphan_inv_tx), applied_orphan_tx)
+        add_action("inventory_transactions.normalize_non_positive_qty", len(bad_qty_tx), applied_bad_qty_tx)
+
+        # 5) Inventory items with negative stock -> set to zero.
+        negative_stock_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, sku, item_name, quantity
+                FROM inventory_items
+                WHERE COALESCE(quantity,0) < 0
+                LIMIT ?
+                """,
+                (max_rows,),
+            ).fetchall()
+        )
+        applied_negative_stock = 0
+        if not dry_run:
+            for row in negative_stock_rows:
+                old_qty = float(row.get("quantity") or 0)
+                db.execute("UPDATE inventory_items SET quantity=0 WHERE id=?", (row.get("id"),))
+                applied_negative_stock += 1
+                audit(
+                    db,
+                    user,
+                    "autofix_set_zero",
+                    "inventory_items",
+                    str(row.get("id")),
+                    f"Set negative stock to zero ({old_qty}) for {row.get('sku') or row.get('item_name')}",
+                )
+        add_action("inventory_items.set_negative_to_zero", len(negative_stock_rows), applied_negative_stock)
+
+        # 6) Invoices overpaid -> cap to amount, then sync status.
+        overpaid_invoices = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, invoice_no, amount, paid_amount, status, is_void
+                FROM invoices
+                WHERE COALESCE(paid_amount,0) > COALESCE(amount,0)
+                LIMIT ?
+                """,
+                (max_rows,),
+            ).fetchall()
+        )
+        applied_overpaid = 0
+        if not dry_run:
+            for row in overpaid_invoices:
+                inv_id = str(row.get("id"))
+                affected_invoice_ids.add(inv_id)
+                amount = float(row.get("amount") or 0)
+                paid_old = float(row.get("paid_amount") or 0)
+                if int(row.get("is_void") or 0) == 1:
+                    continue
+                new_paid = max(0.0, min(paid_old, amount))
+                new_status = "Paid" if new_paid >= amount - 0.001 else ("Partial" if new_paid > 0.001 else "Pending")
+                db.execute("UPDATE invoices SET paid_amount=?, status=? WHERE id=?", (round(new_paid, 3), new_status, inv_id))
+                applied_overpaid += 1
+                audit(
+                    db,
+                    user,
+                    "autofix_cap_paid",
+                    "invoices",
+                    inv_id,
+                    f"Capped paid_amount {paid_old} -> {new_paid} for {row.get('invoice_no') or inv_id}",
+                )
+        add_action("invoices.cap_overpaid", len(overpaid_invoices), applied_overpaid)
+
+        # 7) Re-sync touched invoices with payment totals after payment cleanup.
+        invoice_sync_candidates = 0
+        invoice_sync_applied = 0
+        if affected_invoice_ids:
+            invoice_sync_candidates = len(affected_invoice_ids)
+            if not dry_run:
+                for inv_id in sorted(affected_invoice_ids):
+                    inv = db.execute(
+                        "SELECT id, invoice_no, amount, paid_amount, status, is_void FROM invoices WHERE id=?",
+                        (inv_id,),
+                    ).fetchone()
+                    if not inv:
+                        continue
+                    if int(inv["is_void"] or 0) == 1:
+                        continue
+                    paid_sum = db.execute(
+                        "SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id=?",
+                        (inv_id,),
+                    ).fetchone()[0]
+                    amount = float(inv["amount"] or 0)
+                    old_paid = float(inv["paid_amount"] or 0)
+                    old_status = str(inv["status"] or "")
+                    new_paid = max(0.0, min(float(paid_sum or 0), amount))
+                    new_status = "Paid" if new_paid >= amount - 0.001 else ("Partial" if new_paid > 0.001 else "Pending")
+                    if abs(new_paid - old_paid) > 0.001 or new_status != old_status:
+                        db.execute("UPDATE invoices SET paid_amount=?, status=? WHERE id=?", (round(new_paid, 3), new_status, inv_id))
+                        invoice_sync_applied += 1
+                        audit(
+                            db,
+                            user,
+                            "autofix_sync_invoice",
+                            "invoices",
+                            inv_id,
+                            f"Synced paid/status from payments ({old_paid},{old_status}) -> ({new_paid},{new_status})",
+                        )
+        add_action("invoices.sync_from_payments", invoice_sync_candidates, invoice_sync_applied)
+
+        applied_total = sum(int(a.get("applied") or 0) for a in actions)
+        candidate_total = sum(int(a.get("candidates") or 0) for a in actions)
+
+        if not dry_run:
+            audit(
+                db,
+                user,
+                "autofix_run",
+                "module_integrity",
+                None,
+                f"Module integrity auto-fix applied={applied_total} candidates={candidate_total}",
+            )
+            db.commit()
+
+        self.send_json(
+            {
+                "ok": True,
+                "dry_run": dry_run,
+                "summary": {
+                    "candidates": candidate_total,
+                    "applied": applied_total if not dry_run else 0,
+                    "mode": "preview" if dry_run else "applied",
+                },
+                "actions": actions,
+                "notes": [
+                    "Auto-fix applies only deterministic safe operations.",
+                    "Broken references (e.g. contract points to missing property/client) are reported in integrity scan and require manual business decision.",
+                ],
+            }
+        )
 
     def api_operational_intel(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         dash = build_dashboard(db)

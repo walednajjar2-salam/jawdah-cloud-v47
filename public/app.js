@@ -4000,6 +4000,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       const summary=res.summary||{};
       const byModule=res.by_module||{};
       const issues=Array.isArray(res.issues)?res.issues:[];
+      const canFix = ['admin','owner'].includes(String(Jawdah.user?.role||'').toLowerCase());
       const sevBadge=(s)=>{
         const k=String(s||'').toLowerCase();
         if(k==='critical') return '<span class="badge overdue">critical</span>';
@@ -4012,6 +4013,10 @@ window.printHospitalityFolio = printHospitalityFolio;
       host.innerHTML=`
         <div class="card inner-card">
           <h3>فحص تكامل الوحدات (تشغيلي)</h3>
+          <div class="toolbar" style="margin-bottom:10px">
+            <button class="ghost" type="button" onclick="runModuleIntegrityFix(true)">معاينة الإصلاح الآمن</button>
+            ${canFix ? '<button class="gold-btn" type="button" onclick="runModuleIntegrityFix(false)">تنفيذ الإصلاح الآمن</button>' : '<span class="badge pending">تنفيذ الإصلاح يتطلب صلاحية admin/owner</span>'}
+          </div>
           <div class="kpis grid">
             <div class="kpi"><span>درجة التكامل</span><strong>${fmt(res.score||0)}%</strong></div>
             <div class="kpi"><span>Critical</span><strong>${fmt(summary.critical||0)}</strong></div>
@@ -4036,6 +4041,49 @@ window.printHospitalityFolio = printHospitalityFolio;
       ensureEnglishDigits(host);
     }catch(e){
       host.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
+  };
+
+  window.runModuleIntegrityFix=async function(dryRun=true){
+    const host=$('#moduleIntegrityBox');
+    if(!host) return;
+    const preview = !!dryRun;
+    if(!preview){
+      const ok = confirm('تنفيذ الإصلاح الوظيفي الآمن الآن؟ سيتم تسجيل كل العمليات في السجل.');
+      if(!ok) return;
+    }
+    host.insertAdjacentHTML('afterbegin','<p class="mini">جاري تشغيل '+(preview?'معاينة':'تنفيذ')+' الإصلاح...</p>');
+    try{
+      const res = await api('module_integrity_fix',{
+        method:'POST',
+        body: JSON.stringify({ dry_run: preview }),
+      });
+      const s = res.summary || {};
+      const rows = Array.isArray(res.actions) ? res.actions : [];
+      const msg = `
+        <div class="card inner-card" style="margin-top:12px">
+          <h3>${preview?'نتيجة المعاينة':'نتيجة التنفيذ'} — الإصلاح الآمن</h3>
+          <p class="mini">المرشّح: ${fmt(s.candidates||0)} · المنفذ: ${fmt(s.applied||0)} · الوضع: ${htmlEscape(String(s.mode||''))}</p>
+          ${rows.length ? tableHtml(
+            [
+              ['الإجراء','name',(v)=>htmlEscape(String(v||''))],
+              ['المرشح','candidates',(v)=>fmt(v||0)],
+              ['المنفذ','applied',(v)=>fmt(v||0)],
+              ['ملاحظات','notes',(v)=>htmlEscape(String(v||''))],
+            ],
+            rows
+          ) : '<p class="mini">لا توجد عمليات.</p>'}
+        </div>
+      `;
+      host.insertAdjacentHTML('afterbegin', msg);
+      if(!preview){
+        toast('تم تنفيذ الإصلاح الوظيفي الآمن');
+        if(typeof loadProductionStatus==='function') await loadProductionStatus();
+      }else{
+        toast('تمت معاينة الإصلاح الآمن');
+      }
+    }catch(e){
+      toastErr(e,'تعذر تنفيذ الإصلاح الآمن');
     }
   };
 })();
