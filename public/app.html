@@ -20,17 +20,12 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui2">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
+  <link rel="stylesheet" href="lq-reference-clean.css?v=ref1">
 </head>
-<body class="login-ultra saas-login enterprise-vision va-theme">
+<body class="login-ultra saas-login enterprise-vision va-theme lq-reference-ui">
   <style>
     #loginScreen,#app{position:relative;z-index:10;min-height:100vh}
     #loginScreen.hidden,#app.hidden{display:none!important}
-    body.login-ultra #loginScreen .login-glass-card,
-    body.login-ultra #loginScreen .ev-auth-card{
-      background:linear-gradient(165deg,rgba(14,20,38,.94),rgba(8,12,24,.92))!important;
-      border:1px solid rgba(216,177,91,.28)!important;
-      box-shadow:0 24px 80px rgba(0,0,0,.45)!important;
-    }
     #lqBootMsg{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:#040814;color:#fff1b8;font:600 16px Tajawal,sans-serif;text-align:center;padding:24px}
     #lqBootMsg.show{display:grid}
   </style>
@@ -352,9 +347,7 @@
             <button id="fieldModeBtn" class="tb-icon field-mode-btn" type="button" title="وضع الميدان · Field mode">🧰</button>
             <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة">🧭</button>
             <select id="themeSelect" class="theme-select" title="مظهر المنصة">
-              <option value="luxury-light">Luxury Light</option>
-              <option value="luxury-dark">Luxury Dark</option>
-              <option value="luxury-pink">Luxury Pink</option>
+              <option value="luxury-light">Daylight Pro</option>
             </select>
             <span id="topBackupStatus" class="top-pill top-backup-pill hidden" title="آخر نسخة احتياطية">Backup</span>
             <button class="tb-icon tb-bell" type="button" title="التنبيهات" onclick="showSection('messages')"><span class="bell-glyph">🔔</span><span id="bellDot" class="bell-dot hidden"></span></button>
