@@ -1,161 +1,123 @@
+/*
+  Reference polish layer:
+  - visual-only tweaks
+  - no layout hiding/removal
+  - keeps existing app behavior and sections unchanged
+*/
+
 :root{
   --ref-bg:#f3f6fb;
-  --ref-bg-soft:#ebf1fa;
+  --ref-bg-2:#ebf1fa;
   --ref-surface:#ffffff;
-  --ref-surface-soft:#f8fbff;
+  --ref-surface-2:#f8fbff;
   --ref-border:#dbe5f2;
   --ref-text:#1f2d3d;
   --ref-muted:#6b7c93;
   --ref-primary:#2f6fec;
 }
 
-body.lq-reference-ui{
-  background:linear-gradient(170deg,var(--ref-bg) 0%,var(--ref-bg-soft) 100%) !important;
-  color:var(--ref-text) !important;
-}
-
-/* keep visuals clean and readable */
-body.lq-reference-ui .lq-cosmos,
-body.lq-reference-ui .ev-cinema-lights,
-body.lq-reference-ui .ev-holo-orbs,
-body.lq-reference-ui #neuralCanvas,
-body.lq-reference-ui #neuralDash{
-  display:none !important;
-}
-
-/* login - light, two-panel feeling similar to reference */
-body.lq-reference-ui.login-ultra #loginScreen .login-bg,
-body.lq-reference-ui.login-ultra #loginScreen .login-bg-glow{
+/* Login: soft, bright, reference-like */
+body.login-ultra.saas-login #loginScreen .login-bg,
+body.login-ultra.saas-login #loginScreen .login-bg-glow{
   background:
     radial-gradient(circle at 86% 12%,rgba(213,228,250,.7),transparent 36%),
     radial-gradient(circle at 10% 20%,rgba(246,238,230,.6),transparent 34%),
     linear-gradient(165deg,#f9fbff 0%,#edf3fb 100%) !important;
 }
-body.lq-reference-ui.login-ultra #loginScreen .login-mesh,
-body.lq-reference-ui.login-ultra #loginScreen .login-icons{
-  opacity:.3;
+
+/* Override inline dark card rule using higher selector specificity */
+body.login-ultra.saas-login.enterprise-vision #loginScreen .login-glass-card,
+body.login-ultra.saas-login.enterprise-vision #loginScreen .ev-auth-card{
+  background:linear-gradient(165deg,var(--ref-surface),var(--ref-surface-2)) !important;
+  border:1px solid var(--ref-border) !important;
+  box-shadow:0 16px 36px rgba(30,58,108,.13) !important;
 }
-body.lq-reference-ui.login-ultra #loginScreen .login-stage--center{
-  width:min(1080px,94vw);
-  margin:10px auto 0;
-}
-body.lq-reference-ui.login-ultra #loginScreen .login-glass-stage{
-  display:grid;
-  grid-template-columns:minmax(240px,42%) minmax(320px,58%);
-  border:1px solid var(--ref-border);
-  border-radius:28px;
-  overflow:hidden;
-  box-shadow:0 22px 54px rgba(30,58,108,.12);
-  background:var(--ref-surface);
-}
-body.lq-reference-ui.login-ultra #loginScreen .login-glass-stage::before{
-  content:"";
-  display:block;
-  min-height:580px;
-  background:
-    linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.1)),
-    url("assets/login-portal-bg.png") center/cover no-repeat;
-}
-body.lq-reference-ui.login-ultra #loginScreen .login-auth{
-  padding:34px 30px;
-  background:linear-gradient(165deg,var(--ref-surface),var(--ref-surface-soft));
-}
-body.lq-reference-ui.login-ultra #loginScreen .login-glass-card,
-body.lq-reference-ui.login-ultra #loginScreen .ev-auth-card{
-  background:transparent !important;
-  border:0 !important;
-  box-shadow:none !important;
-  padding:0 !important;
-}
-body.lq-reference-ui.login-ultra #loginScreen .login-card-title{
-  color:#182534 !important;
-}
-body.lq-reference-ui.login-ultra #loginScreen .login-card-sub,
-body.lq-reference-ui.login-ultra #loginScreen .login-field-label{
-  color:var(--ref-muted) !important;
-}
-body.lq-reference-ui.login-ultra #loginScreen .login-form input{
+
+body.login-ultra.saas-login #loginScreen .login-card-title{color:#182534 !important}
+body.login-ultra.saas-login #loginScreen .login-card-sub,
+body.login-ultra.saas-login #loginScreen .login-field-label,
+body.login-ultra.saas-login #loginScreen .mini{color:var(--ref-muted) !important}
+
+body.login-ultra.saas-login #loginScreen .login-form input,
+body.login-ultra.saas-login #loginScreen .ev-otp-input{
   background:#fff !important;
   border:1px solid var(--ref-border) !important;
   color:var(--ref-text) !important;
 }
-body.lq-reference-ui.login-ultra #loginScreen .gold-btn{
+body.login-ultra.saas-login #loginScreen .gold-btn{
   background:linear-gradient(145deg,#3d81ff,#2f6fec) !important;
   color:#fff !important;
   border:1px solid #2a63cf !important;
   box-shadow:0 10px 24px rgba(47,111,236,.22) !important;
 }
-body.lq-reference-ui.login-ultra #loginScreen .login-company-footer,
-body.lq-reference-ui.login-ultra #loginScreen .login-owner-ticker,
-body.lq-reference-ui.login-ultra #loginScreen .login-dev-credit{
-  background:rgba(255,255,255,.72) !important;
+
+/* App shell: keep structure, polish only */
+body.app-ready,
+body.saas-luxury{
+  background:
+    radial-gradient(circle at 86% 10%,rgba(213,228,250,.45),transparent 34%),
+    radial-gradient(circle at 12% 18%,rgba(246,238,230,.38),transparent 32%),
+    linear-gradient(170deg,var(--ref-bg) 0%,var(--ref-bg-2) 100%) !important;
   color:var(--ref-text) !important;
-  border-color:var(--ref-border) !important;
 }
 
-/* app shell - bright and clear */
-body.lq-reference-ui.saas-luxury,
-body.lq-reference-ui.app-ready{
-  background:linear-gradient(170deg,var(--ref-bg) 0%,var(--ref-bg-soft) 100%) !important;
-}
-body.lq-reference-ui.app-ready .sidebar{
+body.app-ready .sidebar{
   background:linear-gradient(180deg,#f1f6fe 0%,#e9f0fb 100%) !important;
   border-left:1px solid var(--ref-border) !important;
 }
-body.lq-reference-ui.app-ready .nav button{
+body.app-ready .nav button{
   background:var(--ref-surface) !important;
   border:1px solid var(--ref-border) !important;
   color:#2f4055 !important;
 }
-body.lq-reference-ui.app-ready .nav button.active,
-body.lq-reference-ui.app-ready .nav button:hover{
+body.app-ready .nav button.active,
+body.app-ready .nav button:hover{
   background:#eaf1ff !important;
   border-color:#bcd0f5 !important;
   color:#1f4ea5 !important;
 }
-body.lq-reference-ui.app-ready .topbar,
-body.lq-reference-ui.app-ready .app-header{
+
+body.app-ready .topbar,
+body.app-ready .app-header{
   background:var(--ref-surface) !important;
   border:1px solid var(--ref-border) !important;
   box-shadow:0 8px 22px rgba(40,64,110,.08) !important;
 }
-body.lq-reference-ui.app-ready .search input,
-body.lq-reference-ui.app-ready .toolbar input,
-body.lq-reference-ui.app-ready .toolbar select,
-body.lq-reference-ui.app-ready .form input,
-body.lq-reference-ui.app-ready .form select,
-body.lq-reference-ui.app-ready .form textarea{
+body.app-ready .search input,
+body.app-ready .toolbar input,
+body.app-ready .toolbar select,
+body.app-ready .form input,
+body.app-ready .form select,
+body.app-ready .form textarea{
   background:#fff !important;
   border:1px solid var(--ref-border) !important;
   color:var(--ref-text) !important;
 }
-body.lq-reference-ui.app-ready .card,
-body.lq-reference-ui.app-ready .saas-glass,
-body.lq-reference-ui.app-ready .kpi,
-body.lq-reference-ui.app-ready .hero{
-  background:linear-gradient(165deg,var(--ref-surface),var(--ref-surface-soft)) !important;
+
+body.app-ready .card,
+body.app-ready .saas-glass,
+body.app-ready .hero,
+body.app-ready .kpi,
+body.app-ready .modal-box{
+  background:linear-gradient(165deg,var(--ref-surface),var(--ref-surface-2)) !important;
   border:1px solid var(--ref-border) !important;
   color:var(--ref-text) !important;
   box-shadow:0 10px 24px rgba(40,64,110,.08) !important;
 }
-body.lq-reference-ui.app-ready .card h3,
-body.lq-reference-ui.app-ready .hero h2{
-  color:#1f3f7a !important;
-}
-body.lq-reference-ui.app-ready .mini,
-body.lq-reference-ui.app-ready small,
-body.lq-reference-ui.app-ready .hero p{
-  color:var(--ref-muted) !important;
-}
-body.lq-reference-ui.app-ready #sec-dashboard::before{
-  display:none !important;
-}
+body.app-ready .card h3,
+body.app-ready .hero h2,
+body.app-ready .content>h2{color:#1f3f7a !important}
+body.app-ready .mini,
+body.app-ready small,
+body.app-ready .hero p{color:var(--ref-muted) !important}
 
-@media (max-width:980px){
-  body.lq-reference-ui.login-ultra #loginScreen .login-glass-stage{
-    grid-template-columns:1fr;
-  }
-  body.lq-reference-ui.login-ultra #loginScreen .login-glass-stage::before{
-    min-height:220px;
+/* Keep dashboard media/map visible and clean */
+body.app-ready #sec-dashboard::before{display:none !important}
+body.app-ready .gis-pro .leaflet-container{background:#dbeafe}
+
+@media (max-width:900px){
+  body.login-ultra.saas-login #loginScreen .login-glass-card,
+  body.login-ultra.saas-login #loginScreen .ev-auth-card{
+    box-shadow:0 10px 24px rgba(30,58,108,.11) !important;
   }
 }
