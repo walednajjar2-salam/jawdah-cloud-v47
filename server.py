@@ -3162,6 +3162,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "operations_check" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_operations_check(db, user)
+                if parts[0] == "module_integrity" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_module_integrity(db)
                 if parts[0] == "operational_intel" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_operational_intel(db, user)
@@ -5886,6 +5889,284 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "today": audit_today,
                 "timeline_updates": timeline_updates,
             },
+        })
+
+    def api_module_integrity(self, db: sqlite3.Connection) -> None:
+        issues: List[Dict[str, Any]] = []
+
+        def add_issue(module: str, severity: str, title: str, entity_id: Any = None, details: str = "") -> None:
+            issues.append({
+                "module": module,
+                "severity": severity,
+                "title": title,
+                "entity_id": entity_id,
+                "details": details,
+            })
+
+        # Contracts: broken links, invalid dates, conflicting active overlaps.
+        broken_contract_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT c.id, c.contract_no, c.property_id, c.client_id
+                FROM contracts c
+                LEFT JOIN properties p ON p.id=c.property_id
+                LEFT JOIN clients cl ON cl.id=c.client_id
+                WHERE p.id IS NULL OR cl.id IS NULL
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in broken_contract_rows:
+            add_issue(
+                "contracts",
+                "critical",
+                "عقد مرتبط بعقار/عميل غير موجود",
+                row.get("id"),
+                f"contract_no={row.get('contract_no') or row.get('id')} property_id={row.get('property_id')} client_id={row.get('client_id')}",
+            )
+
+        invalid_contract_dates = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, contract_no, start_date, end_date
+                FROM contracts
+                WHERE IFNULL(start_date,'')<>'' AND IFNULL(end_date,'')<>'' AND end_date < start_date
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in invalid_contract_dates:
+            add_issue(
+                "contracts",
+                "critical",
+                "عقد بتواريخ غير صالحة (النهاية قبل البداية)",
+                row.get("id"),
+                f"contract_no={row.get('contract_no') or row.get('id')} {row.get('start_date')} -> {row.get('end_date')}",
+            )
+
+        active_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, contract_no, property_id, start_date, end_date
+                FROM contracts
+                WHERE lower(IFNULL(status,'')) IN ('active','activated')
+                ORDER BY property_id, start_date
+                """
+            ).fetchall()
+        )
+        by_property: Dict[Any, List[Dict[str, Any]]] = {}
+        for row in active_rows:
+            by_property.setdefault(row.get("property_id"), []).append(row)
+        for pid, rows in by_property.items():
+            for i in range(len(rows)):
+                a = rows[i]
+                a_start = str(a.get("start_date") or "")
+                a_end = str(a.get("end_date") or "9999-12-31")
+                if not a_start:
+                    continue
+                for j in range(i + 1, len(rows)):
+                    b = rows[j]
+                    b_start = str(b.get("start_date") or "")
+                    b_end = str(b.get("end_date") or "9999-12-31")
+                    if not b_start:
+                        continue
+                    if b_start > a_end:
+                        break
+                    if not (a_end < b_start or b_end < a_start):
+                        add_issue(
+                            "contracts",
+                            "critical",
+                            "تداخل عقود نشطة على نفس الوحدة",
+                            f"{a.get('id')}|{b.get('id')}",
+                            f"property_id={pid} A={a.get('contract_no') or a.get('id')} B={b.get('contract_no') or b.get('id')}",
+                        )
+                        break
+
+        # Invoices & payments integrity
+        broken_invoice_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT i.id, i.invoice_no, i.contract_id, i.client_id, i.property_id
+                FROM invoices i
+                LEFT JOIN contracts c ON c.id=i.contract_id
+                LEFT JOIN clients cl ON cl.id=i.client_id
+                LEFT JOIN properties p ON p.id=i.property_id
+                WHERE c.id IS NULL OR cl.id IS NULL OR p.id IS NULL
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in broken_invoice_rows:
+            add_issue(
+                "invoices",
+                "critical",
+                "فاتورة مرتبطة بسجل مفقود (عقد/عميل/وحدة)",
+                row.get("id"),
+                f"invoice_no={row.get('invoice_no') or row.get('id')}",
+            )
+
+        overpaid_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, invoice_no, amount, paid_amount
+                FROM invoices
+                WHERE COALESCE(paid_amount,0) > COALESCE(amount,0)
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in overpaid_rows:
+            add_issue(
+                "invoices",
+                "high",
+                "فاتورة مدفوعة بأكثر من إجماليها",
+                row.get("id"),
+                f"invoice_no={row.get('invoice_no') or row.get('id')} paid={row.get('paid_amount')} amount={row.get('amount')}",
+            )
+
+        broken_payment_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT p.id, p.invoice_id, p.amount, p.payment_date
+                FROM payments p
+                LEFT JOIN invoices i ON i.id=p.invoice_id
+                WHERE i.id IS NULL OR COALESCE(p.amount,0) <= 0
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in broken_payment_rows:
+            add_issue(
+                "payments",
+                "high",
+                "دفعة غير صالحة (فاتورة مفقودة أو مبلغ <= 0)",
+                row.get("id"),
+                f"invoice_id={row.get('invoice_id')} amount={row.get('amount')}",
+            )
+
+        # Hospitality bookings
+        broken_booking_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT b.id, b.room_id, b.client_id, b.checkin_date, b.checkout_date, b.status
+                FROM hospitality_bookings b
+                LEFT JOIN hospitality_rooms r ON r.id=b.room_id
+                LEFT JOIN clients c ON c.id=b.client_id
+                WHERE r.id IS NULL OR c.id IS NULL
+                   OR IFNULL(b.checkin_date,'')='' OR IFNULL(b.checkout_date,'')=''
+                   OR b.checkout_date < b.checkin_date
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in broken_booking_rows:
+            add_issue(
+                "hospitality",
+                "high",
+                "حجز ضيافة غير صالح (مرجع/تواريخ)",
+                row.get("id"),
+                f"room_id={row.get('room_id')} client_id={row.get('client_id')} {row.get('checkin_date')} -> {row.get('checkout_date')}",
+            )
+
+        booking_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, room_id, checkin_date, checkout_date, status
+                FROM hospitality_bookings
+                WHERE lower(IFNULL(status,'')) IN ('reserved','checked_in')
+                ORDER BY room_id, checkin_date
+                """
+            ).fetchall()
+        )
+        by_room: Dict[Any, List[Dict[str, Any]]] = {}
+        for row in booking_rows:
+            by_room.setdefault(row.get("room_id"), []).append(row)
+        for room_id, rows in by_room.items():
+            for i in range(len(rows)):
+                a = rows[i]
+                a_start = str(a.get("checkin_date") or "")
+                a_end = str(a.get("checkout_date") or "")
+                if not (a_start and a_end):
+                    continue
+                for j in range(i + 1, len(rows)):
+                    b = rows[j]
+                    b_start = str(b.get("checkin_date") or "")
+                    b_end = str(b.get("checkout_date") or "")
+                    if not (b_start and b_end):
+                        continue
+                    if b_start > a_end:
+                        break
+                    if not (a_end < b_start or b_end < a_start):
+                        add_issue(
+                            "hospitality",
+                            "critical",
+                            "تداخل حجوزات على نفس الغرفة",
+                            f"{a.get('id')}|{b.get('id')}",
+                            f"room_id={room_id}",
+                        )
+                        break
+
+        # Inventory consistency
+        orphan_tx_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT t.id, t.item_id, t.quantity, t.tx_type
+                FROM inventory_transactions t
+                LEFT JOIN inventory_items i ON i.id=t.item_id
+                WHERE i.id IS NULL OR COALESCE(t.quantity,0) <= 0
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in orphan_tx_rows:
+            add_issue(
+                "inventory",
+                "high",
+                "حركة مخزون غير صالحة (صنف مفقود/كمية <= 0)",
+                row.get("id"),
+                f"item_id={row.get('item_id')} qty={row.get('quantity')} type={row.get('tx_type')}",
+            )
+
+        negative_stock_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, sku, item_name, quantity
+                FROM inventory_items
+                WHERE COALESCE(quantity,0) < 0
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in negative_stock_rows:
+            add_issue(
+                "inventory",
+                "critical",
+                "رصيد مخزون سالب",
+                row.get("id"),
+                f"{row.get('sku') or row.get('item_name')} quantity={row.get('quantity')}",
+            )
+
+        critical_count = sum(1 for x in issues if x["severity"] == "critical")
+        high_count = sum(1 for x in issues if x["severity"] == "high")
+        total = len(issues)
+        score = max(0.0, round(100 - (critical_count * 12 + high_count * 5 + (total - critical_count - high_count) * 2), 1))
+
+        by_module: Dict[str, int] = {}
+        for issue in issues:
+            key = str(issue.get("module") or "general")
+            by_module[key] = by_module.get(key, 0) + 1
+
+        self.send_json({
+            "ok": True,
+            "score": score,
+            "summary": {
+                "total_issues": total,
+                "critical": critical_count,
+                "high": high_count,
+                "other": max(0, total - critical_count - high_count),
+            },
+            "by_module": by_module,
+            "issues": issues[:300],
         })
 
     def api_operational_intel(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:

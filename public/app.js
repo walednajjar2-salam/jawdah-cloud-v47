@@ -2641,6 +2641,9 @@ async function runQA(){
     const v=await api('backup/verify');
     const vr=v.verification||{};
     html+=`<p class="mini" style="margin-top:12px">فحص النسخ الاحتياطي: ${fmt(vr.score||0)}% — ${vr.ok?'ناجح':'يحتاج مراجعة'}</p>`;
+    const integ=await api('module_integrity');
+    const sm=integ.summary||{};
+    html+=`<p class="mini" style="margin-top:8px">تكامل الوحدات: ${fmt(integ.score||0)}% · Critical: ${fmt(sm.critical||0)} · High: ${fmt(sm.high||0)} · إجمالي: ${fmt(sm.total_issues||0)}</p>`;
   }catch(e){ html+=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`; }
   $('#qaBox').innerHTML=html;
 }
@@ -3984,6 +3987,55 @@ window.printHospitalityFolio = printHospitalityFolio;
       const box=$('#productionStatusBox');
       box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(res.score)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div><div class="kpi"><span>روابط غير سليمة</span><strong>${fmt((alerts.broken_contract_links||0)+(alerts.broken_invoice_links||0))}</strong></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${fmt(c.value)}</b></div>`).join('')}</div>`;
       ensureEnglishDigits(box);
+      if(typeof window.loadModuleIntegrity==='function') window.loadModuleIntegrity();
     }catch(e){toastErr(e)}
+  };
+
+  window.loadModuleIntegrity=async function(){
+    const host=$('#moduleIntegrityBox');
+    if(!host) return;
+    host.innerHTML='<p class="mini">جاري فحص تكامل الوحدات...</p>';
+    try{
+      const res=await api('module_integrity');
+      const summary=res.summary||{};
+      const byModule=res.by_module||{};
+      const issues=Array.isArray(res.issues)?res.issues:[];
+      const sevBadge=(s)=>{
+        const k=String(s||'').toLowerCase();
+        if(k==='critical') return '<span class="badge overdue">critical</span>';
+        if(k==='high') return '<span class="badge pending">high</span>';
+        return '<span class="badge">normal</span>';
+      };
+      const modulesHtml=Object.keys(byModule).length
+        ? Object.entries(byModule).map(([k,v])=>`<span class="badge">${htmlEscape(String(k))}: ${fmt(v)}</span>`).join(' ')
+        : '<span class="badge paid">لا توجد مشاكل مسجلة</span>';
+      host.innerHTML=`
+        <div class="card inner-card">
+          <h3>فحص تكامل الوحدات (تشغيلي)</h3>
+          <div class="kpis grid">
+            <div class="kpi"><span>درجة التكامل</span><strong>${fmt(res.score||0)}%</strong></div>
+            <div class="kpi"><span>Critical</span><strong>${fmt(summary.critical||0)}</strong></div>
+            <div class="kpi"><span>High</span><strong>${fmt(summary.high||0)}</strong></div>
+            <div class="kpi"><span>إجمالي المشاكل</span><strong>${fmt(summary.total_issues||0)}</strong></div>
+          </div>
+          <div class="status-line" style="margin-top:10px">${modulesHtml}</div>
+          <div style="margin-top:12px">
+            ${issues.length ? tableHtml(
+              [
+                ['الحدة','severity',(v)=>sevBadge(v)],
+                ['الوحدة','module',(v)=>htmlEscape(String(v||''))],
+                ['المشكلة','title',(v)=>htmlEscape(String(v||''))],
+                ['المعرّف','entity_id',(v)=>htmlEscape(String(v||''))],
+                ['تفاصيل','details',(v)=>htmlEscape(String(v||''))],
+              ],
+              issues
+            ) : '<p class="badge paid">تكامل الوحدات سليم — لا مشاكل مكتشفة</p>'}
+          </div>
+        </div>
+      `;
+      ensureEnglishDigits(host);
+    }catch(e){
+      host.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
   };
 })();
