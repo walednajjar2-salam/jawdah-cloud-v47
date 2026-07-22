@@ -282,7 +282,7 @@
       return;
     }
     w.document.write(
-      `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>Print</title>
+      `<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><title>Print</title>
       <link rel="stylesheet" href="${base}lq-print.css?v=lq2">
       </head><body class="lq-print-body">${html}</body></html>`
     );
