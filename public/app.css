@@ -83,6 +83,14 @@
 .aging-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:10px}
 .statement-row{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid rgba(148,163,184,.08);padding:11px 0}
 .statement-row:last-child{border-bottom:0}
+.realtime-center-card{border:1px solid rgba(91,154,160,.35)!important;background:linear-gradient(160deg,rgba(36,48,68,.86),rgba(30,41,59,.92))!important;box-shadow:0 14px 38px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06)!important}
+.realtime-center-meta{align-items:center}
+.realtime-feed-list{display:grid;gap:10px;max-height:420px;overflow:auto;padding-right:2px}
+.realtime-feed-item{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:10px 12px;border:1px solid rgba(148,163,184,.16);border-radius:14px;background:rgba(255,255,255,.03)}
+.realtime-feed-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;background:linear-gradient(135deg,rgba(91,154,160,.28),rgba(126,184,212,.14));border:1px solid rgba(91,154,160,.35)}
+.realtime-feed-body b{display:block;color:var(--gold2,#c8e6ea);font-size:13px;margin-bottom:2px}
+.realtime-feed-body p{margin:0;color:#e2e8f0;line-height:1.6;font-size:13px}
+.realtime-feed-body small{color:var(--muted,#94a3b8);font-size:11px}
 .statement-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
 .inner-card{margin-top:16px;background:rgba(255,255,255,.03)!important}
 .contract-engine-card h3:after{content:'Professional Contract Engine';display:block;font-size:12px;color:var(--muted);margin-top:4px;font-weight:500}

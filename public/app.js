@@ -23,6 +23,8 @@ let liveSyncPending = false;
 let liveLastSyncAt = 0;
 let liveSyncScheduled = null;
 let liveKnownAuditTotal = null;
+let liveLastAuditKey = '';
+let liveKpiSignalAt = { overdue: 0, health: 0, expiring: 0 };
 const NIZWA_DEFAULT = { lat: 22.9333, lng: 57.5333, zoom: 11 };
 function haptic(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||12); }catch(e){} }
 function normalizeOwnerTimelineDays(v){
@@ -324,6 +326,123 @@ function friendlyMsg(e, fallback='تعذر إتمام العملية'){
 function toastOk(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
 function toastNotice(msg){ toastOk(friendlyMsg(msg,'يرجى مراجعة البيانات')); }
 function toastErr(e, fallback){ toastOk(friendlyMsg(e,fallback)); }
+function realtimeIconFor(action, entity){
+  const a = String(action||'').toLowerCase();
+  const e = String(entity||'').toLowerCase();
+  if(e.includes('contract')) return a.includes('close') ? '📕' : (a.includes('create') ? '📄' : '🧾');
+  if(e.includes('invoice')) return a.includes('pay') ? '💳' : '🧾';
+  if(e.includes('maint')) return '🛠️';
+  if(e.includes('estate_room') || e.includes('estate_apartment') || e.includes('estate_propert') || e.includes('estate_building')) return '🏢';
+  if(e.includes('client')) return '👤';
+  if(e.includes('user')) return '🛡️';
+  if(a.includes('delete')) return '🗑️';
+  if(a.includes('update')) return '✏️';
+  if(a.includes('create')) return '✨';
+  return '🔔';
+}
+function ensureRealtimeNotifyStore(){
+  if(!Array.isArray(Jawdah.liveNotifications)) Jawdah.liveNotifications = [];
+  return Jawdah.liveNotifications;
+}
+function pushRealtimeNotification(item){
+  const list = ensureRealtimeNotifyStore();
+  const key = String(item?.key||'').trim();
+  if(key && list.some(x=>x.key===key)) return;
+  list.unshift({
+    id: item?.id || `RTN-${Date.now()}-${Math.random().toString(16).slice(2,6)}`,
+    key: key || `RTN-${Date.now()}-${Math.random().toString(16).slice(2,6)}`,
+    ts: item?.ts || new Date().toISOString(),
+    icon: item?.icon || '🔔',
+    level: item?.level || 'info',
+    title: item?.title || 'تنبيه جديد',
+    text: item?.text || '',
+    actor: item?.actor || '',
+  });
+  Jawdah.liveNotifications = list.slice(0, 120);
+  if($('#sec-messages')?.classList.contains('active') && window.LQ_ALERT_CENTER && typeof window.LQ_ALERT_CENTER.refresh==='function'){
+    window.LQ_ALERT_CENTER.refresh(true);
+  }
+}
+function pushRealtimeAuditNotification(audit){
+  if(!audit) return;
+  const key = [audit.created_at,audit.username,audit.action,audit.entity,audit.entity_id].map(x=>String(x||'')).join('|');
+  if(key === liveLastAuditKey) return;
+  liveLastAuditKey = key;
+  const actor = String(audit.username||'النظام');
+  const action = String(audit.action||'update');
+  const entity = String(audit.entity||'record');
+  const detail = String(audit.details||'').trim();
+  const title = `${action} · ${entity}`;
+  pushRealtimeNotification({
+    key: `audit:${key}`,
+    ts: audit.created_at || new Date().toISOString(),
+    icon: realtimeIconFor(action, entity),
+    level: ['delete','void','close'].some(x=>action.includes(x)) ? 'warn' : 'info',
+    title,
+    text: detail || `تم تنفيذ ${action} على ${entity}`,
+    actor,
+  });
+}
+function pushRealtimeKpiNotification(payload){
+  const nowMs = Date.now();
+  const deltas = payload?.deltas || {};
+  const k = payload?.kpis || {};
+  if(Number(deltas.overdue||0) > 0 && nowMs - liveKpiSignalAt.overdue > 25000){
+    liveKpiSignalAt.overdue = nowMs;
+    pushRealtimeNotification({
+      key: `kpi-overdue-${Math.floor(nowMs/25000)}`,
+      icon:'🚨',
+      level:'danger',
+      title:'ارتفاع المتأخرات',
+      text:`زادت المتأخرات بقيمة ${money(deltas.overdue||0)} — الإجمالي الحالي ${money(k.overdue||0)}`,
+      actor:'Live Monitor'
+    });
+  }
+  if(Number(deltas.health||0) < 0 && nowMs - liveKpiSignalAt.health > 30000){
+    liveKpiSignalAt.health = nowMs;
+    pushRealtimeNotification({
+      key: `kpi-health-${Math.floor(nowMs/30000)}`,
+      icon:'📉',
+      level:'warn',
+      title:'انخفاض مؤشر الجاهزية',
+      text:`تغير المؤشر ${fmt(deltas.health||0)}% والإجمالي ${fmt(k.health||0)}%`,
+      actor:'Live Monitor'
+    });
+  }
+  if(Number(deltas.expiring||0) > 0 && nowMs - liveKpiSignalAt.expiring > 35000){
+    liveKpiSignalAt.expiring = nowMs;
+    pushRealtimeNotification({
+      key: `kpi-expiring-${Math.floor(nowMs/35000)}`,
+      icon:'⏳',
+      level:'warn',
+      title:'زيادة العقود القريبة من الانتهاء',
+      text:`زادت العقود القريبة من الانتهاء بمقدار ${fmt(deltas.expiring||0)}`,
+      actor:'Live Monitor'
+    });
+  }
+}
+function welcomeMessageForUser(user){
+  const name = displayUserName(user || Jawdah.user);
+  return `مرحباً ${name}، القائد يعقوب فاضل الخصيبي يرحب بك ويتمنى منك العمل بجد والإخلاص والعمل بروح الفريق.`;
+}
+function maybeSendWelcomeMessage(user){
+  const u = String((user||{}).username || '').toLowerCase();
+  if(!u) return;
+  const todayKey = new Date().toISOString().slice(0,10);
+  const cacheKey = `lq_welcome_${u}_${todayKey}`;
+  if(sessionStorage.getItem(cacheKey)==='1') return;
+  sessionStorage.setItem(cacheKey,'1');
+  const msg = welcomeMessageForUser(user);
+  toastOk(msg);
+  pushRealtimeNotification({
+    key: `welcome:${u}:${todayKey}`,
+    icon:'🤝',
+    level:'info',
+    title:`رسالة ترحيب — ${displayUserName(user)}`,
+    text: msg,
+    actor:'قيادة الشركة'
+  });
+}
 function htmlEscape(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const FAB_QUICK_COMMANDS = [
   {label:'لوحة التحكم', section:'dashboard', icon:'🏠'},
@@ -591,7 +710,7 @@ async function login(){
     localStorage.setItem('jawdah_last_remember', remember ? '1' : '0');
     if(res.must_change_password) Jawdah.user.must_change_password=true;
     showAppShell();
-    await loadAll(); renderBiometricHub(); startOwnerLiveAutoRefresh(); applySavedPortalChoice(); openPortalSwitch(true); haptic(12); toast(`مرحباً ${displayUserName(Jawdah.user)} — تم تسجيل الدخول`);
+    await loadAll(); renderBiometricHub(); startOwnerLiveAutoRefresh(); applySavedPortalChoice(); openPortalSwitch(true); haptic(12); maybeSendWelcomeMessage(Jawdah.user);
   }catch(e){ toastErr(e,'اسم المستخدم أو كلمة المرور غير صحيحة'); }
   finally{
     if(btn){
@@ -654,6 +773,7 @@ async function checkSession(){
     startOwnerLiveAutoRefresh();
     applySavedPortalChoice();
     openPortalSwitch(true);
+    maybeSendWelcomeMessage(Jawdah.user);
   }catch(e){
     localStorage.removeItem('jawdah_cloud_token');
     Jawdah.token='';
@@ -1041,6 +1161,44 @@ function renderWalidPage(){
   }
   box.innerHTML='<p class="mini">Walid module loading…</p>';
 }
+function relativeTimeAr(iso){
+  const ts = new Date(String(iso||''));
+  if(Number.isNaN(ts.getTime())) return 'الآن';
+  const diff = Math.max(0, Date.now() - ts.getTime());
+  const m = Math.floor(diff/60000);
+  if(m < 1) return 'الآن';
+  if(m < 60) return `قبل ${fmt(m)} د`;
+  const h = Math.floor(m/60);
+  if(h < 24) return `قبل ${fmt(h)} س`;
+  const d = Math.floor(h/24);
+  return `قبل ${fmt(d)} يوم`;
+}
+function realtimeFeedHtml(){
+  const items = (Jawdah.liveNotifications || []).slice(0, 24);
+  const danger = items.filter(x=>x.level==='danger').length;
+  const warns = items.filter(x=>x.level==='warn').length;
+  return `
+    <div class="card realtime-center-card">
+      <h3>🚨 مركز الإشعارات اللحظي</h3>
+      <div class="status-line realtime-center-meta">
+        <span class="badge overdue">عاجل: ${fmt(danger)}</span>
+        <span class="badge pending">تنبيهات: ${fmt(warns)}</span>
+        <span class="badge">آخر 24 إشعار</span>
+        <button type="button" class="ghost" onclick="LQ_REALTIME_NOTIFY.clear()">مسح السجل اللحظي</button>
+      </div>
+      <div class="realtime-feed-list">
+        ${items.map(x=>`<div class="realtime-feed-item"><div class="realtime-feed-icon">${x.icon||'🔔'}</div><div class="realtime-feed-body"><b>${htmlEscape(x.title||'تنبيه')}</b><p>${htmlEscape(x.text||'')}</p><small>${htmlEscape(x.actor||'النظام')} · ${relativeTimeAr(x.ts)}</small></div></div>`).join('') || '<p class="mini linked-ok">لا توجد إشعارات لحظية حالياً</p>'}
+      </div>
+    </div>
+  `;
+}
+window.LQ_REALTIME_NOTIFY = {
+  renderHtml: realtimeFeedHtml,
+  clear: ()=>{
+    Jawdah.liveNotifications = [];
+    if($('#sec-messages')?.classList.contains('active')) renderMessagesPage();
+  }
+};
 function renderMessagesPage(){
   const box=$('#messagesPageBox'); if(!box) return;
   if(window.LQ_ALERT_CENTER){
@@ -1056,7 +1214,7 @@ function renderMessagesPage(){
   const k=dashKpis();
   const decisions=Jawdah.dashboard?.decisions||[];
   const openMaint=(Jawdah.data.maintenance||[]).filter(x=>!String(x.status||'').toLowerCase().match(/closed|done|complete/));
-  box.innerHTML=`<div class="card"><h3>📨 الرسائل والتنبيهات</h3><div class="saas-task-list">${decisions.map(d=>`<div class="saas-task-item"><div><b>${d.level}</b><p>${d.text}</p></div></div>`).join('')}${openMaint.slice(0,5).map(m=>`<div class="saas-task-item"><div><b>صيانة</b><p>${m.title} · ${propertyLabel(byId('properties',m.property_id))}</p></div></div>`).join('')}</div>
+  box.innerHTML=`${window.LQ_REALTIME_NOTIFY ? window.LQ_REALTIME_NOTIFY.renderHtml() : ''}<div class="card"><h3>📨 الرسائل والتنبيهات</h3><div class="saas-task-list">${decisions.map(d=>`<div class="saas-task-item"><div><b>${d.level}</b><p>${d.text}</p></div></div>`).join('')}${openMaint.slice(0,5).map(m=>`<div class="saas-task-item"><div><b>صيانة</b><p>${m.title} · ${propertyLabel(byId('properties',m.property_id))}</p></div></div>`).join('')}</div>
   <div class="card" style="margin-top:16px"><h3>ملخص</h3><div class="saas-fin-grid"><div class="saas-glass saas-fin-card"><span>متأخرات</span><strong>${money(k.overdue||0)}</strong></div><div class="saas-glass saas-fin-card"><span>صيانة</span><strong>${fmt(k.maintenance||0)}</strong></div><div class="saas-glass saas-fin-card"><span>عقود</span><strong>${fmt((k.expiring||0)+(k.expired||0))}</strong></div><div class="saas-glass saas-fin-card"><span>الصحة</span><strong>${fmt(k.health||0)}%</strong></div></div></div>`;
 }
 function renderTimelinePage(){
@@ -2902,7 +3060,13 @@ function applyLiveEvent(payload){
     }
     liveKnownAuditTotal = currentAuditTotal;
   }
-  if(payload.latest_audit) Jawdah.liveLatestAudit = payload.latest_audit;
+  if(payload.latest_audit){
+    Jawdah.liveLatestAudit = payload.latest_audit;
+    pushRealtimeAuditNotification(payload.latest_audit);
+  }
+  if(payload.type==='kpis'){
+    pushRealtimeKpiNotification(payload);
+  }
   const host=$('#dashLiveTicker');
   if(host && payload.type==='kpis'){
     const parts=[];
