@@ -3518,7 +3518,16 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if auth.startswith("Bearer "):
             return auth[7:].strip()
         params = urllib.parse.parse_qs(query or "")
-        return (params.get("token") or [""])[0].strip()
+        qtok = (params.get("token") or [""])[0].strip()
+        if qtok:
+            return qtok
+        # Cookie fallback (survives navigation when localStorage is flaky)
+        cookie = self.headers.get("Cookie", "") or ""
+        for part in cookie.split(";"):
+            part = part.strip()
+            if part.startswith("lq_token="):
+                return urllib.parse.unquote(part[9:].strip())
+        return ""
 
     def current_user(self, db: sqlite3.Connection, query: str = "") -> Optional[Dict[str, Any]]:
         token = self.token_from_request(query)
@@ -4065,15 +4074,26 @@ class JawdahHandler(BaseHTTPRequestHandler):
         user = dict(row)
         user.pop("password_hash", None)
         user["must_change_password"] = bool(user.get("must_change_password"))
-        self.send_json(
-            {
-                "ok": True,
-                "token": token,
-                "user": user,
-                "expires_at": expires,
-                "must_change_password": user["must_change_password"],
-            }
+        max_age = session_hours * 3600
+        # Keep cookie in sync with bearer token so portal → app navigation stays authenticated
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header(
+            "Set-Cookie",
+            f"lq_token={urllib.parse.quote(token)}; Path=/; Max-Age={max_age}; SameSite=Lax",
         )
+        self.send_cors_headers()
+        payload = {
+            "ok": True,
+            "token": token,
+            "user": user,
+            "expires_at": expires,
+            "must_change_password": user["must_change_password"],
+        }
+        raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
 
     def api_login(self, db: sqlite3.Connection) -> None:
         data = self.read_json()
@@ -4489,15 +4509,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.send_json({"ok": True, "message": "تم تحديث كلمة المرور"})
 
     def api_logout(self, db: sqlite3.Connection) -> None:
-        auth = self.headers.get("Authorization", "")
-        token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+        token = self.token_from_request("")
         user = self.current_user(db)
         if token:
             db.execute("DELETE FROM sessions WHERE token=?", (token,))
         if user:
             audit(db, user, "logout", "users", user["id"], "User logout")
         db.commit()
-        self.send_json({"ok": True})
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Set-Cookie", "lq_token=; Path=/; Max-Age=0; SameSite=Lax")
+        payload = b'{"ok": true}'
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_cors_headers()
+        self.end_headers()
+        self.wfile.write(payload)
 
     def api_bootstrap(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = {}
