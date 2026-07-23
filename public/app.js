@@ -3961,6 +3961,7 @@ window.printHospitalityFolio = printHospitalityFolio;
 
 (function(){
   let moduleFixPreviewState = null;
+  let moduleFixLastAlertSig = '';
   const moduleFixScopeSnapshot = ()=> {
     const scopeRaw = String($('#moduleFixScope')?.value || 'all');
     const modules = scopeRaw === 'all' ? [] : scopeRaw.split(',').map(s=>s.trim()).filter(Boolean);
@@ -4341,9 +4342,16 @@ window.printHospitalityFolio = printHospitalityFolio;
       const days = Number($('#mfxKpiDays')?.value || 1);
       const res = await api('module_integrity_history_kpi?days='+encodeURIComponent(String(days)));
       const k = res.kpi || {};
+      const alerts = Array.isArray(res.alerts) ? res.alerts : [];
+      const thresholds = res.thresholds || {};
+      const health = String(res.health_status || 'ok');
       const topUsers = Array.isArray(res.top_users) ? res.top_users : [];
       if(cardsHost){
+        const alertHtml = alerts.length
+          ? `<div class="card" style="margin-bottom:10px;border-color:${health==='alert'?'rgba(220,38,38,.45)':'rgba(217,119,6,.4)'}"><h4 style="margin:0 0 8px">${health==='alert'?'تنبيه تشغيلي مهم':'تنبيه تشغيلي'}</h4>${alerts.map(a=>`<p class="mini" style="margin:4px 0"><span class="badge ${a.severity==='high'?'overdue':'pending'}">${htmlEscape(String(a.code||''))}</span> ${htmlEscape(String(a.message||''))}</p>`).join('')}<p class="mini">الحدود: success ≥ ${fmt(thresholds.min_success_rate||0)}% · rejected ≤ ${fmt(thresholds.max_rejected||0)} · effectiveness ≥ ${fmt(thresholds.min_apply_effectiveness||0)}%</p></div>`
+          : `<p class="badge paid">الحالة التشغيلية لسجل الإصلاحات مستقرة ضمن الحدود المحددة</p>`;
         cardsHost.innerHTML = `
+          ${alertHtml}
           <div class="kpis grid">
             <div class="kpi"><span>محاولات</span><strong>${fmt(k.attempts||0)}</strong></div>
             <div class="kpi"><span>نجاح</span><strong>${fmt(k.success||0)}</strong></div>
@@ -4355,6 +4363,11 @@ window.printHospitalityFolio = printHospitalityFolio;
             <div class="kpi"><span>فعالية التطبيق</span><strong>${fmt(k.apply_effectiveness||0)}%</strong></div>
           </div>
         `;
+        const alertSig = JSON.stringify(alerts.map(a=>`${a.code}:${a.value}`));
+        if(alerts.length && alertSig !== moduleFixLastAlertSig){
+          toastErr('تنبيه: مؤشرات سجل الإصلاحات تحتاج مراجعة');
+        }
+        moduleFixLastAlertSig = alertSig;
       }
       if(usersHost){
         usersHost.innerHTML = topUsers.length

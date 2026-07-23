@@ -169,6 +169,10 @@ WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
 MODULE_FIX_PREVIEW_TTL_SECONDS = max(300, int(os.environ.get("LQ_MODULE_FIX_PREVIEW_TTL", "1800") or "1800"))
+MODULE_FIX_MIN_ATTEMPTS_FOR_ALERT = max(1, int(os.environ.get("LQ_MODULE_FIX_MIN_ATTEMPTS_ALERT", "5") or "5"))
+MODULE_FIX_MIN_SUCCESS_RATE = float(os.environ.get("LQ_MODULE_FIX_MIN_SUCCESS_RATE", "85") or "85")
+MODULE_FIX_MAX_REJECTED = max(0, int(os.environ.get("LQ_MODULE_FIX_MAX_REJECTED", "3") or "3"))
+MODULE_FIX_MIN_APPLY_EFFECTIVENESS = float(os.environ.get("LQ_MODULE_FIX_MIN_APPLY_EFFECTIVENESS", "65") or "65")
 MODULE_FIX_PREVIEWS: Dict[str, Dict[str, Any]] = {}
 BIOMETRIC_CHALLENGE_TTL_SECONDS = 180
 BIOMETRIC_CHALLENGES: Dict[str, Dict[str, Any]] = {}
@@ -7052,6 +7056,38 @@ class JawdahHandler(BaseHTTPRequestHandler):
         )
         success_rate = round((ok_total / total) * 100, 1) if total > 0 else 0.0
         apply_effectiveness = round((applied_sum / candidates_sum) * 100, 1) if candidates_sum > 0 else 0.0
+        alerts: List[Dict[str, Any]] = []
+        if total >= MODULE_FIX_MIN_ATTEMPTS_FOR_ALERT and success_rate < MODULE_FIX_MIN_SUCCESS_RATE:
+            alerts.append(
+                {
+                    "code": "success_rate_low",
+                    "severity": "high",
+                    "message": f"نسبة نجاح الإصلاح منخفضة ({success_rate}%) أقل من الحد {MODULE_FIX_MIN_SUCCESS_RATE}%",
+                    "value": success_rate,
+                    "threshold": MODULE_FIX_MIN_SUCCESS_RATE,
+                }
+            )
+        if rejected_total > MODULE_FIX_MAX_REJECTED:
+            alerts.append(
+                {
+                    "code": "rejected_too_many",
+                    "severity": "high",
+                    "message": f"عدد عمليات الرفض مرتفع ({rejected_total}) أعلى من الحد {MODULE_FIX_MAX_REJECTED}",
+                    "value": rejected_total,
+                    "threshold": MODULE_FIX_MAX_REJECTED,
+                }
+            )
+        if candidates_sum >= 10 and apply_effectiveness < MODULE_FIX_MIN_APPLY_EFFECTIVENESS:
+            alerts.append(
+                {
+                    "code": "effectiveness_low",
+                    "severity": "medium",
+                    "message": f"فعالية تطبيق الإصلاح منخفضة ({apply_effectiveness}%) أقل من الحد {MODULE_FIX_MIN_APPLY_EFFECTIVENESS}%",
+                    "value": apply_effectiveness,
+                    "threshold": MODULE_FIX_MIN_APPLY_EFFECTIVENESS,
+                }
+            )
+        health_status = "alert" if any(a.get("severity") == "high" for a in alerts) else ("warning" if alerts else "ok")
 
         top_users = rows_to_dicts(
             db.execute(
@@ -7082,6 +7118,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "success_rate": success_rate,
                     "apply_effectiveness": apply_effectiveness,
                 },
+                "thresholds": {
+                    "min_attempts_for_alert": MODULE_FIX_MIN_ATTEMPTS_FOR_ALERT,
+                    "min_success_rate": MODULE_FIX_MIN_SUCCESS_RATE,
+                    "max_rejected": MODULE_FIX_MAX_REJECTED,
+                    "min_apply_effectiveness": MODULE_FIX_MIN_APPLY_EFFECTIVENESS,
+                },
+                "alerts": alerts,
+                "health_status": health_status,
                 "top_users": top_users,
             }
         )
