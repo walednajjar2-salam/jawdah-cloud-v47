@@ -1,6 +1,24 @@
 ﻿<!doctype html>
 <html lang="ar" dir="ltr">
 <head>
+  <script>
+  /* FORCE fresh load — kill service workers + caches before paint */
+  (function(){
+    try{
+      if(navigator.serviceWorker){
+        navigator.serviceWorker.getRegistrations().then(function(rs){
+          (rs||[]).forEach(function(r){ try{r.unregister()}catch(e){} });
+        });
+      }
+      if(window.caches&&caches.keys){
+        caches.keys().then(function(ks){
+          (ks||[]).forEach(function(k){ try{caches.delete(k)}catch(e){} });
+        });
+      }
+    }catch(e){}
+  })();
+  </script>
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#071426">
@@ -16,14 +34,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=portal2">
-  <link rel="stylesheet" href="lq-shell.css?v=shell21">
+  <link rel="stylesheet" href="app.css?v=portal9">
+  <link rel="stylesheet" href="lq-shell.css?v=shell29">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
-  <link rel="stylesheet" href="lq-reference-clean.css?v=ref4">
-  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec5">
-  <link rel="stylesheet" href="lq-login-locked.css?v=locked2">
+  <link rel="stylesheet" href="lq-reference-clean.css?v=ref9">
+  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec9">
+  <link rel="stylesheet" href="lq-login-locked.css?v=locked9">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
   <style>
@@ -45,6 +63,29 @@
     body.saas-luxury .section:not(.active),body.app-ready .section:not(.active){
       display:none!important;height:0!important;min-height:0!important;overflow:hidden!important;
     }
+
+    /* FORCE NO TOP VOID — v9 */
+    body.saas-luxury,body.app-ready{margin:0!important;padding:0!important}
+    body.saas-luxury #loginScreen,body.app-ready #loginScreen,#loginScreen.hidden,#loginScreen[hidden]{
+      display:none!important;height:0!important;min-height:0!important;max-height:0!important;
+      margin:0!important;padding:0!important;overflow:hidden!important;visibility:hidden!important;
+      position:fixed!important;pointer-events:none!important;opacity:0!important
+    }
+    body.saas-luxury #app.app,body.app-ready #app.app{display:block!important;margin:0!important;padding:0!important;min-height:100vh!important}
+    body.saas-luxury .content{margin:0!important;padding:8px 8px 8px!important;padding-inline-end:calc(var(--saas-side, 0px) + 16px)!important}
+    body.saas-luxury .app-shell{margin-top:0!important;min-height:auto!important}
+    body.saas-luxury .ops-quick-bar:not(:has(button)),
+    body.saas-luxury .ops-quick-bar:has(> .ops-label:only-child){display:none!important;height:0!important}
+    body.saas-luxury .app-shell:has(#sec-estate-platform.active)>.page-head{display:none!important;height:0!important;margin:0!important;padding:0!important}
+    #lqForceEstateDock{display:none}
+    body.saas-luxury #app:has(#sec-estate-platform.active) #lqForceEstateDock{
+      display:grid!important;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;
+      margin:8px 0 10px;padding:10px;border-radius:16px;background:#fff;border:1px solid #cfe0f6;
+      box-shadow:0 10px 28px rgba(30,58,108,.12);position:sticky;top:6px;z-index:80
+    }
+    #lqForceEstateDock button{min-height:74px;border-radius:14px;border:1px solid #d5e4f7;background:#f3f8ff;color:#1d3f74;font:800 12px Tajawal,sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+    #lqForceEstateDock button.active,#lqForceEstateDock button:hover{background:linear-gradient(145deg,#3f84ff,#2f6fec);color:#fff;border-color:#2a63cf}
+
     #lqBrandWatermark{display:none!important;opacity:0!important;visibility:hidden!important}
     #lqBrandWatermark img{display:none!important;opacity:0!important}
     /* locked with lq-login-locked.css */
@@ -341,8 +382,6 @@
   </div>
 
   <main id="app" class="app hidden">
-    <div class="lq-app-bg-parity" aria-hidden="true">
-      <div class="login-bg"></div>
       <div class="login-bg-glow"></div>
       <div class="login-mesh"></div>
       <div class="login-cinema-photo-layer"></div>
@@ -1187,10 +1226,10 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal7" defer></script>
+  <script src="app.js?v=portal9" defer></script>
   <script src="enterprise-vision.js?v=ev10" defer></script>
-  <script src="historic-upgrade.js?v=historic14" defer></script>
-  <script src="lq-hub-dashboard.js?v=hub1" defer></script>
+  <script src="historic-upgrade.js?v=historic19" defer></script>
+  <script src="lq-hub-dashboard.js?v=hub9" defer></script>
   <script src="lq-card-views.js?v=cards2" defer></script>
   <script src="lq-login-remember.js?v=lr1" defer></script>
   <script src="lq-global-loader.js?v=gl1" defer></script>
@@ -1202,9 +1241,9 @@
   <script src="lq-owner-staff.js?v=own1" defer></script>
   <script src="lq-waleed-voice.js?v=voice1" defer></script>
   <script src="lq-ui-unify.js?v=ui2" defer></script>
-  <script src="lq-layout-v2.js?v=lay2" defer></script>
+  <script src="lq-layout-v2.js?v=lay9" defer></script>
   <script src="lq-walid-drag.js?v=wd1" defer></script>
-  <script src="pwa-install.js?v=pwa3" defer></script>
+  <script src="pwa-install.js?v=pwa9" defer></script>
   <script>
     (function(){
       var boot=document.getElementById('lqBootMsg');

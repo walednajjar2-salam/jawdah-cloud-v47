@@ -1107,8 +1107,11 @@ function showSection(id){
   if(resolved==='estate-platform' && typeof renderEstatePlatform==='function') renderEstatePlatform();
   if(resolved==='estate-platform'){
     const ph=$('.page-head'); if(ph) ph.style.display='none';
+    if(typeof ensureForceEstateDock==='function') ensureForceEstateDock();
+    try{ window.scrollTo({top:0, behavior:'auto'}); }catch(_){}
   }else{
     const ph=$('.page-head'); if(ph) ph.style.display='';
+    const fd=document.getElementById('lqForceEstateDock'); if(fd) fd.style.display='none';
   }
   if(resolved==='accounting-platform' && typeof renderAccountingPlatform==='function') renderAccountingPlatform();
   if(resolved==='dashboard') renderDashboard();
@@ -4655,12 +4658,38 @@ window.printHospitalityFolio = printHospitalityFolio;
     document.querySelectorAll('.estate-panel').forEach(p=>{
       p.classList.toggle('active', p.getAttribute('data-estate-panel') === target);
     });
-    document.querySelectorAll('#estateWorkDock .estate-dock-btn').forEach(b=>{
+    document.querySelectorAll('#estateWorkDock .estate-dock-btn, #lqForceEstateDock button').forEach(b=>{
       b.classList.toggle('active', b.getAttribute('data-estate-panel') === target);
     });
     try{ localStorage.setItem('jawdah_estate_panel', target); }catch(_){}
-    const dock = document.getElementById('estateWorkDock');
+    const dock = document.getElementById('estateWorkDock') || document.getElementById('lqForceEstateDock');
     if(dock) dock.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
+  window.ensureForceEstateDock = function(){
+    let host = document.getElementById('lqForceEstateDock');
+    const shell = document.querySelector('.app-shell') || document.querySelector('.content');
+    if(!shell) return;
+    if(!host){
+      host = document.createElement('nav');
+      host.id = 'lqForceEstateDock';
+      host.setAttribute('aria-label','أيقونات العمل العقاري');
+      const items = [
+        ['overview','📊','نظرة عامة'],
+        ['media','🖼️','صور وخريطة'],
+        ['ops','⏱️','متابعة'],
+        ['add','➕','إضافة'],
+        ['maint','🔧','صيانة'],
+        ['tables','📋','جداول'],
+        ['booking','📌','حجز وعقود'],
+        ['finance','💰','تحصيل وإقفال'],
+      ];
+      host.innerHTML = items.map(([id,icon,label])=>`<button type="button" data-estate-panel="${id}" onclick="showEstatePanel('${id}')"><span>${icon}</span><b>${label}</b></button>`).join('')
+        + `<button type="button" data-estate-panel="hospitality" onclick="showSection('hospitality')"><span>🏨</span><b>الضيافة</b></button>`;
+      const header = shell.querySelector('.app-header');
+      if(header && header.nextSibling) header.parentNode.insertBefore(host, header.nextSibling);
+      else shell.insertBefore(host, shell.firstChild);
+    }
+    host.style.display = '';
   };
   function buildEstateTimeline(){
     const from = $('#estateTimelineFrom')?.value || '';
@@ -4836,19 +4865,19 @@ window.printHospitalityFolio = printHospitalityFolio;
     const kpi = $('#estateKpiRow');
     if(kpi){
       kpi.innerHTML = `
-        <div class="kpi"><span>العقارات</span><strong>${fmt(props.length)}</strong></div>
-        <div class="kpi"><span>البنايات</span><strong>${fmt(blds.length)}</strong></div>
-        <div class="kpi"><span>الشقق</span><strong>${fmt(apts.length)}</strong></div>
-        <div class="kpi"><span>شقق مؤجرة</span><strong>${fmt(occupiedApts)}</strong></div>
-        <div class="kpi"><span>شقق محجوزة</span><strong>${fmt(reservedApts)}</strong></div>
-        <div class="kpi"><span>الغرف</span><strong>${fmt(rooms.length)}</strong></div>
-        <div class="kpi"><span>الملحقات</span><strong>${fmt(accessories.length)}</strong></div>
-        <div class="kpi"><span>غرف مؤجرة</span><strong>${fmt(occupied)}</strong></div>
-        <div class="kpi"><span>صيانة مفتوحة</span><strong>${fmt(openMaint)}</strong></div>
-        <div class="kpi"><span>فواتير حجز</span><strong>${fmt(rInv.length)}</strong></div>
-        <div class="kpi"><span>عقود نشطة</span><strong>${fmt(contracts.filter(x=>String(x.status||'').toLowerCase()==='active').length)}</strong></div>
-        <div class="kpi"><span>فواتير عقود</span><strong>${fmt(cInv.length)}</strong></div>
-        <div class="kpi"><span>تسويات عقود</span><strong>${fmt(settlements.length)}</strong></div>
+        <button type="button" class="kpi" onclick="showEstatePanel('tables')"><span>العقارات</span><strong>${fmt(props.length)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('tables')"><span>البنايات</span><strong>${fmt(blds.length)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('tables')"><span>الشقق</span><strong>${fmt(apts.length)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('tables')"><span>شقق مؤجرة</span><strong>${fmt(occupiedApts)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('booking')"><span>شقق محجوزة</span><strong>${fmt(reservedApts)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('tables')"><span>الغرف</span><strong>${fmt(rooms.length)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('add')"><span>الملحقات</span><strong>${fmt(accessories.length)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('tables')"><span>غرف مؤجرة</span><strong>${fmt(occupied)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('maint')"><span>صيانة مفتوحة</span><strong>${fmt(openMaint)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('booking')"><span>فواتير حجز</span><strong>${fmt(rInv.length)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('booking')"><span>عقود نشطة</span><strong>${fmt(contracts.filter(x=>String(x.status||'').toLowerCase()==='active').length)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('finance')"><span>فواتير عقود</span><strong>${fmt(cInv.length)}</strong></button>
+        <button type="button" class="kpi" onclick="showEstatePanel('finance')"><span>تسويات عقود</span><strong>${fmt(settlements.length)}</strong></button>
       `;
     }
     const timeline = $('#estateTimelineBox');
