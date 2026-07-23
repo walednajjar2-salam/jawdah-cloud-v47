@@ -158,11 +158,11 @@ TABLES = {
     "approvals": ["id", "entity", "entity_id", "request_type", "status", "requested_by", "approved_by", "requested_at", "approved_at", "notes"],
     "bank_reconciliations": ["id", "bank_name", "period_name", "book_balance", "bank_balance", "difference", "status", "reconciled_by", "reconciled_at", "notes", "matched_count", "unmatched_count", "period_start", "period_end"],
     "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
-    "estate_properties": ["id", "name", "location", "building_count", "apartment_count", "room_count", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_buildings": ["id", "property_id", "name", "location", "apartment_count", "room_count", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_properties": ["id", "name", "status", "location", "building_count", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_buildings": ["id", "property_id", "name", "status", "location", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_apartments": ["id", "property_id", "building_id", "name", "status", "room_count", "rent_price", "booking_deposit", "prepaid_amount", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "parts_details", "parts_cost", "invoice_no", "total_cost", "maintenance_date", "next_followup_date", "notes"],
+    "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "rent_price", "booking_deposit", "prepaid_amount", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
     "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
@@ -1125,10 +1125,13 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS estate_properties (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
                 location TEXT,
                 building_count INTEGER NOT NULL DEFAULT 0,
                 apartment_count INTEGER NOT NULL DEFAULT 0,
                 room_count INTEGER NOT NULL DEFAULT 0,
+                base_rent_price REAL NOT NULL DEFAULT 0,
+                service_charge REAL NOT NULL DEFAULT 0,
                 attachments TEXT,
                 manager_name TEXT,
                 tenant_client_id TEXT,
@@ -1141,9 +1144,12 @@ def init_db() -> None:
                 id TEXT PRIMARY KEY,
                 property_id TEXT NOT NULL,
                 name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
                 location TEXT,
                 apartment_count INTEGER NOT NULL DEFAULT 0,
                 room_count INTEGER NOT NULL DEFAULT 0,
+                base_rent_price REAL NOT NULL DEFAULT 0,
+                service_charge REAL NOT NULL DEFAULT 0,
                 attachments TEXT,
                 manager_name TEXT,
                 tenant_client_id TEXT,
@@ -1187,6 +1193,15 @@ def init_db() -> None:
                 name TEXT NOT NULL,
                 room_type TEXT,
                 status TEXT NOT NULL DEFAULT 'vacant',
+                rent_price REAL NOT NULL DEFAULT 0,
+                booking_deposit REAL NOT NULL DEFAULT 0,
+                prepaid_amount REAL NOT NULL DEFAULT 0,
+                booked_client_name TEXT,
+                booked_client_phone TEXT,
+                booked_client_id TEXT,
+                booked_by_employee TEXT,
+                maintenance_notes TEXT,
+                maintenance_cost REAL NOT NULL DEFAULT 0,
                 attachments TEXT,
                 manager_name TEXT,
                 tenant_client_id TEXT,
@@ -1208,12 +1223,18 @@ def init_db() -> None:
                 status TEXT NOT NULL DEFAULT 'Open',
                 priority TEXT NOT NULL DEFAULT 'Medium',
                 responsible_name TEXT,
+                assigned_team TEXT,
                 parts_details TEXT,
                 parts_cost REAL NOT NULL DEFAULT 0,
+                labor_cost REAL NOT NULL DEFAULT 0,
                 invoice_no TEXT,
+                invoice_date TEXT,
+                vendor_name TEXT,
                 total_cost REAL NOT NULL DEFAULT 0,
+                approved_by TEXT,
                 maintenance_date TEXT NOT NULL,
                 next_followup_date TEXT,
+                closed_at TEXT,
                 notes TEXT,
                 FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE SET NULL,
                 FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE SET NULL,
@@ -1429,6 +1450,18 @@ def init_db() -> None:
         ensure_column(db, "hospitality_folios", "status", "TEXT NOT NULL DEFAULT 'open'")
         ensure_column(db, "hospitality_folios", "notes", "TEXT")
         for col, definition in [
+            ("status", "TEXT NOT NULL DEFAULT 'active'"),
+            ("base_rent_price", "REAL NOT NULL DEFAULT 0"),
+            ("service_charge", "REAL NOT NULL DEFAULT 0"),
+        ]:
+            ensure_column(db, "estate_properties", col, definition)
+        for col, definition in [
+            ("status", "TEXT NOT NULL DEFAULT 'active'"),
+            ("base_rent_price", "REAL NOT NULL DEFAULT 0"),
+            ("service_charge", "REAL NOT NULL DEFAULT 0"),
+        ]:
+            ensure_column(db, "estate_buildings", col, definition)
+        for col, definition in [
             ("status", "TEXT NOT NULL DEFAULT 'vacant'"),
             ("rent_price", "REAL NOT NULL DEFAULT 0"),
             ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
@@ -1441,6 +1474,27 @@ def init_db() -> None:
             ("maintenance_cost", "REAL NOT NULL DEFAULT 0"),
         ]:
             ensure_column(db, "estate_apartments", col, definition)
+        for col, definition in [
+            ("rent_price", "REAL NOT NULL DEFAULT 0"),
+            ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
+            ("prepaid_amount", "REAL NOT NULL DEFAULT 0"),
+            ("booked_client_name", "TEXT"),
+            ("booked_client_phone", "TEXT"),
+            ("booked_client_id", "TEXT"),
+            ("booked_by_employee", "TEXT"),
+            ("maintenance_notes", "TEXT"),
+            ("maintenance_cost", "REAL NOT NULL DEFAULT 0"),
+        ]:
+            ensure_column(db, "estate_rooms", col, definition)
+        for col, definition in [
+            ("assigned_team", "TEXT"),
+            ("labor_cost", "REAL NOT NULL DEFAULT 0"),
+            ("invoice_date", "TEXT"),
+            ("vendor_name", "TEXT"),
+            ("approved_by", "TEXT"),
+            ("closed_at", "TEXT"),
+        ]:
+            ensure_column(db, "estate_maintenance", col, definition)
         for col, definition in [
             ("credential_data", "TEXT"),
             ("public_key", "TEXT"),
@@ -4476,6 +4530,39 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if err:
                 return self.send_json({"ok": False, "error": err}, 400)
             data.update(prepared)
+        if table == "estate_properties":
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم العقار مطلوب"}, 400)
+            status_map = {"active": "active", "نشط": "active", "inactive": "inactive", "غير نشط": "inactive", "suspended": "suspended", "موقوف": "suspended", "موقوفة": "suspended"}
+            raw_status = str(data.get("status") or "active").strip().lower()
+            data["status"] = status_map.get(raw_status, "active")
+            data["building_count"] = int(float(data.get("building_count") or 0))
+            data["apartment_count"] = int(float(data.get("apartment_count") or 0))
+            data["room_count"] = int(float(data.get("room_count") or 0))
+            if data["building_count"] < 0 or data["apartment_count"] < 0 or data["room_count"] < 0:
+                return self.send_json({"ok": False, "error": "أعداد العقار لا يمكن أن تكون سالبة"}, 400)
+            data["base_rent_price"] = round(float(data.get("base_rent_price") or 0), 3)
+            data["service_charge"] = round(float(data.get("service_charge") or 0), 3)
+            if data["base_rent_price"] < 0 or data["service_charge"] < 0:
+                return self.send_json({"ok": False, "error": "الأسعار ورسوم الخدمة يجب أن تكون موجبة أو صفر"}, 400)
+        if table == "estate_buildings":
+            prop_id = str(data.get("property_id") or "").strip()
+            if not prop_id or not exists(db, "estate_properties", prop_id):
+                return self.send_json({"ok": False, "error": "اختر العقار الصحيح للبناية"}, 400)
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم/رقم البناية مطلوب"}, 400)
+            status_map = {"active": "active", "نشط": "active", "inactive": "inactive", "غير نشط": "inactive", "suspended": "suspended", "موقوف": "suspended", "موقوفة": "suspended"}
+            raw_status = str(data.get("status") or "active").strip().lower()
+            data["status"] = status_map.get(raw_status, "active")
+            data["property_id"] = prop_id
+            data["apartment_count"] = int(float(data.get("apartment_count") or 0))
+            data["room_count"] = int(float(data.get("room_count") or 0))
+            if data["apartment_count"] < 0 or data["room_count"] < 0:
+                return self.send_json({"ok": False, "error": "أعداد البناية لا يمكن أن تكون سالبة"}, 400)
+            data["base_rent_price"] = round(float(data.get("base_rent_price") or 0), 3)
+            data["service_charge"] = round(float(data.get("service_charge") or 0), 3)
+            if data["base_rent_price"] < 0 or data["service_charge"] < 0:
+                return self.send_json({"ok": False, "error": "الأسعار ورسوم الخدمة غير صحيحة"}, 400)
         if table == "estate_apartments":
             prop_id = str(data.get("property_id") or "").strip()
             bld_id = str(data.get("building_id") or "").strip()
@@ -4544,6 +4631,89 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 data["booked_by_employee"] = str(data.get("booked_by_employee") or "").strip() or None
             if status_norm != "maintenance":
                 data["maintenance_notes"] = str(data.get("maintenance_notes") or "").strip() or None
+        if table == "estate_rooms":
+            prop_id = str(data.get("property_id") or "").strip()
+            bld_id = str(data.get("building_id") or "").strip()
+            apt_id = str(data.get("apartment_id") or "").strip()
+            if not prop_id or not exists(db, "estate_properties", prop_id):
+                return self.send_json({"ok": False, "error": "اختر العقار الصحيح للغرفة"}, 400)
+            bld = db.execute("SELECT id, property_id FROM estate_buildings WHERE id=?", (bld_id,)).fetchone() if bld_id else None
+            if not bld:
+                return self.send_json({"ok": False, "error": "اختر البناية الصحيحة للغرفة"}, 400)
+            if str(bld["property_id"] or "") != prop_id:
+                return self.send_json({"ok": False, "error": "البناية لا تتبع العقار المحدد"}, 400)
+            apt = db.execute("SELECT id, property_id, building_id FROM estate_apartments WHERE id=?", (apt_id,)).fetchone() if apt_id else None
+            if not apt:
+                return self.send_json({"ok": False, "error": "اختر الشقة الصحيحة للغرفة"}, 400)
+            if str(apt["property_id"] or "") != prop_id or str(apt["building_id"] or "") != bld_id:
+                return self.send_json({"ok": False, "error": "الشقة لا تتبع نفس العقار/البناية"}, 400)
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم/رقم الغرفة مطلوب"}, 400)
+            status_map = {
+                "vacant": "vacant", "فارغة": "vacant", "شاغرة": "vacant",
+                "occupied": "occupied", "مؤجرة": "occupied",
+                "maintenance": "maintenance", "صيانة": "maintenance", "تحت الصيانة": "maintenance",
+                "reserved": "reserved", "محجوزة": "reserved", "محجوز": "reserved",
+            }
+            raw_status = str(data.get("status") or "vacant").strip().lower()
+            status_norm = status_map.get(raw_status)
+            if not status_norm:
+                return self.send_json({"ok": False, "error": "حالة الغرفة غير معتمدة"}, 400)
+            data["status"] = status_norm
+            data["property_id"] = prop_id
+            data["building_id"] = bld_id
+            data["apartment_id"] = apt_id
+            data["rent_price"] = round(float(data.get("rent_price") or 0), 3)
+            data["booking_deposit"] = round(float(data.get("booking_deposit") or 0), 3)
+            data["prepaid_amount"] = round(float(data.get("prepaid_amount") or 0), 3)
+            data["maintenance_cost"] = round(float(data.get("maintenance_cost") or 0), 3)
+            if data["rent_price"] < 0 or data["booking_deposit"] < 0 or data["prepaid_amount"] < 0 or data["maintenance_cost"] < 0:
+                return self.send_json({"ok": False, "error": "قيم الأسعار/التأمين/المقدم/الصيانة غير صحيحة"}, 400)
+            if status_norm == "reserved":
+                booked_name = str(data.get("booked_client_name") or "").strip()
+                booked_phone = str(data.get("booked_client_phone") or "").strip()
+                booked_employee = str(data.get("booked_by_employee") or "").strip()
+                if data["booking_deposit"] <= 0 or not booked_name or not booked_phone or not booked_employee:
+                    return self.send_json({"ok": False, "error": "الغرفة المحجوزة تتطلب التأمين + بيانات العميل + الموظف الحاجز"}, 400)
+                booked_client_id = str(data.get("booked_client_id") or "").strip()
+                if booked_client_id and not exists(db, "clients", booked_client_id):
+                    return self.send_json({"ok": False, "error": "معرف العميل المحجوز له غير موجود"}, 400)
+            if status_norm == "maintenance":
+                if not str(data.get("maintenance_notes") or "").strip():
+                    return self.send_json({"ok": False, "error": "حالة صيانة الغرفة تتطلب تفاصيل الصيانة"}, 400)
+            if status_norm != "reserved":
+                data["booked_client_name"] = None
+                data["booked_client_phone"] = None
+                data["booked_client_id"] = None
+                data["booked_by_employee"] = None
+            if status_norm != "maintenance":
+                data["maintenance_notes"] = None
+        if table == "estate_maintenance":
+            if not str(data.get("title") or "").strip():
+                return self.send_json({"ok": False, "error": "عنوان طلب الصيانة مطلوب"}, 400)
+            status_raw = str(data.get("status") or "Open").strip().lower()
+            status_map = {
+                "open": "Open",
+                "in progress": "In Progress",
+                "closed": "Closed",
+            }
+            data["status"] = status_map.get(status_raw, "Open")
+            data.setdefault("priority", "Medium")
+            data["parts_cost"] = round(float(data.get("parts_cost") or 0), 3)
+            data["labor_cost"] = round(float(data.get("labor_cost") or 0), 3)
+            data["total_cost"] = round(float(data.get("total_cost") or 0), 3)
+            if data["parts_cost"] < 0 or data["labor_cost"] < 0 or data["total_cost"] < 0:
+                return self.send_json({"ok": False, "error": "تكاليف الصيانة يجب أن تكون موجبة أو صفر"}, 400)
+            if data["total_cost"] <= 0:
+                data["total_cost"] = round(data["parts_cost"] + data["labor_cost"], 3)
+            for f_name, t_name in [("property_id", "estate_properties"), ("building_id", "estate_buildings"), ("apartment_id", "estate_apartments"), ("room_id", "estate_rooms")]:
+                val_id = str(data.get(f_name) or "").strip()
+                if val_id and not exists(db, t_name, val_id):
+                    return self.send_json({"ok": False, "error": f"المعرف المرتبط بـ {f_name} غير موجود"}, 400)
+            if not str(data.get("maintenance_date") or "").strip():
+                data["maintenance_date"] = today()
+            if data["status"] == "Closed" and not str(data.get("closed_at") or "").strip():
+                data["closed_at"] = now_iso()
         if table == "invoices":
             return self.send_json({"ok": False, "error": "الفاتورة تُنشأ من العقد — من قائمة العقود اضغط «فاتورة» أو اعتمد العقد لتوليد الجدول"}, 400)
         if table == "payments":

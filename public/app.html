@@ -506,10 +506,13 @@
             <h3>إضافة عقار</h3>
             <div class="form">
               <input id="epName" placeholder="اسم العقار">
+              <select id="epStatus"><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="suspended">موقوف</option></select>
               <input id="epLocation" placeholder="موقع العقار">
               <input id="epBuildingCount" type="number" min="0" placeholder="عدد البنايات">
               <input id="epApartmentCount" type="number" min="0" placeholder="عدد الشقق">
               <input id="epRoomCount" type="number" min="0" placeholder="عدد الغرف">
+              <input id="epBaseRentPrice" type="number" min="0" step="0.001" placeholder="سعر الإيجار الأساسي OMR">
+              <input id="epServiceCharge" type="number" min="0" step="0.001" placeholder="رسوم الخدمة OMR">
               <input id="epAttachments" placeholder="الملحقات (إن وجدت)">
               <input id="epManager" placeholder="مسؤول العقار">
               <select id="epTenantClient"></select>
@@ -525,9 +528,12 @@
             <div class="form">
               <select id="ebProperty"></select>
               <input id="ebName" placeholder="اسم/رقم البناية">
+              <select id="ebStatus"><option value="active">نشطة</option><option value="inactive">غير نشطة</option><option value="suspended">موقوفة</option></select>
               <input id="ebLocation" placeholder="موقع البناية">
               <input id="ebApartmentCount" type="number" min="0" placeholder="عدد الشقق">
               <input id="ebRoomCount" type="number" min="0" placeholder="عدد الغرف">
+              <input id="ebBaseRentPrice" type="number" min="0" step="0.001" placeholder="سعر الإيجار الأساسي OMR">
+              <input id="ebServiceCharge" type="number" min="0" step="0.001" placeholder="رسوم الخدمة OMR">
               <input id="ebAttachments" placeholder="الملحقات">
               <input id="ebManager" placeholder="مسؤول البناية">
               <select id="ebTenantClient"></select>
@@ -585,6 +591,19 @@
               <input id="erName" placeholder="اسم/رقم الغرفة">
               <input id="erType" placeholder="نوع الغرفة">
               <select id="erStatus"><option value="vacant">شاغرة</option><option value="reserved">محجوزة</option><option value="occupied">مؤجرة</option><option value="maintenance">تحت الصيانة</option></select>
+              <input id="erRentPrice" type="number" min="0" step="0.001" placeholder="سعر الغرفة OMR">
+              <div id="erReservedFields" class="estate-state-fields hidden">
+                <input id="erBookingDeposit" type="number" min="0" step="0.001" placeholder="تأمين حجز الغرفة OMR">
+                <input id="erPrepaidAmount" type="number" min="0" step="0.001" placeholder="مدفوع مقدمًا OMR">
+                <input id="erBookedClientName" placeholder="اسم العميل المحجوز له">
+                <input id="erBookedClientPhone" placeholder="هاتف العميل">
+                <input id="erBookedClientId" placeholder="رقم هوية/مرجع العميل">
+                <input id="erBookedByEmployee" placeholder="الموظف الحاجز">
+              </div>
+              <div id="erMaintenanceFields" class="estate-state-fields hidden">
+                <input id="erMaintenanceCost" type="number" min="0" step="0.001" placeholder="تكلفة صيانة الغرفة OMR">
+                <textarea id="erMaintenanceNotes" placeholder="تفاصيل صيانة الغرفة"></textarea>
+              </div>
               <input id="erAttachments" placeholder="الملحقات">
               <input id="erManager" placeholder="مسؤول الغرفة">
               <select id="erTenantClient"></select>
@@ -607,12 +626,18 @@
             <select id="emStatus"><option>Open</option><option>In Progress</option><option>Closed</option></select>
             <select id="emPriority"><option>High</option><option>Medium</option><option>Low</option></select>
             <input id="emResponsible" placeholder="اسم المسؤول عن الصيانة">
+            <input id="emAssignedTeam" placeholder="الفريق/الجهة المنفذة">
             <input id="emPartsDetails" placeholder="تفاصيل القطع">
             <input id="emPartsCost" type="number" step="0.001" placeholder="تكلفة القطع">
+            <input id="emLaborCost" type="number" step="0.001" placeholder="تكلفة العمالة">
             <input id="emInvoiceNo" placeholder="رقم الفاتورة">
+            <input id="emInvoiceDate" type="date">
+            <input id="emVendorName" placeholder="اسم المورد/المقاول">
             <input id="emTotalCost" type="number" step="0.001" placeholder="إجمالي التكلفة">
+            <input id="emApprovedBy" placeholder="اعتماد بواسطة">
             <input id="emDate" type="date">
             <input id="emNextDate" type="date">
+            <input id="emClosedAt" type="date">
             <textarea id="emNotes" placeholder="ملاحظات إضافية"></textarea>
           </div>
           <button class="gold-btn" type="button" onclick="createEstateMaintenance()">حفظ طلب الصيانة</button>
