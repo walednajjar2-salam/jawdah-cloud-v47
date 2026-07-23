@@ -3597,6 +3597,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def serve_static(self, path: str, head_only: bool = False) -> None:
         # Short stable aliases so old/cached 404 bookmarks still fail less often.
+        if path in ("/go", "/دخول", "/start"):
+            path = "/go.html"
         if path in ("/lq-setup.exe", "/windows-setup.exe", "/LaunchQuality-Setup.exe"):
             path = "/releases/windows/LaunchQuality-Setup.exe"
         if path in ("/windows-setup", "/get-windows"):
