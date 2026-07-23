@@ -3992,13 +3992,80 @@ window.printHospitalityFolio = printHospitalityFolio;
     try{
       const res=await api('production_status');
       const alerts=res.alerts||{};
+      const wf=res.workflow||{};
       const box=$('#productionStatusBox');
-      box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(res.score)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div><div class="kpi"><span>روابط غير سليمة</span><strong>${fmt((alerts.broken_contract_links||0)+(alerts.broken_invoice_links||0))}</strong></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${fmt(c.value)}</b></div>`).join('')}</div>`;
+      box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(res.score)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div><div class="kpi"><span>روابط غير سليمة</span><strong>${fmt((alerts.broken_contract_links||0)+(alerts.broken_invoice_links||0))}</strong></div></div><div class="card inner-card"><h3>Workflow Snapshot</h3><div class="statement-row"><span>Contract activation scope</span><b>${wf.contract_activation_owner_admin_only ? 'Owner/Admin only' : 'Policy-open'}</b></div><div class="statement-row"><span>Manual invoice approval threshold</span><b>${money(wf.manual_invoice_approval_threshold||0)}</b></div><div class="statement-row"><span>Payment approval threshold</span><b>${money(wf.payment_approval_threshold||0)}</b></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${fmt(c.value)}</b></div>`).join('')}</div>`;
       ensureEnglishDigits(box);
+      if(typeof window.loadWorkflowPolicies==='function') window.loadWorkflowPolicies();
       if(typeof window.loadModuleIntegrity==='function') window.loadModuleIntegrity();
       if(typeof window.loadModuleFixHistoryKpi==='function') window.loadModuleFixHistoryKpi();
       if(typeof window.loadModuleFixHistory==='function') window.loadModuleFixHistory();
     }catch(e){toastErr(e)}
+  };
+
+  window.loadWorkflowPolicies=async function(){
+    const host=$('#workflowPoliciesBox');
+    if(!host) return;
+    host.innerHTML='<p class="mini">Loading workflow policies...</p>';
+    try{
+      const res=await api('workflow_policies');
+      const p=res.policies||{};
+      const editable=!!res.editable;
+      host.innerHTML=`
+        <div class="card inner-card">
+          <h3>Workflow + Rules Policy Center</h3>
+          <p class="mini">هذه النواة تتحكم بحدود الأتمتة والاعتمادات لمسار العقود والفواتير والتحصيل.</p>
+          <div class="form" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+            <label class="mini">Contract activation owner/admin only
+              <select id="wfPolicyOwnerAdminOnly" ${editable?'':'disabled'}>
+                <option value="true" ${p.contract_activation_owner_admin_only ? 'selected':''}>true</option>
+                <option value="false" ${!p.contract_activation_owner_admin_only ? 'selected':''}>false</option>
+              </select>
+            </label>
+            <label class="mini">Manual invoice approval threshold
+              <input id="wfPolicyManualThreshold" type="number" min="1" step="1" value="${Number(p.manual_invoice_approval_threshold||0)}" ${editable?'':'disabled'}>
+            </label>
+            <label class="mini">Payment approval threshold
+              <input id="wfPolicyPaymentThreshold" type="number" min="1" step="1" value="${Number(p.payment_approval_threshold||0)}" ${editable?'':'disabled'}>
+            </label>
+            <label class="mini">Invoice backdate limit (days)
+              <input id="wfPolicyBackdateDays" type="number" min="0" step="1" value="${Number(p.invoice_backdate_limit_days||0)}" ${editable?'':'disabled'}>
+            </label>
+            <label class="mini">Invoice future limit (days)
+              <input id="wfPolicyFutureDays" type="number" min="0" step="1" value="${Number(p.invoice_future_limit_days||0)}" ${editable?'':'disabled'}>
+            </label>
+          </div>
+          <div class="toolbar" style="margin-top:10px">
+            ${editable ? '<button class="gold-btn" type="button" onclick="saveWorkflowPolicies()">Save Workflow Policies</button>' : '<span class="badge pending">Requires owner/admin role</span>'}
+          </div>
+        </div>
+      `;
+      ensureEnglishDigits(host);
+    }catch(e){
+      host.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
+  };
+
+  window.saveWorkflowPolicies=async function(){
+    try{
+      const payload={
+        policies:{
+          contract_activation_owner_admin_only: String($('#wfPolicyOwnerAdminOnly')?.value||'true')==='true',
+          manual_invoice_approval_threshold: Number($('#wfPolicyManualThreshold')?.value||0),
+          payment_approval_threshold: Number($('#wfPolicyPaymentThreshold')?.value||0),
+          invoice_backdate_limit_days: Number($('#wfPolicyBackdateDays')?.value||0),
+          invoice_future_limit_days: Number($('#wfPolicyFutureDays')?.value||0),
+        }
+      };
+      await api('workflow_policies',{
+        method:'POST',
+        body:JSON.stringify(payload),
+      });
+      toast('Workflow policies updated');
+      await loadProductionStatus();
+    }catch(e){
+      toastErr(e,'تعذر حفظ Workflow Policies');
+    }
   };
 
   window.loadModuleIntegrity=async function(){

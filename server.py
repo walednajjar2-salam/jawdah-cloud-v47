@@ -186,6 +186,16 @@ OPENAI_API_KEY = (os.environ.get("OPENAI_API_KEY") or os.environ.get("LQ_OPENAI_
 AI_MODEL = os.environ.get("LQ_AI_MODEL", "gpt-4o-mini").strip()
 AI_DAILY_LIMIT = max(1, int(os.environ.get("LQ_AI_DAILY_LIMIT", "50") or "50"))
 APPROVAL_THRESHOLD = float(os.environ.get("LQ_APPROVAL_THRESHOLD", "3000") or "3000")
+WORKFLOW_POLICY_DEFAULTS: Dict[str, Any] = {
+    # If enabled, only owner/admin can activate contracts from API.
+    "contract_activation_owner_admin_only": True,
+    # Dynamic thresholds used by workflow approvals engine.
+    "manual_invoice_approval_threshold": APPROVAL_THRESHOLD,
+    "payment_approval_threshold": APPROVAL_THRESHOLD,
+    # How far invoice due date can be backdated/future-dated by non-admin users.
+    "invoice_backdate_limit_days": 7,
+    "invoice_future_limit_days": 180,
+}
 STAFF_APP_VERSION = os.environ.get("LQ_STAFF_APP_VERSION", "2.0.0").strip()
 STAFF_DOWNLOAD_APK = os.environ.get(
     "LQ_STAFF_APK_URL",
@@ -254,6 +264,95 @@ def cleanup_module_fix_previews() -> None:
 
 def module_fix_preview_key(username: str, preview_id: str) -> str:
     return f"{str(username or '').strip().lower()}::{str(preview_id or '').strip()}"
+
+
+def _coerce_workflow_policy_value(key: str, value: Any) -> Any:
+    if key not in WORKFLOW_POLICY_DEFAULTS:
+        raise ValueError(f"Unsupported workflow policy: {key}")
+    default = WORKFLOW_POLICY_DEFAULTS[key]
+    if isinstance(default, bool):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            token = value.strip().lower()
+            if token in ("1", "true", "yes", "on"):
+                return True
+            if token in ("0", "false", "no", "off"):
+                return False
+        raise ValueError(f"{key} must be boolean")
+    if isinstance(default, int):
+        iv = int(value)
+        if iv < 0:
+            raise ValueError(f"{key} must be >= 0")
+        return iv
+    if isinstance(default, float):
+        fv = float(value)
+        if fv <= 0:
+            raise ValueError(f"{key} must be > 0")
+        return fv
+    return value
+
+
+def _workflow_policy_float(policies: Dict[str, Any], key: str) -> float:
+    try:
+        return float(policies.get(key, WORKFLOW_POLICY_DEFAULTS[key]))
+    except Exception:
+        return float(WORKFLOW_POLICY_DEFAULTS[key])
+
+
+def _workflow_policy_int(policies: Dict[str, Any], key: str) -> int:
+    try:
+        return int(policies.get(key, WORKFLOW_POLICY_DEFAULTS[key]))
+    except Exception:
+        return int(WORKFLOW_POLICY_DEFAULTS[key])
+
+
+def _workflow_policy_bool(policies: Dict[str, Any], key: str) -> bool:
+    raw = policies.get(key, WORKFLOW_POLICY_DEFAULTS[key])
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.strip().lower() in ("1", "true", "yes", "on")
+    return bool(raw)
+
+
+def load_workflow_policies(db: sqlite3.Connection) -> Dict[str, Any]:
+    out = dict(WORKFLOW_POLICY_DEFAULTS)
+    rows = db.execute("SELECT key, value_json FROM workflow_policies").fetchall()
+    for row in rows:
+        key = str(row["key"] or "").strip()
+        if key not in WORKFLOW_POLICY_DEFAULTS:
+            continue
+        try:
+            out[key] = json.loads(row["value_json"])
+        except Exception:
+            out[key] = WORKFLOW_POLICY_DEFAULTS[key]
+    return out
+
+
+def validate_invoice_due_date_by_policy(
+    due_date_raw: Any,
+    user: Dict[str, Any],
+    policies: Dict[str, Any],
+) -> Optional[str]:
+    due_s = str(due_date_raw or "").strip()
+    if not due_s:
+        return None
+    try:
+        due_d = datetime.fromisoformat(due_s).date()
+    except Exception:
+        return "Invoice due_date format must be YYYY-MM-DD"
+    role = str(user.get("role") or "").strip().lower()
+    if role in ("admin", "owner"):
+        return None
+    max_back_days = _workflow_policy_int(policies, "invoice_backdate_limit_days")
+    max_future_days = _workflow_policy_int(policies, "invoice_future_limit_days")
+    delta_days = (due_d - date.today()).days
+    if delta_days < -max_back_days:
+        return f"Backdate over policy limit ({max_back_days} days)"
+    if delta_days > max_future_days:
+        return f"Future due date over policy limit ({max_future_days} days)"
+    return None
 
 
 def log_module_fix_run(
@@ -1117,6 +1216,12 @@ def init_db() -> None:
                 issues_after INTEGER,
                 details_json TEXT
             );
+            CREATE TABLE IF NOT EXISTS workflow_policies (
+                key TEXT PRIMARY KEY,
+                value_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                updated_by TEXT NOT NULL
+            );
             """
         )
         for col, definition in [
@@ -1232,10 +1337,22 @@ def init_db() -> None:
             ensure_column(db, "biometric_credentials", col, definition)
         migrate_property_statuses(db)
         seed_branches_from_buildings(db)
+        ensure_workflow_policies_defaults(db)
         seed_if_empty(db)
         ensure_team_users(db)
         seed_chart_accounts(db)
         db.commit()
+
+
+def ensure_workflow_policies_defaults(db: sqlite3.Connection) -> None:
+    for key, default in WORKFLOW_POLICY_DEFAULTS.items():
+        existing = db.execute("SELECT key FROM workflow_policies WHERE key=?", (key,)).fetchone()
+        if existing:
+            continue
+        db.execute(
+            "INSERT INTO workflow_policies(key, value_json, updated_at, updated_by) VALUES(?,?,?,?)",
+            (key, json.dumps(default, ensure_ascii=False), now_iso(), "system"),
+        )
 
 
 def insert(db: sqlite3.Connection, table: str, row: Dict[str, Any]) -> None:
@@ -3207,6 +3324,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "production_status" and method == "GET":
                     user = self.require_user(db, "reports:read")
                     return None if not user else self.api_production_status(db)
+                if parts[0] == "workflow_policies" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_workflow_policies(db, user)
+                if parts[0] == "workflow_policies" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_update_workflow_policies(db, user)
                 if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_backup_status()
@@ -4557,6 +4680,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_invoice_from_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
+        policies = load_workflow_policies(db)
         contract_id = data.get("contract_id")
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
@@ -4564,6 +4688,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract_status = str(contract["status"] or "").strip().lower()
         if contract_status not in ("active", "activated"):
             return self.send_json({"ok": False, "error": "لا يمكن إصدار فاتورة إلا بعد اعتماد وتفعيل العقد"}, 400)
+        due_policy_err = validate_invoice_due_date_by_policy(data.get("due_date"), user, policies)
+        if due_policy_err:
+            return self.send_json({"ok": False, "error": due_policy_err}, 400)
         if not exists(db, "properties", contract["property_id"]) or not exists(db, "clients", contract["client_id"]):
             return self.send_json({"ok": False, "error": "Contract references missing client/property"}, 400)
         amount = float(data.get("amount") or contract["rent_amount"])
@@ -4585,6 +4712,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_manual_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
+        policies = load_workflow_policies(db)
         contract_id = data.get("contract_id")
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
@@ -4592,10 +4720,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract_status = str(contract["status"] or "").strip().lower()
         if contract_status not in ("active", "activated"):
             return self.send_json({"ok": False, "error": "لا يمكن إصدار فاتورة إلا بعد اعتماد وتفعيل العقد"}, 400)
+        due_policy_err = validate_invoice_due_date_by_policy(data.get("due_date"), user, policies)
+        if due_policy_err:
+            return self.send_json({"ok": False, "error": due_policy_err}, 400)
         amount_value = float(data.get("amount") or 0)
         if amount_value <= 0:
             return self.send_json({"ok": False, "error": "Invoice amount must be positive"}, 400)
-        if amount_value >= APPROVAL_THRESHOLD and not can_decide_approval(user, "manual_invoice"):
+        manual_threshold = _workflow_policy_float(policies, "manual_invoice_approval_threshold")
+        if amount_value >= manual_threshold and not can_decide_approval(user, "manual_invoice"):
             meta = {
                 "contract_id": contract_id,
                 "amount": amount_value,
@@ -4619,7 +4751,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "ok": True,
                 "approval_required": True,
                 "approval_id": approval_id,
-                "message": f"المبلغ {fmt_omr(amount_value)} يحتاج اعتماد المدير/المحاسب قبل إصدار الفاتورة",
+                "message": f"المبلغ {fmt_omr(amount_value)} يحتاج اعتماد المدير/المحاسب قبل إصدار الفاتورة (الحد {fmt_omr(manual_threshold)})",
             })
         inv_type = detect_invoice_type(data.get("description") or "Manual invoice", data.get("invoice_type"))
         invoice = build_invoice_row(
@@ -4671,6 +4803,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_pay_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
+        policies = load_workflow_policies(db)
         invoice_id = data.get("invoice_id")
         amount = float(data.get("amount") or 0)
         payment_proof_image: Optional[str] = None
@@ -4690,7 +4823,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         invoice = db.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
         if not invoice:
             return self.send_json({"ok": False, "error": "Invoice not found"}, 404)
-        if amount >= APPROVAL_THRESHOLD and not can_decide_approval(user, "payment"):
+        payment_threshold = _workflow_policy_float(policies, "payment_approval_threshold")
+        if amount >= payment_threshold and not can_decide_approval(user, "payment"):
             approval_id = data.get("approval_id")
             if approval_id:
                 row = db.execute(
@@ -4723,7 +4857,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "ok": True,
                     "approval_required": True,
                     "approval_id": aid,
-                    "message": f"تحصيل {fmt_omr(amount)} يحتاج اعتماد المدير/المحاسب",
+                    "message": f"تحصيل {fmt_omr(amount)} يحتاج اعتماد المدير/المحاسب (الحد {fmt_omr(payment_threshold)})",
                 })
         try:
             result = execute_invoice_payment(
@@ -5063,10 +5197,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_activate_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
+        policies = load_workflow_policies(db)
         contract_id = str(data.get("contract_id") or "").strip()
         if not contract_id:
             return self.send_json({"ok": False, "error": "contract_id required"}, 400)
-        if user.get("role") not in ("owner", "admin"):
+        owner_admin_only = _workflow_policy_bool(policies, "contract_activation_owner_admin_only")
+        if owner_admin_only and user.get("role") not in ("owner", "admin"):
             return self.send_json({"ok": False, "error": "تفعيل العقد محصور بحسابات الإدارة/المالك"}, 403)
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
@@ -5735,6 +5871,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.send_html(html)
 
     def api_production_status(self, db: sqlite3.Connection) -> None:
+        workflow_policies = load_workflow_policies(db)
         props = db.execute("SELECT COUNT(*) FROM properties").fetchone()[0]
         clients = db.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
         contracts = db.execute("SELECT COUNT(*) FROM contracts").fetchone()[0]
@@ -5760,7 +5897,70 @@ class JawdahHandler(BaseHTTPRequestHandler):
             {"name": "سجل التدقيق", "ok": audit_rows > 0, "value": audit_rows},
         ]
         score = round(sum(1 for c in checks if c["ok"]) / len(checks) * 100, 1)
-        self.send_json({"ok": True, "score": score, "checks": checks, "alerts": {"overdue": float(overdue or 0), "low_stock": low_stock, "broken_contract_links": con_bad, "broken_invoice_links": inv_bad}})
+        self.send_json({
+            "ok": True,
+            "score": score,
+            "checks": checks,
+            "alerts": {"overdue": float(overdue or 0), "low_stock": low_stock, "broken_contract_links": con_bad, "broken_invoice_links": inv_bad},
+            "workflow": {
+                "policy_count": len(workflow_policies),
+                "contract_activation_owner_admin_only": _workflow_policy_bool(workflow_policies, "contract_activation_owner_admin_only"),
+                "manual_invoice_approval_threshold": _workflow_policy_float(workflow_policies, "manual_invoice_approval_threshold"),
+                "payment_approval_threshold": _workflow_policy_float(workflow_policies, "payment_approval_threshold"),
+            },
+        })
+
+    def api_workflow_policies(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        policies = load_workflow_policies(db)
+        self.send_json(
+            {
+                "ok": True,
+                "policies": policies,
+                "defaults": WORKFLOW_POLICY_DEFAULTS,
+                "editable": str(user.get("role") or "").strip().lower() in ("owner", "admin"),
+            }
+        )
+
+    def api_update_workflow_policies(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        incoming = data.get("policies")
+        if not isinstance(incoming, dict) or not incoming:
+            return self.send_json({"ok": False, "error": "policies object required"}, 400)
+        current = load_workflow_policies(db)
+        updated: Dict[str, Any] = {}
+        for key, raw in incoming.items():
+            try:
+                val = _coerce_workflow_policy_value(str(key), raw)
+            except ValueError as exc:
+                return self.send_json({"ok": False, "error": str(exc)}, 400)
+            db.execute(
+                """
+                INSERT INTO workflow_policies(key, value_json, updated_at, updated_by)
+                VALUES(?,?,?,?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value_json=excluded.value_json,
+                    updated_at=excluded.updated_at,
+                    updated_by=excluded.updated_by
+                """,
+                (
+                    key,
+                    json.dumps(val, ensure_ascii=False),
+                    now_iso(),
+                    user.get("username") or user.get("name") or "system",
+                ),
+            )
+            updated[key] = val
+            current[key] = val
+        audit(
+            db,
+            user,
+            "workflow_policy_update",
+            "workflow_policies",
+            None,
+            " | ".join([f"{k}={updated[k]}" for k in sorted(updated.keys())]),
+        )
+        db.commit()
+        self.send_json({"ok": True, "policies": current, "updated": updated})
 
     def api_backup(self, db: sqlite3.Connection) -> None:
         self.send_json({"ok": True, "backup": build_backup_payload(db)})
