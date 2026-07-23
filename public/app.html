@@ -40,7 +40,7 @@
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref9">
-  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec11">
+  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec12">
   <link rel="stylesheet" href="lq-login-locked.css?v=locked9">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
@@ -390,10 +390,6 @@
   </div>
 
   <main id="app" class="app hidden">
-      <div class="login-bg-glow"></div>
-      <div class="login-mesh"></div>
-      <div class="login-cinema-photo-layer"></div>
-    </div>
     <aside id="sidebar" class="sidebar sidebar-ultra">
       <div class="brand brand-pro">
         <img
@@ -405,8 +401,8 @@
           decoding="async"
         >
         <div class="brand-copy-pro">
-          <h1>مشاريع الانطلاقة</h1>
-          <small dir="ltr">Launch Quality · ERP</small>
+          <h1>مشاريع جودة الانطلاقة</h1>
+          <small dir="ltr">Launch Quality LLC</small>
         </div>
       </div>
       <nav id="nav" class="nav nav-ultra"></nav>
@@ -415,29 +411,47 @@
     <section class="content">
       <div class="app-shell">
       <header class="app-header">
-        <div class="app-header-row">
+        <div class="app-header-row lq-header-welcome-row">
           <button id="menuBtn" class="tb-icon mobile-nav" type="button" aria-label="القائمة">☰</button>
-          <div class="lq-header-brand" aria-hidden="false">
-            <img src="assets/brand-logo-gold.png?v=17" alt="مشاريع الانطلاقة" class="lq-header-logo" width="88" height="80" decoding="async">
+
+          <div class="lq-header-brand" aria-label="اسم المؤسسة">
+            <img src="assets/brand-logo-gold.png?v=17" alt="مشاريع جودة الانطلاقة" class="lq-header-logo" width="88" height="80" decoding="async">
             <div class="lq-header-brand-text">
-              <strong>مشاريع الانطلاقة</strong>
-              <small dir="ltr">Launch Quality · ERP</small>
+              <span class="lq-header-kicker">اسم المؤسسة</span>
+              <strong id="headerOrgName">مشاريع جودة الانطلاقة</strong>
+              <small dir="ltr">Launch Quality LLC · ERP</small>
             </div>
           </div>
+
+          <div class="lq-header-welcome" aria-label="الترحيب">
+            <span class="lq-header-kicker">الترحيب</span>
+            <span id="headerGreeting" class="lq-welcome-greet">أهلاً وسهلاً</span>
+            <b id="headerLeaderName" class="lq-welcome-leader">القائد يعقوب فاضل الخصيبي</b>
+          </div>
+
+          <div class="lq-header-clock-wrap" aria-label="الساعة">
+            <span class="lq-header-kicker">الساعة</span>
+            <div id="clock" class="top-pill top-pill-pro lq-header-clock" title="الساعة">00:00:00</div>
+          </div>
+
+          <button id="headerSettingsBtn" class="tb-icon lq-header-settings" type="button" title="الإعدادات" onclick="showSection('settings')" aria-label="الإعدادات">
+            <span class="lq-settings-ico" aria-hidden="true">⚙️</span>
+            <span class="lq-settings-label">الإعدادات</span>
+          </button>
+
           <div class="search search-pro"><input id="globalSearch" placeholder="🔎 بحث في المشاريع والعملاء والعقود..."></div>
+
           <div class="app-header-actions">
-            <button id="fieldModeBtn" class="tb-icon field-mode-btn" type="button" title="وضع الميدان · Field mode">🧰</button>
             <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة والمحاسبة">🧭</button>
-            <select id="themeSelect" class="theme-select" title="مظهر المنصة">
-              <option value="luxury-light">Luxury Light</option>
-            </select>
-            <span id="topBackupStatus" class="top-pill top-backup-pill hidden" title="آخر نسخة احتياطية">Backup</span>
             <button class="tb-icon tb-bell" type="button" title="التنبيهات" onclick="showSection('messages')"><span class="bell-glyph">🔔</span><span id="bellDot" class="bell-dot hidden"></span></button>
-            <button class="tb-icon" type="button" title="الرسائل" onclick="showSection('messages')">📨</button>
-            <button class="tb-icon" type="button" title="الجدول" onclick="showSection('timeline')">📅</button>
             <button class="add-new-btn saas-quick-btn lq-write-only" type="button" onclick="showSection('properties')">+ جديد</button>
-            <div id="clock" class="top-pill top-pill-pro">00:00:00</div>
-            <div class="userbox userbox-pro"><div id="avatar" class="avatar avatar-pro">J</div><div><b id="userName">User</b><br><small id="userRole" class="mini">Role</small></div></div>
+            <div class="userbox userbox-pro">
+              <div id="avatar" class="avatar avatar-pro">ق</div>
+              <div>
+                <b id="userName">القائد يعقوب فاضل الخصيبي</b><br>
+                <small id="userRole" class="mini">المالك العام</small>
+              </div>
+            </div>
             <button id="logoutBtn" class="ghost tb-logout" type="button">خروج</button>
           </div>
         </div>
@@ -1230,7 +1244,7 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal11" defer></script>
+  <script src="app.js?v=portal12" defer></script>
   <script src="enterprise-vision.js?v=ev11" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>
   <script src="lq-hub-dashboard.js?v=hub11" defer></script>

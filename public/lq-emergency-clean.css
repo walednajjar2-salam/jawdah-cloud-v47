@@ -521,3 +521,161 @@ body.lq-workspace-mode .lq-hub-board,
 .lq-cockpit-v30 .saas-split-grid{
   display:grid !important;
 }
+
+/* Header: ترحيب · ساعة · اسم القائد · إعدادات · اسم المؤسسة */
+body.saas-luxury .lq-header-welcome-row,
+body.app-ready .lq-header-welcome-row{
+  display:flex !important;
+  align-items:center !important;
+  gap:12px !important;
+  flex-wrap:wrap !important;
+  min-height:72px !important;
+}
+body.saas-luxury .lq-header-brand,
+body.app-ready .lq-header-brand{
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  flex:0 0 auto !important;
+  min-width:0 !important;
+}
+body.saas-luxury .lq-header-brand-text,
+body.app-ready .lq-header-brand-text{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:2px !important;
+  line-height:1.25 !important;
+}
+body.saas-luxury .lq-header-kicker,
+body.app-ready .lq-header-kicker{
+  display:block !important;
+  font-size:10px !important;
+  font-weight:700 !important;
+  letter-spacing:.04em !important;
+  color:#7a8aa3 !important;
+  margin:0 !important;
+}
+body.saas-luxury .lq-header-brand-text strong,
+body.app-ready .lq-header-brand-text strong,
+body.saas-luxury #headerOrgName,
+body.app-ready #headerOrgName{
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:#1a3358 !important;
+  white-space:nowrap !important;
+}
+body.saas-luxury .lq-header-brand-text small,
+body.app-ready .lq-header-brand-text small{
+  font-size:11px !important;
+  color:#6b7c94 !important;
+}
+body.saas-luxury .lq-header-welcome,
+body.app-ready .lq-header-welcome{
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+  gap:2px !important;
+  padding:6px 14px !important;
+  border-radius:14px !important;
+  background:linear-gradient(135deg,#f7fafc 0%,#eef4fb 100%) !important;
+  border:1px solid #d7e3f2 !important;
+  min-width:200px !important;
+  max-width:320px !important;
+}
+body.saas-luxury .lq-welcome-greet,
+body.app-ready .lq-welcome-greet{
+  font-size:12px !important;
+  font-weight:600 !important;
+  color:#4a6280 !important;
+}
+body.saas-luxury .lq-welcome-leader,
+body.app-ready .lq-welcome-leader,
+body.saas-luxury #headerLeaderName,
+body.app-ready #headerLeaderName{
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:#0f2744 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+body.saas-luxury .lq-header-clock-wrap,
+body.app-ready .lq-header-clock-wrap{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  gap:2px !important;
+  flex:0 0 auto !important;
+}
+body.saas-luxury .lq-header-clock,
+body.app-ready .lq-header-clock,
+body.saas-luxury #clock.lq-header-clock,
+body.app-ready #clock.lq-header-clock{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-width:96px !important;
+  padding:8px 12px !important;
+  border-radius:12px !important;
+  background:#1f2d3d !important;
+  color:#f5f7fa !important;
+  border:1px solid #15202c !important;
+  font-variant-numeric:tabular-nums !important;
+  font-weight:700 !important;
+  font-size:14px !important;
+  letter-spacing:.04em !important;
+}
+body.saas-luxury .lq-header-settings,
+body.app-ready .lq-header-settings{
+  display:inline-flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:2px !important;
+  min-width:64px !important;
+  min-height:52px !important;
+  padding:6px 10px !important;
+  border-radius:12px !important;
+  background:#fff !important;
+  border:1px solid #d4e0f2 !important;
+  color:#1f2d3d !important;
+  line-height:1.1 !important;
+}
+body.saas-luxury .lq-header-settings .lq-settings-ico,
+body.app-ready .lq-header-settings .lq-settings-ico{
+  font-size:16px !important;
+  line-height:1 !important;
+}
+body.saas-luxury .lq-header-settings .lq-settings-label,
+body.app-ready .lq-header-settings .lq-settings-label{
+  font-size:10px !important;
+  font-weight:700 !important;
+  color:#4a6280 !important;
+}
+body.saas-luxury .lq-header-welcome-row .search,
+body.app-ready .lq-header-welcome-row .search{
+  flex:1 1 180px !important;
+  min-width:140px !important;
+  max-width:420px !important;
+}
+@media (max-width:1100px){
+  body.saas-luxury .lq-header-welcome,
+  body.app-ready .lq-header-welcome{
+    min-width:160px !important;
+    max-width:240px !important;
+  }
+  body.saas-luxury .lq-welcome-leader,
+  body.app-ready .lq-welcome-leader{
+    font-size:13px !important;
+  }
+}
+@media (max-width:760px){
+  body.saas-luxury .lq-header-kicker,
+  body.app-ready .lq-header-kicker{
+    display:none !important;
+  }
+  body.saas-luxury .lq-header-settings .lq-settings-label,
+  body.app-ready .lq-header-settings .lq-settings-label{
+    display:none !important;
+  }
+}
