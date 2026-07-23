@@ -4014,6 +4014,14 @@ window.printHospitalityFolio = printHospitalityFolio;
         <div class="card inner-card">
           <h3>فحص تكامل الوحدات (تشغيلي)</h3>
           <div class="toolbar" style="margin-bottom:10px">
+            <select id="moduleFixScope" title="نطاق الإصلاح">
+              <option value="all">كل الوحدات</option>
+              <option value="contracts">العقود فقط</option>
+              <option value="hospitality">الضيافة فقط</option>
+              <option value="payments,invoices">الدفعات + الفواتير</option>
+              <option value="inventory">المخزن فقط</option>
+            </select>
+            <input id="moduleFixMaxRows" type="number" min="10" max="1000" step="10" value="200" style="max-width:120px" title="الحد الأقصى للسجلات" placeholder="max rows">
             <button class="ghost" type="button" onclick="runModuleIntegrityFix(true)">معاينة الإصلاح الآمن</button>
             ${canFix ? '<button class="gold-btn" type="button" onclick="runModuleIntegrityFix(false)">تنفيذ الإصلاح الآمن</button>' : '<span class="badge pending">تنفيذ الإصلاح يتطلب صلاحية admin/owner</span>'}
             ${canFix ? '<button class="gold-btn" type="button" onclick="runModuleIntegrityAutoRun()">تنفيذ + إعادة فحص فوري</button>' : ''}
@@ -4053,18 +4061,23 @@ window.printHospitalityFolio = printHospitalityFolio;
       const ok = confirm('تنفيذ الإصلاح الوظيفي الآمن الآن؟ سيتم تسجيل كل العمليات في السجل.');
       if(!ok) return;
     }
+    const scopeRaw = String($('#moduleFixScope')?.value || 'all');
+    const modules = scopeRaw === 'all' ? [] : scopeRaw.split(',').map(s=>s.trim()).filter(Boolean);
+    const maxRows = Number($('#moduleFixMaxRows')?.value || 200);
     host.insertAdjacentHTML('afterbegin','<p class="mini">جاري تشغيل '+(preview?'معاينة':'تنفيذ')+' الإصلاح...</p>');
     try{
       const res = await api('module_integrity_fix',{
         method:'POST',
-        body: JSON.stringify({ dry_run: preview }),
+        body: JSON.stringify({ dry_run: preview, modules, max_rows: maxRows }),
       });
       const s = res.summary || {};
+      const scope = res.scope || {};
       const rows = Array.isArray(res.actions) ? res.actions : [];
       const msg = `
         <div class="card inner-card" style="margin-top:12px">
           <h3>${preview?'نتيجة المعاينة':'نتيجة التنفيذ'} — الإصلاح الآمن</h3>
           <p class="mini">المرشّح: ${fmt(s.candidates||0)} · المنفذ: ${fmt(s.applied||0)} · الوضع: ${htmlEscape(String(s.mode||''))}</p>
+          <p class="mini">النطاق: ${htmlEscape(String((scope.modules||[]).join(', ')||'all'))} · max_rows: ${fmt(scope.max_rows||maxRows)}</p>
           ${rows.length ? tableHtml(
             [
               ['الإجراء','name',(v)=>htmlEscape(String(v||''))],
@@ -4093,11 +4106,14 @@ window.printHospitalityFolio = printHospitalityFolio;
     if(!host) return;
     const ok = confirm('تنفيذ الإصلاح الآمن ثم إعادة الفحص تلقائيًا الآن؟');
     if(!ok) return;
+    const scopeRaw = String($('#moduleFixScope')?.value || 'all');
+    const modules = scopeRaw === 'all' ? [] : scopeRaw.split(',').map(s=>s.trim()).filter(Boolean);
+    const maxRows = Number($('#moduleFixMaxRows')?.value || 200);
     host.insertAdjacentHTML('afterbegin','<p class="mini">جاري تنفيذ الإصلاح وإعادة الفحص...</p>');
     try{
       const res = await api('module_integrity_autorun',{
         method:'POST',
-        body: JSON.stringify({ confirm: true }),
+        body: JSON.stringify({ confirm: true, modules, max_rows: maxRows }),
       });
       const before = res.before || {};
       const after = res.after || {};
@@ -4106,6 +4122,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       const bsum = before.summary || {};
       const asum = after.summary || {};
       const fsum = fix.summary || {};
+      const scope = res.scope || fix.scope || {};
       const actions = Array.isArray(fix.actions) ? fix.actions : [];
       host.insertAdjacentHTML('afterbegin',`
         <div class="card inner-card" style="margin-top:12px">
@@ -4117,6 +4134,7 @@ window.printHospitalityFolio = printHospitalityFolio;
             <div class="kpi"><span>المشاكل (قبل ← بعد)</span><strong>${fmt(delta.issues_before||0)} → ${fmt(delta.issues_after||0)}</strong></div>
           </div>
           <p class="mini">الإصلاح: مرشّح ${fmt(fsum.candidates||0)} · منفذ ${fmt(fsum.applied||0)}</p>
+          <p class="mini">النطاق: ${htmlEscape(String((scope.modules||[]).join(', ')||'all'))} · max_rows: ${fmt(scope.max_rows||maxRows)}</p>
           <div class="status-line" style="margin:8px 0 12px">
             <span class="badge">Critical: ${fmt(bsum.critical||0)} → ${fmt(asum.critical||0)}</span>
             <span class="badge">High: ${fmt(bsum.high||0)} → ${fmt(asum.high||0)}</span>
