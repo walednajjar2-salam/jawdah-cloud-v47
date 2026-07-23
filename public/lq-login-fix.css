@@ -1,0 +1,167 @@
+/* Emergency login readability fix — loads last, wins conflicts */
+body.login-ultra #loginScreen,
+body.saas-login #loginScreen{
+  isolation:isolate;
+}
+
+body.login-ultra #loginScreen .login-glass-card,
+body.login-ultra #loginScreen .ev-auth-card,
+body.saas-login #loginScreen .login-glass-card{
+  position:relative !important;
+  z-index:5 !important;
+  overflow:hidden !important;
+  background:#0f172a !important;
+  background-image:none !important;
+  border:1px solid rgba(245,215,110,.35) !important;
+  box-shadow:0 24px 60px rgba(0,0,0,.55) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  color:#f8fafc !important;
+}
+
+/* Kill ghost/overlapping decorative text inside the card */
+body.login-ultra #loginScreen .login-glass-card::before,
+body.login-ultra #loginScreen .login-glass-card::after,
+body.login-ultra #loginScreen .ev-auth-card::before,
+body.login-ultra #loginScreen .ev-auth-card::after,
+body.login-ultra #loginScreen .login-glass-stage-shine,
+body.login-ultra #loginScreen .login-glass-stage::before{
+  content:none !important;
+  display:none !important;
+  opacity:0 !important;
+}
+
+body.login-ultra #loginScreen .login-card-title{
+  color:#fff !important;
+  font-size:28px !important;
+  font-weight:800 !important;
+  margin:8px 0 4px !important;
+  text-shadow:none !important;
+  background:none !important;
+  -webkit-text-fill-color:#fff !important;
+}
+
+body.login-ultra #loginScreen .login-card-sub{
+  color:#cbd5e1 !important;
+  font-size:14px !important;
+  opacity:1 !important;
+}
+
+body.login-ultra #loginScreen .login-card-brand{
+  max-width:160px !important;
+}
+body.login-ultra #loginScreen .login-card-brand-ar{
+  background:none !important;
+  -webkit-background-clip:initial !important;
+  background-clip:initial !important;
+  -webkit-text-fill-color:#f5d76e !important;
+  color:#f5d76e !important;
+  filter:none !important;
+  text-shadow:none !important;
+  font-size:13px !important;
+}
+body.login-ultra #loginScreen .login-card-brand-en{
+  color:#94a3b8 !important;
+}
+
+body.login-ultra #loginScreen .login-field{
+  position:relative !important;
+  display:block !important;
+  margin:0 0 14px !important;
+  z-index:2 !important;
+}
+body.login-ultra #loginScreen .login-field-label{
+  display:block !important;
+  color:#e2e8f0 !important;
+  font-size:12px !important;
+  margin-bottom:6px !important;
+  letter-spacing:.04em !important;
+}
+body.login-ultra #loginScreen .login-field-icon{
+  display:none !important; /* icons duplicated in placeholders caused clutter */
+}
+body.login-ultra #loginScreen .login-form input,
+body.login-ultra #loginScreen #loginUser,
+body.login-ultra #loginScreen #loginPass,
+body.login-ultra #loginScreen #otpUser,
+body.login-ultra #loginScreen .ev-otp-input{
+  width:100% !important;
+  box-sizing:border-box !important;
+  background:#111827 !important;
+  color:#f8fafc !important;
+  border:1px solid rgba(148,163,184,.45) !important;
+  border-radius:12px !important;
+  padding:14px 14px !important;
+  font-size:15px !important;
+  position:relative !important;
+  z-index:2 !important;
+  caret-color:#f5d76e !important;
+}
+body.login-ultra #loginScreen .login-form input::placeholder{
+  color:#94a3b8 !important;
+  opacity:1 !important;
+}
+body.login-ultra #loginScreen .login-pass-toggle{
+  position:absolute !important;
+  left:10px !important;
+  right:auto !important;
+  top:38px !important;
+  z-index:3 !important;
+  border:0 !important;
+  background:transparent !important;
+  color:#e2e8f0 !important;
+}
+
+/* Keep only Password + OTP visible */
+body.login-ultra #loginScreen .ev-auth-tab[data-auth="face"],
+body.login-ultra #loginScreen .ev-auth-tab[data-auth="fingerprint"],
+body.login-ultra #loginScreen .ev-auth-tab[data-auth="sso"]{
+  display:none !important;
+}
+body.login-ultra #loginScreen .ev-auth-tabs{
+  display:flex !important;
+  gap:8px !important;
+  margin:0 0 16px !important;
+}
+body.login-ultra #loginScreen .ev-auth-tab{
+  flex:1 !important;
+  background:#111827 !important;
+  color:#cbd5e1 !important;
+  border:1px solid rgba(148,163,184,.35) !important;
+}
+body.login-ultra #loginScreen .ev-auth-tab.active{
+  background:#1e293b !important;
+  color:#f5d76e !important;
+  border-color:rgba(245,215,110,.5) !important;
+}
+
+body.login-ultra #loginScreen .login-submit.gold-btn,
+body.login-ultra #loginScreen #loginBtn{
+  width:100% !important;
+  margin-top:8px !important;
+  background:linear-gradient(135deg,#d4af37,#f5d76e) !important;
+  color:#1a1205 !important;
+  border:0 !important;
+  font-size:16px !important;
+  font-weight:800 !important;
+  padding:14px 16px !important;
+}
+
+body.login-ultra #loginScreen .login-remember-check,
+body.login-ultra #loginScreen .login-inline-tools,
+body.login-ultra #loginScreen .ev-trust-strip{
+  color:#cbd5e1 !important;
+}
+body.login-ultra #loginScreen .ev-trust-pill{
+  background:#111827 !important;
+  color:#e2e8f0 !important;
+  border:1px solid rgba(148,163,184,.25) !important;
+}
+
+/* Reduce left-panel visual noise on smaller widths */
+@media (max-width:1100px){
+  body.login-ultra #loginScreen .va-panel,
+  body.login-ultra #loginScreen .login-showcase{
+    display:none !important;
+  }
+}

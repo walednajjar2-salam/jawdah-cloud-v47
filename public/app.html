@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ar" dir="ltr">
 <head>
   <meta charset="utf-8">
@@ -15,13 +15,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=ultra18">
+  <link rel="stylesheet" href="app.css?v=ultra19">
   <link rel="stylesheet" href="lq-shell.css?v=shell21">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref2">
   <link rel="stylesheet" href="lq-emergency-clean.css?v=ec1">
+  <link rel="stylesheet" href="lq-login-fix.css?v=lf2">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
   <style>
@@ -31,9 +32,10 @@
     #lqBrandWatermark img{display:none!important;opacity:0!important}
     body.login-ultra #loginScreen .login-glass-card,
     body.login-ultra #loginScreen .ev-auth-card{
-      background:linear-gradient(165deg,rgba(14,20,38,.94),rgba(8,12,24,.92))!important;
-      border:1px solid rgba(216,177,91,.28)!important;
-      box-shadow:0 24px 80px rgba(0,0,0,.45)!important;
+      background:#0f172a!important;
+      border:1px solid rgba(216,177,91,.35)!important;
+      box-shadow:0 24px 80px rgba(0,0,0,.5)!important;
+      backdrop-filter:none!important;
     }
     #lqBootMsg{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:#040814;color:#fff1b8;font:600 16px Tajawal,sans-serif;text-align:center;padding:24px}
     #lqBootMsg.show{display:grid}
@@ -158,21 +160,16 @@
             </div>
             <div class="ev-auth-tabs" role="tablist" aria-label="Authentication methods">
               <button type="button" class="ev-auth-tab active" data-auth="password" role="tab">Password</button>
-              <button type="button" class="ev-auth-tab" data-auth="face" role="tab">Face ID</button>
-              <button type="button" class="ev-auth-tab" data-auth="fingerprint" role="tab">Fingerprint</button>
               <button type="button" class="ev-auth-tab" data-auth="otp" role="tab">OTP</button>
-              <button type="button" class="ev-auth-tab" data-auth="sso" role="tab">SSO</button>
             </div>
             <div id="authPanePassword" class="ev-auth-pane login-form" role="tabpanel">
               <label class="login-field">
                 <span class="login-field-label" dir="ltr">Username</span>
-                <span class="login-field-icon" aria-hidden="true">👤</span>
-                <input id="loginUser" placeholder="👤 Enter username · اسم المستخدم" autocomplete="username">
+                <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
               </label>
               <label class="login-field">
                 <span class="login-field-label" dir="ltr">Password</span>
-                <span class="login-field-icon" aria-hidden="true">🔒</span>
-                <input id="loginPass" placeholder="🔒 Enter password · كلمة المرور" type="password" autocomplete="current-password">
+                <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
                 <button type="button" id="loginPassToggle" class="login-pass-toggle" aria-label="إظهار أو إخفاء كلمة المرور">👁️</button>
               </label>
               <div id="capsHint" class="login-caps-hint hidden">⚠️ يبدو أن زر Caps Lock مفعّل</div>
@@ -300,7 +297,7 @@
   <div id="portalSwitchOverlay" class="portal-switch-overlay hidden">
     <div class="portal-switch-card">
       <h3>اختر مسار العمل</h3>
-      <p class="mini">منصة موحّدة بمسارين: العقارات والضيافة.</p>
+      <p class="mini">منصة موحّدة بثلاثة مسارات: العقارات، الضيافة، والمحاسبة.</p>
       <div class="portal-switch-grid">
         <button type="button" class="portal-tile" onclick="choosePortal('realestate')">
           <span class="portal-icon">🏢</span>
@@ -311,6 +308,11 @@
           <span class="portal-icon">🏨</span>
           <b>الضيافة</b>
           <small>تشغيل الضيافة (قيد التطوير)</small>
+        </button>
+        <button type="button" class="portal-tile" onclick="choosePortal('accounting')">
+          <span class="portal-icon">💼</span>
+          <b>المحاسبة</b>
+          <small>منصة مالية مستقلة للمشروع</small>
         </button>
       </div>
       <div class="toolbar" style="justify-content:center;margin-top:12px">
@@ -359,7 +361,7 @@
           <div class="search search-pro"><input id="globalSearch" placeholder="🔎 بحث في المشاريع والعملاء والعقود..."></div>
           <div class="app-header-actions">
             <button id="fieldModeBtn" class="tb-icon field-mode-btn" type="button" title="وضع الميدان · Field mode">🧰</button>
-            <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة">🧭</button>
+            <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة والمحاسبة">🧭</button>
             <select id="themeSelect" class="theme-select" title="مظهر المنصة">
               <option value="luxury-light">Luxury Light</option>
             </select>
@@ -476,6 +478,408 @@
         </div>
       </section>
 
+      <section id="sec-estate-platform" class="section">
+        <div class="card accounting-hero">
+          <h3>منصة العقارات — نظام متكامل</h3>
+          <p class="mini">الترتيب المعتمد: عقار ← بناية ← شقة ← غرفة، مع لوحة تحكم وتايم لاين وصيانة تفصيلية.</p>
+          <div id="estateKpiRow" class="grid kpis"></div>
+          <div class="toolbar" style="margin-top:10px">
+            <button class="gold-btn" type="button" onclick="showSection('hospitality')">الانتقال إلى منصة الضيافة</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>اختصارات المنصة</h3>
+          <div id="estateIconGrid" class="estate-icon-grid"></div>
+        </div>
+
+        <div class="card">
+          <h3>صور العقارات والوحدات</h3>
+          <div id="estatePhotoGallery" class="estate-photo-gallery"></div>
+        </div>
+
+        <div class="card estate-map-card">
+          <h3>الخريطة الحقيقية لموقع العقار</h3>
+          <p class="mini">الموقع الحالي: <b id="estateMapLocationLabel">حي التراث، نزوى، محافظة الداخلية، سلطنة عمان</b></p>
+          <div class="toolbar estate-map-toolbar">
+            <button class="gold-btn" type="button" onclick="openEstateRealMapExternal()">فتح في Google Maps</button>
+            <button class="ghost" type="button" onclick="copyEstateRealMapLink()">نسخ رابط الموقع</button>
+            <span id="estateMapCoords" class="mini">الإحداثيات: —</span>
+          </div>
+          <div class="saas-glass" style="padding:0; overflow:hidden; border-radius:14px;">
+            <iframe
+              id="estateRealMapFrame"
+              title="Real Estate Location Map"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              src="https://www.google.com/maps?q=%D8%AD%D9%8A%20%D8%A7%D9%84%D8%AA%D8%B1%D8%A7%D8%AB%D8%8C%20%D9%86%D8%B2%D9%88%D9%89%D8%8C%20%D9%85%D8%AD%D8%A7%D9%81%D8%B8%D8%A9%20%D8%A7%D9%84%D8%AF%D8%A7%D8%AE%D9%84%D9%8A%D8%A9%D8%8C%20%D8%B3%D9%84%D8%B7%D9%86%D8%A9%20%D8%B9%D9%85%D8%A7%D9%86&output=embed"
+              style="width:100%; min-height:420px; border:0;">
+            </iframe>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>تايم لاين العقارات والصيانة</h3>
+          <div class="toolbar">
+            <input id="estateTimelineFrom" type="date" title="من تاريخ">
+            <input id="estateTimelineTo" type="date" title="إلى تاريخ">
+            <button class="ghost" type="button" onclick="renderEstatePlatform()">تحديث التايم لاين</button>
+          </div>
+          <div id="estateTimelineBox" class="prop-tl-list"></div>
+        </div>
+
+        <div class="layout">
+          <div class="card">
+            <h3>تنبيهات تنفيذية عقارية</h3>
+            <div id="estateExecAlertsBox"></div>
+          </div>
+          <div class="card">
+            <h3>تقرير الإشغال الشهري (مقارنة)</h3>
+            <div class="toolbar">
+              <input id="estateOccMonth" type="month">
+              <button class="ghost" type="button" onclick="renderEstatePlatform()">تحديث التقرير</button>
+            </div>
+            <div id="estateOccupancyReportBox"></div>
+          </div>
+        </div>
+
+        <div class="layout">
+          <div class="card">
+            <h3>إضافة عقار</h3>
+            <div class="form">
+              <input id="epName" placeholder="اسم العقار">
+              <select id="epStatus"><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="suspended">موقوف</option></select>
+              <input id="epLocation" placeholder="موقع العقار">
+              <input id="epBuildingCount" type="number" min="0" placeholder="عدد البنايات">
+              <input id="epApartmentCount" type="number" min="0" placeholder="عدد الشقق">
+              <input id="epRoomCount" type="number" min="0" placeholder="عدد الغرف">
+              <input id="epBaseRentPrice" type="number" min="0" step="0.001" placeholder="سعر الإيجار الأساسي OMR">
+              <input id="epServiceCharge" type="number" min="0" step="0.001" placeholder="رسوم الخدمة OMR">
+              <input id="epAttachments" placeholder="الملحقات (إن وجدت)">
+              <input id="epManager" placeholder="مسؤول العقار">
+              <select id="epTenantClient"></select>
+              <input id="epTenantPhone" placeholder="هاتف المستأجر">
+              <input id="epImage" placeholder="رابط صورة حية للعقار (اختياري)">
+              <label class="mini">رفع صورة العقار (مباشر)
+                <input id="epImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              </label>
+              <img id="epImagePreview" class="hidden lq-prop-upload-preview" alt="معاينة صورة العقار">
+              <textarea id="epNotes" placeholder="ملاحظات"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="createEstateProperty()">حفظ العقار</button>
+          </div>
+
+          <div class="card">
+            <h3>إضافة بناية</h3>
+            <div class="form">
+              <select id="ebProperty"></select>
+              <input id="ebName" placeholder="اسم/رقم البناية">
+              <select id="ebStatus"><option value="active">نشطة</option><option value="inactive">غير نشطة</option><option value="suspended">موقوفة</option></select>
+              <input id="ebLocation" placeholder="موقع البناية">
+              <input id="ebApartmentCount" type="number" min="0" placeholder="عدد الشقق">
+              <input id="ebRoomCount" type="number" min="0" placeholder="عدد الغرف">
+              <input id="ebBaseRentPrice" type="number" min="0" step="0.001" placeholder="سعر الإيجار الأساسي OMR">
+              <input id="ebServiceCharge" type="number" min="0" step="0.001" placeholder="رسوم الخدمة OMR">
+              <input id="ebAttachments" placeholder="الملحقات">
+              <input id="ebManager" placeholder="مسؤول البناية">
+              <select id="ebTenantClient"></select>
+              <input id="ebTenantPhone" placeholder="هاتف المستأجر">
+              <input id="ebImage" placeholder="رابط صورة حية للبناية (اختياري)">
+              <label class="mini">رفع صورة البناية (مباشر)
+                <input id="ebImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              </label>
+              <img id="ebImagePreview" class="hidden lq-prop-upload-preview" alt="معاينة صورة البناية">
+              <textarea id="ebNotes" placeholder="ملاحظات"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="createEstateBuilding()">حفظ البناية</button>
+          </div>
+        </div>
+
+        <div class="layout">
+          <div class="card">
+            <h3>إضافة شقة</h3>
+            <div class="form">
+              <select id="eaProperty"></select>
+              <select id="eaBuilding"></select>
+              <input id="eaName" placeholder="اسم/رقم الشقة">
+              <select id="eaStatus">
+                <option value="draft">مسودة</option>
+                <option value="vacant">فارغة</option>
+                <option value="occupied">مؤجرة</option>
+                <option value="maintenance">صيانة</option>
+                <option value="reserved">محجوزة</option>
+              </select>
+              <input id="eaRoomCount" type="number" min="0" placeholder="عدد الغرف">
+              <input id="eaRentPrice" type="number" min="0" step="0.001" placeholder="سعر الإيجار OMR">
+              <div id="eaReservedFields" class="estate-state-fields hidden">
+                <input id="eaBookingDeposit" type="number" min="0" step="0.001" placeholder="تأمين الحجز OMR">
+                <input id="eaPrepaidAmount" type="number" min="0" step="0.001" placeholder="المدفوع مقدمًا OMR">
+                <input id="eaReservationStart" type="date" placeholder="بداية الحجز">
+                <input id="eaReservationEnd" type="date" placeholder="نهاية الحجز">
+                <input id="eaBookedClientName" placeholder="اسم العميل المحجوز له">
+                <input id="eaBookedClientPhone" placeholder="هاتف العميل">
+                <input id="eaBookedClientId" placeholder="رقم الهوية/المرجع">
+                <input id="eaBookedByEmployee" placeholder="الموظف الذي حجز">
+              </div>
+              <div id="eaMaintenanceFields" class="estate-state-fields hidden">
+                <input id="eaMaintenanceCost" type="number" min="0" step="0.001" placeholder="تكلفة الصيانة OMR">
+                <textarea id="eaMaintenanceNotes" placeholder="تفاصيل أعمال الصيانة المطلوبة"></textarea>
+              </div>
+              <input id="eaAttachments" placeholder="الملحقات">
+              <input id="eaManager" placeholder="مسؤول الشقة">
+              <select id="eaTenantClient"></select>
+              <input id="eaTenantPhone" placeholder="هاتف المستأجر">
+              <input id="eaImage" placeholder="رابط صورة حية للشقة (اختياري)">
+              <label class="mini">رفع صورة الشقة (مباشر)
+                <input id="eaImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              </label>
+              <img id="eaImagePreview" class="hidden lq-prop-upload-preview" alt="معاينة صورة الشقة">
+              <textarea id="eaNotes" placeholder="ملاحظات"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="createEstateApartment()">حفظ الشقة</button>
+          </div>
+
+          <div class="card">
+            <h3>إضافة غرفة</h3>
+            <div class="form">
+              <select id="erProperty"></select>
+              <select id="erBuilding"></select>
+              <select id="erApartment"></select>
+              <input id="erName" placeholder="اسم/رقم الغرفة">
+              <input id="erType" placeholder="نوع الغرفة">
+              <select id="erStatus"><option value="draft">مسودة</option><option value="vacant">شاغرة</option><option value="reserved">محجوزة</option><option value="occupied">مؤجرة</option><option value="maintenance">تحت الصيانة</option></select>
+              <input id="erRentPrice" type="number" min="0" step="0.001" placeholder="سعر الغرفة OMR">
+              <div id="erReservedFields" class="estate-state-fields hidden">
+                <input id="erBookingDeposit" type="number" min="0" step="0.001" placeholder="تأمين حجز الغرفة OMR">
+                <input id="erPrepaidAmount" type="number" min="0" step="0.001" placeholder="مدفوع مقدمًا OMR">
+                <input id="erReservationStart" type="date" placeholder="بداية الحجز">
+                <input id="erReservationEnd" type="date" placeholder="نهاية الحجز">
+                <input id="erBookedClientName" placeholder="اسم العميل المحجوز له">
+                <input id="erBookedClientPhone" placeholder="هاتف العميل">
+                <input id="erBookedClientId" placeholder="رقم هوية/مرجع العميل">
+                <input id="erBookedByEmployee" placeholder="الموظف الحاجز">
+              </div>
+              <div id="erMaintenanceFields" class="estate-state-fields hidden">
+                <input id="erMaintenanceCost" type="number" min="0" step="0.001" placeholder="تكلفة صيانة الغرفة OMR">
+                <textarea id="erMaintenanceNotes" placeholder="تفاصيل صيانة الغرفة"></textarea>
+              </div>
+              <input id="erAttachments" placeholder="الملحقات">
+              <input id="erManager" placeholder="مسؤول الغرفة">
+              <select id="erTenantClient"></select>
+              <input id="erTenantPhone" placeholder="هاتف المستأجر">
+              <input id="erImage" placeholder="رابط صورة حية للغرفة (اختياري)">
+              <label class="mini">رفع صورة الغرفة (مباشر)
+                <input id="erImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              </label>
+              <img id="erImagePreview" class="hidden lq-prop-upload-preview" alt="معاينة صورة الغرفة">
+              <textarea id="erNotes" placeholder="ملاحظات"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="createEstateRoom()">حفظ الغرفة</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>إضافة ملحق</h3>
+          <div class="form">
+            <select id="exProperty"></select>
+            <select id="exBuilding"></select>
+            <select id="exApartment"></select>
+            <select id="exRoom"></select>
+            <input id="exName" placeholder="اسم الملحق">
+            <input id="exCategory" placeholder="التصنيف (مطبخ، تكييف، أثاث...)">
+            <select id="exStatus">
+              <option value="available">متاح</option>
+              <option value="installed">مركب</option>
+              <option value="maintenance">صيانة</option>
+              <option value="retired">موقوف</option>
+            </select>
+            <input id="exQty" type="number" min="1" placeholder="الكمية">
+            <input id="exUnitCost" type="number" min="0" step="0.001" placeholder="تكلفة الوحدة OMR">
+            <input id="exSupplier" placeholder="المورد">
+            <input id="exInvoiceNo" placeholder="رقم الفاتورة">
+            <input id="exResponsible" placeholder="المسؤول">
+            <textarea id="exNotes" placeholder="ملاحظات الملحق"></textarea>
+          </div>
+          <button class="gold-btn" type="button" onclick="createEstateAccessory()">حفظ الملحق</button>
+        </div>
+
+        <div class="card">
+          <h3>قسم الصيانة العقارية</h3>
+          <div class="form">
+            <select id="emProperty"></select>
+            <select id="emBuilding"></select>
+            <select id="emApartment"></select>
+            <select id="emRoom"></select>
+            <input id="emTitle" placeholder="عنوان الطلب / العطل">
+            <select id="emStatus"><option>Open</option><option>In Progress</option><option>Closed</option></select>
+            <select id="emPriority"><option>High</option><option>Medium</option><option>Low</option></select>
+            <input id="emResponsible" placeholder="اسم المسؤول عن الصيانة">
+            <input id="emAssignedTeam" placeholder="الفريق/الجهة المنفذة">
+            <input id="emPartsDetails" placeholder="تفاصيل القطع">
+            <input id="emPartsCost" type="number" step="0.001" placeholder="تكلفة القطع">
+            <input id="emLaborCost" type="number" step="0.001" placeholder="تكلفة العمالة">
+            <input id="emInvoiceNo" placeholder="رقم الفاتورة">
+            <input id="emInvoiceDate" type="date">
+            <input id="emVendorName" placeholder="اسم المورد/المقاول">
+            <input id="emTotalCost" type="number" step="0.001" placeholder="إجمالي التكلفة">
+            <input id="emApprovedBy" placeholder="اعتماد بواسطة">
+            <input id="emDate" type="date">
+            <input id="emNextDate" type="date">
+            <input id="emClosedAt" type="date">
+            <textarea id="emNotes" placeholder="ملاحظات إضافية"></textarea>
+          </div>
+          <button class="gold-btn" type="button" onclick="createEstateMaintenance()">حفظ طلب الصيانة</button>
+        </div>
+
+        <div class="layout">
+          <div class="card"><h3>جدول العقارات</h3><div id="estatePropertiesTable"></div></div>
+          <div class="card"><h3>جدول البنايات</h3><div id="estateBuildingsTable"></div></div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>جدول الشقق</h3><div id="estateApartmentsTable"></div></div>
+          <div class="card"><h3>جدول الغرف</h3><div id="estateRoomsTable"></div></div>
+        </div>
+        <div class="card"><h3>جدول الملحقات</h3><div id="estateAccessoriesTable"></div></div>
+        <div class="card"><h3>جدول الصيانة</h3><div id="estateMaintenanceTable"></div></div>
+        <div class="layout">
+          <div class="card"><h3>تنبيهات الحجز</h3><div id="estateReservationAlerts"></div></div>
+          <div class="card"><h3>فواتير الحجز التلقائية</h3><div id="estateReservationInvoicesTable"></div></div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>تحويل الحجز/الإشغال إلى عقد إيجار نشط</h3>
+            <div class="form">
+              <select id="ecEntityType"><option value="apartment">شقة</option><option value="room">غرفة</option></select>
+              <select id="ecEntityId"></select>
+              <select id="ecTenantClient"></select>
+              <input id="ecStartDate" type="date">
+              <input id="ecEndDate" type="date">
+              <input id="ecRentAmount" type="number" step="0.001" min="0" placeholder="قيمة الإيجار OMR">
+              <select id="ecPaymentCycle"><option value="monthly">شهري</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option><option value="once">مرة واحدة</option></select>
+              <textarea id="ecNotes" placeholder="ملاحظات العقد"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="createEstateContractFromFlow()">إنشاء عقد نشط الآن</button>
+            <div class="toolbar" style="margin-top:10px">
+              <select id="ecScheduleContract"></select>
+              <button class="ghost" type="button" onclick="generateEstateContractSchedule(false)">توليد الجدولة</button>
+              <button class="ghost" type="button" onclick="generateEstateContractSchedule(true)">إعادة جدولة المفتوح</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>تأكيد العمليات التشغيلية</h3>
+            <div class="toolbar">
+              <button class="gold-btn" type="button" onclick="loadEstateOperationsCheck()">تشغيل فحص العمليات</button>
+            </div>
+            <div id="estateOpsCheckBox"></div>
+          </div>
+        </div>
+        <div class="card"><h3>عقود الإيجار النشطة</h3><div id="estateContractsTable"></div></div>
+        <div class="card">
+          <h3>سجل تتبع موحد للوحدة</h3>
+          <div class="toolbar">
+            <select id="estateTraceEntityType"><option value="apartment">شقة</option><option value="room">غرفة</option></select>
+            <select id="estateTraceEntityId"></select>
+            <button class="ghost" type="button" onclick="renderEstatePlatform()">تحديث السجل</button>
+          </div>
+          <div id="estateUnitTraceBox"></div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>تنبيهات استحقاق دفعات العقود</h3>
+            <div id="estateContractInvoiceAlerts"></div>
+          </div>
+          <div class="card">
+            <h3>تحصيل دفعة عقد</h3>
+            <div class="form">
+              <select id="ecPayInvoice"></select>
+              <input id="ecPayAmount" type="number" min="0" step="0.001" placeholder="مبلغ التحصيل OMR">
+              <input id="ecPayDate" type="date">
+            </div>
+            <button class="gold-btn" type="button" onclick="payEstateContractInvoice()">تحصيل الآن</button>
+          </div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>إغلاق العقد + تسوية نهائية</h3>
+            <div class="form">
+              <select id="ecCloseContract"></select>
+              <input id="ecCloseDate" type="date">
+              <label class="mini"><input id="ecForceClose" type="checkbox"> إغلاق إجباري (مع متأخرات) — صلاحية إدارة فقط</label>
+              <textarea id="ecCloseNote" placeholder="ملاحظة الإغلاق/التسوية"></textarea>
+            </div>
+            <button id="estateCloseContractBtn" class="gold-btn" type="button" onclick="closeEstateContract()">إغلاق العقد وإصدار التسوية</button>
+          </div>
+          <div class="card">
+            <h3>تقرير التسوية الأخير</h3>
+            <div id="estateSettlementPreviewBox"></div>
+          </div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>إقفال مالي شهري (Estate Month-End)</h3>
+            <div class="form">
+              <input id="emcMonth" type="month">
+              <label class="mini"><input id="emcForce" type="checkbox"> إقفال إجباري عند وجود ذمم (إدارة فقط)</label>
+              <textarea id="emcNote" placeholder="ملاحظات الإقفال الشهري"></textarea>
+            </div>
+            <button id="estateCloseMonthBtn" class="gold-btn" type="button" onclick="closeEstateMonth()">إقفال الشهر الآن</button>
+          </div>
+          <div class="card">
+            <h3>تقرير إقفال الشهر</h3>
+            <div id="estateMonthClosePreviewBox"></div>
+          </div>
+        </div>
+        <div class="card"><h3>فواتير عقود الإيجار</h3><div id="estateContractInvoicesTable"></div></div>
+        <div class="card"><h3>سجل تسويات العقود</h3><div id="estateContractSettlementsTable"></div></div>
+        <div class="card"><h3>سجل الإقفالات الشهرية</h3><div id="estateMonthClosesTable"></div></div>
+        <div class="card"><h3>سجل حالات الشقق والغرف</h3><div id="estateStatusHistoryTable"></div></div>
+      </section>
+
+      <section id="sec-accounting-platform" class="section">
+        <div class="card accounting-hero">
+          <h3>منصة المحاسبة</h3>
+          <p class="mini">منصة محاسبية مستقلة: التحصيل، الذمم، البنوك، الفترات، التسويات، والتقارير المالية.</p>
+          <div id="accPlatformKpis" class="grid kpis"></div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>لوحة تشغيل المحاسبة</h3>
+            <div id="accPlatformQuick" class="toolbar" style="flex-wrap:wrap"></div>
+          </div>
+          <div class="card">
+            <h3>تنبيهات مالية</h3>
+            <div id="accPlatformAlerts"></div>
+          </div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>آخر فواتير التحصيل</h3><div id="accPlatformInvoices"></div></div>
+          <div class="card"><h3>ملخص البنك والفترات</h3><div id="accPlatformBankPeriods"></div></div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>التدفق النقدي الشهري</h3><div id="accPlatformCashflow"></div></div>
+          <div class="card"><h3>أعمار الذمم (A/R Aging)</h3><div id="accPlatformAging"></div></div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>توقعات التحصيل (30 يوم)</h3><div id="accPlatformForecast"></div></div>
+          <div class="card"><h3>بطاقات القرار الإداري</h3><div id="accPlatformDecisions"></div></div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>أهداف الموازنة الشهرية (Budget Targets)</h3>
+            <div class="form">
+              <input id="accBudgetMonth" type="month">
+              <input id="accBudgetRevenue" type="number" min="0" step="0.001" placeholder="هدف الإيرادات OMR">
+              <input id="accBudgetExpense" type="number" min="0" step="0.001" placeholder="سقف المصروفات OMR">
+              <input id="accBudgetCollection" type="number" min="0" step="0.001" placeholder="هدف التحصيل OMR">
+              <input id="accBudgetReserve" type="number" min="0" step="0.001" placeholder="حد الاحتياطي النقدي OMR">
+              <textarea id="accBudgetNotes" placeholder="ملاحظات الهدف الشهري"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="saveAccountingBudgetTarget()">حفظ هدف الشهر</button>
+          </div>
+          <div class="card"><h3>سجل أهداف الموازنة</h3><div id="accPlatformBudgetTable"></div></div>
+        </div>
+      </section>
+
       <section id="sec-owner-staff" class="section"><div id="ownerStaffBox"></div></section>
       <section id="sec-owner-live" class="section"><div id="ownerLiveHubBox"></div></section>
       <section id="sec-daily-ops" class="section"><div id="dailyOpsBox"></div></section>
@@ -519,11 +923,25 @@
 
       <section id="sec-contracts" class="section">
         <div id="renewalQueueBox"></div>
+        <div class="card lq-doc-brand-strip">
+          <img src="assets/brand-logo-gold.png?v=12" alt="Launch Quality logo">
+          <div>
+            <b>نماذج العقود الرسمية — Launch Quality</b>
+            <p class="mini">صيغة عقد احترافية مع الشروط القانونية، الطباعة، PDF، وتنزيل نسخة HTML.</p>
+          </div>
+        </div>
         <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><select id="contractPaymentCycle"><option value="monthly">شهري</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option><option value="once">مرة واحدة</option></select><div id="contractPropertyWarning" class="lq-inline-warning hidden"></div><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة المؤجرة"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="30"><input id="contractAttachments" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" aria-label="مرفقات العقد"><textarea id="contractLegalTerms" placeholder="الشروط القانونية وحماية الشركة"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('contracts')">تصدير CSV</button><button class="ghost" onclick="exportFilteredContractsCsv()">تصدير نتائج الفلتر</button></div><div id="contractsTable"></div></div>
       </section>
 
       <section id="sec-invoices" class="section">
+        <div class="card lq-doc-brand-strip">
+          <img src="assets/brand-logo-gold.png?v=12" alt="Launch Quality logo">
+          <div>
+            <b>الفواتير الضريبية الرسمية — Launch Quality</b>
+            <p class="mini">تصميم فاخر للطباعة والـ PDF مع شعار الشركة وخيارات تنزيل متعددة.</p>
+          </div>
+        </div>
         <div class="card">
           <h3>إنشاء فاتورة من عقد</h3>
           <p class="mini">اختيار العقد يملأ المبلغ والوصف والاستحقاق المقترح تلقائيًا.</p>
@@ -632,7 +1050,15 @@
       </section>
 
       <section id="sec-users" class="section">
-        <div class="card"><h3>إضافة مستخدم</h3><div class="form"><input id="uUsername" placeholder="اسم المستخدم"><input id="uName" placeholder="الاسم"><select id="uRole"><option value="admin">admin</option><option value="accountant">accountant</option><option value="operations">operations</option><option value="maintenance">maintenance</option><option value="viewer">viewer</option></select><input id="uPassword" placeholder="كلمة المرور"></div><button class="gold-btn" onclick="createUser()">حفظ المستخدم</button></div>
+        <div class="card"><h3>أداة إضافة حساب</h3><div class="form"><input id="uUsername" placeholder="اسم المستخدم"><input id="uName" placeholder="الاسم"><input id="uEmail" placeholder="البريد الإلكتروني (اختياري)"><select id="uRole"><option value="viewer">viewer</option><option value="operations">operations</option><option value="maintenance">maintenance</option><option value="accountant">accountant</option><option value="admin">admin (فقط وليد/يعقوب/أحمد)</option><option value="owner">owner (فقط وليد/يعقوب/أحمد)</option></select><select id="uActive"><option value="1">نشط</option><option value="0">غير نشط</option></select><select id="uMustChangePassword"><option value="1">إجبار تغيير كلمة المرور عند أول دخول</option><option value="0">بدون إجبار</option></select><input id="uPassword" type="password" placeholder="كلمة المرور"></div><button class="gold-btn" onclick="createUser()">إضافة الحساب</button></div>
+        <div class="card">
+          <h3>أداة ضبط صلاحيات باقي الحسابات</h3>
+          <p class="mini">تثبيت أن وليد + يعقوب + أحمد بصلاحيات كاملة، وضبط بقية الحسابات على توزيع تشغيلي آمن.</p>
+          <div class="toolbar">
+            <button class="gold-btn" type="button" onclick="applyUserPermissionTemplate()">تطبيق ضبط الصلاحيات</button>
+          </div>
+          <div id="usersPermissionToolStatus" class="status-line" style="margin-top:10px"></div>
+        </div>
         <div class="card">
           <h3>منصة ربط البصمة المؤسسية</h3>
           <p class="mini">ربط جهاز الموظف (Face/Fingerprint) مع الحساب الحالي لرفع أمان الدخول في التطبيق.</p>
@@ -665,7 +1091,14 @@
       </section>
 
       <section id="sec-qa" class="section">
-        <div class="card"><h3>اختبار التشغيل</h3><button class="gold-btn" onclick="runQA()">تشغيل الاختبار الآن</button><div id="qaBox" style="margin-top:15px"></div></div>
+        <div class="card">
+          <h3>اختبار التشغيل</h3>
+          <div class="toolbar">
+            <button class="gold-btn" onclick="runQA()">تشغيل الاختبار العام</button>
+            <button class="ghost" onclick="runEstateQaScenario()">تشغيل QA العقار خطوة بخطوة</button>
+          </div>
+          <div id="qaBox" style="margin-top:15px"></div>
+        </div>
       </section>
       </div>
       </div>
@@ -673,7 +1106,8 @@
   </main>
 
   <div id="paymentModal" class="modal"><div class="modal-box"><h2>تحصيل فاتورة</h2><p id="payInfo"></p><input id="payInvoiceId" type="hidden"><div class="form"><input id="payAmount" placeholder="المبلغ"><select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id="payNote" placeholder="ملاحظة"><label class="mini">صورة التحويل/الوصل<input id="payProofFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><img id="payProofPreview" class="hidden lq-prop-upload-preview" alt="معاينة الوصل"></div><button class="gold-btn" onclick="submitPayment()">تأكيد التحصيل</button> <button class="ghost" onclick="closeModal('paymentModal')">إغلاق</button></div></div>
-  <div id="invoiceModal" class="modal"><div class="modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="printInvoiceDocument()">طباعة A4</button><button class="gold-btn" onclick="downloadInvoicePdf()">حفظ PDF</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
+  <div id="invoiceModal" class="modal"><div class="modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="printInvoiceDocument()">طباعة A4</button><button class="gold-btn" onclick="downloadInvoicePdf()">حفظ PDF</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="openInvoiceInNewWindow()">فتح بنافذة مستقلة</button><button class="ghost" onclick="copyInvoiceSummary()">نسخ ملخص الفاتورة</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
+  <div id="contractModal" class="modal"><div class="modal-box"><div id="contractPreview"></div><div class="toolbar"><button class="gold-btn" onclick="printContractDocument()">طباعة A4</button><button class="gold-btn" onclick="downloadContractPdf()">حفظ PDF</button><button class="ghost" onclick="downloadContractHtml()">تنزيل HTML</button><button class="ghost" onclick="copyContractTerms()">نسخ الشروط</button><button class="ghost" onclick="openContractInNewWindow()">فتح بنافذة مستقلة</button><button class="ghost" onclick="closeModal('contractModal')">إغلاق</button></div></div></div>
   <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
 
   <div id="kpiInsightPanel" class="kpi-insight-panel" aria-hidden="true"></div>
