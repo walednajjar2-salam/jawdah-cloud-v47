@@ -2953,7 +2953,7 @@ function initLoginUx(){
   }
 }
 function applyTheme(theme){
-  const t = ['luxury-light','luxury-dark','luxury-pink'].includes(theme) ? theme : 'luxury-light';
+  const t = 'luxury-light';
   Jawdah.theme = t;
   localStorage.setItem('jawdah_theme', t);
   document.body.setAttribute('data-theme', t);
