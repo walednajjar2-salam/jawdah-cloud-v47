@@ -171,7 +171,7 @@ TABLES = {
     "estate_month_closes": ["id", "month_key", "status", "total_invoiced", "total_collected", "outstanding_due", "closed_by", "closed_at", "note"],
     "estate_status_history": ["id", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "old_status", "new_status", "changed_by", "changed_at", "note"],
     "estate_reservation_invoices": ["id", "invoice_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "client_name", "issued_by", "issue_date", "due_date", "rent_price", "deposit_amount", "prepaid_amount", "total_amount", "status", "note"],
-    "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
+    "users": ["id", "username", "name", "role", "active", "email", "must_change_password", "password_changed_at", "created_at", "last_login"],
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
@@ -5292,6 +5292,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True})
 
     def save_user(self, db: sqlite3.Connection, user: Dict[str, Any], method: str, data: Dict[str, Any], item_id: Optional[str]) -> None:
+        def as_flag(value: Any, default: bool) -> int:
+            if value is None:
+                return 1 if default else 0
+            if isinstance(value, bool):
+                return 1 if value else 0
+            raw = str(value).strip().lower()
+            if raw in ("1", "true", "yes", "on", "y", "t"):
+                return 1
+            if raw in ("0", "false", "no", "off", "n", "f"):
+                return 0
+            return 1 if default else 0
         if method == "POST":
             required = ["username", "name", "role", "password"]
             missing = [k for k in required if not data.get(k)]
@@ -5303,10 +5314,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
             pwd_error = validate_new_password(str(data.get("password") or ""), str(data.get("username") or ""))
             if pwd_error:
                 return self.send_json({"ok": False, "error": pwd_error}, 400)
+            email_val = str(data.get("email") or "").strip() or None
             row = {
                 "id": data.get("id") or uid("USR"), "username": username, "name": data["name"].strip(),
-                "role": data["role"], "active": int(bool(data.get("active", True))), "password_hash": password_hash(str(data["password"])),
-                "created_at": now_iso(), "last_login": None,
+                "role": data["role"], "active": as_flag(data.get("active"), True), "email": email_val,
+                "must_change_password": as_flag(data.get("must_change_password"), True),
+                "password_hash": password_hash(str(data["password"])),
+                "password_changed_at": None, "created_at": now_iso(), "last_login": None,
             }
             insert(db, "users", row)
             audit(db, user, "create", "users", row["id"], f"Created user {row['username']}")
@@ -5318,13 +5332,29 @@ class JawdahHandler(BaseHTTPRequestHandler):
         current = db.execute("SELECT * FROM users WHERE id=?", (item_id,)).fetchone()
         if not current:
             return self.send_json({"ok": False, "error": "User not found"}, 404)
-        fields = {"username": data.get("username", current["username"]), "name": data.get("name", current["name"]), "role": data.get("role", current["role"]), "active": int(bool(data.get("active", current["active"]))) }
-        db.execute("UPDATE users SET username=?,name=?,role=?,active=? WHERE id=?", (fields["username"], fields["name"], fields["role"], fields["active"], item_id))
+        username = str(data.get("username", current["username"]) or current["username"]).strip().lower()
+        if username not in CORE_USERNAMES:
+            return self.send_json({"ok": False, "error": "اسم المستخدم يجب أن يكون ضمن الحسابات الأساسية الستة"}, 403)
+        fields = {
+            "username": username,
+            "name": str(data.get("name", current["name"]) or current["name"]).strip(),
+            "role": data.get("role", current["role"]),
+            "active": as_flag(data.get("active"), bool(current["active"])),
+            "email": str(data.get("email", current["email"]) or "").strip() or None,
+            "must_change_password": as_flag(data.get("must_change_password"), bool(current["must_change_password"])),
+        }
+        db.execute(
+            "UPDATE users SET username=?,name=?,role=?,active=?,email=?,must_change_password=? WHERE id=?",
+            (fields["username"], fields["name"], fields["role"], fields["active"], fields["email"], fields["must_change_password"], item_id),
+        )
         if data.get("password"):
             pwd_error = validate_new_password(str(data.get("password") or ""), str(fields.get("username") or ""))
             if pwd_error:
                 return self.send_json({"ok": False, "error": pwd_error}, 400)
-            db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(str(data["password"])), item_id))
+            db.execute(
+                "UPDATE users SET password_hash=?, password_changed_at=?, must_change_password=? WHERE id=?",
+                (password_hash(str(data["password"])), now_iso(), as_flag(data.get("must_change_password"), True), item_id),
+            )
         audit(db, user, "update", "users", item_id, f"Updated user {fields['username']}")
         db.commit()
         return self.send_json({"ok": True})

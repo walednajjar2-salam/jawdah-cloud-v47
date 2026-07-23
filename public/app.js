@@ -1565,7 +1565,11 @@ function renderMaintenance(){
 function renderUsers(){
   if(!Jawdah.data.users && !['admin','owner'].includes(Jawdah.user?.role)){ $('#usersTable').innerHTML='<div class="card">هذا القسم للمدير فقط</div>'; return; }
   if(!Jawdah.data.users){ $('#usersTable').innerHTML='<div class="card mini">جاري تحميل المستخدمين...</div>'; return; }
-  $('#usersTable').innerHTML=tableHtml([['المستخدم','username'],['الاسم','name'],['الدور','role',(v)=>roleName(v)],['نشط','active',(v)=>v?'نعم':'لا'],['آخر دخول','last_login']],Jawdah.data.users,r=>`<button class="ghost" onclick="editRecord('users','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('users','${r.id}')">حذف</button>`);
+  $('#usersTable').innerHTML=tableHtml(
+    [['المستخدم','username'],['الاسم','name'],['البريد','email'],['الدور','role',(v)=>roleName(v)],['نشط','active',(v)=>v?'<span class="badge paid">نعم</span>':'<span class="badge overdue">لا</span>'],['تغيير كلمة المرور','must_change_password',(v)=>v?'<span class="badge pending">مطلوب</span>':'<span class="badge paid">لا</span>'],['آخر دخول','last_login']],
+    Jawdah.data.users,
+    r=>`<button class="ghost" onclick="editRecord('users','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('users','${r.id}')">حذف</button>`
+  );
 }
 function lqDocCard(icon, title, sub, href, file){
   return `<article class="lq-doc-card saas-glass"><span class="icon">${icon}</span><div style="flex:1"><b>${htmlEscape(title)}</b><small>${htmlEscape(sub)}</small></div><a class="gold-btn" href="${href}" download="${htmlEscape(file)}" style="text-decoration:none;white-space:nowrap;font-size:.85rem;padding:8px 14px">تنزيل</a></article>`;
@@ -2352,7 +2356,17 @@ async function createProperty(){
 }
 async function createAccount(){ await saveNew('accounts',{entry_date:val('accDate')||today(),type:val('accType'),category:val('accCategory'),description:val('accDesc'),client_id:val('accClient')||null,property_id:val('accProperty')||null,invoice_id:null,amount:num('accAmount')}); }
 async function createMaintenance(){ await saveNew('maintenance',{property_id:val('maintProperty'),title:val('maintTitle'),priority:val('maintPriority'),status:'Open',request_date:today(),cost:num('maintCost'),notes:val('maintNotes')}); }
-async function createUser(){ await saveNew('users',{username:val('uUsername'),name:val('uName'),role:val('uRole'),password:val('uPassword'),active:true}); }
+async function createUser(){
+  await saveNew('users',{
+    username: val('uUsername'),
+    name: val('uName'),
+    email: val('uEmail'),
+    role: val('uRole'),
+    password: val('uPassword'),
+    active: val('uActive') === '1',
+    must_change_password: val('uMustChangePassword') === '1',
+  });
+}
 async function saveNew(table,row){ try{ await api(table,{method:'POST',body:JSON.stringify(row)}); toast('تم الحفظ'); await loadAll(); }catch(e){toastErr(e)} }
 function val(id){ return ($('#'+id)?.value||'').trim(); } function num(id){ return Number(val(id)||0); }
 async function delRecord(table,id){ if(!confirm('تأكيد الحذف؟')) return; try{ await api(`${table}/${id}`,{method:'DELETE'}); toast('تم الحذف'); await loadAll(); }catch(e){toastErr(e)} }
@@ -2364,7 +2378,8 @@ function editOptions(field, row, table=''){
     role: ['admin','accountant','operations','maintenance','viewer'],
     priority: ['Low','Medium','High','Urgent'],
     payment_cycle: ['monthly','quarterly','yearly'],
-    active: ['1','0']
+    active: ['1','0'],
+    must_change_password: ['1','0']
   };
   if(field === 'property_id') return (Jawdah.data.properties||[]).map(x=>[x.id, propertyLabel(x)]);
   if(table === 'properties' && field === 'status') return PROPERTY_STATUSES.map(x=>[x,x]);
@@ -2395,7 +2410,7 @@ const EDIT_CONFIG = {
   hospitality_season_rates: {title:'تعديل تسعير موسمي', fields:[['property_id','العقار','select'],['room_type','نوع الغرفة','text'],['season_name','اسم الموسم','text'],['start_date','بداية الموسم','date'],['end_date','نهاية الموسم','date'],['nightly_rate','سعر الليلة','number'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
   financial_periods: {title:'تعديل فترة مالية', fields:[['period_name','اسم الفترة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   bank_reconciliations: {title:'تعديل تسوية بنك', fields:[['bank_name','البنك','text'],['period_name','الفترة','text'],['book_balance','رصيد الدفاتر','number'],['bank_balance','رصيد كشف البنك','number'],['difference','الفرق','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
-  users: {title:'تعديل مستخدم', fields:[['username','اسم المستخدم','text'],['name','الاسم','text'],['role','الدور','select'],['active','نشط','select'],['password','كلمة مرور جديدة - اختياري','password']]}
+  users: {title:'تعديل مستخدم', fields:[['username','اسم المستخدم','text'],['name','الاسم','text'],['email','البريد الإلكتروني','text'],['role','الدور','select'],['active','نشط','select'],['must_change_password','إجبار تغيير كلمة المرور عند أول دخول','select'],['password','كلمة مرور جديدة - اختياري','password']]}
 };
 function editRecord(table,id){
   const cfg = EDIT_CONFIG[table];
@@ -2417,7 +2432,7 @@ async function submitEditRecord(table,id){
     $$('#genericModalBody [data-edit-field]').forEach(el=>{
       let v = el.value;
       if(el.type === 'number') v = Number(v || 0);
-      if(el.dataset.editField === 'active') v = v === '1';
+      if(el.dataset.editField === 'active' || el.dataset.editField === 'must_change_password') v = v === '1';
       if(el.dataset.editField === 'password' && !v) return;
       if(v === '' && ['client_id','property_id','invoice_id'].includes(el.dataset.editField)) v = null;
       data[el.dataset.editField] = v;
