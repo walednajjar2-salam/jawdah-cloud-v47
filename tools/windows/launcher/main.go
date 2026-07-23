@@ -49,7 +49,7 @@ func launchApp(appURL string) error {
 			candidates = append(candidates, struct {
 				path string
 				args []string
-			}{p, []string{"--app=" + appURL}})
+			}{p, []string{"--new-window", "--start-maximized", appURL}})
 		}
 	}
 
@@ -63,7 +63,7 @@ func launchApp(appURL string) error {
 			candidates = append(candidates, struct {
 				path string
 				args []string
-			}{p, []string{"--app=" + appURL}})
+			}{p, []string{"--new-window", "--start-maximized", appURL}})
 		}
 	}
 
@@ -75,7 +75,6 @@ func launchApp(appURL string) error {
 		}
 	}
 
-	// Fallback: default browser via cmd start
 	cmd := exec.Command("cmd", "/C", "start", "", appURL)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd.Start()
