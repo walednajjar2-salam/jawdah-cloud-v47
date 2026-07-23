@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref4">
-  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec4">
+  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec5">
   <link rel="stylesheet" href="lq-login-locked.css?v=locked2">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
@@ -498,21 +498,53 @@
       </section>
 
       <section id="sec-estate-platform" class="section">
-        <div class="card accounting-hero">
-          <h3>منصة العقارات — نظام متكامل</h3>
-          <p class="mini">الترتيب المعتمد: عقار ← بناية ← شقة ← غرفة، مع لوحة تحكم وتايم لاين وصيانة تفصيلية.</p>
-          <div id="estateKpiRow" class="grid kpis"></div>
-          <div class="toolbar" style="margin-top:10px">
-            <button class="gold-btn" type="button" onclick="showSection('hospitality')">الانتقال إلى منصة الضيافة</button>
+        <div class="estate-workbench">
+          <div class="estate-workbench-head card accounting-hero">
+            <div class="estate-workbench-title">
+              <h3>منصة العقارات</h3>
+              <p class="mini">اضغط أيقونة للعمل مباشرة · عقار ← بناية ← شقة ← غرفة</p>
+            </div>
+            <div id="estateKpiRow" class="grid kpis estate-kpi-compact"></div>
           </div>
-        </div>
 
-        <div class="card">
+          <nav id="estateWorkDock" class="estate-work-dock" aria-label="أيقونات العمل العقاري">
+            <button type="button" class="estate-dock-btn active" data-estate-panel="overview" onclick="showEstatePanel('overview')"><span>📊</span><b>نظرة عامة</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="media" onclick="showEstatePanel('media')"><span>🖼️</span><b>صور وخريطة</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="ops" onclick="showEstatePanel('ops')"><span>⏱️</span><b>متابعة</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="add" onclick="showEstatePanel('add')"><span>➕</span><b>إضافة</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="maint" onclick="showEstatePanel('maint')"><span>🔧</span><b>صيانة</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="tables" onclick="showEstatePanel('tables')"><span>📋</span><b>جداول</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="booking" onclick="showEstatePanel('booking')"><span>📌</span><b>حجز وعقود</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="finance" onclick="showEstatePanel('finance')"><span>💰</span><b>تحصيل وإقفال</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="hospitality" onclick="showSection('hospitality')"><span>🏨</span><b>الضيافة</b></button>
+          </nav>
+
+          <div class="estate-panels">
+            <div id="estatePanel-overview" class="estate-panel active" data-estate-panel="overview">
+<div class="card">
           <h3>اختصارات المنصة</h3>
           <div id="estateIconGrid" class="estate-icon-grid"></div>
         </div>
 
-        <div class="card">
+        <div class="layout">
+          <div class="card">
+            <h3>تنبيهات تنفيذية عقارية</h3>
+            <div id="estateExecAlertsBox"></div>
+          </div>
+          <div class="card">
+            <h3>تقرير الإشغال الشهري (مقارنة)</h3>
+            <div class="toolbar">
+              <input id="estateOccMonth" type="month">
+              <button class="ghost" type="button" onclick="renderEstatePlatform()">تحديث التقرير</button>
+            </div>
+            <div id="estateOccupancyReportBox"></div>
+          </div>
+        </div>
+
+        
+            </div>
+            <div id="estatePanel-media" class="estate-panel" data-estate-panel="media">
+<div class="card">
           <h3>صور العقارات والوحدات</h3>
           <div id="estatePhotoGallery" class="estate-photo-gallery"></div>
         </div>
@@ -537,7 +569,10 @@
           </div>
         </div>
 
-        <div class="card">
+        
+            </div>
+            <div id="estatePanel-ops" class="estate-panel" data-estate-panel="ops">
+<div class="card">
           <h3>تايم لاين العقارات والصيانة</h3>
           <div class="toolbar">
             <input id="estateTimelineFrom" type="date" title="من تاريخ">
@@ -547,22 +582,10 @@
           <div id="estateTimelineBox" class="prop-tl-list"></div>
         </div>
 
-        <div class="layout">
-          <div class="card">
-            <h3>تنبيهات تنفيذية عقارية</h3>
-            <div id="estateExecAlertsBox"></div>
-          </div>
-          <div class="card">
-            <h3>تقرير الإشغال الشهري (مقارنة)</h3>
-            <div class="toolbar">
-              <input id="estateOccMonth" type="month">
-              <button class="ghost" type="button" onclick="renderEstatePlatform()">تحديث التقرير</button>
+        
             </div>
-            <div id="estateOccupancyReportBox"></div>
-          </div>
-        </div>
-
-        <div class="layout">
+            <div id="estatePanel-add" class="estate-panel" data-estate-panel="add">
+<div class="layout">
           <div class="card">
             <h3>إضافة عقار</h3>
             <div class="form">
@@ -722,7 +745,10 @@
           <button class="gold-btn" type="button" onclick="createEstateAccessory()">حفظ الملحق</button>
         </div>
 
-        <div class="card">
+        
+            </div>
+            <div id="estatePanel-maint" class="estate-panel" data-estate-panel="maint">
+<div class="card">
           <h3>قسم الصيانة العقارية</h3>
           <div class="form">
             <select id="emProperty"></select>
@@ -750,7 +776,10 @@
           <button class="gold-btn" type="button" onclick="createEstateMaintenance()">حفظ طلب الصيانة</button>
         </div>
 
-        <div class="layout">
+        
+            </div>
+            <div id="estatePanel-tables" class="estate-panel" data-estate-panel="tables">
+<div class="layout">
           <div class="card"><h3>جدول العقارات</h3><div id="estatePropertiesTable"></div></div>
           <div class="card"><h3>جدول البنايات</h3><div id="estateBuildingsTable"></div></div>
         </div>
@@ -760,7 +789,10 @@
         </div>
         <div class="card"><h3>جدول الملحقات</h3><div id="estateAccessoriesTable"></div></div>
         <div class="card"><h3>جدول الصيانة</h3><div id="estateMaintenanceTable"></div></div>
-        <div class="layout">
+        
+            </div>
+            <div id="estatePanel-booking" class="estate-panel" data-estate-panel="booking">
+<div class="layout">
           <div class="card"><h3>تنبيهات الحجز</h3><div id="estateReservationAlerts"></div></div>
           <div class="card"><h3>فواتير الحجز التلقائية</h3><div id="estateReservationInvoicesTable"></div></div>
         </div>
@@ -802,7 +834,10 @@
           </div>
           <div id="estateUnitTraceBox"></div>
         </div>
-        <div class="layout">
+        
+            </div>
+            <div id="estatePanel-finance" class="estate-panel" data-estate-panel="finance">
+<div class="layout">
           <div class="card">
             <h3>تنبيهات استحقاق دفعات العقود</h3>
             <div id="estateContractInvoiceAlerts"></div>
@@ -852,9 +887,12 @@
         <div class="card"><h3>سجل تسويات العقود</h3><div id="estateContractSettlementsTable"></div></div>
         <div class="card"><h3>سجل الإقفالات الشهرية</h3><div id="estateMonthClosesTable"></div></div>
         <div class="card"><h3>سجل حالات الشقق والغرف</h3><div id="estateStatusHistoryTable"></div></div>
+      
+            </div>
+          </div>
+        </div>
       </section>
-
-      <section id="sec-accounting-platform" class="section">
+<section id="sec-accounting-platform" class="section">
         <div class="card accounting-hero">
           <h3>منصة المحاسبة</h3>
           <p class="mini">منصة محاسبية مستقلة: التحصيل، الذمم، البنوك، الفترات، التسويات، والتقارير المالية.</p>
@@ -1149,7 +1187,7 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal6" defer></script>
+  <script src="app.js?v=portal7" defer></script>
   <script src="enterprise-vision.js?v=ev10" defer></script>
   <script src="historic-upgrade.js?v=historic14" defer></script>
   <script src="lq-hub-dashboard.js?v=hub1" defer></script>

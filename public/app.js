@@ -758,6 +758,7 @@ function showLoginShell(){
   if(login){
     login.classList.remove('hidden');
     login.removeAttribute('aria-hidden');
+    login.removeAttribute('hidden');
     login.style.cssText='';
   }
   closePortalSwitch();
@@ -772,8 +773,12 @@ function showAppShell(){
   if(login){
     login.classList.add('hidden');
     login.setAttribute('aria-hidden','true');
-    login.style.cssText='display:none!important;height:0!important;min-height:0!important;overflow:hidden!important;visibility:hidden!important';
+    login.setAttribute('hidden','');
+    login.style.cssText='display:none!important;height:0!important;min-height:0!important;max-height:0!important;overflow:hidden!important;visibility:hidden!important;position:fixed!important;pointer-events:none!important';
   }
+  // Hide empty ops bar immediately
+  const ops=$('#opsQuickBar');
+  if(ops && !ops.querySelector('button')) ops.style.display='none';
   ensureDashActive();
   if(typeof renderDashLoadingSkeleton==='function') renderDashLoadingSkeleton();
   if(typeof window.__lqShowBoot==='function') window.__lqShowBoot('جاري تحميل لوحة التحكم…');
@@ -1100,6 +1105,11 @@ function showSection(id){
   if(resolved==='owner-live' && typeof renderOwnerLiveHub==='function') renderOwnerLiveHub();
   if(resolved==='hospitality' && typeof renderHospitalityPortal==='function') renderHospitalityPortal();
   if(resolved==='estate-platform' && typeof renderEstatePlatform==='function') renderEstatePlatform();
+  if(resolved==='estate-platform'){
+    const ph=$('.page-head'); if(ph) ph.style.display='none';
+  }else{
+    const ph=$('.page-head'); if(ph) ph.style.display='';
+  }
   if(resolved==='accounting-platform' && typeof renderAccountingPlatform==='function') renderAccountingPlatform();
   if(resolved==='dashboard') renderDashboard();
   populateSelects();
@@ -4631,13 +4641,27 @@ window.printHospitalityFolio = printHospitalityFolio;
     const host = $('#estateIconGrid');
     if(!host) return;
     host.innerHTML = ESTATE_ICON_SET.map(i=>`
-      <article class="estate-icon-card">
+      <button type="button" class="estate-icon-card" onclick="showEstatePanel('add')">
         <div class="estate-icon-circle"><img src="${htmlEscape(i.photo)}" alt="${htmlEscape(i.title)}"></div>
         <h4>${htmlEscape(i.title)}</h4>
         <p>${htmlEscape(i.subtitle)}</p>
-      </article>
+      </button>
     `).join('');
   }
+  window.showEstatePanel = function(panel){
+    const id = String(panel||'overview');
+    const known = ['overview','media','ops','add','maint','tables','booking','finance'];
+    const target = known.includes(id) ? id : 'overview';
+    document.querySelectorAll('.estate-panel').forEach(p=>{
+      p.classList.toggle('active', p.getAttribute('data-estate-panel') === target);
+    });
+    document.querySelectorAll('#estateWorkDock .estate-dock-btn').forEach(b=>{
+      b.classList.toggle('active', b.getAttribute('data-estate-panel') === target);
+    });
+    try{ localStorage.setItem('jawdah_estate_panel', target); }catch(_){}
+    const dock = document.getElementById('estateWorkDock');
+    if(dock) dock.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
   function buildEstateTimeline(){
     const from = $('#estateTimelineFrom')?.value || '';
     const to = $('#estateTimelineTo')?.value || '';
@@ -4788,6 +4812,10 @@ window.printHospitalityFolio = printHospitalityFolio;
     renderEstateIcons();
     renderEstatePhotoGallery();
     fillEstateSelects();
+    try{
+      const saved = localStorage.getItem('jawdah_estate_panel') || 'overview';
+      if(typeof showEstatePanel==='function') showEstatePanel(saved);
+    }catch(_){ if(typeof showEstatePanel==='function') showEstatePanel('overview'); }
     const props = estateRows('estate_properties');
     const blds = estateRows('estate_buildings');
     const apts = estateRows('estate_apartments');

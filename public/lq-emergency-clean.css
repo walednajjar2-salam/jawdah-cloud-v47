@@ -359,3 +359,124 @@ body.login-ultra.saas-login #loginScreen .login-auth--float {
   .estate-photo-gallery{grid-template-columns:repeat(2,minmax(150px,1fr))}
   .estate-state-fields{grid-template-columns:1fr}
 }
+
+/* ── Extra void kill + compact chrome ── */
+html, body.saas-luxury, body.app-ready{
+  margin:0 !important;
+  padding:0 !important;
+}
+body.saas-luxury #lqBootMsg:not(.show),
+body.app-ready #lqBootMsg:not(.show){
+  display:none !important;
+  height:0 !important;
+}
+body.saas-luxury .content{
+  padding-top:8px !important;
+}
+body.saas-luxury .ops-quick-bar:not(:has(button)){
+  display:none !important;
+}
+body.saas-luxury .app-body:has(#sec-estate-platform.active) ~ .page-head,
+body.saas-luxury .app-shell:has(#sec-estate-platform.active) > .page-head{
+  display:none !important;
+  height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+body.saas-luxury #sec-dashboard:not(.active),
+body.saas-luxury #sec-dashboard:not(.active) *{
+  display:none !important;
+}
+
+/* ── Estate work dock (icon row) ── */
+.estate-workbench{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.estate-workbench-head{
+  margin:0 !important;
+  padding:14px 16px !important;
+}
+.estate-workbench-title h3{
+  margin:0 0 4px !important;
+  font-size:1.25rem !important;
+}
+.estate-workbench-title .mini{margin:0}
+.estate-kpi-compact{
+  display:grid !important;
+  grid-template-columns:repeat(auto-fit,minmax(110px,1fr)) !important;
+  gap:8px !important;
+  margin-top:10px !important;
+}
+.estate-kpi-compact .kpi{
+  min-height:0 !important;
+  padding:10px 12px !important;
+  margin:0 !important;
+}
+.estate-kpi-compact .kpi strong{font-size:1.15rem !important; margin:4px 0 0 !important}
+.estate-kpi-compact .kpi span{font-size:12px !important}
+
+.estate-work-dock{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(108px,1fr));
+  gap:8px;
+  position:sticky;
+  top:8px;
+  z-index:40;
+  padding:10px;
+  border-radius:16px;
+  background:#fff;
+  border:1px solid #d7e3f4;
+  box-shadow:0 10px 28px rgba(30,58,108,.10);
+}
+.estate-dock-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-height:78px;
+  padding:10px 8px;
+  border-radius:14px;
+  border:1px solid #d9e5f5;
+  background:linear-gradient(180deg,#f8fbff,#eef4fc);
+  color:#1f3f73;
+  cursor:pointer;
+  font:inherit;
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.estate-dock-btn span{font-size:1.35rem; line-height:1}
+.estate-dock-btn b{font-size:12px; font-weight:800}
+.estate-dock-btn:hover{
+  transform:translateY(-2px);
+  border-color:#9dbcf0;
+  box-shadow:0 8px 18px rgba(47,111,236,.14);
+}
+.estate-dock-btn.active{
+  background:linear-gradient(145deg,#3f84ff,#2f6fec);
+  border-color:#2a63cf;
+  color:#fff;
+  box-shadow:0 10px 22px rgba(47,111,236,.22);
+}
+.estate-panel{display:none !important}
+.estate-panel.active{display:block !important}
+.estate-icon-card{
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.estate-icon-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(30,58,108,.12);
+}
+@media (max-width:720px){
+  .estate-work-dock{grid-template-columns:repeat(3,minmax(0,1fr)); top:4px}
+  .estate-dock-btn{min-height:70px}
+  .estate-dock-btn b{font-size:11px}
+}
+.estate-kpi-compact .kpi{
+  width:100%;
+  text-align:inherit;
+  cursor:pointer;
+  font:inherit;
+}
