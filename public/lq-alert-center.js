@@ -63,7 +63,12 @@
       channels.email
         ? `<button type="button" class="gold-btn" onclick="LQ_ALERT_CENTER.sendEmail()">إرسال ملخص بريد</button>`
         : `<span class="mini">البريد: فعّل LQ_SMTP_HOST على السيرفر للإرسال التلقائي</span>`;
+    const realtimeHtml =
+      window.LQ_REALTIME_NOTIFY && typeof window.LQ_REALTIME_NOTIFY.renderHtml === "function"
+        ? window.LQ_REALTIME_NOTIFY.renderHtml()
+        : "";
     host.innerHTML =
+      realtimeHtml +
       explainHtml() +
       renderSummary(summary) +
       `<div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
@@ -75,12 +80,12 @@
     updateBell(summary);
   }
 
-  async function refresh() {
+  async function refresh(silent) {
     try {
       const res = await api("alert_center");
       const box = document.getElementById("messagesPageBox");
       render(box, res.center);
-      if (typeof toast === "function") toast("تم تحديث التنبيهات");
+      if (!silent && typeof toast === "function") toast("تم تحديث التنبيهات");
     } catch (e) {
       if (typeof toastErr === "function") toastErr(e);
     }
