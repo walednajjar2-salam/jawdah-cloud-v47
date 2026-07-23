@@ -626,6 +626,31 @@
         </div>
 
         <div class="card">
+          <h3>إضافة ملحق</h3>
+          <div class="form">
+            <select id="exProperty"></select>
+            <select id="exBuilding"></select>
+            <select id="exApartment"></select>
+            <select id="exRoom"></select>
+            <input id="exName" placeholder="اسم الملحق">
+            <input id="exCategory" placeholder="التصنيف (مطبخ، تكييف، أثاث...)">
+            <select id="exStatus">
+              <option value="available">متاح</option>
+              <option value="installed">مركب</option>
+              <option value="maintenance">صيانة</option>
+              <option value="retired">موقوف</option>
+            </select>
+            <input id="exQty" type="number" min="1" placeholder="الكمية">
+            <input id="exUnitCost" type="number" min="0" step="0.001" placeholder="تكلفة الوحدة OMR">
+            <input id="exSupplier" placeholder="المورد">
+            <input id="exInvoiceNo" placeholder="رقم الفاتورة">
+            <input id="exResponsible" placeholder="المسؤول">
+            <textarea id="exNotes" placeholder="ملاحظات الملحق"></textarea>
+          </div>
+          <button class="gold-btn" type="button" onclick="createEstateAccessory()">حفظ الملحق</button>
+        </div>
+
+        <div class="card">
           <h3>قسم الصيانة العقارية</h3>
           <div class="form">
             <select id="emProperty"></select>
@@ -661,6 +686,7 @@
           <div class="card"><h3>جدول الشقق</h3><div id="estateApartmentsTable"></div></div>
           <div class="card"><h3>جدول الغرف</h3><div id="estateRoomsTable"></div></div>
         </div>
+        <div class="card"><h3>جدول الملحقات</h3><div id="estateAccessoriesTable"></div></div>
         <div class="card"><h3>جدول الصيانة</h3><div id="estateMaintenanceTable"></div></div>
         <div class="layout">
           <div class="card"><h3>تنبيهات الحجز</h3><div id="estateReservationAlerts"></div></div>

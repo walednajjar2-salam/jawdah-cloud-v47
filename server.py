@@ -128,10 +128,10 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance", "accounting_budgets"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_maintenance", "accounting_budgets:read"},
-    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance", "accounting_budgets:read"},
-    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance:read", "accounting_budgets:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read"},
+    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
+    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
 }
 
 TABLES = {
@@ -163,6 +163,7 @@ TABLES = {
     "estate_buildings": ["id", "property_id", "name", "status", "location", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_apartments": ["id", "property_id", "building_id", "name", "status", "room_count", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_accessories": ["id", "property_id", "building_id", "apartment_id", "room_id", "name", "category", "status", "qty", "unit_cost", "supplier", "invoice_no", "responsible_name", "notes", "last_update"],
     "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
     "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "closed_at", "close_note", "notes"],
     "estate_contract_invoices": ["id", "invoice_no", "contract_id", "due_date", "amount", "paid_amount", "status", "issued_at", "note"],
@@ -1234,6 +1235,27 @@ def init_db() -> None:
                 FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE,
                 FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE CASCADE,
                 FOREIGN KEY(apartment_id) REFERENCES estate_apartments(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_accessories (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                name TEXT NOT NULL,
+                category TEXT,
+                status TEXT NOT NULL DEFAULT 'available',
+                qty INTEGER NOT NULL DEFAULT 1,
+                unit_cost REAL NOT NULL DEFAULT 0,
+                supplier TEXT,
+                invoice_no TEXT,
+                responsible_name TEXT,
+                notes TEXT,
+                last_update TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE,
+                FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE SET NULL,
+                FOREIGN KEY(apartment_id) REFERENCES estate_apartments(id) ON DELETE SET NULL,
+                FOREIGN KEY(room_id) REFERENCES estate_rooms(id) ON DELETE SET NULL
             );
             CREATE TABLE IF NOT EXISTS estate_maintenance (
                 id TEXT PRIMARY KEY,
@@ -5149,6 +5171,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "estate_buildings",
             "estate_apartments",
             "estate_rooms",
+            "estate_accessories",
             "estate_maintenance",
             "estate_status_history",
             "estate_reservation_invoices",
@@ -5645,6 +5668,69 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if status_norm != "maintenance":
                 data["maintenance_notes"] = None
             estate_new_status = status_norm
+        if table == "estate_accessories":
+            estate_entity_type = "accessory"
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_accessories WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    estate_prev_status = str(current["status"] or "")
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+            prop_id = str(data.get("property_id") or "").strip()
+            bld_id = str(data.get("building_id") or "").strip()
+            apt_id = str(data.get("apartment_id") or "").strip()
+            room_id = str(data.get("room_id") or "").strip()
+            if not prop_id or not exists(db, "estate_properties", prop_id):
+                return self.send_json({"ok": False, "error": "اختر العقار الصحيح للملحق"}, 400)
+            if bld_id:
+                bld = db.execute("SELECT id, property_id FROM estate_buildings WHERE id=?", (bld_id,)).fetchone()
+                if not bld:
+                    return self.send_json({"ok": False, "error": "البناية المحددة للملحق غير موجودة"}, 400)
+                if str(bld["property_id"] or "") != prop_id:
+                    return self.send_json({"ok": False, "error": "البناية لا تتبع العقار المحدد"}, 400)
+            if apt_id:
+                apt = db.execute("SELECT id, property_id, building_id FROM estate_apartments WHERE id=?", (apt_id,)).fetchone()
+                if not apt:
+                    return self.send_json({"ok": False, "error": "الشقة المحددة للملحق غير موجودة"}, 400)
+                if str(apt["property_id"] or "") != prop_id:
+                    return self.send_json({"ok": False, "error": "الشقة لا تتبع العقار المحدد"}, 400)
+                if bld_id and str(apt["building_id"] or "") != bld_id:
+                    return self.send_json({"ok": False, "error": "الشقة لا تتبع البناية المحددة"}, 400)
+            if room_id:
+                room = db.execute("SELECT id, property_id, building_id, apartment_id FROM estate_rooms WHERE id=?", (room_id,)).fetchone()
+                if not room:
+                    return self.send_json({"ok": False, "error": "الغرفة المحددة للملحق غير موجودة"}, 400)
+                if str(room["property_id"] or "") != prop_id:
+                    return self.send_json({"ok": False, "error": "الغرفة لا تتبع العقار المحدد"}, 400)
+                if bld_id and str(room["building_id"] or "") != bld_id:
+                    return self.send_json({"ok": False, "error": "الغرفة لا تتبع البناية المحددة"}, 400)
+                if apt_id and str(room["apartment_id"] or "") != apt_id:
+                    return self.send_json({"ok": False, "error": "الغرفة لا تتبع الشقة المحددة"}, 400)
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم الملحق مطلوب"}, 400)
+            status_map = {
+                "available": "available", "متاح": "available", "جاهز": "available",
+                "installed": "installed", "مركب": "installed",
+                "maintenance": "maintenance", "صيانة": "maintenance", "تحت الصيانة": "maintenance",
+                "retired": "retired", "موقوف": "retired", "ملغى": "retired",
+            }
+            raw_status = str(data.get("status") or "available").strip().lower()
+            status_norm = status_map.get(raw_status)
+            if not status_norm:
+                return self.send_json({"ok": False, "error": "حالة الملحق غير معتمدة"}, 400)
+            data["status"] = status_norm
+            data["property_id"] = prop_id
+            data["building_id"] = bld_id or None
+            data["apartment_id"] = apt_id or None
+            data["room_id"] = room_id or None
+            data["qty"] = int(float(data.get("qty") or 1))
+            data["unit_cost"] = round(float(data.get("unit_cost") or 0), 3)
+            if data["qty"] <= 0:
+                return self.send_json({"ok": False, "error": "كمية الملحق يجب أن تكون أكبر من صفر"}, 400)
+            if data["unit_cost"] < 0:
+                return self.send_json({"ok": False, "error": "تكلفة الملحق يجب أن تكون موجبة أو صفر"}, 400)
+            estate_new_status = status_norm
         if table == "estate_maintenance":
             if method == "PUT" and item_id:
                 current = db.execute("SELECT * FROM estate_maintenance WHERE id=?", (item_id,)).fetchone()
@@ -6012,12 +6098,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if method == "POST":
             insert(db, table, clean)
             audit(db, user, "create", table, row_id, "Created record")
-            if table in ("estate_apartments", "estate_rooms"):
+            if table in ("estate_apartments", "estate_rooms", "estate_accessories"):
                 if not estate_new_status:
                     estate_new_status = str(clean.get("status") or "")
                 log_estate_status_history(
                     db,
-                    estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
+                    estate_entity_type or ("apartment" if table == "estate_apartments" else ("room" if table == "estate_rooms" else "accessory")),
                     row_id,
                     clean,
                     "",
@@ -6025,7 +6111,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     actor_name,
                     "Initial status on create",
                 )
-                if estate_new_status == "reserved":
+                if table in ("estate_apartments", "estate_rooms") and estate_new_status == "reserved":
                     ensure_estate_reservation_invoice(
                         db,
                         estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
@@ -6084,14 +6170,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if changed:
                     audit_details = " | ".join(changed[:12])
             audit(db, user, "update", table, item_id, audit_details)
-            if table in ("estate_apartments", "estate_rooms"):
+            if table in ("estate_apartments", "estate_rooms", "estate_accessories"):
                 current_status = str(clean.get("status") or "")
                 if not current_status:
                     current_status = estate_new_status
                 if current_status and (current_status != estate_prev_status):
                     log_estate_status_history(
                         db,
-                        estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
+                        estate_entity_type or ("apartment" if table == "estate_apartments" else ("room" if table == "estate_rooms" else "accessory")),
                         str(item_id),
                         clean,
                         estate_prev_status,
@@ -6099,12 +6185,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         actor_name,
                         "Status changed by update",
                     )
-                if current_status != "reserved" and estate_prev_status.lower() == "reserved":
+                if table in ("estate_apartments", "estate_rooms") and current_status != "reserved" and estate_prev_status.lower() == "reserved":
                     db.execute(
                         "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed after status moved to ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
                         (current_status, estate_entity_type or ("apartment" if table == "estate_apartments" else "room"), str(item_id)),
                     )
-                if current_status == "reserved" and estate_reserved_transition:
+                if table in ("estate_apartments", "estate_rooms") and current_status == "reserved" and estate_reserved_transition:
                     ensure_estate_reservation_invoice(
                         db,
                         estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
