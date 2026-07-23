@@ -138,6 +138,15 @@ body.login-ultra.saas-login #loginScreen .login-auth--float {
 
 /* Windows/Desktop-first estate layout polish */
 @media (min-width: 1100px){
+  #sec-estate-platform{
+    max-width: 1580px;
+    margin: 0 auto;
+    padding-bottom: 26px;
+  }
+  #sec-estate-platform > .card,
+  #sec-estate-platform > .layout{
+    margin-bottom: 14px;
+  }
   #sec-estate-platform .layout{
     grid-template-columns:repeat(2,minmax(0,1fr)) !important;
     gap:16px !important;
@@ -152,12 +161,34 @@ body.login-ultra.saas-login #loginScreen .login-auth--float {
     grid-template-columns:repeat(2,minmax(220px,1fr));
     gap:10px;
   }
+  #sec-estate-platform .form input,
+  #sec-estate-platform .form select{
+    min-height: 42px;
+  }
   #sec-estate-platform .form textarea{
     grid-column:1/-1;
     min-height:84px;
+    resize: vertical;
   }
   #sec-estate-platform .form .estate-state-fields{
     grid-column:1/-1;
+  }
+  #sec-estate-platform .kpis.grid{
+    grid-template-columns: repeat(6, minmax(0,1fr));
+    gap: 10px;
+  }
+  #sec-estate-platform .table-wrap{
+    max-height: 460px;
+    overflow: auto;
+  }
+  #sec-estate-platform table{
+    table-layout: fixed;
+    width: 100%;
+  }
+  #sec-estate-platform table th,
+  #sec-estate-platform table td{
+    vertical-align: top;
+    word-break: break-word;
   }
   .estate-map-card .estate-map-toolbar{
     display:flex;
@@ -168,6 +199,15 @@ body.login-ultra.saas-login #loginScreen .login-auth--float {
   }
   #estateRealMapFrame{
     min-height:520px !important;
+  }
+}
+
+@media (min-width: 1600px){
+  #sec-estate-platform .kpis.grid{
+    grid-template-columns: repeat(8, minmax(0,1fr));
+  }
+  #sec-estate-platform .layout{
+    gap: 18px !important;
   }
 }
 
