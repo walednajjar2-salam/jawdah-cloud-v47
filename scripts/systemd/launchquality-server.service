@@ -1,0 +1,17 @@
+[Unit]
+Description=Launch Quality Backend Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/workspace
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /workspace/server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
