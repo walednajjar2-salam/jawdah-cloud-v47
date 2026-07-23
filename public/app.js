@@ -3822,6 +3822,21 @@ window.printHospitalityFolio = printHospitalityFolio;
     { id:'accessory', title:'الملحقات', subtitle:'تجهيزات ومكونات الوحدة', photo:'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=400&q=80' },
   ];
   const estateRows = (k)=>Array.isArray(Jawdah.data?.[k]) ? Jawdah.data[k] : [];
+  const ESTATE_DEFAULT_MAP_LOCATION = 'حي التراث، نزوى، محافظة الداخلية، سلطنة عمان';
+  const estateGoogleMapEmbed = (locationText)=>{
+    const q = String(locationText || ESTATE_DEFAULT_MAP_LOCATION).trim() || ESTATE_DEFAULT_MAP_LOCATION;
+    return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+  };
+  function refreshEstateRealMap(locationText){
+    const label = $('#estateMapLocationLabel');
+    const frame = $('#estateRealMapFrame');
+    const cleanLocation = String(locationText || '').trim() || ESTATE_DEFAULT_MAP_LOCATION;
+    if(label) label.textContent = cleanLocation;
+    if(frame){
+      const nextSrc = estateGoogleMapEmbed(cleanLocation);
+      if(frame.getAttribute('src') !== nextSrc) frame.setAttribute('src', nextSrc);
+    }
+  }
   const clientName = (id)=>htmlEscape(byId('clients',id).name||'');
   const pickName = (arr,id)=>htmlEscape((arr.find(x=>x.id===id)||{}).name||'');
   const roomStatusLabel = (s)=>{
@@ -4089,6 +4104,9 @@ window.printHospitalityFolio = printHospitalityFolio;
     const apts = estateRows('estate_apartments');
     const rooms = estateRows('estate_rooms');
     const accessories = estateRows('estate_accessories');
+    const mapProperty = props.find(x=>String(x.location||'').trim()) || null;
+    const mapLocationText = mapProperty ? String(mapProperty.location||'').trim() : ESTATE_DEFAULT_MAP_LOCATION;
+    refreshEstateRealMap(mapLocationText);
     const maint = estateRows('estate_maintenance');
     const rInv = estateRows('estate_reservation_invoices');
     const contracts = estateRows('estate_contracts');
@@ -4528,8 +4546,13 @@ window.printHospitalityFolio = printHospitalityFolio;
   document.addEventListener('change', (e)=>{
     const id = e?.target?.id;
     if(['eaProperty','erProperty','emProperty','exProperty','erBuilding','emBuilding','exBuilding','emApartment','exApartment','ecEntityType'].includes(id)) fillEstateSelects();
+    if(id==='epLocation') refreshEstateRealMap(String(e?.target?.value || '').trim());
     if(id==='eaStatus') syncEstateApartmentStateFields();
     if(id==='erStatus') syncEstateRoomStateFields();
+  });
+  document.addEventListener('input', (e)=>{
+    const id = e?.target?.id;
+    if(id==='epLocation') refreshEstateRealMap(String(e?.target?.value || '').trim());
   });
   syncEstateApartmentStateFields();
   syncEstateRoomStateFields();
