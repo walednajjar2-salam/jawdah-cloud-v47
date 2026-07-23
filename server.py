@@ -80,6 +80,7 @@ MAX_JOURNAL_FILES_PER_ENTRY = 5
 HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
+LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
 APP_VERSION = "Launch-Quality-LLC-v49-production"
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 BACKUP_DIR = Path(os.environ.get("JAWDAH_BACKUP_DIR", str(DATA_DIR / "backups"))).resolve()
@@ -9417,7 +9418,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 line = f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                 self.wfile.write(line.encode("utf-8"))
                 self.wfile.flush()
-                time.sleep(15)
+                time.sleep(LIVE_STREAM_INTERVAL_SEC)
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
 

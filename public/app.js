@@ -697,7 +697,7 @@ async function syncLiveData(reason='live'){
 }
 function scheduleLiveSync(reason='live'){
   if(!Jawdah.token) return;
-  const minGapMs = 7000;
+  const minGapMs = 1200;
   const elapsed = Date.now() - liveLastSyncAt;
   if(elapsed >= minGapMs){
     syncLiveData(reason);
@@ -707,14 +707,14 @@ function scheduleLiveSync(reason='live'){
   liveSyncScheduled = setTimeout(()=>{
     liveSyncScheduled = null;
     syncLiveData(reason);
-  }, Math.max(1000, minGapMs - elapsed));
+  }, Math.max(250, minGapMs - elapsed));
 }
 function startTimelineAutoRefresh(){
   if(timelineAutoTimer) return;
   timelineAutoTimer = setInterval(()=>{
     if(!Jawdah.token) return;
     if($('#sec-timeline')?.classList.contains('active')) renderTimelinePage();
-  }, 15000);
+  }, 5000);
 }
 function renderSidebarUser(){
   const el=$('#sidebarUser'); if(!el||!Jawdah.user) return;
@@ -2820,7 +2820,7 @@ function connectLiveStream(){
     es.onmessage=(ev)=>{
       try{ applyLiveEvent(JSON.parse(ev.data||'{}')); }catch(e){}
     };
-    es.onerror=()=>{ es.close(); Jawdah.liveStream=null; setTimeout(connectLiveStream,30000); };
+    es.onerror=()=>{ es.close(); Jawdah.liveStream=null; setTimeout(connectLiveStream,5000); };
   }catch(e){}
 }
 function applyLiveEvent(payload){
