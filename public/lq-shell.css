@@ -15,5 +15,5 @@
 @import url("lq-field-app.css?v=field1");
 @import url("lq-security.css?v=sec1");
 @import url("lq-brand-scale.css?v=brand1");
-@import url("lq-watermark.css?v=wm2");
+/* Watermark import intentionally disabled for dashboard readability. */
 @import url("lq-owner-staff.css?v=own1");

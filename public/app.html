@@ -1,5 +1,5 @@
 ﻿<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -15,16 +15,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=ultra16">
-  <link rel="stylesheet" href="lq-shell.css?v=shell17">
+  <link rel="stylesheet" href="app.css?v=ultra18">
+  <link rel="stylesheet" href="lq-shell.css?v=shell20">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="lq-ui-unify.css?v=ui2">
+  <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
+  <link rel="stylesheet" href="lq-reference-clean.css?v=ref2">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
   <style>
     #loginScreen,#app{position:relative;z-index:10;min-height:100vh}
     #loginScreen.hidden,#app.hidden{display:none!important}
+    #lqBrandWatermark{display:none!important;opacity:0!important;visibility:hidden!important}
+    #lqBrandWatermark img{display:none!important;opacity:0!important}
     body.login-ultra #loginScreen .login-glass-card,
     body.login-ultra #loginScreen .ev-auth-card{
       background:linear-gradient(165deg,rgba(14,20,38,.94),rgba(8,12,24,.92))!important;
@@ -143,7 +146,7 @@
                 <p class="login-card-sub">تسجيل الدخول · بوابة الموظفين</p>
               </div>
               <div class="login-card-brand">
-                <span class="login-card-brand-ar" dir="rtl" lang="ar">جودة الانطلاقة ش.م.م</span>
+                <span class="login-card-brand-ar" dir="ltr" lang="ar">جودة الانطلاقة ش.م.م</span>
                 <span class="login-card-brand-en" dir="ltr" lang="en">Launch Quality LLC</span>
               </div>
             </div>
@@ -230,7 +233,7 @@
             <span class="login-desc-label">About</span>
             <p>Premium platform for property leasing, hospitality, finance, and intelligent portfolio management — built for global standards.</p>
           </div>
-          <div class="login-desc-ar" dir="rtl" lang="ar">
+          <div class="login-desc-ar" dir="ltr" lang="ar">
             <span class="login-desc-label">نبذة</span>
             <p>منصة مؤسسية متكاملة لإدارة العقارات والإيجارات والضيافة والمالية — بمعايير عالمية واحترافية.</p>
           </div>
@@ -251,7 +254,7 @@
           <small>Trusted enterprise operations · Finance · Leasing · Maintenance</small>
         </div>
         <div class="footer-sep" aria-hidden="true"></div>
-        <div class="footer-col footer-ar" dir="rtl" lang="ar">
+        <div class="footer-col footer-ar" dir="ltr" lang="ar">
           <strong>جودة الانطلاقة ش.م.م</strong>
           <span>المالك: يعقوب فاضل حمد الخصيبي</span>
           <em>نظام إدارة العقارات والضيافة · سلطنة عُمان · س.ت 1466316</em>
@@ -353,8 +356,6 @@
             <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة">🧭</button>
             <select id="themeSelect" class="theme-select" title="مظهر المنصة">
               <option value="luxury-light">Luxury Light</option>
-              <option value="luxury-dark">Luxury Dark</option>
-              <option value="luxury-pink">Luxury Pink</option>
             </select>
             <span id="topBackupStatus" class="top-pill top-backup-pill hidden" title="آخر نسخة احتياطية">Backup</span>
             <button class="tb-icon tb-bell" type="button" title="التنبيهات" onclick="showSection('messages')"><span class="bell-glyph">🔔</span><span id="bellDot" class="bell-dot hidden"></span></button>
@@ -646,7 +647,7 @@
 
 
       <section id="sec-production" class="section">
-        <div class="card production-hero"><h3>جاهزية التشغيل المؤسسي</h3><p class="mini">مركز مراجعة داخلي للتأكد من سلامة العقود، التقارير المالية، المستخدمين، والبيانات قبل التشغيل الفعلي.</p><button class="gold-btn" onclick="loadProductionStatus()">تشغيل فحص الجاهزية</button><div id="productionStatusBox" style="margin-top:16px"></div></div>
+        <div class="card production-hero"><h3>جاهزية التشغيل المؤسسي</h3><p class="mini">مركز مراجعة داخلي للتأكد من سلامة العقود، التقارير المالية، المستخدمين، والبيانات قبل التشغيل الفعلي.</p><div class="toolbar"><button class="gold-btn" onclick="loadProductionStatus()">تشغيل فحص الجاهزية</button><button class="ghost" onclick="loadWorkflowPolicies()">Workflow Rules</button><button class="ghost" onclick="loadModuleIntegrity()">فحص تكامل الوحدات</button><button class="ghost" onclick="loadModuleFixHistory()">سجل موافقات الإصلاح</button></div><div id="productionStatusBox" style="margin-top:16px"></div><div id="workflowPoliciesBox" style="margin-top:16px"></div><div id="moduleIntegrityBox" style="margin-top:16px"></div><div id="moduleFixKpiBox" style="margin-top:16px"></div><div id="moduleFixHistoryBox" style="margin-top:16px"></div></div>
         <div class="layout">
           <div class="card"><h3>مراجعة العقود القانونية</h3><p>العقود التشغيلية جاهزة داخل النظام، وتعتمد رسمياً بعد مراجعة مستشار قانوني عماني للبنود النهائية.</p><ul class="check-list"><li>بيانات المؤجر والمستأجر والوحدة.</li><li>الإيجار، التأمين، الغرامات، التجديد، الإخلاء.</li><li>التوقيع والختم وطباعة العقد.</li></ul></div>
           <div class="card"><h3>مراجعة التقارير المالية</h3><p>القوائم المالية تولد تلقائياً من الحسابات والفواتير والمشتريات والرواتب والمخزون والبنك.</p><ul class="check-list"><li>قائمة دخل.</li><li>ميزانية.</li><li>كشف بنك.</li><li>ذمم مدينة ودائنة.</li></ul></div>
@@ -689,7 +690,7 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=saas53" defer></script>
+  <script src="app.js?v=saas55" defer></script>
   <script src="enterprise-vision.js?v=ev10" defer></script>
   <script src="historic-upgrade.js?v=historic14" defer></script>
   <script src="lq-hub-dashboard.js?v=hub1" defer></script>
@@ -701,13 +702,12 @@
   <script src="lq-flow-animate.js?v=flow2" defer></script>
   <script src="lq-waleed-persona.js?v=wp2" defer></script>
   <script src="lq-role-ui.js?v=role1" defer></script>
-  <script src="lq-watermark.js?v=wm2" defer></script>
   <script src="lq-owner-staff.js?v=own1" defer></script>
   <script src="lq-waleed-voice.js?v=voice1" defer></script>
   <script src="lq-ui-unify.js?v=ui2" defer></script>
   <script src="lq-layout-v2.js?v=lay2" defer></script>
   <script src="lq-walid-drag.js?v=wd1" defer></script>
-  <script src="pwa-install.js?v=pwa2" defer></script>
+  <script src="pwa-install.js?v=pwa3" defer></script>
   <script>
     (function(){
       var boot=document.getElementById('lqBootMsg');

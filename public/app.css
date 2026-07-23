@@ -984,23 +984,7 @@ body[data-theme="luxury-pink"] .gold-btn{
 @media(max-width:1000px){.hotel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.hotel-grid{grid-template-columns:1fr}}
 
-/* Legacy uploaded brown lounge image on dashboard */
-#sec-dashboard{
-  position: relative;
-  isolation: isolate;
-}
+/* Dashboard background overlay disabled for readability. */
 #sec-dashboard::before{
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: url('assets/login-portal-bg.png') center center / cover no-repeat;
-  opacity: .30;
-  filter: saturate(1.05) brightness(.72);
-  border-radius: 20px;
-  pointer-events: none;
-  z-index: 0;
-}
-#sec-dashboard > *{
-  position: relative;
-  z-index: 1;
+  display:none !important;
 }

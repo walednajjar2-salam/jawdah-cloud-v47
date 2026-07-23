@@ -2554,7 +2554,7 @@ function printInvoice(id){
 function downloadInvoice(){
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
   const body=$('#invoicePreview').innerHTML;
-  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
   downloadFile(`invoice-${Jawdah.invoiceForPrint?.invoice_no||'file'}.html`,html,'text/html');
 }
 async function voidInvoice(id){
@@ -2641,6 +2641,9 @@ async function runQA(){
     const v=await api('backup/verify');
     const vr=v.verification||{};
     html+=`<p class="mini" style="margin-top:12px">فحص النسخ الاحتياطي: ${fmt(vr.score||0)}% — ${vr.ok?'ناجح':'يحتاج مراجعة'}</p>`;
+    const integ=await api('module_integrity');
+    const sm=integ.summary||{};
+    html+=`<p class="mini" style="margin-top:8px">تكامل الوحدات: ${fmt(integ.score||0)}% · Critical: ${fmt(sm.critical||0)} · High: ${fmt(sm.high||0)} · إجمالي: ${fmt(sm.total_issues||0)}</p>`;
   }catch(e){ html+=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`; }
   $('#qaBox').innerHTML=html;
 }
@@ -2950,7 +2953,7 @@ function initLoginUx(){
   }
 }
 function applyTheme(theme){
-  const t = ['luxury-light','luxury-dark','luxury-pink'].includes(theme) ? theme : 'luxury-light';
+  const t = 'luxury-light';
   Jawdah.theme = t;
   localStorage.setItem('jawdah_theme', t);
   document.body.setAttribute('data-theme', t);
@@ -3829,7 +3832,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   };
   window.downloadFinancialReport = function(){
     const e = accEngine();
-    const html = `<!doctype html><meta charset="utf-8"><title>Launch Quality LLC Financial Report</title><body style="font-family:Arial;direction:rtl"><h1>Launch Quality LLC - التقرير المالي</h1><p>Income: ${money(e.income)} | Expense: ${money(e.expense)} | Net: ${money(e.net)} | Collection: ${fmt(e.collectionRate)}%</p><h2>أعمار الذمم</h2><ul>${Object.entries(e.aging).map(([k,v])=>`<li>${k}: ${money(v)}</li>`).join('')}</ul></body>`;
+    const html = `<!doctype html><meta charset="utf-8"><title>Launch Quality LLC Financial Report</title><body style="font-family:Arial;direction:ltr"><h1>Launch Quality LLC - التقرير المالي</h1><p>Income: ${money(e.income)} | Expense: ${money(e.expense)} | Net: ${money(e.net)} | Collection: ${fmt(e.collectionRate)}%</p><h2>أعمار الذمم</h2><ul>${Object.entries(e.aging).map(([k,v])=>`<li>${k}: ${money(v)}</li>`).join('')}</ul></body>`;
     downloadFile('launch-quality-financial-report.html', html, 'text/html');
   };
   const oldCheck = window.LAUNCH_QUALITY_CHECK;
@@ -3957,6 +3960,14 @@ window.printHospitalityFolio = printHospitalityFolio;
 
 
 (function(){
+  let moduleFixPreviewState = null;
+  let moduleFixLastAlertSig = '';
+  const moduleFixScopeSnapshot = ()=> {
+    const scopeRaw = String($('#moduleFixScope')?.value || 'all');
+    const modules = scopeRaw === 'all' ? [] : scopeRaw.split(',').map(s=>s.trim()).filter(Boolean);
+    const maxRows = Number($('#moduleFixMaxRows')?.value || 200);
+    return { modules, maxRows, scopeRaw };
+  };
   const oldShow = showSection;
   showSection=function(id){
     oldShow(id);
@@ -3981,9 +3992,465 @@ window.printHospitalityFolio = printHospitalityFolio;
     try{
       const res=await api('production_status');
       const alerts=res.alerts||{};
+      const wf=res.workflow||{};
       const box=$('#productionStatusBox');
-      box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(res.score)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div><div class="kpi"><span>روابط غير سليمة</span><strong>${fmt((alerts.broken_contract_links||0)+(alerts.broken_invoice_links||0))}</strong></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${fmt(c.value)}</b></div>`).join('')}</div>`;
+      box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(res.score)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div><div class="kpi"><span>روابط غير سليمة</span><strong>${fmt((alerts.broken_contract_links||0)+(alerts.broken_invoice_links||0))}</strong></div></div><div class="card inner-card"><h3>Workflow Snapshot</h3><div class="statement-row"><span>Contract activation scope</span><b>${wf.contract_activation_owner_admin_only ? 'Owner/Admin only' : 'Policy-open'}</b></div><div class="statement-row"><span>Manual invoice approval threshold</span><b>${money(wf.manual_invoice_approval_threshold||0)}</b></div><div class="statement-row"><span>Payment approval threshold</span><b>${money(wf.payment_approval_threshold||0)}</b></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${fmt(c.value)}</b></div>`).join('')}</div>`;
       ensureEnglishDigits(box);
+      if(typeof window.loadWorkflowPolicies==='function') window.loadWorkflowPolicies();
+      if(typeof window.loadModuleIntegrity==='function') window.loadModuleIntegrity();
+      if(typeof window.loadModuleFixHistoryKpi==='function') window.loadModuleFixHistoryKpi();
+      if(typeof window.loadModuleFixHistory==='function') window.loadModuleFixHistory();
     }catch(e){toastErr(e)}
+  };
+
+  window.loadWorkflowPolicies=async function(){
+    const host=$('#workflowPoliciesBox');
+    if(!host) return;
+    host.innerHTML='<p class="mini">Loading workflow policies...</p>';
+    try{
+      const res=await api('workflow_policies');
+      const p=res.policies||{};
+      const editable=!!res.editable;
+      host.innerHTML=`
+        <div class="card inner-card">
+          <h3>Workflow + Rules Policy Center</h3>
+          <p class="mini">هذه النواة تتحكم بحدود الأتمتة والاعتمادات لمسار العقود والفواتير والتحصيل.</p>
+          <div class="form" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+            <label class="mini">Contract activation owner/admin only
+              <select id="wfPolicyOwnerAdminOnly" ${editable?'':'disabled'}>
+                <option value="true" ${p.contract_activation_owner_admin_only ? 'selected':''}>true</option>
+                <option value="false" ${!p.contract_activation_owner_admin_only ? 'selected':''}>false</option>
+              </select>
+            </label>
+            <label class="mini">Manual invoice approval threshold
+              <input id="wfPolicyManualThreshold" type="number" min="1" step="1" value="${Number(p.manual_invoice_approval_threshold||0)}" ${editable?'':'disabled'}>
+            </label>
+            <label class="mini">Payment approval threshold
+              <input id="wfPolicyPaymentThreshold" type="number" min="1" step="1" value="${Number(p.payment_approval_threshold||0)}" ${editable?'':'disabled'}>
+            </label>
+            <label class="mini">Invoice backdate limit (days)
+              <input id="wfPolicyBackdateDays" type="number" min="0" step="1" value="${Number(p.invoice_backdate_limit_days||0)}" ${editable?'':'disabled'}>
+            </label>
+            <label class="mini">Invoice future limit (days)
+              <input id="wfPolicyFutureDays" type="number" min="0" step="1" value="${Number(p.invoice_future_limit_days||0)}" ${editable?'':'disabled'}>
+            </label>
+          </div>
+          <div class="toolbar" style="margin-top:10px">
+            ${editable ? '<button class="gold-btn" type="button" onclick="saveWorkflowPolicies()">Save Workflow Policies</button>' : '<span class="badge pending">Requires owner/admin role</span>'}
+          </div>
+        </div>
+      `;
+      ensureEnglishDigits(host);
+    }catch(e){
+      host.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
+  };
+
+  window.saveWorkflowPolicies=async function(){
+    try{
+      const payload={
+        policies:{
+          contract_activation_owner_admin_only: String($('#wfPolicyOwnerAdminOnly')?.value||'true')==='true',
+          manual_invoice_approval_threshold: Number($('#wfPolicyManualThreshold')?.value||0),
+          payment_approval_threshold: Number($('#wfPolicyPaymentThreshold')?.value||0),
+          invoice_backdate_limit_days: Number($('#wfPolicyBackdateDays')?.value||0),
+          invoice_future_limit_days: Number($('#wfPolicyFutureDays')?.value||0),
+        }
+      };
+      await api('workflow_policies',{
+        method:'POST',
+        body:JSON.stringify(payload),
+      });
+      toast('Workflow policies updated');
+      await loadProductionStatus();
+    }catch(e){
+      toastErr(e,'تعذر حفظ Workflow Policies');
+    }
+  };
+
+  window.loadModuleIntegrity=async function(){
+    const host=$('#moduleIntegrityBox');
+    if(!host) return;
+    host.innerHTML='<p class="mini">جاري فحص تكامل الوحدات...</p>';
+    try{
+      const res=await api('module_integrity');
+      const summary=res.summary||{};
+      const byModule=res.by_module||{};
+      const issues=Array.isArray(res.issues)?res.issues:[];
+      const canFix = ['admin','owner'].includes(String(Jawdah.user?.role||'').toLowerCase());
+      const sevBadge=(s)=>{
+        const k=String(s||'').toLowerCase();
+        if(k==='critical') return '<span class="badge overdue">critical</span>';
+        if(k==='high') return '<span class="badge pending">high</span>';
+        return '<span class="badge">normal</span>';
+      };
+      const modulesHtml=Object.keys(byModule).length
+        ? Object.entries(byModule).map(([k,v])=>`<span class="badge">${htmlEscape(String(k))}: ${fmt(v)}</span>`).join(' ')
+        : '<span class="badge paid">لا توجد مشاكل مسجلة</span>';
+      host.innerHTML=`
+        <div class="card inner-card">
+          <h3>فحص تكامل الوحدات (تشغيلي)</h3>
+          <div class="toolbar" style="margin-bottom:10px">
+            <select id="moduleFixScope" title="نطاق الإصلاح">
+              <option value="all">كل الوحدات</option>
+              <option value="contracts">العقود فقط</option>
+              <option value="hospitality">الضيافة فقط</option>
+              <option value="payments,invoices">الدفعات + الفواتير</option>
+              <option value="inventory">المخزن فقط</option>
+            </select>
+            <input id="moduleFixMaxRows" type="number" min="10" max="1000" step="10" value="200" style="max-width:120px" title="الحد الأقصى للسجلات" placeholder="max rows">
+            <button class="ghost" type="button" onclick="runModuleIntegrityFix(true)">معاينة الإصلاح الآمن</button>
+            ${canFix ? '<button class="gold-btn" type="button" onclick="runModuleIntegrityFix(false)">تنفيذ الإصلاح الآمن</button>' : '<span class="badge pending">تنفيذ الإصلاح يتطلب صلاحية admin/owner</span>'}
+            ${canFix ? '<button class="gold-btn" type="button" onclick="runModuleIntegrityAutoRun()">تنفيذ + إعادة فحص فوري</button>' : ''}
+          </div>
+          <div class="kpis grid">
+            <div class="kpi"><span>درجة التكامل</span><strong>${fmt(res.score||0)}%</strong></div>
+            <div class="kpi"><span>Critical</span><strong>${fmt(summary.critical||0)}</strong></div>
+            <div class="kpi"><span>High</span><strong>${fmt(summary.high||0)}</strong></div>
+            <div class="kpi"><span>إجمالي المشاكل</span><strong>${fmt(summary.total_issues||0)}</strong></div>
+          </div>
+          <div class="status-line" style="margin-top:10px">${modulesHtml}</div>
+          <div style="margin-top:12px">
+            ${issues.length ? tableHtml(
+              [
+                ['الحدة','severity',(v)=>sevBadge(v)],
+                ['الوحدة','module',(v)=>htmlEscape(String(v||''))],
+                ['المشكلة','title',(v)=>htmlEscape(String(v||''))],
+                ['المعرّف','entity_id',(v)=>htmlEscape(String(v||''))],
+                ['تفاصيل','details',(v)=>htmlEscape(String(v||''))],
+              ],
+              issues
+            ) : '<p class="badge paid">تكامل الوحدات سليم — لا مشاكل مكتشفة</p>'}
+          </div>
+        </div>
+      `;
+      ensureEnglishDigits(host);
+    }catch(e){
+      host.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
+  };
+
+  window.runModuleIntegrityFix=async function(dryRun=true){
+    const host=$('#moduleIntegrityBox');
+    if(!host) return;
+    const preview = !!dryRun;
+    const snap = moduleFixScopeSnapshot();
+    const modules = snap.modules;
+    const maxRows = snap.maxRows;
+    if(!preview){
+      const ok = confirm('تنفيذ الإصلاح الوظيفي الآمن الآن؟ سيتم تسجيل كل العمليات في السجل.');
+      if(!ok) return;
+      if(!moduleFixPreviewState || !moduleFixPreviewState.previewId){
+        return toastErr('نفّذ المعاينة أولاً للحصول على preview_id');
+      }
+      const savedSig = JSON.stringify({modules: moduleFixPreviewState.modules||[], maxRows: moduleFixPreviewState.maxRows||200});
+      const currentSig = JSON.stringify({modules, maxRows});
+      if(savedSig !== currentSig){
+        return toastErr('تم تغيير نطاق الإصلاح بعد المعاينة. أعد المعاينة أولاً.');
+      }
+      const confirmText = prompt('للتنفيذ النهائي اكتب APPLY');
+      if(String(confirmText || '').trim().toUpperCase() !== 'APPLY') return toastErr('تم إلغاء التنفيذ');
+      moduleFixPreviewState.confirmText = 'APPLY';
+    }
+    host.insertAdjacentHTML('afterbegin','<p class="mini">جاري تشغيل '+(preview?'معاينة':'تنفيذ')+' الإصلاح...</p>');
+    try{
+      const requestBody = { dry_run: preview, modules, max_rows: maxRows };
+      if(!preview){
+        requestBody.preview_id = moduleFixPreviewState.previewId;
+        requestBody.confirm_text = moduleFixPreviewState.confirmText || 'APPLY';
+      }
+      const res = await api('module_integrity_fix',{
+        method:'POST',
+        body: JSON.stringify(requestBody),
+      });
+      const s = res.summary || {};
+      const scope = res.scope || {};
+      const rows = Array.isArray(res.actions) ? res.actions : [];
+      if(preview){
+        const p = res.preview || {};
+        moduleFixPreviewState = {
+          previewId: p.id || '',
+          expiresAt: p.expires_at || '',
+          modules,
+          maxRows,
+        };
+      } else {
+        moduleFixPreviewState = null;
+      }
+      const msg = `
+        <div class="card inner-card" style="margin-top:12px">
+          <h3>${preview?'نتيجة المعاينة':'نتيجة التنفيذ'} — الإصلاح الآمن</h3>
+          <p class="mini">المرشّح: ${fmt(s.candidates||0)} · المنفذ: ${fmt(s.applied||0)} · الوضع: ${htmlEscape(String(s.mode||''))}</p>
+          <p class="mini">النطاق: ${htmlEscape(String((scope.modules||[]).join(', ')||'all'))} · max_rows: ${fmt(scope.max_rows||maxRows)}</p>
+          ${preview && moduleFixPreviewState?.previewId ? `<p class="mini">preview_id: ${htmlEscape(moduleFixPreviewState.previewId)} · expires: ${htmlEscape(moduleFixPreviewState.expiresAt||'')}</p>` : ''}
+          ${rows.length ? tableHtml(
+            [
+              ['الإجراء','name',(v)=>htmlEscape(String(v||''))],
+              ['المرشح','candidates',(v)=>fmt(v||0)],
+              ['المنفذ','applied',(v)=>fmt(v||0)],
+              ['ملاحظات','notes',(v)=>htmlEscape(String(v||''))],
+            ],
+            rows
+          ) : '<p class="mini">لا توجد عمليات.</p>'}
+        </div>
+      `;
+      host.insertAdjacentHTML('afterbegin', msg);
+      if(!preview){
+        toast('تم تنفيذ الإصلاح الوظيفي الآمن');
+        if(typeof loadProductionStatus==='function') await loadProductionStatus();
+        if(typeof loadModuleFixHistory==='function') await loadModuleFixHistory();
+      }else{
+        toast('تمت معاينة الإصلاح الآمن');
+        if(typeof loadModuleFixHistory==='function') await loadModuleFixHistory();
+      }
+    }catch(e){
+      toastErr(e,'تعذر تنفيذ الإصلاح الآمن');
+    }
+  };
+
+  window.runModuleIntegrityAutoRun=async function(){
+    const host=$('#moduleIntegrityBox');
+    if(!host) return;
+    const ok = confirm('تنفيذ الإصلاح الآمن ثم إعادة الفحص تلقائيًا الآن؟');
+    if(!ok) return;
+    const confirmText = prompt('للتنفيذ النهائي اكتب APPLY');
+    if(String(confirmText || '').trim().toUpperCase() !== 'APPLY') return toastErr('تم إلغاء التنفيذ');
+    const snap = moduleFixScopeSnapshot();
+    const modules = snap.modules;
+    const maxRows = snap.maxRows;
+    host.insertAdjacentHTML('afterbegin','<p class="mini">جاري تنفيذ الإصلاح وإعادة الفحص...</p>');
+    try{
+      const res = await api('module_integrity_autorun',{
+        method:'POST',
+        body: JSON.stringify({ confirm: true, confirm_text:'APPLY', modules, max_rows: maxRows }),
+      });
+      const before = res.before || {};
+      const after = res.after || {};
+      const fix = res.fix || {};
+      const delta = res.delta || {};
+      const bsum = before.summary || {};
+      const asum = after.summary || {};
+      const fsum = fix.summary || {};
+      const scope = res.scope || fix.scope || {};
+      const actions = Array.isArray(fix.actions) ? fix.actions : [];
+      host.insertAdjacentHTML('afterbegin',`
+        <div class="card inner-card" style="margin-top:12px">
+          <h3>تقرير التنفيذ التلقائي (Before / After)</h3>
+          <div class="kpis grid">
+            <div class="kpi"><span>الدرجة قبل</span><strong>${fmt(before.score||0)}%</strong></div>
+            <div class="kpi"><span>الدرجة بعد</span><strong>${fmt(after.score||0)}%</strong></div>
+            <div class="kpi"><span>التغير</span><strong>${fmt(delta.score_change||0)}</strong></div>
+            <div class="kpi"><span>المشاكل (قبل ← بعد)</span><strong>${fmt(delta.issues_before||0)} → ${fmt(delta.issues_after||0)}</strong></div>
+          </div>
+          <p class="mini">الإصلاح: مرشّح ${fmt(fsum.candidates||0)} · منفذ ${fmt(fsum.applied||0)}</p>
+          <p class="mini">النطاق: ${htmlEscape(String((scope.modules||[]).join(', ')||'all'))} · max_rows: ${fmt(scope.max_rows||maxRows)}</p>
+          <div class="status-line" style="margin:8px 0 12px">
+            <span class="badge">Critical: ${fmt(bsum.critical||0)} → ${fmt(asum.critical||0)}</span>
+            <span class="badge">High: ${fmt(bsum.high||0)} → ${fmt(asum.high||0)}</span>
+            <span class="badge">Total: ${fmt(bsum.total_issues||0)} → ${fmt(asum.total_issues||0)}</span>
+          </div>
+          ${actions.length ? tableHtml(
+            [
+              ['الإجراء','name',(v)=>htmlEscape(String(v||''))],
+              ['المرشح','candidates',(v)=>fmt(v||0)],
+              ['المنفذ','applied',(v)=>fmt(v||0)],
+              ['ملاحظات','notes',(v)=>htmlEscape(String(v||''))],
+            ],
+            actions
+          ) : '<p class="mini">لا توجد إجراءات منفذة.</p>'}
+        </div>
+      `);
+      toast('تم التنفيذ وإعادة الفحص بنجاح');
+      await loadProductionStatus();
+      if(typeof loadModuleFixHistory==='function') await loadModuleFixHistory();
+    }catch(e){
+      toastErr(e,'تعذر تنفيذ Auto-run');
+    }
+  };
+
+  window.loadModuleFixHistory=async function(){
+    const host = $('#moduleFixHistoryBox');
+    if(!host) return;
+    if(!host.dataset.init){
+      host.dataset.init = '1';
+      host.innerHTML = `
+        <div class="card inner-card">
+          <h3>سجل موافقات/تنفيذ الإصلاح</h3>
+          <div class="toolbar" style="margin-bottom:10px">
+            <input id="mfxFilterUser" placeholder="فلتر المستخدم">
+            <select id="mfxFilterMode">
+              <option value="">كل الأوضاع</option>
+              <option value="preview">preview</option>
+              <option value="apply">apply</option>
+              <option value="autorun">autorun</option>
+            </select>
+            <select id="mfxFilterStatus">
+              <option value="">كل الحالات</option>
+              <option value="ok">ok</option>
+              <option value="rejected_missing_confirm">rejected_missing_confirm</option>
+              <option value="rejected_missing_preview">rejected_missing_preview</option>
+              <option value="rejected_invalid_preview">rejected_invalid_preview</option>
+              <option value="rejected_scope_mismatch">rejected_scope_mismatch</option>
+            </select>
+            <input id="mfxFilterFrom" type="date" title="من تاريخ">
+            <input id="mfxFilterTo" type="date" title="إلى تاريخ">
+            <input id="mfxFilterPreview" placeholder="preview_id">
+            <input id="mfxFilterLimit" type="number" min="10" max="500" step="10" value="60" style="max-width:90px" title="limit">
+            <button class="ghost" type="button" onclick="loadModuleFixHistory()">تحديث</button>
+            <button class="ghost" type="button" onclick="exportModuleFixHistoryCsv()">تصدير CSV</button>
+          </div>
+          <div id="mfxHistoryTable"><p class="mini">جاري التحميل...</p></div>
+        </div>
+      `;
+    }else{
+      const tableHost = $('#mfxHistoryTable');
+      if(tableHost) tableHost.innerHTML = '<p class="mini">جاري تحميل سجل موافقات الإصلاح...</p>';
+    }
+    try{
+      const qp = new URLSearchParams();
+      const mode = String($('#mfxFilterMode')?.value || '').trim();
+      const status = String($('#mfxFilterStatus')?.value || '').trim();
+      const username = String($('#mfxFilterUser')?.value || '').trim();
+      const from = String($('#mfxFilterFrom')?.value || '').trim();
+      const to = String($('#mfxFilterTo')?.value || '').trim();
+      const preview = String($('#mfxFilterPreview')?.value || '').trim();
+      const limit = Number($('#mfxFilterLimit')?.value || 60);
+      qp.set('limit', String(Math.max(10, Math.min(500, limit || 60))));
+      if(mode) qp.set('mode', mode);
+      if(status) qp.set('status', status);
+      if(username) qp.set('username', username);
+      if(from) qp.set('from', from);
+      if(to) qp.set('to', to);
+      if(preview) qp.set('preview_id', preview);
+      const res = await api('module_integrity_history?'+qp.toString());
+      const rows = Array.isArray(res.history) ? res.history : [];
+      const tableHost = $('#mfxHistoryTable');
+      if(!tableHost) return;
+      tableHost.innerHTML = rows.length ? tableHtml(
+            [
+              ['الوقت','created_at',(v)=>htmlEscape(String(v||''))],
+              ['المستخدم','username',(v)=>htmlEscape(String(v||''))],
+              ['الوضع','mode',(v)=>htmlEscape(String(v||''))],
+              ['الحالة','status',(v)=>statusBadge(String(v||''))],
+              ['النطاق','modules',(v)=>htmlEscape(Array.isArray(v)?v.join(', '):String(v||''))],
+              ['max','max_rows',(v)=>fmt(v||0)],
+              ['مرشح','candidates',(v)=>fmt(v||0)],
+              ['منفذ','applied',(v)=>fmt(v||0)],
+              ['قبل','issues_before',(v)=>v==null?'—':fmt(v)],
+              ['بعد','issues_after',(v)=>v==null?'—':fmt(v)],
+              ['preview','preview_id',(v)=>htmlEscape(String(v||''))],
+            ],
+            rows
+          ) : '<p class="mini">لا يوجد سجل حسب الفلاتر الحالية.</p>';
+      ensureEnglishDigits(host);
+    }catch(e){
+      const tableHost = $('#mfxHistoryTable');
+      if(tableHost) tableHost.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
+  };
+
+  window.exportModuleFixHistoryCsv=async function(){
+    try{
+      const qp = new URLSearchParams();
+      const mode = String($('#mfxFilterMode')?.value || '').trim();
+      const status = String($('#mfxFilterStatus')?.value || '').trim();
+      const username = String($('#mfxFilterUser')?.value || '').trim();
+      const from = String($('#mfxFilterFrom')?.value || '').trim();
+      const to = String($('#mfxFilterTo')?.value || '').trim();
+      const preview = String($('#mfxFilterPreview')?.value || '').trim();
+      const limit = Number($('#mfxFilterLimit')?.value || 500);
+      qp.set('limit', String(Math.max(10, Math.min(2000, limit || 500))));
+      if(mode) qp.set('mode', mode);
+      if(status) qp.set('status', status);
+      if(username) qp.set('username', username);
+      if(from) qp.set('from', from);
+      if(to) qp.set('to', to);
+      if(preview) qp.set('preview_id', preview);
+      const res = await fetch('/api/export/module_fix_history?'+qp.toString(),{headers:{Authorization:'Bearer '+(Jawdah.token||'')}});
+      if(!res.ok) throw new Error(await res.text() || 'Export failed');
+      const blob=await res.blob();
+      const cd=res.headers.get('Content-Disposition')||'';
+      const match=cd.match(/filename="?([^"]+)"?/);
+      const name=match?match[1]:`jawdah-module-fix-history-${today()}.csv`;
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      toast('تم تصدير سجل الإصلاح');
+    }catch(e){ toastErr(e,'تعذر تصدير سجل الإصلاح'); }
+  };
+
+  window.loadModuleFixHistoryKpi=async function(){
+    const host = $('#moduleFixKpiBox');
+    if(!host) return;
+    if(!host.dataset.init){
+      host.dataset.init = '1';
+      host.innerHTML = `
+        <div class="card inner-card">
+          <div class="toolbar" style="justify-content:space-between;align-items:flex-end">
+            <h3 style="margin:0">KPI سجل الإصلاحات</h3>
+            <label class="mini">الفترة
+              <select id="mfxKpiDays" onchange="loadModuleFixHistoryKpi()">
+                <option value="1">آخر 24 ساعة</option>
+                <option value="7">آخر 7 أيام</option>
+                <option value="30">آخر 30 يوم</option>
+                <option value="90">آخر 90 يوم</option>
+              </select>
+            </label>
+          </div>
+          <div id="mfxKpiCards"><p class="mini">جاري التحميل...</p></div>
+          <div id="mfxKpiTopUsers" style="margin-top:10px"></div>
+        </div>
+      `;
+    }
+    const cardsHost = $('#mfxKpiCards');
+    const usersHost = $('#mfxKpiTopUsers');
+    if(cardsHost) cardsHost.innerHTML = '<p class="mini">جاري تحميل KPI...</p>';
+    if(usersHost) usersHost.innerHTML = '';
+    try{
+      const days = Number($('#mfxKpiDays')?.value || 1);
+      const res = await api('module_integrity_history_kpi?days='+encodeURIComponent(String(days)));
+      const k = res.kpi || {};
+      const alerts = Array.isArray(res.alerts) ? res.alerts : [];
+      const thresholds = res.thresholds || {};
+      const health = String(res.health_status || 'ok');
+      const topUsers = Array.isArray(res.top_users) ? res.top_users : [];
+      if(cardsHost){
+        const alertHtml = alerts.length
+          ? `<div class="card" style="margin-bottom:10px;border-color:${health==='alert'?'rgba(220,38,38,.45)':'rgba(217,119,6,.4)'}"><h4 style="margin:0 0 8px">${health==='alert'?'تنبيه تشغيلي مهم':'تنبيه تشغيلي'}</h4>${alerts.map(a=>`<p class="mini" style="margin:4px 0"><span class="badge ${a.severity==='high'?'overdue':'pending'}">${htmlEscape(String(a.code||''))}</span> ${htmlEscape(String(a.message||''))}</p>`).join('')}<p class="mini">الحدود: success ≥ ${fmt(thresholds.min_success_rate||0)}% · rejected ≤ ${fmt(thresholds.max_rejected||0)} · effectiveness ≥ ${fmt(thresholds.min_apply_effectiveness||0)}%</p></div>`
+          : `<p class="badge paid">الحالة التشغيلية لسجل الإصلاحات مستقرة ضمن الحدود المحددة</p>`;
+        cardsHost.innerHTML = `
+          ${alertHtml}
+          <div class="kpis grid">
+            <div class="kpi"><span>محاولات</span><strong>${fmt(k.attempts||0)}</strong></div>
+            <div class="kpi"><span>نجاح</span><strong>${fmt(k.success||0)}</strong></div>
+            <div class="kpi"><span>رفض</span><strong>${fmt(k.rejected||0)}</strong></div>
+            <div class="kpi"><span>نسبة النجاح</span><strong>${fmt(k.success_rate||0)}%</strong></div>
+            <div class="kpi"><span>تطبيقات ناجحة</span><strong>${fmt(k.apply_success||0)}</strong></div>
+            <div class="kpi"><span>إجمالي منفذ</span><strong>${fmt(k.applied_total||0)}</strong></div>
+            <div class="kpi"><span>إجمالي مرشح</span><strong>${fmt(k.candidates_total||0)}</strong></div>
+            <div class="kpi"><span>فعالية التطبيق</span><strong>${fmt(k.apply_effectiveness||0)}%</strong></div>
+          </div>
+        `;
+        const alertSig = JSON.stringify(alerts.map(a=>`${a.code}:${a.value}`));
+        if(alerts.length && alertSig !== moduleFixLastAlertSig){
+          toastErr('تنبيه: مؤشرات سجل الإصلاحات تحتاج مراجعة');
+        }
+        moduleFixLastAlertSig = alertSig;
+      }
+      if(usersHost){
+        usersHost.innerHTML = topUsers.length
+          ? `<h4 style="margin:8px 0">أكثر المستخدمين تنفيذًا</h4>${tableHtml(
+              [
+                ['المستخدم','username',(v)=>htmlEscape(String(v||''))],
+                ['عدد العمليات','runs',(v)=>fmt(v||0)],
+                ['منفذ فعلي','applied_total',(v)=>fmt(v||0)],
+              ],
+              topUsers
+            )}`
+          : '<p class="mini">لا توجد بيانات مستخدمين ضمن الفترة.</p>';
+      }
+      ensureEnglishDigits(host);
+    }catch(e){
+      if(cardsHost) cardsHost.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
   };
 })();

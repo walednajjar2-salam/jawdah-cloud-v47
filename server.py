@@ -104,7 +104,7 @@ CONTRACT_CORE_FIELDS = {
 CORE_USERNAMES = {"waleed", "yaqoub", "razan", "amjad", "ali", "admin"}
 
 # Fallback assets: Railway can still open the app even if the public folder is misplaced.
-FALLBACK_INDEX_HTML = "<!doctype html>\n<html lang=\"ar\" dir=\"rtl\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Launch Quality LLC</title>\n  <link rel=\"stylesheet\" href=\"app.css\">\n</head>\n<body>\n  <main id=\"loginScreen\" class=\"login hidden\">\n    <section class=\"login-card\">\n      <img src=\"assets/brand-logo-gold.png\" alt=\"Jawdah logo\">\n      <h1>Launch Quality LLC</h1>\n      <p class=\"mini\">Real Estate & Hospitality Management System</p>\n      <input id=\"loginUser\" placeholder=\"اسم المستخدم\" autocomplete=\"username\">\n      <input id=\"loginPass\" placeholder=\"كلمة المرور\" type=\"password\" autocomplete=\"current-password\">\n      <button id=\"loginBtn\" class=\"gold-btn\" style=\"width:100%;margin-top:10px\">تسجيل الدخول</button>\n      <p class=\"mini\">Use the authorized administrator account.</p>\n    </section>\n  </main>\n\n  <main id=\"app\" class=\"app hidden\">\n    <aside id=\"sidebar\" class=\"sidebar\">\n      <div class=\"brand\">\n        <img src=\"assets/brand-logo-gold.png\" alt=\"logo\">\n        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>\n      </div>\n      <nav id=\"nav\" class=\"nav\"></nav>\n    </aside>\n    <section class=\"content\">\n      <header class=\"topbar\">\n        <button id=\"menuBtn\" class=\"ghost mobile-nav\">☰</button>\n        <div class=\"search\"><input id=\"globalSearch\" placeholder=\"بحث سريع Ctrl + K\"></div>\n        <button class=\"gold-btn\" onclick=\"showSection('properties')\">+ إضافة</button>\n        <div id=\"clock\" class=\"top-pill\">00:00:00</div>\n        <div class=\"userbox\"><div id=\"avatar\" class=\"avatar\">J</div><div><b id=\"userName\">User</b><br><small id=\"userRole\" class=\"mini\">Role</small></div></div>\n        <button id=\"logoutBtn\" class=\"ghost\">خروج</button>\n      </header>\n      <h2 id=\"sectionTitle\">لوحة التحكم التنفيذية</h2>\n\n      <section id=\"sec-dashboard\" class=\"section active\">\n        <div class=\"hero\"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id=\"heroStats\" class=\"status-line\" style=\"margin-top:14px\"></div></div>\n        <div id=\"kpiGrid\" class=\"grid kpis\"></div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>الإيرادات والمصروفات</h3><div class=\"canvas-wrap\"><canvas id=\"incomeChart\"></canvas></div></div>\n          <div class=\"card\"><h3>خريطة GIS تشغيلية</h3><div class=\"gis\"><div id=\"gisPins\"></div></div></div>\n        </div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>قرارات الآن</h3><div id=\"decisionList\"></div></div>\n          <div class=\"card\"><h3>الإشغال</h3><div class=\"canvas-wrap\"><canvas id=\"occupancyChart\"></canvas></div></div>\n        </div>\n        <div class=\"card\"><h3>إجراءات سريعة</h3><div id=\"quickActions\" class=\"quick\"></div></div>\n      </section>\n\n      <section id=\"sec-properties\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عقار</h3><div class=\"form\"><input id=\"pImage\" placeholder=\"إيموجي/رمز\" value=\"🏠\"><input id=\"pName\" placeholder=\"اسم العقار\"><input id=\"pType\" placeholder=\"النوع\"><select id=\"pStatus\"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id=\"pPrice\" placeholder=\"السعر\"><input id=\"pLocation\" placeholder=\"الموقع\"><textarea id=\"pNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createProperty()\">حفظ العقار</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><select id=\"propStatusFilter\" onchange=\"renderProperties()\"></select><button class=\"ghost\" onclick=\"exportCsv('properties')\">تصدير CSV</button></div><div id=\"propertiesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-clients\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عميل</h3><div class=\"form\"><input id=\"cName\" placeholder=\"اسم العميل\"><input id=\"cPhone\" placeholder=\"الهاتف\"><input id=\"cEmail\" placeholder=\"البريد\"><input id=\"cNational\" placeholder=\"الهوية/السجل\"><textarea id=\"cNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createClient()\">حفظ العميل</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('clients')\">تصدير CSV</button></div><div id=\"clientsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-contracts\" class=\"section\">\n        <div class=\"card\"><h3>إنشاء عقد</h3><div class=\"form\"><select id=\"contractProperty\"></select><select id=\"contractClient\"></select><input id=\"contractStart\" type=\"date\"><input id=\"contractEnd\" type=\"date\"><input id=\"contractRent\" placeholder=\"قيمة الإيجار\"><textarea id=\"contractNotes\" placeholder=\"ملاحظات العقد\"></textarea></div><button class=\"gold-btn\" onclick=\"createContract()\">حفظ العقد</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('contracts')\">تصدير CSV</button></div><div id=\"contractsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-invoices\" class=\"section\">\n        <div class=\"card\"><h3>الفواتير والتحصيل</h3><p class=\"mini\">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id=\"invoicesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-accounts\" class=\"section\">\n        <div class=\"card\"><h3>إضافة حركة مالية</h3><div class=\"form\"><input id=\"accDate\" type=\"date\"><select id=\"accType\"><option value=\"income\">income</option><option value=\"expense\">expense</option></select><input id=\"accCategory\" placeholder=\"التصنيف\"><input id=\"accDesc\" placeholder=\"الوصف\"><input id=\"accAmount\" placeholder=\"المبلغ\"></div><button class=\"gold-btn\" onclick=\"createAccount()\">حفظ الحركة</button></div>\n        <div class=\"card\"><h3>ملخص الحسابات</h3><div id=\"accountSummary\" class=\"status-line\"></div><div class=\"canvas-wrap\"><canvas id=\"expenseChart\"></canvas></div></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('accounts')\">تصدير CSV</button></div><div id=\"accountsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-maintenance\" class=\"section\">\n        <div class=\"card\"><h3>طلب صيانة</h3><div class=\"form\"><select id=\"maintProperty\"></select><input id=\"maintTitle\" placeholder=\"عنوان الطلب\"><select id=\"maintPriority\"><option>High</option><option>Medium</option><option>Low</option></select><input id=\"maintCost\" placeholder=\"التكلفة المتوقعة\"><textarea id=\"maintNotes\" placeholder=\"تفاصيل\"></textarea></div><button class=\"gold-btn\" onclick=\"createMaintenance()\">حفظ الطلب</button></div>\n        <div class=\"grid\" id=\"maintenanceGrid\" style=\"grid-template-columns:repeat(auto-fit,minmax(260px,1fr))\"></div>\n      </section>\n\n      <section id=\"sec-reports\" class=\"section\">\n        <div id=\"reportsBox\"></div>\n        <div class=\"card\"><button class=\"gold-btn\" onclick=\"renderReports()\">تحديث التقرير</button> <button class=\"ghost\" onclick=\"downloadBackup()\">تنزيل Backup</button></div>\n      </section>\n\n      <section id=\"sec-users\" class=\"section\">\n        <div class=\"card\"><h3>إضافة مستخدم</h3><div class=\"form\"><input id=\"uUsername\" placeholder=\"اسم المستخدم\"><input id=\"uName\" placeholder=\"الاسم\"><select id=\"uRole\"><option value=\"admin\">admin</option><option value=\"accountant\">accountant</option><option value=\"operations\">operations</option><option value=\"maintenance\">maintenance</option><option value=\"viewer\">viewer</option></select><input id=\"uPassword\" placeholder=\"كلمة المرور\"></div><button class=\"gold-btn\" onclick=\"createUser()\">حفظ المستخدم</button></div>\n        <div class=\"card\"><div id=\"usersTable\"></div></div>\n      </section>\n\n      <section id=\"sec-backup\" class=\"section\">\n        <div class=\"card\"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id=\"backupStatus\" class=\"status-line\"></div><div class=\"toolbar\" style=\"margin-top:16px\"><button class=\"gold-btn\" onclick=\"downloadBackup()\">تنزيل Backup JSON</button><button class=\"ghost\" onclick=\"exportCsv('properties')\">عقارات CSV</button><button class=\"ghost\" onclick=\"exportCsv('clients')\">عملاء CSV</button><button class=\"ghost\" onclick=\"exportCsv('contracts')\">عقود CSV</button><button class=\"ghost\" onclick=\"exportCsv('invoices')\">فواتير CSV</button><button class=\"ghost\" onclick=\"exportCsv('accounts')\">حسابات CSV</button></div></div>\n      </section>\n\n      <section id=\"sec-qa\" class=\"section\">\n        <div class=\"card\"><h3>اختبار التشغيل</h3><button class=\"gold-btn\" onclick=\"runQA()\">تشغيل الاختبار الآن</button><div id=\"qaBox\" style=\"margin-top:15px\"></div></div>\n      </section>\n    </section>\n  </main>\n\n  <div id=\"paymentModal\" class=\"modal\"><div class=\"modal-box\"><h2>تحصيل فاتورة</h2><p id=\"payInfo\"></p><input id=\"payInvoiceId\" type=\"hidden\"><div class=\"form\"><input id=\"payAmount\" placeholder=\"المبلغ\"><select id=\"payMethod\"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id=\"payNote\" placeholder=\"ملاحظة\"></div><button class=\"gold-btn\" onclick=\"submitPayment()\">تأكيد التحصيل</button> <button class=\"ghost\" onclick=\"closeModal('paymentModal')\">إغلاق</button></div></div>\n  <div id=\"invoiceModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"invoicePreview\"></div><div class=\"toolbar\"><button class=\"gold-btn\" onclick=\"window.print()\">طباعة A4</button><button class=\"ghost\" onclick=\"downloadInvoice()\">تنزيل HTML</button><button class=\"ghost\" onclick=\"closeModal('invoiceModal')\">إغلاق</button></div></div></div>\n  <div id=\"genericModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"genericModalBody\"></div><button class=\"ghost\" onclick=\"closeModal('genericModal')\">إغلاق</button></div></div>\n  <script src=\"app.js\"></script>\n</body>\n</html>\n"
+FALLBACK_INDEX_HTML = "<!doctype html>\n<html lang=\"ar\" dir=\"ltr\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Launch Quality LLC</title>\n  <link rel=\"stylesheet\" href=\"app.css\">\n</head>\n<body>\n  <main id=\"loginScreen\" class=\"login hidden\">\n    <section class=\"login-card\">\n      <img src=\"assets/brand-logo-gold.png\" alt=\"Jawdah logo\">\n      <h1>Launch Quality LLC</h1>\n      <p class=\"mini\">Real Estate & Hospitality Management System</p>\n      <input id=\"loginUser\" placeholder=\"اسم المستخدم\" autocomplete=\"username\">\n      <input id=\"loginPass\" placeholder=\"كلمة المرور\" type=\"password\" autocomplete=\"current-password\">\n      <button id=\"loginBtn\" class=\"gold-btn\" style=\"width:100%;margin-top:10px\">تسجيل الدخول</button>\n      <p class=\"mini\">Use the authorized administrator account.</p>\n    </section>\n  </main>\n\n  <main id=\"app\" class=\"app hidden\">\n    <aside id=\"sidebar\" class=\"sidebar\">\n      <div class=\"brand\">\n        <img src=\"assets/brand-logo-gold.png\" alt=\"logo\">\n        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>\n      </div>\n      <nav id=\"nav\" class=\"nav\"></nav>\n    </aside>\n    <section class=\"content\">\n      <header class=\"topbar\">\n        <button id=\"menuBtn\" class=\"ghost mobile-nav\">☰</button>\n        <div class=\"search\"><input id=\"globalSearch\" placeholder=\"بحث سريع Ctrl + K\"></div>\n        <button class=\"gold-btn\" onclick=\"showSection('properties')\">+ إضافة</button>\n        <div id=\"clock\" class=\"top-pill\">00:00:00</div>\n        <div class=\"userbox\"><div id=\"avatar\" class=\"avatar\">J</div><div><b id=\"userName\">User</b><br><small id=\"userRole\" class=\"mini\">Role</small></div></div>\n        <button id=\"logoutBtn\" class=\"ghost\">خروج</button>\n      </header>\n      <h2 id=\"sectionTitle\">لوحة التحكم التنفيذية</h2>\n\n      <section id=\"sec-dashboard\" class=\"section active\">\n        <div class=\"hero\"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id=\"heroStats\" class=\"status-line\" style=\"margin-top:14px\"></div></div>\n        <div id=\"kpiGrid\" class=\"grid kpis\"></div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>الإيرادات والمصروفات</h3><div class=\"canvas-wrap\"><canvas id=\"incomeChart\"></canvas></div></div>\n          <div class=\"card\"><h3>خريطة GIS تشغيلية</h3><div class=\"gis\"><div id=\"gisPins\"></div></div></div>\n        </div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>قرارات الآن</h3><div id=\"decisionList\"></div></div>\n          <div class=\"card\"><h3>الإشغال</h3><div class=\"canvas-wrap\"><canvas id=\"occupancyChart\"></canvas></div></div>\n        </div>\n        <div class=\"card\"><h3>إجراءات سريعة</h3><div id=\"quickActions\" class=\"quick\"></div></div>\n      </section>\n\n      <section id=\"sec-properties\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عقار</h3><div class=\"form\"><input id=\"pImage\" placeholder=\"إيموجي/رمز\" value=\"🏠\"><input id=\"pName\" placeholder=\"اسم العقار\"><input id=\"pType\" placeholder=\"النوع\"><select id=\"pStatus\"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id=\"pPrice\" placeholder=\"السعر\"><input id=\"pLocation\" placeholder=\"الموقع\"><textarea id=\"pNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createProperty()\">حفظ العقار</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><select id=\"propStatusFilter\" onchange=\"renderProperties()\"></select><button class=\"ghost\" onclick=\"exportCsv('properties')\">تصدير CSV</button></div><div id=\"propertiesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-clients\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عميل</h3><div class=\"form\"><input id=\"cName\" placeholder=\"اسم العميل\"><input id=\"cPhone\" placeholder=\"الهاتف\"><input id=\"cEmail\" placeholder=\"البريد\"><input id=\"cNational\" placeholder=\"الهوية/السجل\"><textarea id=\"cNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createClient()\">حفظ العميل</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('clients')\">تصدير CSV</button></div><div id=\"clientsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-contracts\" class=\"section\">\n        <div class=\"card\"><h3>إنشاء عقد</h3><div class=\"form\"><select id=\"contractProperty\"></select><select id=\"contractClient\"></select><input id=\"contractStart\" type=\"date\"><input id=\"contractEnd\" type=\"date\"><input id=\"contractRent\" placeholder=\"قيمة الإيجار\"><textarea id=\"contractNotes\" placeholder=\"ملاحظات العقد\"></textarea></div><button class=\"gold-btn\" onclick=\"createContract()\">حفظ العقد</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('contracts')\">تصدير CSV</button></div><div id=\"contractsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-invoices\" class=\"section\">\n        <div class=\"card\"><h3>الفواتير والتحصيل</h3><p class=\"mini\">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id=\"invoicesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-accounts\" class=\"section\">\n        <div class=\"card\"><h3>إضافة حركة مالية</h3><div class=\"form\"><input id=\"accDate\" type=\"date\"><select id=\"accType\"><option value=\"income\">income</option><option value=\"expense\">expense</option></select><input id=\"accCategory\" placeholder=\"التصنيف\"><input id=\"accDesc\" placeholder=\"الوصف\"><input id=\"accAmount\" placeholder=\"المبلغ\"></div><button class=\"gold-btn\" onclick=\"createAccount()\">حفظ الحركة</button></div>\n        <div class=\"card\"><h3>ملخص الحسابات</h3><div id=\"accountSummary\" class=\"status-line\"></div><div class=\"canvas-wrap\"><canvas id=\"expenseChart\"></canvas></div></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('accounts')\">تصدير CSV</button></div><div id=\"accountsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-maintenance\" class=\"section\">\n        <div class=\"card\"><h3>طلب صيانة</h3><div class=\"form\"><select id=\"maintProperty\"></select><input id=\"maintTitle\" placeholder=\"عنوان الطلب\"><select id=\"maintPriority\"><option>High</option><option>Medium</option><option>Low</option></select><input id=\"maintCost\" placeholder=\"التكلفة المتوقعة\"><textarea id=\"maintNotes\" placeholder=\"تفاصيل\"></textarea></div><button class=\"gold-btn\" onclick=\"createMaintenance()\">حفظ الطلب</button></div>\n        <div class=\"grid\" id=\"maintenanceGrid\" style=\"grid-template-columns:repeat(auto-fit,minmax(260px,1fr))\"></div>\n      </section>\n\n      <section id=\"sec-reports\" class=\"section\">\n        <div id=\"reportsBox\"></div>\n        <div class=\"card\"><button class=\"gold-btn\" onclick=\"renderReports()\">تحديث التقرير</button> <button class=\"ghost\" onclick=\"downloadBackup()\">تنزيل Backup</button></div>\n      </section>\n\n      <section id=\"sec-users\" class=\"section\">\n        <div class=\"card\"><h3>إضافة مستخدم</h3><div class=\"form\"><input id=\"uUsername\" placeholder=\"اسم المستخدم\"><input id=\"uName\" placeholder=\"الاسم\"><select id=\"uRole\"><option value=\"admin\">admin</option><option value=\"accountant\">accountant</option><option value=\"operations\">operations</option><option value=\"maintenance\">maintenance</option><option value=\"viewer\">viewer</option></select><input id=\"uPassword\" placeholder=\"كلمة المرور\"></div><button class=\"gold-btn\" onclick=\"createUser()\">حفظ المستخدم</button></div>\n        <div class=\"card\"><div id=\"usersTable\"></div></div>\n      </section>\n\n      <section id=\"sec-backup\" class=\"section\">\n        <div class=\"card\"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id=\"backupStatus\" class=\"status-line\"></div><div class=\"toolbar\" style=\"margin-top:16px\"><button class=\"gold-btn\" onclick=\"downloadBackup()\">تنزيل Backup JSON</button><button class=\"ghost\" onclick=\"exportCsv('properties')\">عقارات CSV</button><button class=\"ghost\" onclick=\"exportCsv('clients')\">عملاء CSV</button><button class=\"ghost\" onclick=\"exportCsv('contracts')\">عقود CSV</button><button class=\"ghost\" onclick=\"exportCsv('invoices')\">فواتير CSV</button><button class=\"ghost\" onclick=\"exportCsv('accounts')\">حسابات CSV</button></div></div>\n      </section>\n\n      <section id=\"sec-qa\" class=\"section\">\n        <div class=\"card\"><h3>اختبار التشغيل</h3><button class=\"gold-btn\" onclick=\"runQA()\">تشغيل الاختبار الآن</button><div id=\"qaBox\" style=\"margin-top:15px\"></div></div>\n      </section>\n    </section>\n  </main>\n\n  <div id=\"paymentModal\" class=\"modal\"><div class=\"modal-box\"><h2>تحصيل فاتورة</h2><p id=\"payInfo\"></p><input id=\"payInvoiceId\" type=\"hidden\"><div class=\"form\"><input id=\"payAmount\" placeholder=\"المبلغ\"><select id=\"payMethod\"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id=\"payNote\" placeholder=\"ملاحظة\"></div><button class=\"gold-btn\" onclick=\"submitPayment()\">تأكيد التحصيل</button> <button class=\"ghost\" onclick=\"closeModal('paymentModal')\">إغلاق</button></div></div>\n  <div id=\"invoiceModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"invoicePreview\"></div><div class=\"toolbar\"><button class=\"gold-btn\" onclick=\"window.print()\">طباعة A4</button><button class=\"ghost\" onclick=\"downloadInvoice()\">تنزيل HTML</button><button class=\"ghost\" onclick=\"closeModal('invoiceModal')\">إغلاق</button></div></div></div>\n  <div id=\"genericModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"genericModalBody\"></div><button class=\"ghost\" onclick=\"closeModal('genericModal')\">إغلاق</button></div></div>\n  <script src=\"app.js\"></script>\n</body>\n</html>\n"
 FALLBACK_CSS = ":root{\n  --bg:#030712;\n  --navy:#07111f;\n  --navy2:#0b1728;\n  --navy3:#111f34;\n  --panel:rgba(11,23,40,.82);\n  --panel2:rgba(17,31,52,.72);\n  --glass:rgba(255,255,255,.075);\n  --text:#f8f5ec;\n  --muted:#aeb8c9;\n  --gold:#d8b15b;\n  --gold2:#fff0b8;\n  --gold3:#9c6d21;\n  --silver:#dce3ef;\n  --silver2:#93a4ba;\n  --blue:#4ea1ff;\n  --red:#ff6666;\n  --line:rgba(255,255,255,.13);\n  --line-gold:rgba(216,177,91,.42);\n  --shadow:0 28px 85px rgba(0,0,0,.42);\n  --soft:0 16px 45px rgba(0,0,0,.22);\n  --radius:24px;\n  --side:300px;\n}\n*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:\"Tajawal\",\"Segoe UI\",Arial,sans-serif;background:radial-gradient(circle at 14% 10%,rgba(216,177,91,.22),transparent 27%),radial-gradient(circle at 82% 0%,rgba(78,161,255,.14),transparent 30%),linear-gradient(135deg,#030712 0%,#07111f 44%,#0b1220 100%);color:var(--text);min-height:100vh;overflow-x:hidden}body:before{content:\"\";position:fixed;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(216,177,91,.07),transparent 18%,transparent 82%,rgba(216,177,91,.06)),radial-gradient(circle at 50% 110%,rgba(216,177,91,.14),transparent 38%);z-index:-1}button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}.app{min-height:100vh;display:grid;grid-template-columns:var(--side) 1fr}.sidebar{position:sticky;top:0;height:100vh;padding:22px;background:linear-gradient(180deg,rgba(15,25,42,.95),rgba(5,11,22,.97));border-left:1px solid var(--line-gold);box-shadow:var(--shadow);overflow-y:auto}.sidebar::-webkit-scrollbar{width:6px}.sidebar::-webkit-scrollbar-thumb{background:rgba(216,177,91,.45);border-radius:20px}.brand{display:flex;align-items:center;gap:14px;margin-bottom:24px;border:1px solid rgba(216,177,91,.25);border-radius:26px;padding:12px;background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(216,177,91,.08))}.brand img{width:64px;height:64px;border-radius:22px;object-fit:cover;border:2px solid rgba(216,177,91,.95);box-shadow:0 0 38px rgba(216,177,91,.38)}.brand h1{font-size:19px;margin:0;color:var(--gold2)}.brand small{color:var(--muted)}.nav{display:grid;gap:10px}.nav button{border:1px solid var(--line);background:linear-gradient(135deg,rgba(255,255,255,.055),rgba(255,255,255,.025));color:var(--text);padding:13px 14px;border-radius:18px;display:flex;justify-content:space-between;align-items:center;transition:.22s;box-shadow:0 10px 22px rgba(0,0,0,.12)}.nav button:hover,.nav button.active{background:linear-gradient(135deg,rgba(216,177,91,.28),rgba(255,255,255,.08));border-color:rgba(216,177,91,.78);transform:translateX(-4px);box-shadow:0 14px 34px rgba(216,177,91,.16), inset 0 1px 0 rgba(255,255,255,.16)}.content{padding:22px 24px 34px;min-width:0}.topbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;position:sticky;top:10px;z-index:10;background:linear-gradient(180deg,rgba(8,18,32,.86),rgba(8,18,32,.62));backdrop-filter:blur(18px);padding:10px;border:1px solid rgba(216,177,91,.25);border-radius:26px;box-shadow:0 18px 48px rgba(0,0,0,.26)}.search{flex:1;position:relative}.search input{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.055);color:var(--text);padding:14px 18px;border-radius:18px;outline:none}.search input:focus{border-color:rgba(216,177,91,.72);box-shadow:0 0 0 4px rgba(216,177,91,.1)}.top-pill{border:1px solid rgba(216,177,91,.55);background:linear-gradient(135deg,rgba(216,177,91,.24),rgba(255,255,255,.07));color:var(--gold2);padding:12px 15px;border-radius:18px;white-space:nowrap;font-weight:800}.gold-btn,.primary{border:0;background:linear-gradient(135deg,#9a681e,#f4d77f 48%,#b88328);color:#101010;border-radius:17px;padding:12px 18px;font-weight:900;box-shadow:0 18px 42px rgba(216,177,91,.27), inset 0 1px 0 rgba(255,255,255,.5)}.gold-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}.ghost{border:1px solid var(--line);background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.035));color:var(--text);border-radius:15px;padding:10px 13px}.ghost:hover{border-color:rgba(216,177,91,.45);background:rgba(216,177,91,.08)}.danger{border:0;background:linear-gradient(135deg,#7f1d1d,#ff7474);color:#fff;border-radius:15px;padding:10px 13px;font-weight:900}.userbox{display:flex;align-items:center;gap:10px}.avatar{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#fff1b8,#b8862e);color:#111;border:2px solid var(--gold2);font-weight:900}.content>h2{font-size:24px;margin:8px 0 18px;color:var(--gold2);letter-spacing:.2px}.hero{position:relative;overflow:hidden;border:1px solid rgba(216,177,91,.32);border-radius:34px;background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.035)),radial-gradient(circle at 12% 15%,rgba(216,177,91,.28),transparent 32%),radial-gradient(circle at 85% 25%,rgba(78,161,255,.14),transparent 30%),linear-gradient(135deg,#0a1627,#111d31);padding:30px;margin-bottom:20px;box-shadow:var(--shadow)}.hero:before{content:\"Jawdah Command Center\";position:absolute;left:28px;bottom:10px;font-size:56px;font-weight:900;color:rgba(255,255,255,.035);letter-spacing:1px;white-space:nowrap}.hero:after{content:\"\";position:absolute;inset:auto -110px -160px auto;width:420px;height:420px;background:radial-gradient(circle,rgba(216,177,91,.36),transparent 62%);filter:blur(12px)}.hero h2{font-size:36px;margin:0 0 10px;color:var(--gold2)}.hero p{margin:0;color:var(--muted);max-width:920px;line-height:1.9}.grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.kpi{border:1px solid rgba(216,177,91,.18);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.035));padding:18px;box-shadow:0 18px 52px rgba(0,0,0,.24);position:relative;overflow:hidden;transition:.22s;min-height:142px}.kpi:hover{transform:translateY(-3px);border-color:rgba(216,177,91,.55);box-shadow:0 24px 68px rgba(0,0,0,.32),0 0 26px rgba(216,177,91,.12)}.kpi:before{content:\"\";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),var(--gold2),transparent)}.kpi:after{content:\"\";position:absolute;left:-25%;bottom:-55%;width:180px;height:180px;background:radial-gradient(circle,rgba(216,177,91,.18),transparent 62%)}.kpi .icon{font-size:31px;filter:drop-shadow(0 8px 18px rgba(216,177,91,.28))}.kpi strong{display:block;font-size:31px;margin:10px 0 4px;color:#fff}.kpi span{color:var(--muted)}.layout{display:grid;grid-template-columns:1.18fr .82fr;gap:16px;margin-top:16px}.card{border:1px solid rgba(216,177,91,.16);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.032));padding:18px;box-shadow:0 18px 48px rgba(0,0,0,.22);min-width:0}.card h3{margin:0 0 14px;color:var(--gold2)}.canvas-wrap{height:280px}.canvas-wrap canvas{width:100%;height:100%}.gis{height:330px;border-radius:24px;background:radial-gradient(circle at 40% 35%,rgba(216,177,91,.14),transparent 30%),linear-gradient(135deg,#10233a,#0b1628);position:relative;overflow:hidden;border:1px solid rgba(216,177,91,.18)}.gis:before{content:\"\";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:35px 35px;opacity:.35}.gis:after{content:\"\";position:absolute;inset:15%;border:1px solid rgba(216,177,91,.18);border-radius:50%;filter:blur(.2px)}.pin{position:absolute;width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 8px rgba(255,255,255,.08),0 0 25px currentColor;border:2px solid rgba(255,255,255,.75)}.pin.gold{color:#f6d77f;background:#f6d77f}.pin.blue{color:#60a5fa;background:#60a5fa}.pin.red{color:#ff6b6b;background:#ff6b6b}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.toolbar select,.form input,.form select,.form textarea{border:1px solid var(--line);background:rgba(255,255,255,.065);color:var(--text);border-radius:15px;padding:11px 12px;outline:none}.toolbar option,.form option{background:#0b1728;color:#fff}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.18)}table{width:100%;border-collapse:collapse;min-width:880px}th,td{padding:13px;border-bottom:1px solid rgba(255,255,255,.075);text-align:right;vertical-align:middle}th{color:var(--gold2);background:rgba(216,177,91,.09);position:sticky;top:0}td{color:#edf2fa}.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--line);font-size:13px;color:var(--silver)}.paid,.active,.rented{color:#1b1302;background:linear-gradient(135deg,#b9882c,#ffe49a);border-color:rgba(216,177,91,.8);font-weight:800}.partial,.pending{color:#261a02;background:linear-gradient(135deg,#b68b39,#e8d9ac);border-color:rgba(216,177,91,.65);font-weight:800}.overdue,.maintenance,.open{color:#fff;background:linear-gradient(135deg,#7f1d1d,#e15b5b);border-color:rgba(255,115,115,.65);font-weight:800}.vacant{color:#06172c;background:linear-gradient(135deg,#79b7ff,#dceaff);border-color:rgba(96,165,250,.65);font-weight:800}.section{display:none}.section.active{display:block}.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:15px}.form textarea{grid-column:1/-1;min-height:90px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}.modal.show{display:flex}.modal-box{width:min(880px,100%);max-height:90vh;overflow:auto;border:1px solid rgba(216,177,91,.38);border-radius:28px;background:#081426;color:var(--text);padding:22px;box-shadow:0 30px 90px rgba(0,0,0,.55)}.invoice-paper{background:#fff;color:#111;border-radius:18px;padding:30px;direction:ltr}.invoice-paper .head{display:flex;justify-content:space-between;border-bottom:4px solid #d8b15b;padding-bottom:16px;margin-bottom:18px}.invoice-paper table{min-width:0;color:#111}.invoice-paper th{background:#071426;color:#fff}.invoice-paper td{color:#111;border-color:#ddd}.login{min-height:100vh;display:grid;place-items:center;padding:20px}.login-card{width:min(460px,100%);border:1px solid rgba(216,177,91,.35);border-radius:32px;background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.04));padding:32px;box-shadow:var(--shadow);text-align:center}.login-card img{width:96px;height:96px;border-radius:30px;border:2px solid var(--gold);object-fit:cover}.login-card input{width:100%;margin:9px 0;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;padding:14px;border-radius:16px;outline:none}.toast{position:fixed;bottom:22px;left:22px;background:#101d30;border:1px solid rgba(216,177,91,.45);padding:14px 18px;border-radius:18px;box-shadow:var(--shadow);z-index:50}.toast.err{border-color:#ef4444}.mobile-nav{display:none}.mini{font-size:13px;color:var(--muted)}.status-line{display:flex;gap:10px;flex-wrap:wrap}.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.quick button{text-align:right;padding:18px;border-radius:22px}.executive-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}.executive-chip{border:1px solid rgba(216,177,91,.2);background:rgba(255,255,255,.055);border-radius:20px;padding:14px}.executive-chip b{color:var(--gold2)}@media(max-width:1100px){.app{grid-template-columns:1fr}.sidebar{position:fixed;right:-320px;width:290px;z-index:40;transition:.25s}.sidebar.open{right:0}.content{padding:14px}.kpis{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}.form{grid-template-columns:1fr}.mobile-nav{display:inline-flex}.topbar{flex-wrap:wrap}.quick{grid-template-columns:repeat(2,1fr)}.executive-strip{grid-template-columns:1fr}}@media(max-width:650px){.kpis{grid-template-columns:1fr}.hero h2{font-size:25px}.hero:before{font-size:34px}.userbox{width:100%;justify-content:space-between}.top-pill{font-size:13px}.quick{grid-template-columns:1fr}}@media print{body{background:#fff;color:#000}.app,.modal .ghost,.modal .gold-btn{display:none!important}.modal{display:block!important;position:static;background:#fff;padding:0}.modal-box{box-shadow:none;border:0;max-height:none;width:100%;padding:0}.invoice-paper{border-radius:0;padding:0}}\n"
 FALLBACK_JS = 'const Jawdah = {\n  token: localStorage.getItem(\'jawdah_cloud_token\') || \'\',\n  user: null,\n  data: {},\n  dashboard: null,\n  activeSection: \'dashboard\',\n  charts: {},\n  invoiceForPrint: null\n};\nconst $ = s => document.querySelector(s);\nconst $$ = s => Array.from(document.querySelectorAll(s));\nconst api = async (path, opts={}) => {\n  const headers = {\'Content-Type\':\'application/json\'};\n  if(Jawdah.token) headers.Authorization = \'Bearer \' + Jawdah.token;\n  const res = await fetch(\'/api/\' + path.replace(/^\\//,\'\'), {...opts, headers:{...headers, ...(opts.headers||{})}});\n  const text = await res.text();\n  let data;\n  try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false,error:text || \'Invalid response\'}; }\n  if(!res.ok || data.ok === false) throw new Error(data.error || data.detail || \'Request failed\');\n  return data;\n};\nconst fmt = n => Number(n||0).toLocaleString(\'en-US\',{maximumFractionDigits:2});\nconst money = n => fmt(n) + \' OMR\';\nconst today = () => new Date().toISOString().slice(0,10);\nconst byId = (table,id) => (Jawdah.data[table]||[]).find(x=>x.id===id) || {};\nconst roleName = r => ({admin:\'مدير النظام\',accountant:\'محاسب\',operations:\'تشغيل\',maintenance:\'صيانة\',viewer:\'مشاهد\'}[r]||r);\nfunction toast(msg, err=false){ const t=document.createElement(\'div\'); t.className=\'toast\'+(err?\' err\':\'\'); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }\nfunction ensureEnglishDigits(root=document.body){\n  const rx=/[\\u0660-\\u0669\\u06F0-\\u06F9]/g;\n  const convert=s=>String(s).replace(rx,ch=>String(ch.charCodeAt(0)-((ch.charCodeAt(0)>=0x06F0)?0x06F0:0x0660)));\n  const walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);\n  let n; while(n=walk.nextNode()){ if(rx.test(n.nodeValue)) n.nodeValue=convert(n.nodeValue); }\n  $$(\'input,textarea\').forEach(el=>{ if(rx.test(el.value)) el.value=convert(el.value); });\n}\nasync function login(){\n  try{\n    const username=$(\'#loginUser\').value.trim(); const password=$(\'#loginPass\').value;\n    const res=await api(\'login\',{method:\'POST\',body:JSON.stringify({username,password})});\n    Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem(\'jawdah_cloud_token\',res.token);\n    $(\'#loginScreen\').classList.add(\'hidden\'); $(\'#app\').classList.remove(\'hidden\'); await loadAll(); toast(\'تم تسجيل الدخول\');\n  }catch(e){toast(e.message,true)}\n}\nasync function logout(){ try{await api(\'logout\',{method:\'POST\'});}catch(e){} localStorage.removeItem(\'jawdah_cloud_token\'); location.reload(); }\nasync function checkSession(){\n  if(!Jawdah.token){ $(\'#loginScreen\').classList.remove(\'hidden\'); return; }\n  try{ const me=await api(\'me\'); Jawdah.user=me.user; $(\'#loginScreen\').classList.add(\'hidden\'); $(\'#app\').classList.remove(\'hidden\'); await loadAll(); }\n  catch(e){ localStorage.removeItem(\'jawdah_cloud_token\'); $(\'#loginScreen\').classList.remove(\'hidden\'); }\n}\nasync function loadAll(){\n  const res=await api(\'bootstrap\'); Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;\n  $(\'#userName\').textContent=Jawdah.user.name; $(\'#userRole\').textContent=roleName(Jawdah.user.role); $(\'#avatar\').textContent=(Jawdah.user.name||\'J\').slice(0,1).toUpperCase();\n  buildNav(); renderAll(); showSection(Jawdah.activeSection||\'dashboard\'); ensureEnglishDigits();\n}\nfunction buildNav(){\n  const items=[[\'dashboard\',\'لوحة التحكم\',\'🏛️\'],[\'properties\',\'العقارات\',\'🏠\'],[\'clients\',\'العملاء\',\'👥\'],[\'contracts\',\'العقود\',\'📑\'],[\'invoices\',\'الفواتير\',\'🧾\'],[\'accounts\',\'الحسابات\',\'💰\'],[\'maintenance\',\'الصيانة\',\'🔧\'],[\'reports\',\'التقارير\',\'📊\'],[\'users\',\'المستخدمين\',\'🛡️\'],[\'backup\',\'التخزين والنسخ\',\'💾\'],[\'qa\',\'اختبار التشغيل\',\'✅\']];\n  const nav=$(\'#nav\'); nav.innerHTML=\'\';\n  items.forEach(([id,label,icon])=>{\n    if(id===\'users\' && Jawdah.user.role!==\'admin\') return;\n    const b=document.createElement(\'button\'); b.dataset.section=id; b.innerHTML=`<span>${icon} ${label}</span><small>›</small>`; b.onclick=()=>showSection(id); nav.appendChild(b);\n  });\n}\nfunction showSection(id){\n  Jawdah.activeSection=id; $$(\'.section\').forEach(s=>s.classList.remove(\'active\')); const s=$(\'#sec-\'+id); if(s) s.classList.add(\'active\');\n  $$(\'#nav button\').forEach(b=>b.classList.toggle(\'active\',b.dataset.section===id));\n  $(\'#sectionTitle\').textContent = ({dashboard:\'لوحة التحكم التنفيذية\',properties:\'العقارات\',clients:\'العملاء\',contracts:\'العقود\',invoices:\'الفواتير\',accounts:\'الحسابات\',maintenance:\'الصيانة\',reports:\'التقارير المالية\',users:\'المستخدمين والصلاحيات\',backup:\'التخزين والنسخ الاحتياطي\',qa:\'اختبار التشغيل\'}[id]||\'Jawdah\');\n  if(innerWidth<1100) $(\'#sidebar\').classList.remove(\'open\'); setTimeout(drawCharts,50); ensureEnglishDigits();\n}\nfunction renderAll(){ renderDashboard(); renderProperties(); renderClients(); renderContracts(); renderInvoices(); renderAccounts(); renderMaintenance(); renderUsers(); renderBackup(); renderQA(); }\nfunction renderDashboard(){\n  const k=Jawdah.dashboard.kpis;\n  const collectionRate = k.billed ? Math.round((Number(k.paid||0)/Number(k.billed||1))*100) : 0;\n  $(\'#heroStats\').innerHTML=`<span class="badge paid">جاهزية النظام ${fmt(k.health)}%</span><span class="badge">الإشغال ${fmt(k.occupancy)}%</span><span class="badge">التحصيل ${fmt(collectionRate)}%</span><span class="badge">صافي الدخل ${money(k.net)}</span>`;\n  const kpis=[[\'🏛️\',\'إجمالي العقارات\',k.properties,\'properties\'],[\'🔑\',\'العقارات المؤجرة\',k.rented,\'properties\'],[\'🏠\',\'العقارات الشاغرة\',k.vacant,\'properties\'],[\'🧾\',\'إجمالي الفوترة\',k.billed,\'invoices\',\'money\'],[\'💳\',\'إجمالي التحصيل\',k.paid,\'accounts\',\'money\'],[\'⏰\',\'المبالغ المتأخرة\',k.overdue,\'invoices\',\'money\'],[\'🔧\',\'طلبات الصيانة المفتوحة\',k.maintenance,\'maintenance\'],[\'📈\',\'صافي الربح\',k.net,\'accounts\',\'money\']];\n  $(\'#kpiGrid\').innerHTML=kpis.map(x=>`<div class="kpi" onclick="showSection(\'${x[3]}\')"><div class="icon">${x[0]}</div><span>${x[1]}</span><strong>${x[4]?money(x[2]):fmt(x[2])}</strong><small class="mini">فتح التفاصيل</small></div>`).join(\'\');\n  $(\'#decisionList\').innerHTML=`<div class="executive-strip"><div class="executive-chip"><b>مؤشر التحصيل</b><br><span class="mini">${fmt(collectionRate)}% من إجمالي الفواتير</span></div><div class="executive-chip"><b>مؤشر الإشغال</b><br><span class="mini">${fmt(k.occupancy)}% من الوحدات</span></div><div class="executive-chip"><b>القرار التالي</b><br><span class="mini">راجع المتأخرات والصيانة أولاً</span></div></div>` + Jawdah.dashboard.decisions.map(d=>`<div class="card" style="padding:13px;margin-bottom:10px"><span class="badge">${d.level}</span><p>${d.text}</p></div>`).join(\'\');\n  const props=Jawdah.data.properties||[];\n  $(\'#gisPins\').innerHTML=props.map((p,i)=>{ const cls=(p.status||\'\').toLowerCase().includes(\'maintenance\')?\'red\':((p.status||\'\').toLowerCase().includes(\'vacant\')?\'blue\':\'gold\'); const left=[18,43,68,28,78,52,36][i%7], top=[24,42,58,70,32,22,64][i%7]; return `<button class="pin ${cls}" title="${p.name}" style="left:${left}%;top:${top}%" onclick="toast(\'${p.name} - ${p.status}\')"></button>` }).join(\'\');\n  $(\'#quickActions\').innerHTML=[[\'إضافة عقار\',\'properties\',\'🏠\'],[\'إضافة عميل\',\'clients\',\'👥\'],[\'إنشاء عقد\',\'contracts\',\'📑\'],[\'فاتورة من عقد\',\'invoices\',\'🧾\'],[\'تحصيل دفعة\',\'invoices\',\'💳\'],[\'Backup فوري\',\'backup\',\'💾\'],[\'تقرير مالي\',\'reports\',\'📊\'],[\'اختبار التشغيل\',\'qa\',\'✅\']].map(q=>`<button class="ghost" onclick="showSection(\'${q[1]}\')"><b>${q[2]} ${q[0]}</b><br><small class="mini">أمر تنفيذي سريع</small></button>`).join(\'\');\n}\nfunction tableHtml(cols, rows, actions){\n  return `<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join(\'\')}${actions?\'<th>إجراء</th>\':\'\'}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?c[2](r[c[1]],r):(r[c[1]]??\'\')}</td>`).join(\'\')}${actions?`<td>${actions(r)}</td>`:\'\'}</tr>`).join(\'\')||`<tr><td colspan="${cols.length+1}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;\n}\nfunction renderProperties(){\n  const rows=filterRows(\'properties\',[\'name\',\'type\',\'status\',\'location\']);\n  $(\'#propertiesTable\').innerHTML=tableHtml([[\'الصورة\',\'image\'],[\'الاسم\',\'name\'],[\'النوع\',\'type\'],[\'الحالة\',\'status\',(v)=>badge(v)],[\'السعر\',\'price\',(v)=>money(v)],[\'الموقع\',\'location\'],[\'آخر تحديث\',\'last_update\']],rows,r=>`<button class="ghost" onclick="editRecord(\'properties\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'properties\',\'${r.id}\')">حذف</button>`);\n  fillSelect(\'#propStatusFilter\',[\'\',\'Rented\',\'Vacant\',\'Maintenance\'],false);\n}\nfunction renderClients(){\n  const rows=filterRows(\'clients\',[\'name\',\'phone\',\'email\',\'national_id\']);\n  $(\'#clientsTable\').innerHTML=tableHtml([[\'الاسم\',\'name\'],[\'الهاتف\',\'phone\'],[\'البريد\',\'email\'],[\'الهوية/السجل\',\'national_id\'],[\'الرصيد\',\'balance\',(v)=>money(v)],[\'ملاحظات\',\'notes\']],rows,r=>`<button class="ghost" onclick="clientStatement(\'${r.id}\')">كشف</button> <button class="ghost" onclick="editRecord(\'clients\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'clients\',\'${r.id}\')">حذف</button>`);\n}\nfunction renderContracts(){\n  fillSelect(\'#contractProperty\',Jawdah.data.properties||[],true,\'id\',\'name\'); fillSelect(\'#contractClient\',Jawdah.data.clients||[],true,\'id\',\'name\');\n  const rows=filterRows(\'contracts\',[\'id\',\'status\',\'notes\']);\n  $(\'#contractsTable\').innerHTML=tableHtml([[\'العقد\',\'id\'],[\'العقار\',\'property_id\',(v)=>byId(\'properties\',v).name||v],[\'العميل\',\'client_id\',(v)=>byId(\'clients\',v).name||v],[\'البداية\',\'start_date\'],[\'النهاية\',\'end_date\'],[\'الإيجار\',\'rent_amount\',(v)=>money(v)],[\'الحالة\',\'status\',(v)=>badge(v)]],rows,r=>`<button class="gold-btn" onclick="invoiceFromContract(\'${r.id}\')">فاتورة</button> <button class="ghost" onclick="editRecord(\'contracts\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'contracts\',\'${r.id}\')">حذف</button>`);\n}\nfunction renderInvoices(){\n  const rows=filterRows(\'invoices\',[\'invoice_no\',\'description\',\'status\']);\n  $(\'#invoicesTable\').innerHTML=tableHtml([[\'رقم\',\'invoice_no\'],[\'العميل\',\'client_id\',(v)=>byId(\'clients\',v).name||v],[\'العقار\',\'property_id\',(v)=>byId(\'properties\',v).name||v],[\'الإصدار\',\'issue_date\'],[\'الاستحقاق\',\'due_date\'],[\'الإجمالي\',\'amount\',(v)=>money(v)],[\'المدفوع\',\'paid_amount\',(v)=>money(v)],[\'المتبقي\',\'amount\',(v,r)=>money(Number(r.amount)-Number(r.paid_amount))],[\'الحالة\',\'status\',(v)=>badge(v)]],rows,r=>`<button class="gold-btn" onclick="openPayment(\'${r.id}\')">تحصيل</button> <button class="ghost" onclick="printInvoice(\'${r.id}\')">طباعة</button> <button class="danger" onclick="delRecord(\'invoices\',\'${r.id}\')">حذف</button>`);\n}\nfunction renderAccounts(){\n  const rows=filterRows(\'accounts\',[\'description\',\'category\',\'type\']);\n  $(\'#accountsTable\').innerHTML=tableHtml([[\'التاريخ\',\'entry_date\'],[\'النوع\',\'type\',(v)=>badge(v)],[\'التصنيف\',\'category\'],[\'الوصف\',\'description\'],[\'العميل\',\'client_id\',(v)=>v?(byId(\'clients\',v).name||v):\'\'],[\'العقار\',\'property_id\',(v)=>v?(byId(\'properties\',v).name||v):\'\'],[\'الفاتورة\',\'invoice_id\',(v)=>v?(byId(\'invoices\',v).invoice_no||v):\'\'],[\'المبلغ\',\'amount\',(v)=>money(v)]],rows,r=>`<button class="ghost" onclick="editRecord(\'accounts\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'accounts\',\'${r.id}\')">حذف</button>`);\n  const income=rows.filter(x=>x.type===\'income\').reduce((s,x)=>s+Number(x.amount||0),0), expense=rows.filter(x=>x.type===\'expense\').reduce((s,x)=>s+Number(x.amount||0),0);\n  $(\'#accountSummary\').innerHTML=`<span class="badge">إيرادات ${money(income)}</span><span class="badge">مصروفات ${money(expense)}</span><span class="badge">صافي ${money(income-expense)}</span>`;\n}\nfunction renderMaintenance(){\n  fillSelect(\'#maintProperty\',Jawdah.data.properties||[],true,\'id\',\'name\');\n  const rows=filterRows(\'maintenance\',[\'title\',\'priority\',\'status\',\'notes\']);\n  $(\'#maintenanceGrid\').innerHTML=rows.map(m=>`<div class="card"><h3>${m.title}</h3><p>${byId(\'properties\',m.property_id).name||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord(\'maintenance\',\'${m.id}\')">متابعة</button> <button class="danger" onclick="delRecord(\'maintenance\',\'${m.id}\')">حذف</button></div>`).join(\'\')||\'<div class="card">لا توجد طلبات صيانة</div>\';\n}\nfunction renderUsers(){\n  if(!Jawdah.data.users){ $(\'#usersTable\').innerHTML=\'<div class="card">هذا القسم للمدير فقط</div>\'; return; }\n  $(\'#usersTable\').innerHTML=tableHtml([[\'المستخدم\',\'username\'],[\'الاسم\',\'name\'],[\'الدور\',\'role\',(v)=>roleName(v)],[\'نشط\',\'active\',(v)=>v?\'نعم\':\'لا\'],[\'آخر دخول\',\'last_login\']],Jawdah.data.users,r=>`<button class="ghost" onclick="editRecord(\'users\',\'${r.id}\')">تعديل</button> <button class="danger" onclick="delRecord(\'users\',\'${r.id}\')">حذف</button>`);\n}\nfunction renderBackup(){\n  const counts=Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,(v||[]).length]));\n  $(\'#backupStatus\').innerHTML=Object.entries(counts).map(([k,v])=>`<span class="badge">${k}: ${fmt(v)}</span>`).join(\' \');\n}\nfunction renderQA(){\n  $(\'#qaBox\').innerHTML=\'<p>اضغط تشغيل الاختبار لفحص الترابط والتخزين والفواتير والحسابات.</p>\';\n}\nfunction filterRows(table, fields){\n  let rows=[...(Jawdah.data[table]||[])]; const q=($(\'#globalSearch\')?.value||\'\').toLowerCase().trim();\n  if(q) rows=rows.filter(r=>fields.some(f=>String(r[f]??\'\').toLowerCase().includes(q)));\n  if(table===\'properties\'){ const s=$(\'#propStatusFilter\')?.value; if(s) rows=rows.filter(r=>r.status===s); }\n  return rows;\n}\nfunction badge(v){ const cls=String(v||\'\').toLowerCase(); return `<span class="badge ${cls}">${v||\'\'}</span>`; }\nfunction fillSelect(sel, data, objects=false, valueKey=\'id\', textKey=\'name\'){\n  const el=$(sel); if(!el) return; const old=el.value; let html=\'<option value="">اختر</option>\';\n  if(objects) html+=data.map(x=>`<option value="${x[valueKey]}">${x[textKey]}</option>`).join(\'\'); else html+=data.map(x=>`<option value="${x}">${x||\'الكل\'}</option>`).join(\'\');\n  el.innerHTML=html; if([...el.options].some(o=>o.value===old)) el.value=old;\n}\nasync function createProperty(){ await saveNew(\'properties\',{name:val(\'pName\'),type:val(\'pType\'),status:val(\'pStatus\'),price:num(\'pPrice\'),location:val(\'pLocation\'),image:val(\'pImage\')||\'🏠\',last_update:today(),notes:val(\'pNotes\')}); }\nasync function createClient(){ await saveNew(\'clients\',{name:val(\'cName\'),phone:val(\'cPhone\'),email:val(\'cEmail\'),national_id:val(\'cNational\'),balance:0,notes:val(\'cNotes\')}); }\nasync function createContract(){ await saveNew(\'contracts\',{property_id:val(\'contractProperty\'),client_id:val(\'contractClient\'),start_date:val(\'contractStart\')||today(),end_date:val(\'contractEnd\')||today(),rent_amount:num(\'contractRent\'),status:\'Active\',payment_cycle:\'monthly\',notes:val(\'contractNotes\')}); }\nasync function createAccount(){ await saveNew(\'accounts\',{entry_date:val(\'accDate\')||today(),type:val(\'accType\'),category:val(\'accCategory\'),description:val(\'accDesc\'),client_id:val(\'accClient\')||null,property_id:val(\'accProperty\')||null,invoice_id:null,amount:num(\'accAmount\')}); }\nasync function createMaintenance(){ await saveNew(\'maintenance\',{property_id:val(\'maintProperty\'),title:val(\'maintTitle\'),priority:val(\'maintPriority\'),status:\'Open\',request_date:today(),cost:num(\'maintCost\'),notes:val(\'maintNotes\')}); }\nasync function createUser(){ await saveNew(\'users\',{username:val(\'uUsername\'),name:val(\'uName\'),role:val(\'uRole\'),password:val(\'uPassword\'),active:true}); }\nasync function saveNew(table,row){ try{ await api(table,{method:\'POST\',body:JSON.stringify(row)}); toast(\'تم الحفظ\'); await loadAll(); }catch(e){toast(e.message,true)} }\nfunction val(id){ return ($(\'#\'+id)?.value||\'\').trim(); } function num(id){ return Number(val(id)||0); }\nasync function delRecord(table,id){ if(!confirm(\'تأكيد الحذف؟\')) return; try{ await api(`${table}/${id}`,{method:\'DELETE\'}); toast(\'تم الحذف\'); await loadAll(); }catch(e){toast(e.message,true)} }\nfunction escapeHtml(v){ return String(v ?? \'\').replace(/[&<>"\']/g, ch => ({\'&\':\'&amp;\',\'<\':\'&lt;\',\'>\':\'&gt;\',\'"\':\'&quot;\',"\'":\'&#39;\'}[ch])); }\nfunction editOptions(field, row){\n  const opts = {\n    status: [\'Rented\',\'Vacant\',\'Maintenance\',\'Active\',\'Closed\',\'Open\',\'In Progress\',\'Completed\',\'Pending\'],\n    type: [\'Villa\',\'Apartment\',\'Office\',\'Compound\',\'income\',\'expense\'],\n    role: [\'admin\',\'accountant\',\'operations\',\'maintenance\',\'viewer\'],\n    priority: [\'Low\',\'Medium\',\'High\',\'Urgent\'],\n    payment_cycle: [\'monthly\',\'quarterly\',\'yearly\'],\n    active: [\'1\',\'0\']\n  };\n  if(field === \'property_id\') return (Jawdah.data.properties||[]).map(x=>[x.id,x.name]);\n  if(field === \'client_id\') return (Jawdah.data.clients||[]).map(x=>[x.id,x.name]);\n  if(field === \'invoice_id\') return [[\'\',\'بدون فاتورة\'], ...(Jawdah.data.invoices||[]).map(x=>[x.id,x.invoice_no])];\n  if(opts[field]) return opts[field].map(x=>[x, field===\'role\'?roleName(x):(x===\'1\'?\'نعم\':x===\'0\'?\'لا\':x)]);\n  return null;\n}\nconst EDIT_CONFIG = {\n  properties: {title:\'تعديل عقار\', fields:[[\'name\',\'اسم العقار\',\'text\'],[\'type\',\'النوع\',\'select\'],[\'status\',\'الحالة\',\'select\'],[\'price\',\'السعر\',\'number\'],[\'location\',\'الموقع\',\'text\'],[\'image\',\'رمز/صورة\',\'text\'],[\'notes\',\'ملاحظات\',\'textarea\']]},\n  clients: {title:\'تعديل عميل\', fields:[[\'name\',\'اسم العميل\',\'text\'],[\'phone\',\'الهاتف\',\'text\'],[\'email\',\'البريد\',\'text\'],[\'national_id\',\'الهوية/السجل\',\'text\'],[\'balance\',\'الرصيد الافتتاحي\',\'number\'],[\'notes\',\'ملاحظات\',\'textarea\']]},\n  contracts: {title:\'تعديل عقد\', fields:[[\'property_id\',\'العقار\',\'select\'],[\'client_id\',\'العميل\',\'select\'],[\'start_date\',\'تاريخ البداية\',\'date\'],[\'end_date\',\'تاريخ النهاية\',\'date\'],[\'rent_amount\',\'قيمة الإيجار\',\'number\'],[\'status\',\'الحالة\',\'select\'],[\'payment_cycle\',\'دورة الدفع\',\'select\'],[\'notes\',\'ملاحظات\',\'textarea\']]},\n  accounts: {title:\'تعديل حركة مالية\', fields:[[\'entry_date\',\'التاريخ\',\'date\'],[\'type\',\'النوع\',\'select\'],[\'category\',\'التصنيف\',\'text\'],[\'description\',\'الوصف\',\'text\'],[\'client_id\',\'العميل\',\'select\'],[\'property_id\',\'العقار\',\'select\'],[\'invoice_id\',\'الفاتورة\',\'select\'],[\'amount\',\'المبلغ\',\'number\']]},\n  maintenance: {title:\'تعديل طلب صيانة\', fields:[[\'property_id\',\'العقار\',\'select\'],[\'title\',\'عنوان الطلب\',\'text\'],[\'priority\',\'الأولوية\',\'select\'],[\'status\',\'الحالة\',\'select\'],[\'request_date\',\'تاريخ الطلب\',\'date\'],[\'cost\',\'التكلفة\',\'number\'],[\'notes\',\'ملاحظات\',\'textarea\']]},\n  users: {title:\'تعديل مستخدم\', fields:[[\'username\',\'اسم المستخدم\',\'text\'],[\'name\',\'الاسم\',\'text\'],[\'role\',\'الدور\',\'select\'],[\'active\',\'نشط\',\'select\'],[\'password\',\'كلمة مرور جديدة - اختياري\',\'password\']]}\n};\nfunction editRecord(table,id){\n  const cfg = EDIT_CONFIG[table];\n  const row = byId(table,id);\n  if(!cfg || !row.id){ toast(\'لم يتم العثور على السجل\', true); return; }\n  const fields = cfg.fields.map(([key,label,type])=>{\n    const value = key === \'password\' ? \'\' : (row[key] ?? \'\');\n    const options = editOptions(key,row);\n    if(type === \'textarea\') return `<label>${label}<textarea data-edit-field="${key}" rows="3">${escapeHtml(value)}</textarea></label>`;\n    if(options) return `<label>${label}<select data-edit-field="${key}">${options.map(([v,t])=>`<option value="${escapeHtml(v)}" ${String(value)===String(v)?\'selected\':\'\'}>${escapeHtml(t)}</option>`).join(\'\')}</select></label>`;\n    return `<label>${label}<input data-edit-field="${key}" type="${type}" value="${escapeHtml(value)}" ${type===\'number\'?\'step="0.001"\':\'\'}></label>`;\n  }).join(\'\');\n  $(\'#genericModalBody\').innerHTML = `<h2>${cfg.title}</h2><p class="mini">تعديل مباشر محفوظ في قاعدة البيانات عبر API.</p><div class="form edit-form">${fields}</div><div class="toolbar"><button class="gold-btn" onclick="submitEditRecord(\'${table}\',\'${id}\')">حفظ التعديل</button><button class="ghost" onclick="closeModal(\'genericModal\')">إلغاء</button></div>`;\n  openModal(\'genericModal\');\n}\nasync function submitEditRecord(table,id){\n  try{\n    const data = {};\n    $$(\'#genericModalBody [data-edit-field]\').forEach(el=>{\n      let v = el.value;\n      if(el.type === \'number\') v = Number(v || 0);\n      if(el.dataset.editField === \'active\') v = v === \'1\';\n      if(el.dataset.editField === \'password\' && !v) return;\n      if(v === \'\' && [\'client_id\',\'property_id\',\'invoice_id\'].includes(el.dataset.editField)) v = null;\n      data[el.dataset.editField] = v;\n    });\n    await api(`${table}/${id}`, {method:\'PUT\', body:JSON.stringify(data)});\n    closeModal(\'genericModal\');\n    toast(\'تم حفظ التعديل\');\n    await loadAll();\n  }catch(e){ toast(e.message, true); }\n}\nasync function invoiceFromContract(contractId){ try{ const due=prompt(\'تاريخ الاستحقاق YYYY-MM-DD\', today()); const desc=prompt(\'وصف الفاتورة\',\'Rent invoice\'); const res=await api(\'invoice_from_contract\',{method:\'POST\',body:JSON.stringify({contract_id:contractId,due_date:due||today(),description:desc||\'Rent invoice\'})}); toast(\'تم إنشاء الفاتورة \'+res.item.invoice_no); await loadAll(); showSection(\'invoices\'); }catch(e){toast(e.message,true)} }\nfunction openPayment(id){ const inv=byId(\'invoices\',id); const remaining=Number(inv.amount)-Number(inv.paid_amount); $(\'#payInvoiceId\').value=id; $(\'#payAmount\').value=remaining.toFixed(2); $(\'#payInfo\').textContent=`${inv.invoice_no} - المتبقي ${money(remaining)}`; openModal(\'paymentModal\'); }\nasync function submitPayment(){ try{ await api(\'pay_invoice\',{method:\'POST\',body:JSON.stringify({invoice_id:val(\'payInvoiceId\'),amount:num(\'payAmount\'),method:val(\'payMethod\'),note:val(\'payNote\')})}); closeModal(\'paymentModal\'); toast(\'تم التحصيل وتحديث الحسابات\'); await loadAll(); }catch(e){toast(e.message,true)} }\nfunction printInvoice(id){ const inv=byId(\'invoices\',id), client=byId(\'clients\',inv.client_id), prop=byId(\'properties\',inv.property_id), contract=byId(\'contracts\',inv.contract_id); Jawdah.invoiceForPrint=inv; const rem=Number(inv.amount)-Number(inv.paid_amount);\n  $(\'#invoicePreview\').innerHTML=`<div class="invoice-paper"><div class="head"><div><h1>INVOICE</h1><h2>Quality of Launch</h2><p>Real Estate & Hospitality Services<br>GSM: 96203068 / 92120205<br>C.R: 1466316 | Postal Code: 611 | Sultanate of Oman</p></div><div><h2>${inv.invoice_no}</h2><p>Issue: ${inv.issue_date}<br>Due: ${inv.due_date}<br>Status: ${inv.status}</p></div></div><div class="grid" style="grid-template-columns:1fr 1fr"><div><h3>Client</h3><p>${client.name||\'\'}<br>${client.phone||\'\'}<br>${client.email||\'\'}</p></div><div><h3>Contract / Property</h3><p>${contract.id||\'\'}<br>${prop.name||\'\'}<br>${prop.location||\'\'}</p></div></div><table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>${inv.description}</td><td>${money(inv.amount)}</td></tr></tbody></table><h3>Total: ${money(inv.amount)}</h3><h3>Paid: ${money(inv.paid_amount)}</h3><h3>Remaining: ${money(rem)}</h3><div style="margin-top:40px;display:flex;justify-content:space-between"><p>Prepared By: __________</p><p>Client Signature: __________</p><p>Company Stamp: __________</p></div></div>`; openModal(\'invoiceModal\'); }\nfunction downloadInvoice(){ const html=\'<!doctype html><meta charset="utf-8">\'+$(\'#invoicePreview\').innerHTML; downloadFile(`invoice-${Jawdah.invoiceForPrint?.invoice_no||\'file\'}.html`,html,\'text/html\'); }\nfunction clientStatement(id){ const c=byId(\'clients\',id); const inv=(Jawdah.data.invoices||[]).filter(x=>x.client_id===id); const acc=(Jawdah.data.accounts||[]).filter(x=>x.client_id===id); const total=inv.reduce((s,x)=>s+Number(x.amount||0),0), paid=inv.reduce((s,x)=>s+Number(x.paid_amount||0),0); $(\'#genericModalBody\').innerHTML=`<h2>كشف حساب ${c.name}</h2><p>إجمالي الفواتير: ${money(total)} | المدفوع: ${money(paid)} | المتبقي: ${money(total-paid)}</p>${tableHtml([[\'رقم\',\'invoice_no\'],[\'تاريخ\',\'issue_date\'],[\'إجمالي\',\'amount\',(v)=>money(v)],[\'مدفوع\',\'paid_amount\',(v)=>money(v)],[\'حالة\',\'status\',(v)=>badge(v)]],inv)}<h3>الحركات</h3>${tableHtml([[\'تاريخ\',\'entry_date\'],[\'نوع\',\'type\'],[\'وصف\',\'description\'],[\'مبلغ\',\'amount\',(v)=>money(v)]],acc)}`; openModal(\'genericModal\'); }\nfunction openModal(id){ $(\'#\'+id).classList.add(\'show\'); ensureEnglishDigits($(\'#\'+id)); } function closeModal(id){ $(\'#\'+id).classList.remove(\'show\'); }\nasync function downloadBackup(){ try{ const res=await api(\'backup\'); downloadFile(\'jawdah-cloud-backup.json\', JSON.stringify(res.backup,null,2), \'application/json\'); }catch(e){toast(e.message,true)} }\nfunction downloadFile(name,content,type=\'text/plain\'){ const a=document.createElement(\'a\'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }\nasync function exportCsv(table){ try{ const res=await fetch(\'/api/export/\'+table,{headers:{Authorization:\'Bearer \'+Jawdah.token}}); if(!res.ok) throw new Error(\'Export failed\'); const blob=await res.blob(); const a=document.createElement(\'a\'); a.href=URL.createObjectURL(blob); a.download=\'jawdah-\'+table+\'.csv\'; a.click(); }catch(e){toast(e.message,true)} }\nfunction renderReports(){\n  const k=Jawdah.dashboard.kpis; $(\'#reportsBox\').innerHTML=`<div class="kpis grid"><div class="kpi"><span>الإيرادات</span><strong>${money(k.income)}</strong></div><div class="kpi"><span>المصروفات</span><strong>${money(k.expense)}</strong></div><div class="kpi"><span>الصافي</span><strong>${money(k.net)}</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(k.overdue)}</strong></div></div><div class="card"><h3>قرارات تنفيذية</h3>${Jawdah.dashboard.decisions.map(d=>`<p><span class="badge">${d.level}</span> ${d.text}</p>`).join(\'\')}</div>`;\n}\nfunction runQA(){\n  const problems=[]; const data=Jawdah.data;\n  (data.contracts||[]).forEach(c=>{ if(!byId(\'properties\',c.property_id).id) problems.push(\'عقد بدون عقار: \'+c.id); if(!byId(\'clients\',c.client_id).id) problems.push(\'عقد بدون عميل: \'+c.id); });\n  (data.invoices||[]).forEach(i=>{ if(!byId(\'contracts\',i.contract_id).id) problems.push(\'فاتورة بدون عقد: \'+i.invoice_no); if(Number(i.paid_amount)>Number(i.amount)) problems.push(\'فاتورة مدفوعة أكثر من الإجمالي: \'+i.invoice_no); });\n  const score=Math.max(0,100-problems.length*10);\n  $(\'#qaBox\').innerHTML=`<div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(score)}%</strong></div>${problems.length?problems.map(p=>`<p class="badge overdue">${p}</p>`).join(\'\'):\'<p class="badge paid">كل الفحوصات الأساسية ناجحة</p>\'}`;\n}\nfunction drawCharts(){ if(!Jawdah.dashboard) return; drawLine(\'incomeChart\',Jawdah.dashboard.series.map(x=>x.income),Jawdah.dashboard.series.map(x=>x.expense)); drawDonut(\'occupancyChart\',Jawdah.dashboard.kpis.occupancy); drawBar(\'expenseChart\',Jawdah.dashboard.series.map(x=>x.expense)); }\nfunction ctx(id){ const c=$(\'#\'+id); return c?c.getContext(\'2d\'):null; }\nfunction prepCanvas(c){ const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; const g=c.getContext(\'2d\'); g.scale(devicePixelRatio,devicePixelRatio); return [g,r.width,r.height]; }\nfunction drawLine(id,a,b){ const c=$(\'#\'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const vals=[...a,...b,1], max=Math.max(...vals)*1.22; const area=(arr,color1,color2)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.lineTo(w-32,h-34); g.lineTo(32,h-34); g.closePath(); const gr=g.createLinearGradient(0,28,0,h-34); gr.addColorStop(0,color1); gr.addColorStop(1,color2); g.fillStyle=gr; g.fill(); }; const plot=(arr,color)=>{ g.beginPath(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); i?g.lineTo(x,y):g.moveTo(x,y); }); g.strokeStyle=color; g.lineWidth=4; g.shadowBlur=16; g.shadowColor=color; g.stroke(); arr.forEach((v,i)=>{ const x=32+i*(w-64)/(arr.length-1||1), y=h-34-(v/max)*(h-70); g.beginPath(); g.fillStyle=color; g.arc(x,y,4,0,Math.PI*2); g.fill(); }); g.shadowBlur=0; }; g.strokeStyle=\'rgba(255,255,255,.12)\'; for(let i=0;i<5;i++){let y=24+i*(h-58)/4;g.beginPath();g.moveTo(24,y);g.lineTo(w-24,y);g.stroke();} area(a,\'rgba(246,215,127,.28)\',\'rgba(246,215,127,0)\'); plot(a,\'#f6d77f\'); plot(b,\'#8fbfff\'); }\nfunction drawDonut(id,p){ const c=$(\'#\'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=26; g.lineCap=\'round\'; g.strokeStyle=\'rgba(255,255,255,.12)\'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,\'#fff0b8\'); gr.addColorStop(.5,\'#d8b15b\'); gr.addColorStop(1,\'#8f631b\'); g.strokeStyle=gr; g.shadowBlur=20; g.shadowColor=\'rgba(216,177,91,.4)\'; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.shadowBlur=0; g.fillStyle=\'#fff\'; g.font=\'800 30px Segoe UI\'; g.textAlign=\'center\'; g.fillText(fmt(p)+\'%\',x,y+6); g.font=\'13px Segoe UI\'; g.fillStyle=\'rgba(255,255,255,.7)\'; g.fillText(\'Occupancy\',x,y+28); }\nfunction drawBar(id,arr){ const c=$(\'#\'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,\'#f6d77f\'); grd.addColorStop(1,\'#8f631b\'); g.fillStyle=grd; g.shadowBlur=16; g.shadowColor=\'rgba(216,177,91,.38)\'; g.fillRect(x,h-25-bh,bw,bh);}); g.shadowBlur=0; }\nfunction initClock(){ setInterval(()=>{ const d=new Date(); $(\'#clock\').textContent=d.toLocaleTimeString(\'en-US\',{hour12:false}); },1000); }\nfunction bind(){\n  $(\'#loginBtn\').onclick=login; $(\'#logoutBtn\').onclick=logout; $(\'#menuBtn\').onclick=()=>$(\'#sidebar\').classList.toggle(\'open\'); $(\'#globalSearch\').oninput=()=>renderAll();\n  document.addEventListener(\'input\',e=>ensureEnglishDigits(e.target));\n  document.addEventListener(\'keydown\',e=>{ if(e.ctrlKey&&e.key.toLowerCase()===\'k\'){ e.preventDefault(); $(\'#globalSearch\').focus(); } if(e.key===\'/\' && document.activeElement.tagName!==\'INPUT\'){e.preventDefault();$(\'#globalSearch\').focus();} });\n}\nwindow.JAWDAH_CLOUD_CHECK=()=>({status:\'v40-executive-dashboard\',user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});\nwindow.addEventListener(\'load\',()=>{ bind(); initClock(); checkSession(); setInterval(()=>ensureEnglishDigits(),3000); });\n'
 
@@ -119,6 +119,7 @@ def _load_public_asset(name: str, fallback: str) -> str:
         pass
     return fallback
 
+FALLBACK_APP_HTML = _load_public_asset("app.html", FALLBACK_INDEX_HTML)
 FALLBACK_INDEX_HTML = _load_public_asset("index.html", FALLBACK_INDEX_HTML)
 FALLBACK_CSS = _load_public_asset("app.css", FALLBACK_CSS)
 FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
@@ -168,6 +169,12 @@ WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
 
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
+MODULE_FIX_PREVIEW_TTL_SECONDS = max(300, int(os.environ.get("LQ_MODULE_FIX_PREVIEW_TTL", "1800") or "1800"))
+MODULE_FIX_MIN_ATTEMPTS_FOR_ALERT = max(1, int(os.environ.get("LQ_MODULE_FIX_MIN_ATTEMPTS_ALERT", "5") or "5"))
+MODULE_FIX_MIN_SUCCESS_RATE = float(os.environ.get("LQ_MODULE_FIX_MIN_SUCCESS_RATE", "85") or "85")
+MODULE_FIX_MAX_REJECTED = max(0, int(os.environ.get("LQ_MODULE_FIX_MAX_REJECTED", "3") or "3"))
+MODULE_FIX_MIN_APPLY_EFFECTIVENESS = float(os.environ.get("LQ_MODULE_FIX_MIN_APPLY_EFFECTIVENESS", "65") or "65")
+MODULE_FIX_PREVIEWS: Dict[str, Dict[str, Any]] = {}
 BIOMETRIC_CHALLENGE_TTL_SECONDS = 180
 BIOMETRIC_CHALLENGES: Dict[str, Dict[str, Any]] = {}
 BIOMETRIC_FLOW_STATES: Dict[str, Dict[str, Any]] = {}
@@ -180,6 +187,16 @@ OPENAI_API_KEY = (os.environ.get("OPENAI_API_KEY") or os.environ.get("LQ_OPENAI_
 AI_MODEL = os.environ.get("LQ_AI_MODEL", "gpt-4o-mini").strip()
 AI_DAILY_LIMIT = max(1, int(os.environ.get("LQ_AI_DAILY_LIMIT", "50") or "50"))
 APPROVAL_THRESHOLD = float(os.environ.get("LQ_APPROVAL_THRESHOLD", "3000") or "3000")
+WORKFLOW_POLICY_DEFAULTS: Dict[str, Any] = {
+    # If enabled, only owner/admin can activate contracts from API.
+    "contract_activation_owner_admin_only": True,
+    # Dynamic thresholds used by workflow approvals engine.
+    "manual_invoice_approval_threshold": APPROVAL_THRESHOLD,
+    "payment_approval_threshold": APPROVAL_THRESHOLD,
+    # How far invoice due date can be backdated/future-dated by non-admin users.
+    "invoice_backdate_limit_days": 7,
+    "invoice_future_limit_days": 180,
+}
 STAFF_APP_VERSION = os.environ.get("LQ_STAFF_APP_VERSION", "2.0.0").strip()
 STAFF_DOWNLOAD_APK = os.environ.get(
     "LQ_STAFF_APK_URL",
@@ -237,6 +254,150 @@ def cleanup_biometric_challenges() -> None:
     expired_states = [key for key, item in BIOMETRIC_FLOW_STATES.items() if now_ts > float(item.get("expires", 0))]
     for key in expired_states:
         BIOMETRIC_FLOW_STATES.pop(key, None)
+
+
+def cleanup_module_fix_previews() -> None:
+    now_ts = time.time()
+    expired = [key for key, item in MODULE_FIX_PREVIEWS.items() if now_ts > float(item.get("expires_ts", 0))]
+    for key in expired:
+        MODULE_FIX_PREVIEWS.pop(key, None)
+
+
+def module_fix_preview_key(username: str, preview_id: str) -> str:
+    return f"{str(username or '').strip().lower()}::{str(preview_id or '').strip()}"
+
+
+def _coerce_workflow_policy_value(key: str, value: Any) -> Any:
+    if key not in WORKFLOW_POLICY_DEFAULTS:
+        raise ValueError(f"Unsupported workflow policy: {key}")
+    default = WORKFLOW_POLICY_DEFAULTS[key]
+    if isinstance(default, bool):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            token = value.strip().lower()
+            if token in ("1", "true", "yes", "on"):
+                return True
+            if token in ("0", "false", "no", "off"):
+                return False
+        raise ValueError(f"{key} must be boolean")
+    if isinstance(default, int):
+        iv = int(value)
+        if iv < 0:
+            raise ValueError(f"{key} must be >= 0")
+        return iv
+    if isinstance(default, float):
+        fv = float(value)
+        if fv <= 0:
+            raise ValueError(f"{key} must be > 0")
+        return fv
+    return value
+
+
+def _workflow_policy_float(policies: Dict[str, Any], key: str) -> float:
+    try:
+        return float(policies.get(key, WORKFLOW_POLICY_DEFAULTS[key]))
+    except Exception:
+        return float(WORKFLOW_POLICY_DEFAULTS[key])
+
+
+def _workflow_policy_int(policies: Dict[str, Any], key: str) -> int:
+    try:
+        return int(policies.get(key, WORKFLOW_POLICY_DEFAULTS[key]))
+    except Exception:
+        return int(WORKFLOW_POLICY_DEFAULTS[key])
+
+
+def _workflow_policy_bool(policies: Dict[str, Any], key: str) -> bool:
+    raw = policies.get(key, WORKFLOW_POLICY_DEFAULTS[key])
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.strip().lower() in ("1", "true", "yes", "on")
+    return bool(raw)
+
+
+def load_workflow_policies(db: sqlite3.Connection) -> Dict[str, Any]:
+    out = dict(WORKFLOW_POLICY_DEFAULTS)
+    rows = db.execute("SELECT key, value_json FROM workflow_policies").fetchall()
+    for row in rows:
+        key = str(row["key"] or "").strip()
+        if key not in WORKFLOW_POLICY_DEFAULTS:
+            continue
+        try:
+            out[key] = json.loads(row["value_json"])
+        except Exception:
+            out[key] = WORKFLOW_POLICY_DEFAULTS[key]
+    return out
+
+
+def validate_invoice_due_date_by_policy(
+    due_date_raw: Any,
+    user: Dict[str, Any],
+    policies: Dict[str, Any],
+) -> Optional[str]:
+    due_s = str(due_date_raw or "").strip()
+    if not due_s:
+        return None
+    try:
+        due_d = datetime.fromisoformat(due_s).date()
+    except Exception:
+        return "Invoice due_date format must be YYYY-MM-DD"
+    role = str(user.get("role") or "").strip().lower()
+    if role in ("admin", "owner"):
+        return None
+    max_back_days = _workflow_policy_int(policies, "invoice_backdate_limit_days")
+    max_future_days = _workflow_policy_int(policies, "invoice_future_limit_days")
+    delta_days = (due_d - date.today()).days
+    if delta_days < -max_back_days:
+        return f"Backdate over policy limit ({max_back_days} days)"
+    if delta_days > max_future_days:
+        return f"Future due date over policy limit ({max_future_days} days)"
+    return None
+
+
+def log_module_fix_run(
+    db: sqlite3.Connection,
+    *,
+    username: str,
+    mode: str,
+    status: str,
+    preview_id: str = "",
+    modules: Optional[List[str]] = None,
+    max_rows: int = 0,
+    candidates: int = 0,
+    applied: int = 0,
+    score_before: Optional[float] = None,
+    score_after: Optional[float] = None,
+    issues_before: Optional[int] = None,
+    issues_after: Optional[int] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    try:
+        insert(
+            db,
+            "module_fix_runs",
+            {
+                "id": uid("MFX"),
+                "created_at": now_iso(),
+                "username": str(username or "unknown"),
+                "mode": str(mode or ""),
+                "status": str(status or ""),
+                "preview_id": str(preview_id or ""),
+                "modules": json.dumps(modules or [], ensure_ascii=False),
+                "max_rows": int(max_rows or 0),
+                "candidates": int(candidates or 0),
+                "applied": int(applied or 0),
+                "score_before": score_before,
+                "score_after": score_after,
+                "issues_before": issues_before,
+                "issues_after": issues_after,
+                "details_json": json.dumps(details or {}, ensure_ascii=False),
+            },
+        )
+    except Exception:
+        # Never block main API behavior if history logging fails.
+        pass
 
 
 def create_biometric_challenge(user_id: str, action: str) -> Dict[str, str]:
@@ -1039,6 +1200,29 @@ def init_db() -> None:
                 FOREIGN KEY(employee_user_id) REFERENCES users(id),
                 FOREIGN KEY(created_by_user_id) REFERENCES users(id)
             );
+            CREATE TABLE IF NOT EXISTS module_fix_runs (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                username TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                status TEXT NOT NULL,
+                preview_id TEXT,
+                modules TEXT,
+                max_rows INTEGER,
+                candidates INTEGER NOT NULL DEFAULT 0,
+                applied INTEGER NOT NULL DEFAULT 0,
+                score_before REAL,
+                score_after REAL,
+                issues_before INTEGER,
+                issues_after INTEGER,
+                details_json TEXT
+            );
+            CREATE TABLE IF NOT EXISTS workflow_policies (
+                key TEXT PRIMARY KEY,
+                value_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                updated_by TEXT NOT NULL
+            );
             """
         )
         for col, definition in [
@@ -1154,10 +1338,22 @@ def init_db() -> None:
             ensure_column(db, "biometric_credentials", col, definition)
         migrate_property_statuses(db)
         seed_branches_from_buildings(db)
+        ensure_workflow_policies_defaults(db)
         seed_if_empty(db)
         ensure_team_users(db)
         seed_chart_accounts(db)
         db.commit()
+
+
+def ensure_workflow_policies_defaults(db: sqlite3.Connection) -> None:
+    for key, default in WORKFLOW_POLICY_DEFAULTS.items():
+        existing = db.execute("SELECT key FROM workflow_policies WHERE key=?", (key,)).fetchone()
+        if existing:
+            continue
+        db.execute(
+            "INSERT INTO workflow_policies(key, value_json, updated_at, updated_by) VALUES(?,?,?,?)",
+            (key, json.dumps(default, ensure_ascii=False), now_iso(), "system"),
+        )
 
 
 def insert(db: sqlite3.Connection, table: str, row: Dict[str, Any]) -> None:
@@ -2914,10 +3110,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return
         # Safe fallback for serving the main interface.
         if path == "/app.html":
-            raw = FALLBACK_INDEX_HTML.encode("utf-8")
+            raw = FALLBACK_APP_HTML.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
             self.end_headers()
             self.wfile.write(raw)
             return
@@ -3129,6 +3326,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "production_status" and method == "GET":
                     user = self.require_user(db, "reports:read")
                     return None if not user else self.api_production_status(db)
+                if parts[0] == "workflow_policies" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_workflow_policies(db, user)
+                if parts[0] == "workflow_policies" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_update_workflow_policies(db, user)
                 if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_backup_status()
@@ -3156,12 +3359,30 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "export" and len(parts) >= 2 and parts[1] == "timeline_audit" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_export_timeline_audit_csv(db, user, query)
+                if parts[0] == "export" and len(parts) >= 2 and parts[1] == "module_fix_history" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_export_module_fix_history_csv(db, user, query)
                 if parts[0] == "export" and method == "GET" and len(parts) >= 2:
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_export_csv(db, parts[1])
                 if parts[0] == "operations_check" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_operations_check(db, user)
+                if parts[0] == "module_integrity" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_module_integrity(db)
+                if parts[0] == "module_integrity_history" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_module_integrity_history(db, user, query)
+                if parts[0] == "module_integrity_history_kpi" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_module_integrity_history_kpi(db, user, query)
+                if parts[0] == "module_integrity_fix" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_module_integrity_fix(db, user)
+                if parts[0] == "module_integrity_autorun" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_module_integrity_autorun(db, user)
                 if parts[0] == "operational_intel" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_operational_intel(db, user)
@@ -4461,6 +4682,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_invoice_from_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
+        policies = load_workflow_policies(db)
         contract_id = data.get("contract_id")
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
@@ -4468,6 +4690,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract_status = str(contract["status"] or "").strip().lower()
         if contract_status not in ("active", "activated"):
             return self.send_json({"ok": False, "error": "لا يمكن إصدار فاتورة إلا بعد اعتماد وتفعيل العقد"}, 400)
+        due_policy_err = validate_invoice_due_date_by_policy(data.get("due_date"), user, policies)
+        if due_policy_err:
+            return self.send_json({"ok": False, "error": due_policy_err}, 400)
         if not exists(db, "properties", contract["property_id"]) or not exists(db, "clients", contract["client_id"]):
             return self.send_json({"ok": False, "error": "Contract references missing client/property"}, 400)
         amount = float(data.get("amount") or contract["rent_amount"])
@@ -4489,6 +4714,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_manual_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
+        policies = load_workflow_policies(db)
         contract_id = data.get("contract_id")
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
@@ -4496,10 +4722,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract_status = str(contract["status"] or "").strip().lower()
         if contract_status not in ("active", "activated"):
             return self.send_json({"ok": False, "error": "لا يمكن إصدار فاتورة إلا بعد اعتماد وتفعيل العقد"}, 400)
+        due_policy_err = validate_invoice_due_date_by_policy(data.get("due_date"), user, policies)
+        if due_policy_err:
+            return self.send_json({"ok": False, "error": due_policy_err}, 400)
         amount_value = float(data.get("amount") or 0)
         if amount_value <= 0:
             return self.send_json({"ok": False, "error": "Invoice amount must be positive"}, 400)
-        if amount_value >= APPROVAL_THRESHOLD and not can_decide_approval(user, "manual_invoice"):
+        manual_threshold = _workflow_policy_float(policies, "manual_invoice_approval_threshold")
+        if amount_value >= manual_threshold and not can_decide_approval(user, "manual_invoice"):
             meta = {
                 "contract_id": contract_id,
                 "amount": amount_value,
@@ -4523,7 +4753,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "ok": True,
                 "approval_required": True,
                 "approval_id": approval_id,
-                "message": f"المبلغ {fmt_omr(amount_value)} يحتاج اعتماد المدير/المحاسب قبل إصدار الفاتورة",
+                "message": f"المبلغ {fmt_omr(amount_value)} يحتاج اعتماد المدير/المحاسب قبل إصدار الفاتورة (الحد {fmt_omr(manual_threshold)})",
             })
         inv_type = detect_invoice_type(data.get("description") or "Manual invoice", data.get("invoice_type"))
         invoice = build_invoice_row(
@@ -4575,6 +4805,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_pay_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
+        policies = load_workflow_policies(db)
         invoice_id = data.get("invoice_id")
         amount = float(data.get("amount") or 0)
         payment_proof_image: Optional[str] = None
@@ -4594,7 +4825,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         invoice = db.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
         if not invoice:
             return self.send_json({"ok": False, "error": "Invoice not found"}, 404)
-        if amount >= APPROVAL_THRESHOLD and not can_decide_approval(user, "payment"):
+        payment_threshold = _workflow_policy_float(policies, "payment_approval_threshold")
+        if amount >= payment_threshold and not can_decide_approval(user, "payment"):
             approval_id = data.get("approval_id")
             if approval_id:
                 row = db.execute(
@@ -4627,7 +4859,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "ok": True,
                     "approval_required": True,
                     "approval_id": aid,
-                    "message": f"تحصيل {fmt_omr(amount)} يحتاج اعتماد المدير/المحاسب",
+                    "message": f"تحصيل {fmt_omr(amount)} يحتاج اعتماد المدير/المحاسب (الحد {fmt_omr(payment_threshold)})",
                 })
         try:
             result = execute_invoice_payment(
@@ -4967,10 +5199,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_activate_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
+        policies = load_workflow_policies(db)
         contract_id = str(data.get("contract_id") or "").strip()
         if not contract_id:
             return self.send_json({"ok": False, "error": "contract_id required"}, 400)
-        if user.get("role") not in ("owner", "admin"):
+        owner_admin_only = _workflow_policy_bool(policies, "contract_activation_owner_admin_only")
+        if owner_admin_only and user.get("role") not in ("owner", "admin"):
             return self.send_json({"ok": False, "error": "تفعيل العقد محصور بحسابات الإدارة/المالك"}, 403)
         contract = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
@@ -5127,7 +5361,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
         company_en = "QUALITY OF LAUNCH PROJECTS LLC"
         owner_line = "يعقوب فاضل سعيد الخصيبي · Yaqoub Fadel Saeed Al-Khasibi"
         html = f"""<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="ltr">
 <head>
 <meta charset="utf-8">
 <title>{html_escape(c['contract_no'] or c['id'])} - {company_en}</title>
@@ -5145,7 +5379,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
   .grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0}}
   .box{{border:1px solid #e5d39a;border-radius:14px;padding:14px;background:#fffdf7}}
   .box h3{{margin:0 0 8px;color:#8f631b;font-size:13px}}
-  table{{width:100%;border-collapse:collapse;margin:16px 0;direction:rtl}}
+  table{{width:100%;border-collapse:collapse;margin:16px 0;direction:ltr}}
   th,td{{border:1px solid #e5e7eb;padding:10px;text-align:right;vertical-align:top}}
   th{{background:#0b1220;color:#f5d76e}}
   .terms{{white-space:pre-wrap}}
@@ -5639,6 +5873,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.send_html(html)
 
     def api_production_status(self, db: sqlite3.Connection) -> None:
+        workflow_policies = load_workflow_policies(db)
         props = db.execute("SELECT COUNT(*) FROM properties").fetchone()[0]
         clients = db.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
         contracts = db.execute("SELECT COUNT(*) FROM contracts").fetchone()[0]
@@ -5664,7 +5899,70 @@ class JawdahHandler(BaseHTTPRequestHandler):
             {"name": "سجل التدقيق", "ok": audit_rows > 0, "value": audit_rows},
         ]
         score = round(sum(1 for c in checks if c["ok"]) / len(checks) * 100, 1)
-        self.send_json({"ok": True, "score": score, "checks": checks, "alerts": {"overdue": float(overdue or 0), "low_stock": low_stock, "broken_contract_links": con_bad, "broken_invoice_links": inv_bad}})
+        self.send_json({
+            "ok": True,
+            "score": score,
+            "checks": checks,
+            "alerts": {"overdue": float(overdue or 0), "low_stock": low_stock, "broken_contract_links": con_bad, "broken_invoice_links": inv_bad},
+            "workflow": {
+                "policy_count": len(workflow_policies),
+                "contract_activation_owner_admin_only": _workflow_policy_bool(workflow_policies, "contract_activation_owner_admin_only"),
+                "manual_invoice_approval_threshold": _workflow_policy_float(workflow_policies, "manual_invoice_approval_threshold"),
+                "payment_approval_threshold": _workflow_policy_float(workflow_policies, "payment_approval_threshold"),
+            },
+        })
+
+    def api_workflow_policies(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        policies = load_workflow_policies(db)
+        self.send_json(
+            {
+                "ok": True,
+                "policies": policies,
+                "defaults": WORKFLOW_POLICY_DEFAULTS,
+                "editable": str(user.get("role") or "").strip().lower() in ("owner", "admin"),
+            }
+        )
+
+    def api_update_workflow_policies(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        incoming = data.get("policies")
+        if not isinstance(incoming, dict) or not incoming:
+            return self.send_json({"ok": False, "error": "policies object required"}, 400)
+        current = load_workflow_policies(db)
+        updated: Dict[str, Any] = {}
+        for key, raw in incoming.items():
+            try:
+                val = _coerce_workflow_policy_value(str(key), raw)
+            except ValueError as exc:
+                return self.send_json({"ok": False, "error": str(exc)}, 400)
+            db.execute(
+                """
+                INSERT INTO workflow_policies(key, value_json, updated_at, updated_by)
+                VALUES(?,?,?,?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value_json=excluded.value_json,
+                    updated_at=excluded.updated_at,
+                    updated_by=excluded.updated_by
+                """,
+                (
+                    key,
+                    json.dumps(val, ensure_ascii=False),
+                    now_iso(),
+                    user.get("username") or user.get("name") or "system",
+                ),
+            )
+            updated[key] = val
+            current[key] = val
+        audit(
+            db,
+            user,
+            "workflow_policy_update",
+            "workflow_policies",
+            None,
+            " | ".join([f"{k}={updated[k]}" for k in sorted(updated.keys())]),
+        )
+        db.commit()
+        self.send_json({"ok": True, "policies": current, "updated": updated})
 
     def api_backup(self, db: sqlite3.Connection) -> None:
         self.send_json({"ok": True, "backup": build_backup_payload(db)})
@@ -5799,6 +6097,56 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def api_export_module_fix_history_csv(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        rows, filters = self.query_module_fix_history_rows(db, query, default_limit=500, max_limit=2000)
+        output = io.StringIO()
+        fieldnames = [
+            "id",
+            "created_at",
+            "username",
+            "mode",
+            "status",
+            "preview_id",
+            "modules",
+            "max_rows",
+            "candidates",
+            "applied",
+            "score_before",
+            "score_after",
+            "issues_before",
+            "issues_after",
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(
+                {
+                    "id": row.get("id"),
+                    "created_at": row.get("created_at"),
+                    "username": row.get("username"),
+                    "mode": row.get("mode"),
+                    "status": row.get("status"),
+                    "preview_id": row.get("preview_id"),
+                    "modules": row.get("modules"),
+                    "max_rows": row.get("max_rows"),
+                    "candidates": row.get("candidates"),
+                    "applied": row.get("applied"),
+                    "score_before": row.get("score_before"),
+                    "score_after": row.get("score_after"),
+                    "issues_before": row.get("issues_before"),
+                    "issues_after": row.get("issues_after"),
+                }
+            )
+        raw = output.getvalue().encode("utf-8-sig")
+        suffix = today()
+        mode_suffix = filters.get("mode") or "all"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Content-Disposition", f"attachment; filename=jawdah-module-fix-history-{mode_suffix}-{suffix}.csv")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
     def api_export_bundle_zip(self, user: Dict[str, Any]) -> None:
         data = self.read_json()
         files = data.get("files") if isinstance(data, dict) else None
@@ -5887,6 +6235,1102 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "timeline_updates": timeline_updates,
             },
         })
+
+    def api_module_integrity(self, db: sqlite3.Connection, return_payload_only: bool = False) -> Optional[Dict[str, Any]]:
+        issues: List[Dict[str, Any]] = []
+
+        def add_issue(module: str, severity: str, title: str, entity_id: Any = None, details: str = "") -> None:
+            issues.append({
+                "module": module,
+                "severity": severity,
+                "title": title,
+                "entity_id": entity_id,
+                "details": details,
+            })
+
+        # Contracts: broken links, invalid dates, conflicting active overlaps.
+        broken_contract_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT c.id, c.contract_no, c.property_id, c.client_id
+                FROM contracts c
+                LEFT JOIN properties p ON p.id=c.property_id
+                LEFT JOIN clients cl ON cl.id=c.client_id
+                WHERE p.id IS NULL OR cl.id IS NULL
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in broken_contract_rows:
+            add_issue(
+                "contracts",
+                "critical",
+                "عقد مرتبط بعقار/عميل غير موجود",
+                row.get("id"),
+                f"contract_no={row.get('contract_no') or row.get('id')} property_id={row.get('property_id')} client_id={row.get('client_id')}",
+            )
+
+        invalid_contract_dates = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, contract_no, start_date, end_date
+                FROM contracts
+                WHERE IFNULL(start_date,'')<>'' AND IFNULL(end_date,'')<>'' AND end_date < start_date
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in invalid_contract_dates:
+            add_issue(
+                "contracts",
+                "critical",
+                "عقد بتواريخ غير صالحة (النهاية قبل البداية)",
+                row.get("id"),
+                f"contract_no={row.get('contract_no') or row.get('id')} {row.get('start_date')} -> {row.get('end_date')}",
+            )
+
+        active_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, contract_no, property_id, start_date, end_date
+                FROM contracts
+                WHERE lower(IFNULL(status,'')) IN ('active','activated')
+                ORDER BY property_id, start_date
+                """
+            ).fetchall()
+        )
+        by_property: Dict[Any, List[Dict[str, Any]]] = {}
+        for row in active_rows:
+            by_property.setdefault(row.get("property_id"), []).append(row)
+        for pid, rows in by_property.items():
+            for i in range(len(rows)):
+                a = rows[i]
+                a_start = str(a.get("start_date") or "")
+                a_end = str(a.get("end_date") or "9999-12-31")
+                if not a_start:
+                    continue
+                for j in range(i + 1, len(rows)):
+                    b = rows[j]
+                    b_start = str(b.get("start_date") or "")
+                    b_end = str(b.get("end_date") or "9999-12-31")
+                    if not b_start:
+                        continue
+                    if b_start > a_end:
+                        break
+                    if not (a_end < b_start or b_end < a_start):
+                        add_issue(
+                            "contracts",
+                            "critical",
+                            "تداخل عقود نشطة على نفس الوحدة",
+                            f"{a.get('id')}|{b.get('id')}",
+                            f"property_id={pid} A={a.get('contract_no') or a.get('id')} B={b.get('contract_no') or b.get('id')}",
+                        )
+                        break
+
+        # Invoices & payments integrity
+        broken_invoice_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT i.id, i.invoice_no, i.contract_id, i.client_id, i.property_id
+                FROM invoices i
+                LEFT JOIN contracts c ON c.id=i.contract_id
+                LEFT JOIN clients cl ON cl.id=i.client_id
+                LEFT JOIN properties p ON p.id=i.property_id
+                WHERE c.id IS NULL OR cl.id IS NULL OR p.id IS NULL
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in broken_invoice_rows:
+            add_issue(
+                "invoices",
+                "critical",
+                "فاتورة مرتبطة بسجل مفقود (عقد/عميل/وحدة)",
+                row.get("id"),
+                f"invoice_no={row.get('invoice_no') or row.get('id')}",
+            )
+
+        overpaid_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, invoice_no, amount, paid_amount
+                FROM invoices
+                WHERE COALESCE(paid_amount,0) > COALESCE(amount,0)
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in overpaid_rows:
+            add_issue(
+                "invoices",
+                "high",
+                "فاتورة مدفوعة بأكثر من إجماليها",
+                row.get("id"),
+                f"invoice_no={row.get('invoice_no') or row.get('id')} paid={row.get('paid_amount')} amount={row.get('amount')}",
+            )
+
+        broken_payment_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT p.id, p.invoice_id, p.amount, p.payment_date
+                FROM payments p
+                LEFT JOIN invoices i ON i.id=p.invoice_id
+                WHERE i.id IS NULL OR COALESCE(p.amount,0) <= 0
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in broken_payment_rows:
+            add_issue(
+                "payments",
+                "high",
+                "دفعة غير صالحة (فاتورة مفقودة أو مبلغ <= 0)",
+                row.get("id"),
+                f"invoice_id={row.get('invoice_id')} amount={row.get('amount')}",
+            )
+
+        # Hospitality bookings
+        broken_booking_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT b.id, b.room_id, b.client_id, b.checkin_date, b.checkout_date, b.status
+                FROM hospitality_bookings b
+                LEFT JOIN hospitality_rooms r ON r.id=b.room_id
+                LEFT JOIN clients c ON c.id=b.client_id
+                WHERE r.id IS NULL OR c.id IS NULL
+                   OR IFNULL(b.checkin_date,'')='' OR IFNULL(b.checkout_date,'')=''
+                   OR b.checkout_date < b.checkin_date
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in broken_booking_rows:
+            add_issue(
+                "hospitality",
+                "high",
+                "حجز ضيافة غير صالح (مرجع/تواريخ)",
+                row.get("id"),
+                f"room_id={row.get('room_id')} client_id={row.get('client_id')} {row.get('checkin_date')} -> {row.get('checkout_date')}",
+            )
+
+        booking_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, room_id, checkin_date, checkout_date, status
+                FROM hospitality_bookings
+                WHERE lower(IFNULL(status,'')) IN ('reserved','checked_in')
+                ORDER BY room_id, checkin_date
+                """
+            ).fetchall()
+        )
+        by_room: Dict[Any, List[Dict[str, Any]]] = {}
+        for row in booking_rows:
+            by_room.setdefault(row.get("room_id"), []).append(row)
+        for room_id, rows in by_room.items():
+            for i in range(len(rows)):
+                a = rows[i]
+                a_start = str(a.get("checkin_date") or "")
+                a_end = str(a.get("checkout_date") or "")
+                if not (a_start and a_end):
+                    continue
+                for j in range(i + 1, len(rows)):
+                    b = rows[j]
+                    b_start = str(b.get("checkin_date") or "")
+                    b_end = str(b.get("checkout_date") or "")
+                    if not (b_start and b_end):
+                        continue
+                    if b_start > a_end:
+                        break
+                    if not (a_end < b_start or b_end < a_start):
+                        add_issue(
+                            "hospitality",
+                            "critical",
+                            "تداخل حجوزات على نفس الغرفة",
+                            f"{a.get('id')}|{b.get('id')}",
+                            f"room_id={room_id}",
+                        )
+                        break
+
+        # Inventory consistency
+        orphan_tx_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT t.id, t.item_id, t.quantity, t.tx_type
+                FROM inventory_transactions t
+                LEFT JOIN inventory_items i ON i.id=t.item_id
+                WHERE i.id IS NULL OR COALESCE(t.quantity,0) <= 0
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in orphan_tx_rows:
+            add_issue(
+                "inventory",
+                "high",
+                "حركة مخزون غير صالحة (صنف مفقود/كمية <= 0)",
+                row.get("id"),
+                f"item_id={row.get('item_id')} qty={row.get('quantity')} type={row.get('tx_type')}",
+            )
+
+        negative_stock_rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, sku, item_name, quantity
+                FROM inventory_items
+                WHERE COALESCE(quantity,0) < 0
+                LIMIT 120
+                """
+            ).fetchall()
+        )
+        for row in negative_stock_rows:
+            add_issue(
+                "inventory",
+                "critical",
+                "رصيد مخزون سالب",
+                row.get("id"),
+                f"{row.get('sku') or row.get('item_name')} quantity={row.get('quantity')}",
+            )
+
+        critical_count = sum(1 for x in issues if x["severity"] == "critical")
+        high_count = sum(1 for x in issues if x["severity"] == "high")
+        total = len(issues)
+        score = max(0.0, round(100 - (critical_count * 12 + high_count * 5 + (total - critical_count - high_count) * 2), 1))
+
+        by_module: Dict[str, int] = {}
+        for issue in issues:
+            key = str(issue.get("module") or "general")
+            by_module[key] = by_module.get(key, 0) + 1
+
+        payload = {
+            "ok": True,
+            "score": score,
+            "summary": {
+                "total_issues": total,
+                "critical": critical_count,
+                "high": high_count,
+                "other": max(0, total - critical_count - high_count),
+            },
+            "by_module": by_module,
+            "issues": issues[:300],
+        }
+        if return_payload_only:
+            return payload
+        self.send_json(payload)
+        return None
+
+    def api_module_integrity_fix(
+        self,
+        db: sqlite3.Connection,
+        user: Dict[str, Any],
+        return_payload_only: bool = False,
+        override_dry_run: Optional[bool] = None,
+        override_modules: Optional[List[str]] = None,
+        override_max_rows: Optional[int] = None,
+        require_preview_guard: bool = True,
+        override_preview_id: Optional[str] = None,
+        override_confirm_text: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        payload = self.read_json() if self.command == "POST" else {}
+        dry_run = bool((payload or {}).get("dry_run", True)) if override_dry_run is None else bool(override_dry_run)
+        allowed_modules = {"contracts", "hospitality", "payments", "invoices", "inventory"}
+        if override_modules is not None:
+            raw_modules = [str(x).strip().lower() for x in (override_modules or [])]
+        else:
+            raw_modules = [str(x).strip().lower() for x in ((payload or {}).get("modules") or [])]
+        selected_modules = {m for m in raw_modules if m in allowed_modules}
+        if not selected_modules:
+            selected_modules = set(allowed_modules)
+        req_max_rows = override_max_rows if override_max_rows is not None else (payload or {}).get("max_rows", 200)
+        try:
+            max_rows = int(req_max_rows or 200)
+        except Exception:
+            max_rows = 200
+        max_rows = max(10, min(1000, max_rows))
+
+        cleanup_module_fix_previews()
+        username = str(user.get("username") or user.get("name") or "").strip().lower()
+        preview_id = str(override_preview_id if override_preview_id is not None else (payload or {}).get("preview_id", "")).strip()
+        confirm_text = str(override_confirm_text if override_confirm_text is not None else (payload or {}).get("confirm_text", "")).strip().upper()
+        if not dry_run and require_preview_guard:
+            if confirm_text != "APPLY":
+                log_module_fix_run(
+                    db,
+                    username=username,
+                    mode="apply",
+                    status="rejected_missing_confirm",
+                    preview_id=preview_id,
+                    modules=sorted(selected_modules),
+                    max_rows=max_rows,
+                    details={"error": "Second approval required"},
+                )
+                db.commit()
+                err = {
+                    "ok": False,
+                    "error": "Second approval required",
+                    "detail": "Send confirm_text='APPLY' and a valid preview_id from dry-run.",
+                }
+                if return_payload_only:
+                    return err
+                return self.send_json(err, 400)
+            if not preview_id:
+                log_module_fix_run(
+                    db,
+                    username=username,
+                    mode="apply",
+                    status="rejected_missing_preview",
+                    preview_id="",
+                    modules=sorted(selected_modules),
+                    max_rows=max_rows,
+                    details={"error": "Missing preview_id"},
+                )
+                db.commit()
+                err = {"ok": False, "error": "Missing preview_id", "detail": "Run dry-run first to get preview_id."}
+                if return_payload_only:
+                    return err
+                return self.send_json(err, 400)
+            pkey = module_fix_preview_key(username, preview_id)
+            preview_info = MODULE_FIX_PREVIEWS.get(pkey) or {}
+            preview_scope = set(str(x).strip().lower() for x in (preview_info.get("modules") or []))
+            if not preview_info:
+                log_module_fix_run(
+                    db,
+                    username=username,
+                    mode="apply",
+                    status="rejected_invalid_preview",
+                    preview_id=preview_id,
+                    modules=sorted(selected_modules),
+                    max_rows=max_rows,
+                    details={"error": "Invalid preview_id"},
+                )
+                db.commit()
+                err = {"ok": False, "error": "Invalid preview_id", "detail": "Preview token not found or expired."}
+                if return_payload_only:
+                    return err
+                return self.send_json(err, 400)
+            if preview_scope != set(selected_modules) or int(preview_info.get("max_rows") or 0) != int(max_rows):
+                log_module_fix_run(
+                    db,
+                    username=username,
+                    mode="apply",
+                    status="rejected_scope_mismatch",
+                    preview_id=preview_id,
+                    modules=sorted(selected_modules),
+                    max_rows=max_rows,
+                    details={
+                        "error": "Preview scope mismatch",
+                        "preview_modules": sorted(preview_scope),
+                        "preview_max_rows": int(preview_info.get("max_rows") or 0),
+                    },
+                )
+                db.commit()
+                err = {
+                    "ok": False,
+                    "error": "Preview scope mismatch",
+                    "detail": "Scope/max_rows changed after preview. Re-run dry-run first.",
+                }
+                if return_payload_only:
+                    return err
+                return self.send_json(err, 400)
+
+        actions: List[Dict[str, Any]] = []
+
+        def add_action(name: str, candidates: int, applied: int, notes: str = "") -> None:
+            actions.append(
+                {
+                    "name": name,
+                    "candidates": int(candidates or 0),
+                    "applied": int(applied or 0),
+                    "notes": notes,
+                }
+            )
+        def enabled(module: str) -> bool:
+            return module in selected_modules
+
+        # 1) Contracts with invalid date order.
+        if enabled("contracts"):
+            bad_contract_dates = rows_to_dicts(
+                db.execute(
+                    """
+                    SELECT id, contract_no, start_date, end_date
+                    FROM contracts
+                    WHERE IFNULL(start_date,'')<>'' AND IFNULL(end_date,'')<>'' AND end_date < start_date
+                    LIMIT ?
+                    """,
+                    (max_rows,),
+                ).fetchall()
+            )
+            applied_bad_contract_dates = 0
+            if not dry_run:
+                for row in bad_contract_dates:
+                    db.execute(
+                        "UPDATE contracts SET start_date=?, end_date=? WHERE id=?",
+                        (row.get("end_date"), row.get("start_date"), row.get("id")),
+                    )
+                    applied_bad_contract_dates += 1
+                    audit(
+                        db,
+                        user,
+                        "autofix_swap_dates",
+                        "contracts",
+                        str(row.get("id")),
+                        f"Auto-fix swapped start/end date for contract {row.get('contract_no') or row.get('id')}",
+                    )
+            add_action("contracts.swap_invalid_dates", len(bad_contract_dates), applied_bad_contract_dates)
+
+        # 2) Hospitality bookings with invalid date order.
+        if enabled("hospitality"):
+            bad_booking_dates = rows_to_dicts(
+                db.execute(
+                    """
+                    SELECT id, checkin_date, checkout_date
+                    FROM hospitality_bookings
+                    WHERE IFNULL(checkin_date,'')<>'' AND IFNULL(checkout_date,'')<>'' AND checkout_date < checkin_date
+                    LIMIT ?
+                    """,
+                    (max_rows,),
+                ).fetchall()
+            )
+            applied_bad_booking_dates = 0
+            if not dry_run:
+                for row in bad_booking_dates:
+                    db.execute(
+                        "UPDATE hospitality_bookings SET checkin_date=?, checkout_date=? WHERE id=?",
+                        (row.get("checkout_date"), row.get("checkin_date"), row.get("id")),
+                    )
+                    applied_bad_booking_dates += 1
+                    audit(
+                        db,
+                        user,
+                        "autofix_swap_dates",
+                        "hospitality_bookings",
+                        str(row.get("id")),
+                        "Auto-fix swapped invalid booking dates",
+                    )
+            add_action("hospitality.swap_invalid_dates", len(bad_booking_dates), applied_bad_booking_dates)
+
+        # 3) Payments: orphans and non-positive amounts.
+        affected_invoice_ids: set[str] = set()
+        if enabled("payments"):
+            orphan_payments = rows_to_dicts(
+                db.execute(
+                    """
+                    SELECT p.id, p.invoice_id
+                    FROM payments p
+                    LEFT JOIN invoices i ON i.id=p.invoice_id
+                    WHERE i.id IS NULL
+                    LIMIT ?
+                    """,
+                    (max_rows,),
+                ).fetchall()
+            )
+            non_positive_payments = rows_to_dicts(
+                db.execute(
+                    """
+                    SELECT p.id, p.invoice_id, p.amount
+                    FROM payments p
+                    JOIN invoices i ON i.id=p.invoice_id
+                    WHERE COALESCE(p.amount,0) <= 0
+                    LIMIT ?
+                    """,
+                    (max_rows,),
+                ).fetchall()
+            )
+            applied_orphan_payments = 0
+            applied_non_positive_payments = 0
+            if not dry_run:
+                for row in orphan_payments:
+                    db.execute("DELETE FROM payments WHERE id=?", (row.get("id"),))
+                    applied_orphan_payments += 1
+                    audit(
+                        db,
+                        user,
+                        "autofix_delete_orphan",
+                        "payments",
+                        str(row.get("id")),
+                        f"Removed orphan payment invoice_id={row.get('invoice_id')}",
+                    )
+                for row in non_positive_payments:
+                    db.execute("DELETE FROM payments WHERE id=?", (row.get("id"),))
+                    applied_non_positive_payments += 1
+                    inv_id = str(row.get("invoice_id") or "").strip()
+                    if inv_id:
+                        affected_invoice_ids.add(inv_id)
+                    audit(
+                        db,
+                        user,
+                        "autofix_delete_nonpositive",
+                        "payments",
+                        str(row.get("id")),
+                        f"Removed non-positive payment amount={row.get('amount')}",
+                    )
+            add_action("payments.delete_orphans", len(orphan_payments), applied_orphan_payments)
+            add_action("payments.delete_non_positive", len(non_positive_payments), applied_non_positive_payments)
+
+        # 4) Inventory transactions: remove orphans and normalize non-positive quantity.
+        if enabled("inventory"):
+            orphan_inv_tx = rows_to_dicts(
+                db.execute(
+                    """
+                    SELECT t.id, t.item_id
+                    FROM inventory_transactions t
+                    LEFT JOIN inventory_items i ON i.id=t.item_id
+                    WHERE i.id IS NULL
+                    LIMIT ?
+                    """,
+                    (max_rows,),
+                ).fetchall()
+            )
+            bad_qty_tx = rows_to_dicts(
+                db.execute(
+                    """
+                    SELECT t.id, t.quantity
+                    FROM inventory_transactions t
+                    JOIN inventory_items i ON i.id=t.item_id
+                    WHERE COALESCE(t.quantity,0) <= 0
+                    LIMIT ?
+                    """,
+                    (max_rows,),
+                ).fetchall()
+            )
+            applied_orphan_tx = 0
+            applied_bad_qty_tx = 0
+            if not dry_run:
+                for row in orphan_inv_tx:
+                    db.execute("DELETE FROM inventory_transactions WHERE id=?", (row.get("id"),))
+                    applied_orphan_tx += 1
+                    audit(
+                        db,
+                        user,
+                        "autofix_delete_orphan",
+                        "inventory_transactions",
+                        str(row.get("id")),
+                        f"Removed orphan inventory transaction item_id={row.get('item_id')}",
+                    )
+                for row in bad_qty_tx:
+                    qty = float(row.get("quantity") or 0)
+                    new_qty = abs(qty) if abs(qty) > 0.0001 else 1.0
+                    db.execute("UPDATE inventory_transactions SET quantity=? WHERE id=?", (round(new_qty, 3), row.get("id")))
+                    applied_bad_qty_tx += 1
+                    audit(
+                        db,
+                        user,
+                        "autofix_normalize_quantity",
+                        "inventory_transactions",
+                        str(row.get("id")),
+                        f"Normalized quantity {qty} -> {new_qty}",
+                    )
+            add_action("inventory_transactions.delete_orphans", len(orphan_inv_tx), applied_orphan_tx)
+            add_action("inventory_transactions.normalize_non_positive_qty", len(bad_qty_tx), applied_bad_qty_tx)
+
+        # 5) Inventory items with negative stock -> set to zero.
+        if enabled("inventory"):
+            negative_stock_rows = rows_to_dicts(
+                db.execute(
+                    """
+                    SELECT id, sku, item_name, quantity
+                    FROM inventory_items
+                    WHERE COALESCE(quantity,0) < 0
+                    LIMIT ?
+                    """,
+                    (max_rows,),
+                ).fetchall()
+            )
+            applied_negative_stock = 0
+            if not dry_run:
+                for row in negative_stock_rows:
+                    old_qty = float(row.get("quantity") or 0)
+                    db.execute("UPDATE inventory_items SET quantity=0 WHERE id=?", (row.get("id"),))
+                    applied_negative_stock += 1
+                    audit(
+                        db,
+                        user,
+                        "autofix_set_zero",
+                        "inventory_items",
+                        str(row.get("id")),
+                        f"Set negative stock to zero ({old_qty}) for {row.get('sku') or row.get('item_name')}",
+                    )
+            add_action("inventory_items.set_negative_to_zero", len(negative_stock_rows), applied_negative_stock)
+
+        # 6) Invoices overpaid -> cap to amount, then sync status.
+        if enabled("invoices"):
+            overpaid_invoices = rows_to_dicts(
+                db.execute(
+                    """
+                    SELECT id, invoice_no, amount, paid_amount, status, is_void
+                    FROM invoices
+                    WHERE COALESCE(paid_amount,0) > COALESCE(amount,0)
+                    LIMIT ?
+                    """,
+                    (max_rows,),
+                ).fetchall()
+            )
+            applied_overpaid = 0
+            if not dry_run:
+                for row in overpaid_invoices:
+                    inv_id = str(row.get("id"))
+                    affected_invoice_ids.add(inv_id)
+                    amount = float(row.get("amount") or 0)
+                    paid_old = float(row.get("paid_amount") or 0)
+                    if int(row.get("is_void") or 0) == 1:
+                        continue
+                    new_paid = max(0.0, min(paid_old, amount))
+                    new_status = "Paid" if new_paid >= amount - 0.001 else ("Partial" if new_paid > 0.001 else "Pending")
+                    db.execute("UPDATE invoices SET paid_amount=?, status=? WHERE id=?", (round(new_paid, 3), new_status, inv_id))
+                    applied_overpaid += 1
+                    audit(
+                        db,
+                        user,
+                        "autofix_cap_paid",
+                        "invoices",
+                        inv_id,
+                        f"Capped paid_amount {paid_old} -> {new_paid} for {row.get('invoice_no') or inv_id}",
+                    )
+            add_action("invoices.cap_overpaid", len(overpaid_invoices), applied_overpaid)
+
+        # 7) Re-sync touched invoices with payment totals after payment cleanup.
+        invoice_sync_candidates = 0
+        invoice_sync_applied = 0
+        if enabled("invoices") and affected_invoice_ids:
+            invoice_sync_candidates = len(affected_invoice_ids)
+            if not dry_run:
+                for inv_id in sorted(affected_invoice_ids):
+                    inv = db.execute(
+                        "SELECT id, invoice_no, amount, paid_amount, status, is_void FROM invoices WHERE id=?",
+                        (inv_id,),
+                    ).fetchone()
+                    if not inv:
+                        continue
+                    if int(inv["is_void"] or 0) == 1:
+                        continue
+                    paid_sum = db.execute(
+                        "SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id=?",
+                        (inv_id,),
+                    ).fetchone()[0]
+                    amount = float(inv["amount"] or 0)
+                    old_paid = float(inv["paid_amount"] or 0)
+                    old_status = str(inv["status"] or "")
+                    new_paid = max(0.0, min(float(paid_sum or 0), amount))
+                    new_status = "Paid" if new_paid >= amount - 0.001 else ("Partial" if new_paid > 0.001 else "Pending")
+                    if abs(new_paid - old_paid) > 0.001 or new_status != old_status:
+                        db.execute("UPDATE invoices SET paid_amount=?, status=? WHERE id=?", (round(new_paid, 3), new_status, inv_id))
+                        invoice_sync_applied += 1
+                        audit(
+                            db,
+                            user,
+                            "autofix_sync_invoice",
+                            "invoices",
+                            inv_id,
+                            f"Synced paid/status from payments ({old_paid},{old_status}) -> ({new_paid},{new_status})",
+                        )
+        add_action("invoices.sync_from_payments", invoice_sync_candidates, invoice_sync_applied)
+
+        applied_total = sum(int(a.get("applied") or 0) for a in actions)
+        candidate_total = sum(int(a.get("candidates") or 0) for a in actions)
+
+        if not dry_run:
+            audit(
+                db,
+                user,
+                "autofix_run",
+                "module_integrity",
+                None,
+                f"Module integrity auto-fix applied={applied_total} candidates={candidate_total}",
+            )
+            db.commit()
+            if require_preview_guard and preview_id:
+                MODULE_FIX_PREVIEWS.pop(module_fix_preview_key(username, preview_id), None)
+
+        result = {
+            "ok": True,
+            "dry_run": dry_run,
+            "summary": {
+                "candidates": candidate_total,
+                "applied": applied_total if not dry_run else 0,
+                "mode": "preview" if dry_run else "applied",
+            },
+            "scope": {
+                "modules": sorted(selected_modules),
+                "max_rows": max_rows,
+            },
+            "actions": actions,
+            "notes": [
+                "Auto-fix applies only deterministic safe operations.",
+                "Broken references (e.g. contract points to missing property/client) are reported in integrity scan and require manual business decision.",
+            ],
+        }
+        if dry_run:
+            preview_id_new = uid("PRV")
+            expires_ts = time.time() + MODULE_FIX_PREVIEW_TTL_SECONDS
+            MODULE_FIX_PREVIEWS[module_fix_preview_key(username, preview_id_new)] = {
+                "username": username,
+                "modules": sorted(selected_modules),
+                "max_rows": max_rows,
+                "created_at": now_iso(),
+                "expires_ts": expires_ts,
+                "expires_at": datetime.fromtimestamp(expires_ts).replace(microsecond=0).isoformat(sep=" "),
+                "candidate_total": candidate_total,
+            }
+            result["preview"] = {
+                "id": preview_id_new,
+                "expires_in_seconds": MODULE_FIX_PREVIEW_TTL_SECONDS,
+                "expires_at": MODULE_FIX_PREVIEWS[module_fix_preview_key(username, preview_id_new)]["expires_at"],
+            }
+            log_module_fix_run(
+                db,
+                username=username,
+                mode="preview",
+                status="ok",
+                preview_id=preview_id_new,
+                modules=sorted(selected_modules),
+                max_rows=max_rows,
+                candidates=candidate_total,
+                applied=0,
+                details={
+                    "scope": result.get("scope"),
+                    "summary": result.get("summary"),
+                },
+            )
+            db.commit()
+        elif preview_id:
+            result["preview_validated"] = preview_id
+            log_module_fix_run(
+                db,
+                username=username,
+                mode="apply",
+                status="ok",
+                preview_id=preview_id,
+                modules=sorted(selected_modules),
+                max_rows=max_rows,
+                candidates=candidate_total,
+                applied=applied_total,
+                details={
+                    "scope": result.get("scope"),
+                    "summary": result.get("summary"),
+                },
+            )
+            db.commit()
+        if return_payload_only:
+            return result
+        self.send_json(result)
+        return None
+
+    def api_module_integrity_autorun(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json() if self.command == "POST" else {}
+        username = str(user.get("username") or user.get("name") or "").strip().lower()
+        confirm_text = str((data or {}).get("confirm_text", "")).strip().upper() if isinstance(data, dict) else ""
+        if confirm_text != "APPLY":
+            log_module_fix_run(
+                db,
+                username=username,
+                mode="autorun",
+                status="rejected_missing_confirm",
+                details={"error": "Second approval required"},
+            )
+            db.commit()
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "Second approval required",
+                    "detail": "Send confirm_text='APPLY' to execute autorun.",
+                },
+                400,
+            )
+        modules = [str(x).strip().lower() for x in (data.get("modules") or [])] if isinstance(data, dict) else []
+        max_rows_raw = (data.get("max_rows") if isinstance(data, dict) else None)
+        try:
+            max_rows = int(max_rows_raw) if max_rows_raw is not None else None
+        except Exception:
+            max_rows = None
+        before = self.api_module_integrity(db, return_payload_only=True) or {}
+        preview_result = self.api_module_integrity_fix(
+            db,
+            user,
+            return_payload_only=True,
+            override_dry_run=True,
+            override_modules=modules or None,
+            override_max_rows=max_rows,
+            require_preview_guard=False,
+        ) or {}
+        if not bool(preview_result.get("ok", False)):
+            return self.send_json(preview_result, 400)
+        preview_id = str(((preview_result or {}).get("preview") or {}).get("id") or "").strip()
+        if not preview_id:
+            return self.send_json({"ok": False, "error": "Preview generation failed"}, 500)
+        fix_result = self.api_module_integrity_fix(
+            db,
+            user,
+            return_payload_only=True,
+            override_dry_run=False,
+            override_modules=modules or None,
+            override_max_rows=max_rows,
+            require_preview_guard=True,
+            override_preview_id=preview_id,
+            override_confirm_text="APPLY",
+        ) or {}
+        if not bool(fix_result.get("ok", False)):
+            return self.send_json(fix_result, 400)
+        after = self.api_module_integrity(db, return_payload_only=True) or {}
+        before_score = float(before.get("score") or 0)
+        after_score = float(after.get("score") or 0)
+        log_module_fix_run(
+            db,
+            username=username,
+            mode="autorun",
+            status="ok",
+            preview_id=preview_id,
+            modules=list((fix_result.get("scope") or {}).get("modules") or []),
+            max_rows=int((fix_result.get("scope") or {}).get("max_rows") or 0),
+            candidates=int((fix_result.get("summary") or {}).get("candidates") or 0),
+            applied=int((fix_result.get("summary") or {}).get("applied") or 0),
+            score_before=before_score,
+            score_after=after_score,
+            issues_before=int((before.get("summary") or {}).get("total_issues") or 0),
+            issues_after=int((after.get("summary") or {}).get("total_issues") or 0),
+            details={"delta": {"score_change": round(after_score - before_score, 2)}},
+        )
+        db.commit()
+        self.send_json(
+            {
+                "ok": True,
+                "before": before,
+                "preview": preview_result,
+                "fix": fix_result,
+                "after": after,
+                "delta": {
+                    "score_change": round(after_score - before_score, 2),
+                    "issues_before": int((before.get("summary") or {}).get("total_issues") or 0),
+                    "issues_after": int((after.get("summary") or {}).get("total_issues") or 0),
+                },
+                "scope": (fix_result.get("scope") if isinstance(fix_result, dict) else None) or {},
+            }
+        )
+
+    def query_module_fix_history_rows(self, db: sqlite3.Connection, query: str, default_limit: int = 50, max_limit: int = 500) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        params = urllib.parse.parse_qs(query or "")
+        try:
+            limit = int((params.get("limit") or [str(default_limit)])[0] or default_limit)
+        except Exception:
+            limit = default_limit
+        limit = max(1, min(max_limit, limit))
+
+        mode_filter = str((params.get("mode") or [""])[0] or "").strip().lower()
+        status_filter = str((params.get("status") or [""])[0] or "").strip().lower()
+        username_filter = str((params.get("username") or [""])[0] or "").strip().lower()
+        preview_filter = str((params.get("preview_id") or [""])[0] or "").strip()
+        from_date = str((params.get("from") or [""])[0] or "").strip()
+        to_date = str((params.get("to") or [""])[0] or "").strip()
+
+        sql = "SELECT * FROM module_fix_runs"
+        clauses: List[str] = []
+        args: List[Any] = []
+        if mode_filter:
+            clauses.append("lower(mode)=?")
+            args.append(mode_filter)
+        if status_filter:
+            clauses.append("lower(status)=?")
+            args.append(status_filter)
+        if username_filter:
+            clauses.append("lower(username) LIKE ?")
+            args.append(f"%{username_filter}%")
+        if preview_filter:
+            clauses.append("preview_id LIKE ?")
+            args.append(f"%{preview_filter}%")
+        if from_date:
+            clauses.append("datetime(created_at) >= datetime(?)")
+            args.append(from_date + " 00:00:00")
+        if to_date:
+            clauses.append("datetime(created_at) <= datetime(?)")
+            args.append(to_date + " 23:59:59")
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        args.append(limit)
+        rows = rows_to_dicts(db.execute(sql, tuple(args)).fetchall())
+        filters = {
+            "mode": mode_filter,
+            "status": status_filter,
+            "username": username_filter,
+            "preview_id": preview_filter,
+            "from": from_date,
+            "to": to_date,
+            "limit": limit,
+        }
+        return rows, filters
+
+    def api_module_integrity_history(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        rows, filters = self.query_module_fix_history_rows(db, query, default_limit=60, max_limit=500)
+        out: List[Dict[str, Any]] = []
+        for row in rows:
+            modules: List[str] = []
+            try:
+                parsed = json.loads(str(row.get("modules") or "[]"))
+                if isinstance(parsed, list):
+                    modules = [str(x) for x in parsed]
+            except Exception:
+                modules = []
+            details = {}
+            try:
+                details = json.loads(str(row.get("details_json") or "{}"))
+            except Exception:
+                details = {}
+            out.append(
+                {
+                    "id": row.get("id"),
+                    "created_at": row.get("created_at"),
+                    "username": row.get("username"),
+                    "mode": row.get("mode"),
+                    "status": row.get("status"),
+                    "preview_id": row.get("preview_id"),
+                    "modules": modules,
+                    "max_rows": row.get("max_rows"),
+                    "candidates": row.get("candidates"),
+                    "applied": row.get("applied"),
+                    "score_before": row.get("score_before"),
+                    "score_after": row.get("score_after"),
+                    "issues_before": row.get("issues_before"),
+                    "issues_after": row.get("issues_after"),
+                    "details": details,
+                }
+            )
+        self.send_json({"ok": True, "history": out, "limit": filters.get("limit"), "filters": filters})
+
+    def api_module_integrity_history_kpi(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        try:
+            days = int((params.get("days") or ["1"])[0] or 1)
+        except Exception:
+            days = 1
+        days = max(1, min(365, days))
+        since_dt = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+
+        total = int(
+            db.execute(
+                "SELECT COUNT(*) FROM module_fix_runs WHERE datetime(created_at) >= datetime(?)",
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        ok_total = int(
+            db.execute(
+                "SELECT COUNT(*) FROM module_fix_runs WHERE datetime(created_at) >= datetime(?) AND lower(status)='ok'",
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        rejected_total = int(
+            db.execute(
+                "SELECT COUNT(*) FROM module_fix_runs WHERE datetime(created_at) >= datetime(?) AND lower(status) LIKE 'rejected%'",
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        apply_ok = int(
+            db.execute(
+                """
+                SELECT COUNT(*) FROM module_fix_runs
+                WHERE datetime(created_at) >= datetime(?)
+                  AND lower(status)='ok'
+                  AND lower(mode) IN ('apply','autorun')
+                """,
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        applied_sum = int(
+            db.execute(
+                """
+                SELECT COALESCE(SUM(applied),0) FROM module_fix_runs
+                WHERE datetime(created_at) >= datetime(?) AND lower(status)='ok'
+                """,
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        candidates_sum = int(
+            db.execute(
+                """
+                SELECT COALESCE(SUM(candidates),0) FROM module_fix_runs
+                WHERE datetime(created_at) >= datetime(?) AND lower(status)='ok'
+                """,
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        success_rate = round((ok_total / total) * 100, 1) if total > 0 else 0.0
+        apply_effectiveness = round((applied_sum / candidates_sum) * 100, 1) if candidates_sum > 0 else 0.0
+        alerts: List[Dict[str, Any]] = []
+        if total >= MODULE_FIX_MIN_ATTEMPTS_FOR_ALERT and success_rate < MODULE_FIX_MIN_SUCCESS_RATE:
+            alerts.append(
+                {
+                    "code": "success_rate_low",
+                    "severity": "high",
+                    "message": f"نسبة نجاح الإصلاح منخفضة ({success_rate}%) أقل من الحد {MODULE_FIX_MIN_SUCCESS_RATE}%",
+                    "value": success_rate,
+                    "threshold": MODULE_FIX_MIN_SUCCESS_RATE,
+                }
+            )
+        if rejected_total > MODULE_FIX_MAX_REJECTED:
+            alerts.append(
+                {
+                    "code": "rejected_too_many",
+                    "severity": "high",
+                    "message": f"عدد عمليات الرفض مرتفع ({rejected_total}) أعلى من الحد {MODULE_FIX_MAX_REJECTED}",
+                    "value": rejected_total,
+                    "threshold": MODULE_FIX_MAX_REJECTED,
+                }
+            )
+        if candidates_sum >= 10 and apply_effectiveness < MODULE_FIX_MIN_APPLY_EFFECTIVENESS:
+            alerts.append(
+                {
+                    "code": "effectiveness_low",
+                    "severity": "medium",
+                    "message": f"فعالية تطبيق الإصلاح منخفضة ({apply_effectiveness}%) أقل من الحد {MODULE_FIX_MIN_APPLY_EFFECTIVENESS}%",
+                    "value": apply_effectiveness,
+                    "threshold": MODULE_FIX_MIN_APPLY_EFFECTIVENESS,
+                }
+            )
+        health_status = "alert" if any(a.get("severity") == "high" for a in alerts) else ("warning" if alerts else "ok")
+
+        top_users = rows_to_dicts(
+            db.execute(
+                """
+                SELECT username, COUNT(*) as runs, COALESCE(SUM(applied),0) as applied_total
+                FROM module_fix_runs
+                WHERE datetime(created_at) >= datetime(?)
+                GROUP BY username
+                ORDER BY runs DESC, applied_total DESC
+                LIMIT 5
+                """,
+                (since_dt,),
+            ).fetchall()
+        )
+
+        self.send_json(
+            {
+                "ok": True,
+                "window_days": days,
+                "since": since_dt,
+                "kpi": {
+                    "attempts": total,
+                    "success": ok_total,
+                    "rejected": rejected_total,
+                    "apply_success": apply_ok,
+                    "applied_total": applied_sum,
+                    "candidates_total": candidates_sum,
+                    "success_rate": success_rate,
+                    "apply_effectiveness": apply_effectiveness,
+                },
+                "thresholds": {
+                    "min_attempts_for_alert": MODULE_FIX_MIN_ATTEMPTS_FOR_ALERT,
+                    "min_success_rate": MODULE_FIX_MIN_SUCCESS_RATE,
+                    "max_rejected": MODULE_FIX_MAX_REJECTED,
+                    "min_apply_effectiveness": MODULE_FIX_MIN_APPLY_EFFECTIVENESS,
+                },
+                "alerts": alerts,
+                "health_status": health_status,
+                "top_users": top_users,
+            }
+        )
 
     def api_operational_intel(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         dash = build_dashboard(db)
@@ -6704,7 +8148,7 @@ def build_executive_report_html(owner: str, dash: Dict[str, Any]) -> str:
         for d in decisions
     )
     return f"""<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="ltr">
 <head>
 <meta charset="utf-8">
 <title>Executive Report · Launch Quality LLC</title>
@@ -6983,7 +8427,7 @@ def build_accountant_report_html(
         </div>"""
 
     return f"""<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="ltr">
 <head>
 <meta charset="utf-8">
 <title>{html_escape(title)}</title>
@@ -7572,7 +9016,7 @@ def build_bank_reconciliation_html(
         body += f"<p><strong>ملاحظات:</strong> {html_escape(rec.get('notes',''))}</p>"
 
     return f"""<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="ltr">
 <head>
 <meta charset="utf-8">
 <title>{html_escape(title)}</title>
@@ -7618,7 +9062,7 @@ def build_hospitality_report_html(summary: Dict[str, Any], owner: str) -> str:
         for r in rows
     ) or "<tr><td colspan='3'>لا توجد بيانات</td></tr>"
     return f"""<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="ltr">
 <head>
 <meta charset="utf-8">
 <title>تقرير أداء الضيافة</title>
@@ -7661,7 +9105,7 @@ def build_hospitality_report_html(summary: Dict[str, Any], owner: str) -> str:
 
 def build_hospitality_folio_html(folio: Dict[str, Any], owner: str) -> str:
     return f"""<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="ltr">
 <head>
 <meta charset="utf-8">
 <title>فوليو ضيافة {html_escape(str(folio.get('folio_no') or folio.get('id') or ''))}</title>

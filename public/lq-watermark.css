@@ -1,10 +1,10 @@
-/* Brand watermark — large logo, no floor/plate */
+/* Brand watermark disabled by default (can be opted-in). */
 #lqBrandWatermark {
   position: fixed;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   overflow: hidden;
@@ -25,7 +25,7 @@
   -webkit-user-drag: none;
 }
 
-body.saas-luxury.app-ready #lqBrandWatermark {
+body.saas-luxury.app-ready.show-brand-watermark #lqBrandWatermark {
   display: flex;
 }
 
