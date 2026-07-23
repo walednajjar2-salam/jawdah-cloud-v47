@@ -1,0 +1,214 @@
+﻿<!doctype html>
+<html lang="ar" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Launch Quality LLC</title>
+  <style>
+    :root{
+      --bg:#f3f7fd;
+      --panel:#ffffff;
+      --line:#d9e4f4;
+      --text:#1f2d3d;
+      --muted:#5f738d;
+      --brand:#2f6fec;
+      --brand-2:#1f4ea5;
+      --danger:#c73f3f;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Tajawal,Segoe UI,Arial,sans-serif;
+      background:linear-gradient(180deg,#f7faff 0%,#eef4fc 100%);
+      color:var(--text);
+    }
+    .page{
+      min-height:100%;
+      display:grid;
+      grid-template-rows:1fr auto;
+      padding:26px;
+      gap:18px;
+    }
+    .hero{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:22px;
+      align-items:center;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:0 12px 30px rgba(35,62,110,.08);
+      padding:26px;
+      min-height:0;
+    }
+    .brand-side{
+      order:2;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:420px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#f8fbff;
+    }
+    .brand-side img{
+      width:min(92%,460px);
+      height:auto;
+      object-fit:contain;
+      filter:drop-shadow(0 10px 24px rgba(47,111,236,.18));
+    }
+    .login-side{
+      order:1;
+      min-height:420px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .login-card{
+      width:min(100%,430px);
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+      padding:20px;
+      box-shadow:0 10px 24px rgba(35,62,110,.07);
+    }
+    .title{
+      margin:0 0 6px;
+      font-size:26px;
+      color:var(--brand-2);
+      font-weight:800;
+    }
+    .subtitle{
+      margin:0 0 18px;
+      color:var(--muted);
+      font-size:14px;
+    }
+    .field{display:grid;gap:6px;margin-bottom:12px}
+    .field label{font-size:13px;color:#3b516e;font-weight:700}
+    .field input{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:12px 13px;
+      font-size:15px;
+      color:var(--text);
+      background:#fff;
+      outline:none;
+    }
+    .field input:focus{
+      border-color:#98b4e6;
+      box-shadow:0 0 0 3px rgba(47,111,236,.12);
+    }
+    .actions{display:grid;gap:8px;margin-top:6px}
+    .btn{
+      border:1px solid #285fca;
+      border-radius:10px;
+      padding:12px 14px;
+      background:linear-gradient(145deg,#3d81ff,#2f6fec);
+      color:#fff;
+      font-size:15px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .btn:hover{filter:brightness(1.04)}
+    .status{
+      min-height:22px;
+      font-size:13px;
+      color:var(--muted);
+      margin-top:6px;
+    }
+    .status.err{color:var(--danger)}
+    .desc{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px 18px;
+      color:#415975;
+      line-height:1.8;
+      text-align:center;
+      box-shadow:0 8px 18px rgba(35,62,110,.06);
+    }
+    @media (max-width:980px){
+      .hero{grid-template-columns:1fr}
+      .brand-side,.login-side{min-height:auto}
+      .brand-side{order:1;padding:14px}
+      .login-side{order:2}
+      .page{padding:14px}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <section class="brand-side" aria-label="الشعار">
+        <img src="/assets/brand-logo-gold.png" alt="Launch Quality Logo">
+      </section>
+
+      <section class="login-side" aria-label="تسجيل الدخول">
+        <form class="login-card" id="loginForm">
+          <h1 class="title">Launch Quality LLC</h1>
+          <p class="subtitle">بوابة تسجيل الدخول الرسمية</p>
+
+          <div class="field">
+            <label for="loginUser">اسم المستخدم</label>
+            <input id="loginUser" autocomplete="username" placeholder="ادخل اسم المستخدم">
+          </div>
+
+          <div class="field">
+            <label for="loginPass">كلمة المرور</label>
+            <input id="loginPass" type="password" autocomplete="current-password" placeholder="ادخل كلمة المرور">
+          </div>
+
+          <div class="actions">
+            <button class="btn" type="submit">تسجيل الدخول</button>
+          </div>
+          <div id="status" class="status"></div>
+        </form>
+      </section>
+    </section>
+
+    <section class="desc">
+      منصة جودة الانطلاقة لإدارة العقارات والضيافة والمالية — دخول بسيط وآمن، ثم انتقال مباشر إلى النظام الكامل.
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const form = document.getElementById("loginForm");
+      const user = document.getElementById("loginUser");
+      const pass = document.getElementById("loginPass");
+      const status = document.getElementById("status");
+
+      async function login(ev) {
+        ev.preventDefault();
+        status.className = "status";
+        status.textContent = "جاري تسجيل الدخول...";
+        try {
+          const res = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: String(user.value || "").trim(),
+              password: String(pass.value || ""),
+              remember_device: true
+            })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.ok === false || !data.token) {
+            throw new Error(data.error || "فشل تسجيل الدخول");
+          }
+          localStorage.setItem("jawdah_cloud_token", data.token);
+          status.textContent = "تم تسجيل الدخول بنجاح، جاري التحويل...";
+          location.replace("/app.html?v=clean-login-1");
+        } catch (err) {
+          status.className = "status err";
+          status.textContent = (err && err.message) ? err.message : "تعذر تسجيل الدخول";
+        }
+      }
+
+      form.addEventListener("submit", login);
+    })();
+  </script>
+</body>
+</html>
