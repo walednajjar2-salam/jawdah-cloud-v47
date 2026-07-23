@@ -1,0 +1,99 @@
+/* Emergency clean mode: prioritize readability and stable layout */
+body.saas-luxury.app-ready .lq-cosmos,
+body.saas-luxury.app-ready .ev-cinema-lights,
+body.saas-luxury.app-ready .ev-holo-orbs,
+body.saas-luxury.app-ready #neuralCanvas,
+body.saas-luxury.app-ready #neuralDash,
+body.saas-luxury.app-ready .login-cinema-photo-layer,
+body.saas-luxury.app-ready #lqBrandWatermark {
+  display: none !important;
+}
+
+body.saas-luxury.app-ready #sec-dashboard::before {
+  display: none !important;
+  background: none !important;
+}
+
+body.saas-luxury.app-ready,
+body.saas-luxury.app-ready .content {
+  background: linear-gradient(180deg, #f2f6fc 0%, #eaf1fb 100%) !important;
+  color: #1f2d3d !important;
+}
+
+body.saas-luxury.app-ready .saas-glass,
+body.saas-luxury.app-ready .card,
+body.saas-luxury.app-ready .topbar,
+body.saas-luxury.app-ready .app-header {
+  background: #ffffff !important;
+  border: 1px solid #dce6f4 !important;
+  color: #1f2d3d !important;
+  box-shadow: 0 8px 24px rgba(28, 52, 94, 0.09) !important;
+}
+
+body.saas-luxury.app-ready .search input,
+body.saas-luxury.app-ready .toolbar input,
+body.saas-luxury.app-ready .toolbar select,
+body.saas-luxury.app-ready .form input,
+body.saas-luxury.app-ready .form select,
+body.saas-luxury.app-ready .form textarea {
+  background: #ffffff !important;
+  border: 1px solid #d4e0f2 !important;
+  color: #1f2d3d !important;
+}
+
+body.saas-luxury.app-ready .sidebar {
+  background: linear-gradient(180deg, #eef4fe, #e4edf9) !important;
+  border-left: 1px solid #d6e2f3 !important;
+}
+
+body.saas-luxury.app-ready .nav button {
+  background: #ffffff !important;
+  border: 1px solid #d8e3f4 !important;
+  color: #335175 !important;
+}
+
+body.saas-luxury.app-ready .nav button.active,
+body.saas-luxury.app-ready .nav button:hover {
+  background: #edf4ff !important;
+  border-color: #bed1f1 !important;
+  color: #1e4da1 !important;
+}
+
+body.saas-luxury.app-ready .gis-pro,
+body.saas-luxury.app-ready .nizwa-map,
+body.saas-luxury.app-ready .leaflet-container {
+  min-height: 320px !important;
+  border-radius: 14px !important;
+  border: 1px solid #cde0f8 !important;
+  overflow: hidden !important;
+}
+
+/* Login: make a clear two-column composition (logo right, form left) */
+body.login-ultra.saas-login #loginScreen .login-stage--center {
+  max-width: 1120px !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 22px !important;
+  align-items: center !important;
+}
+
+body.login-ultra.saas-login #loginScreen .login-top-logo {
+  order: 2 !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+body.login-ultra.saas-login #loginScreen .login-auth--float {
+  order: 1 !important;
+}
+
+@media (max-width: 980px) {
+  body.login-ultra.saas-login #loginScreen .login-stage--center {
+    grid-template-columns: 1fr !important;
+  }
+  body.login-ultra.saas-login #loginScreen .login-top-logo,
+  body.login-ultra.saas-login #loginScreen .login-auth--float {
+    order: initial !important;
+  }
+}
