@@ -548,6 +548,10 @@
               <select id="epTenantClient"></select>
               <input id="epTenantPhone" placeholder="هاتف المستأجر">
               <input id="epImage" placeholder="رابط صورة حية للعقار (اختياري)">
+              <label class="mini">رفع صورة العقار (مباشر)
+                <input id="epImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              </label>
+              <img id="epImagePreview" class="hidden lq-prop-upload-preview" alt="معاينة صورة العقار">
               <textarea id="epNotes" placeholder="ملاحظات"></textarea>
             </div>
             <button class="gold-btn" type="button" onclick="createEstateProperty()">حفظ العقار</button>
@@ -569,6 +573,10 @@
               <select id="ebTenantClient"></select>
               <input id="ebTenantPhone" placeholder="هاتف المستأجر">
               <input id="ebImage" placeholder="رابط صورة حية للبناية (اختياري)">
+              <label class="mini">رفع صورة البناية (مباشر)
+                <input id="ebImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              </label>
+              <img id="ebImagePreview" class="hidden lq-prop-upload-preview" alt="معاينة صورة البناية">
               <textarea id="ebNotes" placeholder="ملاحظات"></textarea>
             </div>
             <button class="gold-btn" type="button" onclick="createEstateBuilding()">حفظ البناية</button>
@@ -610,6 +618,10 @@
               <select id="eaTenantClient"></select>
               <input id="eaTenantPhone" placeholder="هاتف المستأجر">
               <input id="eaImage" placeholder="رابط صورة حية للشقة (اختياري)">
+              <label class="mini">رفع صورة الشقة (مباشر)
+                <input id="eaImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              </label>
+              <img id="eaImagePreview" class="hidden lq-prop-upload-preview" alt="معاينة صورة الشقة">
               <textarea id="eaNotes" placeholder="ملاحظات"></textarea>
             </div>
             <button class="gold-btn" type="button" onclick="createEstateApartment()">حفظ الشقة</button>
@@ -644,6 +656,10 @@
               <select id="erTenantClient"></select>
               <input id="erTenantPhone" placeholder="هاتف المستأجر">
               <input id="erImage" placeholder="رابط صورة حية للغرفة (اختياري)">
+              <label class="mini">رفع صورة الغرفة (مباشر)
+                <input id="erImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              </label>
+              <img id="erImagePreview" class="hidden lq-prop-upload-preview" alt="معاينة صورة الغرفة">
               <textarea id="erNotes" placeholder="ملاحظات"></textarea>
             </div>
             <button class="gold-btn" type="button" onclick="createEstateRoom()">حفظ الغرفة</button>

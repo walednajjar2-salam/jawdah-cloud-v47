@@ -5279,6 +5279,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 row = db.execute("SELECT image FROM properties WHERE id=?", (item_id,)).fetchone()
                 if row:
                     delete_property_photo_file(row["image"])
+            if table in ("estate_properties", "estate_buildings", "estate_apartments", "estate_rooms"):
+                row = db.execute(f"SELECT image FROM {table} WHERE id=?", (item_id,)).fetchone()
+                if row:
+                    delete_upload_file(str(row["image"] or ""), "estate_images")
             reason = protected_delete_reason(db, table, item_id)
             if reason:
                 return self.send_json({"ok": False, "error": reason}, 400)
@@ -5351,6 +5355,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     )
                 except ValueError as exc:
                     return self.send_json({"ok": False, "error": str(exc)}, 400)
+        if table in ("estate_properties", "estate_buildings", "estate_apartments", "estate_rooms"):
+            image_upload = data.get("image_upload")
+            if isinstance(image_upload, dict) and (image_upload.get("image") or image_upload.get("data") or image_upload.get("base64")):
+                previous_image = None
+                if method == "PUT" and item_id:
+                    row = db.execute(f"SELECT image FROM {table} WHERE id=?", (item_id,)).fetchone()
+                    if row:
+                        previous_image = str(row["image"] or "").strip() or None
+                try:
+                    file_bytes, content_type = decode_upload_payload(image_upload)
+                    data["image"] = save_named_image_upload(
+                        "estate_images",
+                        f"{table}-{row_id}",
+                        file_bytes,
+                        content_type,
+                        MAX_PROPERTY_PHOTO_BYTES,
+                    )
+                except ValueError as exc:
+                    return self.send_json({"ok": False, "error": str(exc)}, 400)
+                if previous_image and previous_image != data.get("image") and is_stored_upload_url(previous_image, "estate_images"):
+                    delete_upload_file(previous_image, "estate_images")
         if table == "branches":
             if not str(data.get("name") or "").strip() or not str(data.get("code") or "").strip():
                 return self.send_json({"ok": False, "error": "رمز الفرع والاسم مطلوبان"}, 400)

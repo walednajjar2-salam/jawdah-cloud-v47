@@ -3609,6 +3609,10 @@ function bind(){
   initThemeUx();
   bindImagePreview('cCardImage','cCardPreview');
   bindImagePreview('payProofFile','payProofPreview');
+  bindImagePreview('epImageFile','epImagePreview');
+  bindImagePreview('ebImageFile','ebImagePreview');
+  bindImagePreview('eaImageFile','eaImagePreview');
+  bindImagePreview('erImageFile','erImagePreview');
   initDashboardCharts();
   initFabDock();
   if(typeof initEnterpriseVision==='function') initEnterpriseVision();
@@ -4303,7 +4307,13 @@ window.printHospitalityFolio = printHospitalityFolio;
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }
   }
-  window.createEstateProperty = function(){
+  async function estateImageUploadPayload(inputId){
+    const file = document.getElementById(inputId)?.files?.[0];
+    if(!file) return null;
+    return { image: await readFileAsDataUrl(file), content_type: file.type, name: file.name };
+  }
+  window.createEstateProperty = async function(){
+    const imageUpload = await estateImageUploadPayload('epImageFile');
     const tenant = val('epTenantClient') || null;
     const tenantObj = byId('clients', tenant);
     return postEstate('estate_properties',{
@@ -4321,10 +4331,12 @@ window.printHospitalityFolio = printHospitalityFolio;
       tenant_phone: val('epTenantPhone') || tenantObj.phone || '',
       notes: val('epNotes'),
       image: val('epImage'),
+      image_upload: imageUpload,
       last_update: nowDay(),
     });
   };
-  window.createEstateBuilding = function(){
+  window.createEstateBuilding = async function(){
+    const imageUpload = await estateImageUploadPayload('ebImageFile');
     const tenant = val('ebTenantClient') || null;
     const tenantObj = byId('clients', tenant);
     return postEstate('estate_buildings',{
@@ -4342,10 +4354,12 @@ window.printHospitalityFolio = printHospitalityFolio;
       tenant_phone: val('ebTenantPhone') || tenantObj.phone || '',
       notes: val('ebNotes'),
       image: val('ebImage'),
+      image_upload: imageUpload,
       last_update: nowDay(),
     });
   };
-  window.createEstateApartment = function(){
+  window.createEstateApartment = async function(){
+    const imageUpload = await estateImageUploadPayload('eaImageFile');
     const tenant = val('eaTenantClient') || null;
     const tenantObj = byId('clients', tenant);
     const status = String(val('eaStatus') || 'vacant').toLowerCase();
@@ -4375,10 +4389,12 @@ window.printHospitalityFolio = printHospitalityFolio;
       tenant_phone: val('eaTenantPhone') || tenantObj.phone || '',
       notes: val('eaNotes'),
       image: val('eaImage'),
+      image_upload: imageUpload,
       last_update: nowDay(),
     });
   };
-  window.createEstateRoom = function(){
+  window.createEstateRoom = async function(){
+    const imageUpload = await estateImageUploadPayload('erImageFile');
     const tenant = val('erTenantClient') || null;
     const tenantObj = byId('clients', tenant);
     const status = String(val('erStatus') || 'vacant').toLowerCase();
@@ -4409,6 +4425,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       tenant_phone: val('erTenantPhone') || tenantObj.phone || '',
       notes: val('erNotes'),
       image: val('erImage'),
+      image_upload: imageUpload,
       last_update: nowDay(),
     });
   };
