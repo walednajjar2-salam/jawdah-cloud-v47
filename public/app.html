@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ar" dir="ltr">
 <head>
   <meta charset="utf-8">
@@ -15,13 +15,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=ultra18">
+  <link rel="stylesheet" href="app.css?v=ultra19">
   <link rel="stylesheet" href="lq-shell.css?v=shell21">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref2">
   <link rel="stylesheet" href="lq-emergency-clean.css?v=ec1">
+  <link rel="stylesheet" href="lq-login-fix.css?v=lf2">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
   <style>
@@ -31,9 +32,10 @@
     #lqBrandWatermark img{display:none!important;opacity:0!important}
     body.login-ultra #loginScreen .login-glass-card,
     body.login-ultra #loginScreen .ev-auth-card{
-      background:linear-gradient(165deg,rgba(14,20,38,.94),rgba(8,12,24,.92))!important;
-      border:1px solid rgba(216,177,91,.28)!important;
-      box-shadow:0 24px 80px rgba(0,0,0,.45)!important;
+      background:#0f172a!important;
+      border:1px solid rgba(216,177,91,.35)!important;
+      box-shadow:0 24px 80px rgba(0,0,0,.5)!important;
+      backdrop-filter:none!important;
     }
     #lqBootMsg{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:#040814;color:#fff1b8;font:600 16px Tajawal,sans-serif;text-align:center;padding:24px}
     #lqBootMsg.show{display:grid}
@@ -158,21 +160,16 @@
             </div>
             <div class="ev-auth-tabs" role="tablist" aria-label="Authentication methods">
               <button type="button" class="ev-auth-tab active" data-auth="password" role="tab">Password</button>
-              <button type="button" class="ev-auth-tab" data-auth="face" role="tab">Face ID</button>
-              <button type="button" class="ev-auth-tab" data-auth="fingerprint" role="tab">Fingerprint</button>
               <button type="button" class="ev-auth-tab" data-auth="otp" role="tab">OTP</button>
-              <button type="button" class="ev-auth-tab" data-auth="sso" role="tab">SSO</button>
             </div>
             <div id="authPanePassword" class="ev-auth-pane login-form" role="tabpanel">
               <label class="login-field">
                 <span class="login-field-label" dir="ltr">Username</span>
-                <span class="login-field-icon" aria-hidden="true">👤</span>
-                <input id="loginUser" placeholder="👤 Enter username · اسم المستخدم" autocomplete="username">
+                <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
               </label>
               <label class="login-field">
                 <span class="login-field-label" dir="ltr">Password</span>
-                <span class="login-field-icon" aria-hidden="true">🔒</span>
-                <input id="loginPass" placeholder="🔒 Enter password · كلمة المرور" type="password" autocomplete="current-password">
+                <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
                 <button type="button" id="loginPassToggle" class="login-pass-toggle" aria-label="إظهار أو إخفاء كلمة المرور">👁️</button>
               </label>
               <div id="capsHint" class="login-caps-hint hidden">⚠️ يبدو أن زر Caps Lock مفعّل</div>
