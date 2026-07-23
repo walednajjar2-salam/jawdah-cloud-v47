@@ -3789,7 +3789,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     user = self.require_user(db)
                     return None if not user else self.api_change_password(db, user)
                 if parts[0] == "me" and method == "GET":
-                    user = self.require_user(db)
+                    user = self.require_user(db, query=query)
                     return None if not user else self.send_json({"ok": True, "user": user, "permissions": sorted(ROLE_PERMISSIONS.get(user["role"], []))})
                 if parts[0] == "dashboard" and method == "GET":
                     user = self.require_user(db, "dashboard")
