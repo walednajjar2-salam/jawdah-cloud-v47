@@ -1,4 +1,4 @@
-/* Compact login: one screen, no empty top space, no left overlapping junk */
+/* Login layout: transparent fixed background, form LEFT, logo RIGHT */
 html:has(#loginScreen:not(.hidden)),
 body:has(#loginScreen:not(.hidden)){
   height:100% !important;
@@ -16,13 +16,42 @@ body.saas-login #loginScreen{
   display:grid !important;
   place-items:center !important;
   margin:0 !important;
-  padding:12px !important;
+  padding:24px !important;
   box-sizing:border-box !important;
   isolation:isolate;
   z-index:20 !important;
+  background:transparent !important;
 }
 
-/* Kill every decorative / tall block that forces scroll */
+/* Fixed transparent cinematic background */
+body.login-ultra #loginScreen .login-bg,
+body.login-ultra #loginScreen .login-bg-glow,
+body.login-ultra #loginScreen .login-mesh{
+  position:fixed !important;
+  inset:0 !important;
+  display:block !important;
+  opacity:.35 !important;
+  pointer-events:none !important;
+  z-index:0 !important;
+  height:auto !important;
+  width:auto !important;
+  visibility:visible !important;
+}
+body.login-ultra #loginScreen .login-cinema-photo-layer{
+  position:fixed !important;
+  inset:0 !important;
+  display:block !important;
+  opacity:.42 !important;
+  pointer-events:none !important;
+  z-index:0 !important;
+  height:auto !important;
+  width:auto !important;
+  visibility:visible !important;
+  background-attachment:fixed !important;
+  filter:saturate(1.05) brightness(.72) !important;
+}
+
+/* Hide clutter only */
 body.login-ultra #loginScreen .login-icons,
 body.login-ultra #loginScreen .login-float-icon,
 body.login-ultra #loginScreen .va-login-analytics,
@@ -47,79 +76,101 @@ body.login-ultra .lq-cosmos{
   overflow:hidden !important;
 }
 
+/* Two columns: form left, logo right */
 body.login-ultra #loginScreen .login-shell{
+  position:relative !important;
+  z-index:2 !important;
+  width:min(1080px,100%) !important;
+  max-width:1080px !important;
   min-height:0 !important;
   height:auto !important;
   max-height:100% !important;
-  max-width:440px !important;
-  width:min(440px,100%) !important;
   margin:0 auto !important;
   padding:0 !important;
-  gap:10px !important;
-  display:flex !important;
-  flex-direction:column !important;
+  gap:28px !important;
+  display:grid !important;
+  grid-template-columns:minmax(300px,420px) minmax(260px,1fr) !important;
+  grid-template-areas:"form logo" !important;
   align-items:center !important;
-  justify-content:center !important;
+  justify-items:stretch !important;
   overflow:visible !important;
 }
 
-body.login-ultra #loginScreen .login-top-logo,
-body.login-ultra #loginScreen .login-logo-wrap{
+body.login-ultra #loginScreen .login-top-logo{
+  grid-area:logo !important;
+  order:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
   margin:0 !important;
   padding:0 !important;
   height:auto !important;
 }
+body.login-ultra #loginScreen .login-logo-wrap,
+body.login-ultra #loginScreen .login-logo-wrap--float{
+  margin:0 !important;
+  padding:0 !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
 body.login-ultra #loginScreen .login-logo-img,
 body.login-ultra #loginScreen .login-logo-img--float{
-  width:72px !important;
-  height:72px !important;
-  max-width:72px !important;
-  max-height:72px !important;
+  width:min(340px,38vw) !important;
+  height:auto !important;
+  max-width:340px !important;
+  max-height:62vh !important;
   object-fit:contain !important;
   display:block !important;
   margin:0 auto !important;
+  filter:drop-shadow(0 18px 40px rgba(0,0,0,.35)) !important;
 }
 
 body.login-ultra #loginScreen .login-stage,
-body.login-ultra #loginScreen .login-stage--center,
+body.login-ultra #loginScreen .login-stage--center{
+  grid-area:form !important;
+  min-height:0 !important;
+  height:auto !important;
+  max-width:420px !important;
+  width:100% !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:block !important;
+  grid-template-columns:1fr !important;
+  position:relative !important;
+  transform:none !important;
+}
 body.login-ultra #loginScreen .login-glass-stage,
 body.login-ultra #loginScreen .login-auth,
 body.login-ultra #loginScreen .login-auth--float{
   min-height:0 !important;
   height:auto !important;
-  max-height:none !important;
   margin:0 !important;
   padding:0 !important;
   display:block !important;
   width:100% !important;
-  grid-template-columns:1fr !important;
-  position:relative !important;
-  top:auto !important;
-  left:auto !important;
-  right:auto !important;
+  background:transparent !important;
+  border:0 !important;
   transform:none !important;
 }
 
+/* Transparent form card */
 body.login-ultra #loginScreen .login-glass-card,
 body.login-ultra #loginScreen .ev-auth-card,
 body.saas-login #loginScreen .login-glass-card{
   position:relative !important;
-  top:auto !important;
-  left:auto !important;
-  right:auto !important;
-  transform:none !important;
   z-index:5 !important;
   width:100% !important;
   max-width:420px !important;
-  margin:0 auto !important;
-  padding:18px 18px 16px !important;
+  margin:0 !important;
+  padding:20px 20px 18px !important;
   overflow:hidden !important;
-  background:#0f172a !important;
+  background:rgba(8,14,28,.48) !important;
   background-image:none !important;
-  border:1px solid rgba(245,215,110,.35) !important;
-  box-shadow:0 18px 40px rgba(0,0,0,.45) !important;
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
+  border:1px solid rgba(245,215,110,.32) !important;
+  box-shadow:0 18px 50px rgba(0,0,0,.35) !important;
+  backdrop-filter:blur(18px) saturate(1.2) !important;
+  -webkit-backdrop-filter:blur(18px) saturate(1.2) !important;
   color:#f8fafc !important;
   border-radius:18px !important;
 }
@@ -137,8 +188,9 @@ body.login-ultra #loginScreen .login-card-head{
   align-items:flex-start !important;
   justify-content:space-between !important;
   gap:10px !important;
-  margin:0 0 10px !important;
+  margin:0 0 12px !important;
   padding:0 0 10px !important;
+  border-bottom:1px solid rgba(255,255,255,.1) !important;
 }
 body.login-ultra #loginScreen .login-secure-badge{
   display:inline-block !important;
@@ -147,7 +199,7 @@ body.login-ultra #loginScreen .login-secure-badge{
 }
 body.login-ultra #loginScreen .login-card-title{
   color:#fff !important;
-  font-size:22px !important;
+  font-size:24px !important;
   font-weight:800 !important;
   margin:0 !important;
   line-height:1.2 !important;
@@ -155,8 +207,8 @@ body.login-ultra #loginScreen .login-card-title{
   -webkit-text-fill-color:#fff !important;
 }
 body.login-ultra #loginScreen .login-card-sub{
-  color:#cbd5e1 !important;
-  font-size:12px !important;
+  color:#dbe4f0 !important;
+  font-size:13px !important;
   margin:4px 0 0 !important;
 }
 body.login-ultra #loginScreen .login-card-brand{
@@ -171,7 +223,6 @@ body.login-ultra #loginScreen .login-card-brand-ar{
   color:#f5d76e !important;
   filter:none !important;
   font-size:11px !important;
-  line-height:1.3 !important;
 }
 body.login-ultra #loginScreen .login-card-brand-en{
   color:#94a3b8 !important;
@@ -181,7 +232,7 @@ body.login-ultra #loginScreen .login-card-brand-en{
 body.login-ultra #loginScreen .ev-auth-tabs{
   display:flex !important;
   gap:6px !important;
-  margin:0 0 10px !important;
+  margin:0 0 12px !important;
 }
 body.login-ultra #loginScreen .ev-auth-tab[data-auth="face"],
 body.login-ultra #loginScreen .ev-auth-tab[data-auth="fingerprint"],
@@ -191,14 +242,14 @@ body.login-ultra #loginScreen .ev-auth-tab[data-auth="sso"]{
 body.login-ultra #loginScreen .ev-auth-tab{
   flex:1 !important;
   padding:8px 10px !important;
-  background:#111827 !important;
+  background:rgba(17,24,39,.55) !important;
   color:#cbd5e1 !important;
   border:1px solid rgba(148,163,184,.35) !important;
   border-radius:10px !important;
   font-size:13px !important;
 }
 body.login-ultra #loginScreen .ev-auth-tab.active{
-  background:#1e293b !important;
+  background:rgba(30,41,59,.7) !important;
   color:#f5d76e !important;
   border-color:rgba(245,215,110,.5) !important;
 }
@@ -221,7 +272,7 @@ body.login-ultra #loginScreen #loginPass,
 body.login-ultra #loginScreen #otpUser{
   width:100% !important;
   box-sizing:border-box !important;
-  background:#111827 !important;
+  background:rgba(17,24,39,.62) !important;
   color:#f8fafc !important;
   border:1px solid rgba(148,163,184,.45) !important;
   border-radius:10px !important;
@@ -258,10 +309,23 @@ body.login-ultra #loginScreen #loginBtn{
   border-radius:12px !important;
 }
 
-/* Hide leftover absolute left/right ghost words from older layouts */
-body.login-ultra #loginScreen [class*="watermark"],
-body.login-ultra #loginScreen .login-mesh,
-body.login-ultra #loginScreen .login-cinema-photo-layer{
-  opacity:.18 !important;
-}
 body.login-ultra #lqBrandWatermark{display:none !important;}
+
+@media (max-width:860px){
+  body.login-ultra #loginScreen{
+    padding:16px !important;
+    overflow:auto !important;
+  }
+  body.login-ultra #loginScreen .login-shell{
+    grid-template-columns:1fr !important;
+    grid-template-areas:"logo" "form" !important;
+    gap:16px !important;
+    max-width:440px !important;
+  }
+  body.login-ultra #loginScreen .login-logo-img,
+  body.login-ultra #loginScreen .login-logo-img--float{
+    width:140px !important;
+    max-width:140px !important;
+    max-height:140px !important;
+  }
+}
