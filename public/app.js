@@ -4202,14 +4202,62 @@ window.printHospitalityFolio = printHospitalityFolio;
   window.loadModuleFixHistory=async function(){
     const host = $('#moduleFixHistoryBox');
     if(!host) return;
-    host.innerHTML = '<p class="mini">جاري تحميل سجل موافقات الإصلاح...</p>';
-    try{
-      const res = await api('module_integrity_history?limit=60');
-      const rows = Array.isArray(res.history) ? res.history : [];
+    if(!host.dataset.init){
+      host.dataset.init = '1';
       host.innerHTML = `
         <div class="card inner-card">
           <h3>سجل موافقات/تنفيذ الإصلاح</h3>
-          ${rows.length ? tableHtml(
+          <div class="toolbar" style="margin-bottom:10px">
+            <input id="mfxFilterUser" placeholder="فلتر المستخدم">
+            <select id="mfxFilterMode">
+              <option value="">كل الأوضاع</option>
+              <option value="preview">preview</option>
+              <option value="apply">apply</option>
+              <option value="autorun">autorun</option>
+            </select>
+            <select id="mfxFilterStatus">
+              <option value="">كل الحالات</option>
+              <option value="ok">ok</option>
+              <option value="rejected_missing_confirm">rejected_missing_confirm</option>
+              <option value="rejected_missing_preview">rejected_missing_preview</option>
+              <option value="rejected_invalid_preview">rejected_invalid_preview</option>
+              <option value="rejected_scope_mismatch">rejected_scope_mismatch</option>
+            </select>
+            <input id="mfxFilterFrom" type="date" title="من تاريخ">
+            <input id="mfxFilterTo" type="date" title="إلى تاريخ">
+            <input id="mfxFilterPreview" placeholder="preview_id">
+            <input id="mfxFilterLimit" type="number" min="10" max="500" step="10" value="60" style="max-width:90px" title="limit">
+            <button class="ghost" type="button" onclick="loadModuleFixHistory()">تحديث</button>
+            <button class="ghost" type="button" onclick="exportModuleFixHistoryCsv()">تصدير CSV</button>
+          </div>
+          <div id="mfxHistoryTable"><p class="mini">جاري التحميل...</p></div>
+        </div>
+      `;
+    }else{
+      const tableHost = $('#mfxHistoryTable');
+      if(tableHost) tableHost.innerHTML = '<p class="mini">جاري تحميل سجل موافقات الإصلاح...</p>';
+    }
+    try{
+      const qp = new URLSearchParams();
+      const mode = String($('#mfxFilterMode')?.value || '').trim();
+      const status = String($('#mfxFilterStatus')?.value || '').trim();
+      const username = String($('#mfxFilterUser')?.value || '').trim();
+      const from = String($('#mfxFilterFrom')?.value || '').trim();
+      const to = String($('#mfxFilterTo')?.value || '').trim();
+      const preview = String($('#mfxFilterPreview')?.value || '').trim();
+      const limit = Number($('#mfxFilterLimit')?.value || 60);
+      qp.set('limit', String(Math.max(10, Math.min(500, limit || 60))));
+      if(mode) qp.set('mode', mode);
+      if(status) qp.set('status', status);
+      if(username) qp.set('username', username);
+      if(from) qp.set('from', from);
+      if(to) qp.set('to', to);
+      if(preview) qp.set('preview_id', preview);
+      const res = await api('module_integrity_history?'+qp.toString());
+      const rows = Array.isArray(res.history) ? res.history : [];
+      const tableHost = $('#mfxHistoryTable');
+      if(!tableHost) return;
+      tableHost.innerHTML = rows.length ? tableHtml(
             [
               ['الوقت','created_at',(v)=>htmlEscape(String(v||''))],
               ['المستخدم','username',(v)=>htmlEscape(String(v||''))],
@@ -4224,12 +4272,40 @@ window.printHospitalityFolio = printHospitalityFolio;
               ['preview','preview_id',(v)=>htmlEscape(String(v||''))],
             ],
             rows
-          ) : '<p class="mini">لا يوجد سجل بعد.</p>'}
-        </div>
-      `;
+          ) : '<p class="mini">لا يوجد سجل حسب الفلاتر الحالية.</p>';
       ensureEnglishDigits(host);
     }catch(e){
-      host.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+      const tableHost = $('#mfxHistoryTable');
+      if(tableHost) tableHost.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
     }
+  };
+
+  window.exportModuleFixHistoryCsv=async function(){
+    try{
+      const qp = new URLSearchParams();
+      const mode = String($('#mfxFilterMode')?.value || '').trim();
+      const status = String($('#mfxFilterStatus')?.value || '').trim();
+      const username = String($('#mfxFilterUser')?.value || '').trim();
+      const from = String($('#mfxFilterFrom')?.value || '').trim();
+      const to = String($('#mfxFilterTo')?.value || '').trim();
+      const preview = String($('#mfxFilterPreview')?.value || '').trim();
+      const limit = Number($('#mfxFilterLimit')?.value || 500);
+      qp.set('limit', String(Math.max(10, Math.min(2000, limit || 500))));
+      if(mode) qp.set('mode', mode);
+      if(status) qp.set('status', status);
+      if(username) qp.set('username', username);
+      if(from) qp.set('from', from);
+      if(to) qp.set('to', to);
+      if(preview) qp.set('preview_id', preview);
+      const res = await fetch('/api/export/module_fix_history?'+qp.toString(),{headers:{Authorization:'Bearer '+(Jawdah.token||'')}});
+      if(!res.ok) throw new Error(await res.text() || 'Export failed');
+      const blob=await res.blob();
+      const cd=res.headers.get('Content-Disposition')||'';
+      const match=cd.match(/filename="?([^"]+)"?/);
+      const name=match?match[1]:`jawdah-module-fix-history-${today()}.csv`;
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      toast('تم تصدير سجل الإصلاح');
+    }catch(e){ toastErr(e,'تعذر تصدير سجل الإصلاح'); }
   };
 })();

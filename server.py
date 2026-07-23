@@ -3230,6 +3230,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "export" and len(parts) >= 2 and parts[1] == "timeline_audit" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_export_timeline_audit_csv(db, user, query)
+                if parts[0] == "export" and len(parts) >= 2 and parts[1] == "module_fix_history" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_export_module_fix_history_csv(db, user, query)
                 if parts[0] == "export" and method == "GET" and len(parts) >= 2:
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_export_csv(db, parts[1])
@@ -5885,6 +5888,56 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def api_export_module_fix_history_csv(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        rows, filters = self.query_module_fix_history_rows(db, query, default_limit=500, max_limit=2000)
+        output = io.StringIO()
+        fieldnames = [
+            "id",
+            "created_at",
+            "username",
+            "mode",
+            "status",
+            "preview_id",
+            "modules",
+            "max_rows",
+            "candidates",
+            "applied",
+            "score_before",
+            "score_after",
+            "issues_before",
+            "issues_after",
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(
+                {
+                    "id": row.get("id"),
+                    "created_at": row.get("created_at"),
+                    "username": row.get("username"),
+                    "mode": row.get("mode"),
+                    "status": row.get("status"),
+                    "preview_id": row.get("preview_id"),
+                    "modules": row.get("modules"),
+                    "max_rows": row.get("max_rows"),
+                    "candidates": row.get("candidates"),
+                    "applied": row.get("applied"),
+                    "score_before": row.get("score_before"),
+                    "score_after": row.get("score_after"),
+                    "issues_before": row.get("issues_before"),
+                    "issues_after": row.get("issues_after"),
+                }
+            )
+        raw = output.getvalue().encode("utf-8-sig")
+        suffix = today()
+        mode_suffix = filters.get("mode") or "all"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Content-Disposition", f"attachment; filename=jawdah-module-fix-history-{mode_suffix}-{suffix}.csv")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
     def api_export_bundle_zip(self, user: Dict[str, Any]) -> None:
         data = self.read_json()
         files = data.get("files") if isinstance(data, dict) else None
@@ -6843,15 +6896,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
             }
         )
 
-    def api_module_integrity_history(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+    def query_module_fix_history_rows(self, db: sqlite3.Connection, query: str, default_limit: int = 50, max_limit: int = 500) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         params = urllib.parse.parse_qs(query or "")
         try:
-            limit = int((params.get("limit") or ["50"])[0] or 50)
+            limit = int((params.get("limit") or [str(default_limit)])[0] or default_limit)
         except Exception:
-            limit = 50
-        limit = max(10, min(500, limit))
+            limit = default_limit
+        limit = max(1, min(max_limit, limit))
+
         mode_filter = str((params.get("mode") or [""])[0] or "").strip().lower()
         status_filter = str((params.get("status") or [""])[0] or "").strip().lower()
+        username_filter = str((params.get("username") or [""])[0] or "").strip().lower()
+        preview_filter = str((params.get("preview_id") or [""])[0] or "").strip()
+        from_date = str((params.get("from") or [""])[0] or "").strip()
+        to_date = str((params.get("to") or [""])[0] or "").strip()
+
         sql = "SELECT * FROM module_fix_runs"
         clauses: List[str] = []
         args: List[Any] = []
@@ -6861,11 +6920,36 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if status_filter:
             clauses.append("lower(status)=?")
             args.append(status_filter)
+        if username_filter:
+            clauses.append("lower(username) LIKE ?")
+            args.append(f"%{username_filter}%")
+        if preview_filter:
+            clauses.append("preview_id LIKE ?")
+            args.append(f"%{preview_filter}%")
+        if from_date:
+            clauses.append("datetime(created_at) >= datetime(?)")
+            args.append(from_date + " 00:00:00")
+        if to_date:
+            clauses.append("datetime(created_at) <= datetime(?)")
+            args.append(to_date + " 23:59:59")
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         sql += " ORDER BY created_at DESC LIMIT ?"
         args.append(limit)
         rows = rows_to_dicts(db.execute(sql, tuple(args)).fetchall())
+        filters = {
+            "mode": mode_filter,
+            "status": status_filter,
+            "username": username_filter,
+            "preview_id": preview_filter,
+            "from": from_date,
+            "to": to_date,
+            "limit": limit,
+        }
+        return rows, filters
+
+    def api_module_integrity_history(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        rows, filters = self.query_module_fix_history_rows(db, query, default_limit=60, max_limit=500)
         out: List[Dict[str, Any]] = []
         for row in rows:
             modules: List[str] = []
@@ -6899,7 +6983,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "details": details,
                 }
             )
-        self.send_json({"ok": True, "history": out, "limit": limit, "filters": {"mode": mode_filter, "status": status_filter}})
+        self.send_json({"ok": True, "history": out, "limit": filters.get("limit"), "filters": filters})
 
     def api_operational_intel(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         dash = build_dashboard(db)
