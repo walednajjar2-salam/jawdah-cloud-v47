@@ -1,4 +1,70 @@
 /* Emergency clean mode: prioritize readability and stable layout */
+
+/* ── Kill the post-login top void ──
+   Causes:
+   1) #loginScreen staying in document flow (min-height:100vh) after portal entry
+   2) .lq-app-bg-parity participating in #app CSS grid and creating a blank row
+*/
+body.saas-luxury #loginScreen,
+body.app-ready #loginScreen,
+#loginScreen.hidden{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+  height:0 !important;
+  max-height:0 !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  position:fixed !important;
+  inset:0 auto auto 0 !important;
+  z-index:-1 !important;
+}
+
+body.saas-luxury #app.app,
+body.app-ready #app.app{
+  display:block !important;
+  min-height:100vh !important;
+  position:relative !important;
+}
+
+body.saas-luxury #app > .lq-app-bg-parity,
+body.app-ready #app > .lq-app-bg-parity,
+.lq-app-bg-parity{
+  position:fixed !important;
+  inset:0 !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+  width:auto !important;
+  height:auto !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+}
+
+body.saas-luxury #app > .content,
+body.app-ready #app > .content{
+  position:relative !important;
+  z-index:2 !important;
+  display:block !important;
+  margin-top:0 !important;
+  padding-top:var(--saas-float-gap, 14px) !important;
+}
+
+body.saas-luxury .section:not(.active),
+body.app-ready .section:not(.active){
+  display:none !important;
+  height:0 !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+
 body.saas-luxury.app-ready .lq-cosmos,
 body.saas-luxury.app-ready .ev-cinema-lights,
 body.saas-luxury.app-ready .ev-holo-orbs,

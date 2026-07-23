@@ -22,13 +22,29 @@
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref4">
-  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec3">
-  <link rel="stylesheet" href="lq-login-locked.css?v=locked1">
+  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec4">
+  <link rel="stylesheet" href="lq-login-locked.css?v=locked2">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
   <style>
     #loginScreen,#app{position:relative;z-index:10;min-height:100vh}
     #loginScreen.hidden,#app.hidden{display:none!important}
+    /* Hard kill: never leave a blank 100vh login block above the app */
+    body.saas-luxury #loginScreen,
+    body.app-ready #loginScreen,
+    #loginScreen.hidden{
+      display:none!important;visibility:hidden!important;pointer-events:none!important;
+      height:0!important;max-height:0!important;min-height:0!important;
+      margin:0!important;padding:0!important;overflow:hidden!important;
+    }
+    body.saas-luxury #app.app,body.app-ready #app.app{display:block!important}
+    #app > .lq-app-bg-parity,.lq-app-bg-parity{
+      position:fixed!important;inset:0!important;z-index:0!important;pointer-events:none!important;
+      margin:0!important;padding:0!important;min-height:0!important;
+    }
+    body.saas-luxury .section:not(.active),body.app-ready .section:not(.active){
+      display:none!important;height:0!important;min-height:0!important;overflow:hidden!important;
+    }
     #lqBrandWatermark{display:none!important;opacity:0!important;visibility:hidden!important}
     #lqBrandWatermark img{display:none!important;opacity:0!important}
     /* locked with lq-login-locked.css */
@@ -1133,7 +1149,7 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal5" defer></script>
+  <script src="app.js?v=portal6" defer></script>
   <script src="enterprise-vision.js?v=ev10" defer></script>
   <script src="historic-upgrade.js?v=historic14" defer></script>
   <script src="lq-hub-dashboard.js?v=hub1" defer></script>

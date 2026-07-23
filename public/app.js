@@ -754,7 +754,12 @@ function showLoginShell(){
   document.body.classList.add('login-ultra','saas-login','enterprise-vision','va-theme');
   document.body.classList.remove('saas-luxury','dash-pro-active','field-mode','app-ready');
   $('#app')?.classList.add('hidden');
-  $('#loginScreen')?.classList.remove('hidden');
+  const login=$('#loginScreen');
+  if(login){
+    login.classList.remove('hidden');
+    login.removeAttribute('aria-hidden');
+    login.style.cssText='';
+  }
   closePortalSwitch();
   if(typeof window.__lqHideBoot==='function') window.__lqHideBoot();
   if(typeof syncVisionLayers==='function') syncVisionLayers();
@@ -763,7 +768,12 @@ function showAppShell(){
   document.body.classList.remove('login-ultra','saas-login');
   document.body.classList.add('saas-luxury','enterprise-vision','va-theme','app-ready');
   $('#app')?.classList.remove('hidden');
-  $('#loginScreen')?.classList.add('hidden');
+  const login=$('#loginScreen');
+  if(login){
+    login.classList.add('hidden');
+    login.setAttribute('aria-hidden','true');
+    login.style.cssText='display:none!important;height:0!important;min-height:0!important;overflow:hidden!important;visibility:hidden!important';
+  }
   ensureDashActive();
   if(typeof renderDashLoadingSkeleton==='function') renderDashLoadingSkeleton();
   if(typeof window.__lqShowBoot==='function') window.__lqShowBoot('جاري تحميل لوحة التحكم…');
@@ -835,6 +845,10 @@ async function checkSession(){
   // 2) Enter app immediately after auth — loadAll failures must NOT show login
   showAppShell();
   try{
+    if(typeof buildNav==='function') buildNav();
+    if(typeof renderSidebarUser==='function') renderSidebarUser();
+  }catch(_){/* ignore */}
+  try{
     await loadAll();
     renderBiometricHub();
     startOwnerLiveAutoRefresh();
@@ -842,6 +856,7 @@ async function checkSession(){
     maybeSendWelcomeMessage(Jawdah.user);
   }catch(e){
     console.error('loadAll after login failed', e);
+    try{ if(typeof buildNav==='function') buildNav(); }catch(_){}
     try{ if(typeof toastErr==='function') toastErr(e,'تعذر تحميل البيانات — أنت داخل النظام'); }catch(_){}
     try{ applySavedPortalChoice(); }catch(_){}
   }
