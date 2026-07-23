@@ -3827,6 +3827,43 @@ window.printHospitalityFolio = printHospitalityFolio;
     const q = String(locationText || ESTATE_DEFAULT_MAP_LOCATION).trim() || ESTATE_DEFAULT_MAP_LOCATION;
     return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
   };
+  const estateGoogleMapLink = (locationText)=>{
+    const q = String(locationText || ESTATE_DEFAULT_MAP_LOCATION).trim() || ESTATE_DEFAULT_MAP_LOCATION;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  };
+  let estateMapGeoTimer = null;
+  let estateMapGeoSeq = 0;
+  function estateCurrentMapLocation(){
+    return String($('#estateMapLocationLabel')?.textContent || '').trim() || ESTATE_DEFAULT_MAP_LOCATION;
+  }
+  async function resolveEstateMapCoords(locationText){
+    const coordsBox = $('#estateMapCoords');
+    if(!coordsBox) return;
+    const q = String(locationText || '').trim() || ESTATE_DEFAULT_MAP_LOCATION;
+    const seq = ++estateMapGeoSeq;
+    coordsBox.textContent = 'الإحداثيات: جاري التحديد...';
+    try{
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if(!res.ok) throw new Error('map-geocode-failed');
+      const data = await res.json();
+      if(seq !== estateMapGeoSeq) return;
+      const top = Array.isArray(data) ? data[0] : null;
+      if(top && top.lat && top.lon){
+        const lat = Number(top.lat), lon = Number(top.lon);
+        coordsBox.textContent = `الإحداثيات: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+      }else{
+        coordsBox.textContent = 'الإحداثيات: غير متاحة';
+      }
+    }catch(_e){
+      if(seq !== estateMapGeoSeq) return;
+      coordsBox.textContent = 'الإحداثيات: غير متاحة';
+    }
+  }
+  function queueEstateMapCoords(locationText){
+    if(estateMapGeoTimer) clearTimeout(estateMapGeoTimer);
+    estateMapGeoTimer = setTimeout(()=>{ resolveEstateMapCoords(locationText); }, 350);
+  }
   function refreshEstateRealMap(locationText){
     const label = $('#estateMapLocationLabel');
     const frame = $('#estateRealMapFrame');
@@ -3836,7 +3873,36 @@ window.printHospitalityFolio = printHospitalityFolio;
       const nextSrc = estateGoogleMapEmbed(cleanLocation);
       if(frame.getAttribute('src') !== nextSrc) frame.setAttribute('src', nextSrc);
     }
+    queueEstateMapCoords(cleanLocation);
   }
+  window.openEstateRealMapExternal = function(){
+    const url = estateGoogleMapLink(estateCurrentMapLocation());
+    try{ window.open(url, '_blank', 'noopener,noreferrer'); }catch(_e){}
+  };
+  window.copyEstateRealMapLink = async function(){
+    const url = estateGoogleMapLink(estateCurrentMapLocation());
+    try{
+      if(navigator?.clipboard?.writeText){
+        await navigator.clipboard.writeText(url);
+        toast('تم نسخ رابط الموقع');
+        return;
+      }
+    }catch(_e){}
+    try{
+      const t = document.createElement('textarea');
+      t.value = url;
+      t.setAttribute('readonly','readonly');
+      t.style.position = 'fixed';
+      t.style.opacity = '0';
+      document.body.appendChild(t);
+      t.select();
+      document.execCommand('copy');
+      document.body.removeChild(t);
+      toast('تم نسخ رابط الموقع');
+    }catch(_e){
+      toastErr('تعذر نسخ الرابط');
+    }
+  };
   const clientName = (id)=>htmlEscape(byId('clients',id).name||'');
   const pickName = (arr,id)=>htmlEscape((arr.find(x=>x.id===id)||{}).name||'');
   const roomStatusLabel = (s)=>{

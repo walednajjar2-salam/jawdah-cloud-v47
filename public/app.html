@@ -496,9 +496,14 @@
           <div id="estateIconGrid" class="estate-icon-grid"></div>
         </div>
 
-        <div class="card">
+        <div class="card estate-map-card">
           <h3>الخريطة الحقيقية لموقع العقار</h3>
           <p class="mini">الموقع الحالي: <b id="estateMapLocationLabel">حي التراث، نزوى، محافظة الداخلية، سلطنة عمان</b></p>
+          <div class="toolbar estate-map-toolbar">
+            <button class="gold-btn" type="button" onclick="openEstateRealMapExternal()">فتح في Google Maps</button>
+            <button class="ghost" type="button" onclick="copyEstateRealMapLink()">نسخ رابط الموقع</button>
+            <span id="estateMapCoords" class="mini">الإحداثيات: —</span>
+          </div>
           <div class="saas-glass" style="padding:0; overflow:hidden; border-radius:14px;">
             <iframe
               id="estateRealMapFrame"
