@@ -1,5 +1,5 @@
 /* Launch Quality — kill stale PWA caches immediately */
-const KILL = 'lq-kill-cache-v50';
+const KILL = 'lq-kill-cache-v51';
 self.addEventListener('install', (e) => {
   e.waitUntil(self.skipWaiting());
 });

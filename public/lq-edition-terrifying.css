@@ -1,0 +1,125 @@
+/* التطوير المرعب — base edition visual + effectiveness layer
+   Loaded after emergency-clean. Keeps daylight luxury; does not restyle locked login. */
+
+:root {
+  --lq-td-ink: #0f2744;
+  --lq-td-muted: #5a6f8c;
+  --lq-td-line: #d4e0f2;
+  --lq-td-panel: #ffffff;
+  --lq-td-soft: #eef4fb;
+  --lq-td-accent: #1e4f8c;
+  --lq-td-gold: #b8892d;
+  --lq-td-ok: #1f7a4d;
+}
+
+html[data-lq-edition="terrifying-dev"],
+body.lq-edition-terrifying {
+  --saas-float-gap: 12px;
+}
+
+/* Edition badge in header */
+body.lq-edition-terrifying .lq-edition-badge,
+#lqEditionBadge.lq-edition-badge {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 1px !important;
+  padding: 6px 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--lq-td-line) !important;
+  background: linear-gradient(145deg, #fffdf8 0%, #f3f7fd 100%) !important;
+  min-width: 118px !important;
+  line-height: 1.2 !important;
+  box-shadow: 0 6px 16px rgba(28, 52, 94, 0.06) !important;
+}
+body.lq-edition-terrifying .lq-edition-badge .lq-ed-kicker {
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  color: var(--lq-td-muted) !important;
+  letter-spacing: 0.03em !important;
+}
+body.lq-edition-terrifying .lq-edition-badge strong {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--lq-td-ink) !important;
+  white-space: nowrap !important;
+}
+body.lq-edition-terrifying .lq-edition-badge small {
+  font-size: 10px !important;
+  color: var(--lq-td-accent) !important;
+  font-weight: 700 !important;
+}
+body.lq-edition-terrifying .lq-edition-badge.is-healthy {
+  border-color: rgba(31, 122, 77, 0.35) !important;
+}
+
+/* Header composition as base */
+body.lq-edition-terrifying.app-ready .lq-header-welcome-row {
+  align-items: center !important;
+  gap: 10px !important;
+}
+body.lq-edition-terrifying.app-ready .app-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 40 !important;
+}
+
+/* Never hide cockpit / hub on this base */
+body.lq-edition-terrifying.lq-hub-mode .lq-cockpit-wrap,
+body.lq-edition-terrifying.lq-hub-mode:not(.lq-hub-expanded) .lq-cockpit-wrap,
+body.lq-edition-terrifying.lq-workspace-mode .lq-cockpit-wrap,
+body.lq-edition-terrifying.lq-workspace-mode .lq-hub-board,
+body.lq-edition-terrifying .lq-cockpit-v30 .lq-dash-legacy {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Sidebar brand clarity */
+body.lq-edition-terrifying.app-ready .brand-copy-pro h1 {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: var(--lq-td-ink) !important;
+}
+body.lq-edition-terrifying.app-ready .brand-copy-pro small::after {
+  content: " · التطوير المرعب";
+  color: var(--lq-td-gold);
+  font-weight: 700;
+}
+
+/* Active section reliability */
+body.lq-edition-terrifying.app-ready .section.active {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Estate dock stays usable */
+body.lq-edition-terrifying .estate-dock,
+body.lq-edition-terrifying .estate-dock-btn {
+  pointer-events: auto !important;
+}
+
+/* Soft page atmosphere without flat void */
+body.lq-edition-terrifying.app-ready .content {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(184, 137, 45, 0.06), transparent 28%),
+    radial-gradient(circle at 92% 4%, rgba(30, 79, 140, 0.05), transparent 30%),
+    linear-gradient(180deg, #f4f8fd 0%, #eef3fa 100%) !important;
+}
+
+@media (max-width: 900px) {
+  body.lq-edition-terrifying .lq-edition-badge small,
+  body.lq-edition-terrifying .lq-edition-badge .lq-ed-kicker {
+    display: none !important;
+  }
+  body.lq-edition-terrifying .lq-edition-badge {
+    min-width: auto !important;
+    padding: 8px 10px !important;
+  }
+}

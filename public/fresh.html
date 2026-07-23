@@ -35,7 +35,7 @@
         localStorage.setItem('lq_hub_expanded','1');
         localStorage.removeItem('lq_workspace_collapsed');
       }catch(e){}
-      const url = '/app.html?fresh=20260723v10&t=' + Date.now();
+      const url = '/app.html?fresh=20260723v11&t=' + Date.now();
       document.getElementById('go').onclick = function(){ location.replace(url); };
       setTimeout(function(){ location.replace(url); }, 600);
     })();

@@ -80,7 +80,9 @@ function canSeeFinanceSection(id){
   return canSeeFinance();
 }
 const FINANCE_SECTIONS = new Set(['revenues','admin-expenses','accounts','purchases','payroll','inventory','bank','chart-accounts','statements','bank-reconciliation','financial-periods']);
-const APP_UI_VERSION = '2026.2';
+const APP_UI_VERSION = '2026.3-TD';
+const APP_BASE_EDITION = 'terrifying-dev';
+const APP_EDITION_LABEL = 'التطوير المرعب';
 const DISPLAY_OWNER_NAME = 'القائد يعقوب فاضل الخصيبي';
 const DISPLAY_OWNER_ROLE = 'المالك العام';
 const OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
@@ -746,8 +748,9 @@ function ensureDashActive(){
   }
 }
 function showLoginShell(){
-  document.body.classList.add('login-ultra','saas-login','enterprise-vision','va-theme');
+  document.body.classList.add('login-ultra','saas-login','enterprise-vision','va-theme','lq-edition-terrifying');
   document.body.classList.remove('saas-luxury','dash-pro-active','field-mode','app-ready');
+  document.body.setAttribute('data-edition', APP_BASE_EDITION);
   $('#app')?.classList.add('hidden');
   const login=$('#loginScreen');
   if(login){
@@ -760,9 +763,21 @@ function showLoginShell(){
   if(typeof window.__lqHideBoot==='function') window.__lqHideBoot();
   if(typeof syncVisionLayers==='function') syncVisionLayers();
 }
+function applyTerrifyingBase(){
+  try{ localStorage.setItem('lq_ui_edition', APP_BASE_EDITION); }catch(_){}
+  document.documentElement.setAttribute('data-lq-edition', APP_BASE_EDITION);
+  document.documentElement.setAttribute('data-lq-edition-label', APP_EDITION_LABEL);
+  document.body.classList.add('lq-edition-terrifying','lq-hub-expanded');
+  document.body.setAttribute('data-edition', APP_BASE_EDITION);
+  try{ localStorage.setItem('lq_hub_expanded','1'); localStorage.removeItem('lq_workspace_collapsed'); }catch(_){}
+  if(typeof window.__LQ_TERRIFYING__?.heal==='function'){
+    try{ window.__LQ_TERRIFYING__.heal(); }catch(_){}
+  }
+}
 function showAppShell(){
   document.body.classList.remove('login-ultra','saas-login');
   document.body.classList.add('saas-luxury','enterprise-vision','va-theme','app-ready');
+  applyTerrifyingBase();
   $('#app')?.classList.remove('hidden');
   const login=$('#loginScreen');
   if(login){
@@ -776,7 +791,7 @@ function showAppShell(){
   if(ops && !ops.querySelector('button')) ops.style.display='none';
   ensureDashActive();
   if(typeof renderDashLoadingSkeleton==='function') renderDashLoadingSkeleton();
-  if(typeof window.__lqShowBoot==='function') window.__lqShowBoot('جاري تحميل لوحة التحكم…');
+  if(typeof window.__lqShowBoot==='function') window.__lqShowBoot('جاري تحميل '+APP_EDITION_LABEL+'…');
   if(typeof syncVisionLayers==='function') syncVisionLayers();
 }
 async function checkSession(){
@@ -4213,8 +4228,24 @@ function bind(){
     if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#globalSearch').focus();}
   });
 }
-window.LAUNCH_QUALITY_CHECK=()=>({system:'Launch Quality LLC',user:Jawdah.user?.username||null,tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),dashboard:Jawdah.dashboard});
-window.addEventListener('load',()=>{ syncLoginOwnerBranding(); bind(); initClock(); checkSession(); renderBiometricHub(); setInterval(()=>ensureEnglishDigits(),3000); });
+window.LAUNCH_QUALITY_CHECK=()=>({
+  system:'Launch Quality LLC',
+  edition:APP_BASE_EDITION,
+  edition_label:APP_EDITION_LABEL,
+  ui_version:APP_UI_VERSION,
+  user:Jawdah.user?.username||null,
+  tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),
+  dashboard:Jawdah.dashboard
+});
+window.addEventListener('load',()=>{
+  applyTerrifyingBase();
+  syncLoginOwnerBranding();
+  bind();
+  initClock();
+  checkSession();
+  renderBiometricHub();
+  setInterval(()=>ensureEnglishDigits(),3000);
+});
 window.addEventListener('error',()=>true);
 window.addEventListener('unhandledrejection',e=>{ e.preventDefault(); });
 window.registerEnterpriseBiometric = registerEnterpriseBiometric;
@@ -4257,13 +4288,15 @@ window.printHospitalityFolio = printHospitalityFolio;
   const oldCheck = window.JAWDAH_CLOUD_CHECK;
   window.JAWDAH_CLOUD_CHECK = function(){
     const base = oldCheck ? oldCheck() : {};
-    return {...base, version:APP_UI_VERSION, theme:'enterprise-vision', editVerified:true, apiConnected:true};
+    return {...base, version:APP_UI_VERSION, edition:APP_BASE_EDITION, edition_label:APP_EDITION_LABEL, theme:'enterprise-vision', editVerified:true, apiConnected:true};
   };
   window.addEventListener('load',()=>{
-    document.title = 'Launch Quality LLC';
+    document.title = 'Launch Quality LLC · التطوير المرعب';
     setTimeout(()=>{
-      const brandSmall = document.querySelector('.brand-copy-pro small'); if(brandSmall && !brandSmall.textContent.trim()) brandSmall.textContent = APP_UI_VERSION;
-      const loginMini = document.querySelector('.login-card .mini'); if(loginMini) loginMini.textContent = 'Real Estate & Hospitality Management System';
+      const brandSmall = document.querySelector('.brand-copy-pro small');
+      if(brandSmall && !brandSmall.textContent.trim()) brandSmall.textContent = APP_UI_VERSION + ' · ' + APP_EDITION_LABEL;
+      const loginMini = document.querySelector('.login-card .mini');
+      if(loginMini) loginMini.textContent = 'Real Estate & Hospitality Management System · التطوير المرعب';
     },100);
   });
 })();

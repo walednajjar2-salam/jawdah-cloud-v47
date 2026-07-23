@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -81,8 +81,12 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v49-production"
+APP_VERSION = "Launch-Quality-LLC-v50-terrifying-dev"
+# DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
+# Product base edition — التطوير المرعب is the default foundation for UI + health.
+APP_BASE_EDITION = os.environ.get("LQ_BASE_EDITION", "terrifying-dev").strip().lower() or "terrifying-dev"
+APP_EDITION_LABEL = os.environ.get("LQ_EDITION_LABEL", "التطوير المرعب").strip() or "التطوير المرعب"
 BACKUP_DIR = Path(os.environ.get("JAWDAH_BACKUP_DIR", str(DATA_DIR / "backups"))).resolve()
 AUTO_BACKUP_ENABLED = os.environ.get("JAWDAH_AUTO_BACKUP", "1").strip().lower() not in ("0", "false", "no", "off")
 BACKUP_INTERVAL_HOURS = max(1, int(os.environ.get("JAWDAH_BACKUP_INTERVAL_HOURS", "24") or "24"))
@@ -3724,6 +3728,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "service": "production",
                         "version": APP_VERSION,
                         "edition": APP_EDITION,
+                        "base_edition": APP_BASE_EDITION,
+                        "edition_label": APP_EDITION_LABEL,
+                        "base_name_ar": "التطوير المرعب",
                         "database": str(DB_PATH),
                         "database_engine": "sqlite",
                         "postgres_url_configured": bool(LQ_DATABASE_URL),
@@ -3802,7 +3809,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return None if not user else self.api_change_password(db, user)
                 if parts[0] == "me" and method == "GET":
                     user = self.require_user(db, query=query)
-                    return None if not user else self.send_json({"ok": True, "user": user, "permissions": sorted(ROLE_PERMISSIONS.get(user["role"], []))})
+                    return None if not user else self.send_json({
+                        "ok": True,
+                        "user": user,
+                        "permissions": sorted(ROLE_PERMISSIONS.get(user["role"], [])),
+                        "version": APP_VERSION,
+                        "base_edition": APP_BASE_EDITION,
+                        "edition_label": APP_EDITION_LABEL,
+                    })
                 if parts[0] == "dashboard" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_dashboard(db)
@@ -11196,7 +11210,7 @@ def main() -> None:
             "invoices_cols": len(db.execute("PRAGMA table_info(invoices)").fetchall()),
         }
     print(f"Schema overview: {schema_overview}")
-    print(f"Launch Quality LLC {APP_VERSION} running on http://{HOST}:{PORT}")
+    print(f"Launch Quality LLC {APP_VERSION} [{APP_EDITION_LABEL}] running on http://{HOST}:{PORT}")
     print(f"Database: {DB_PATH}")
     print(f"Data dir: {DATA_DIR} | Backup dir: {BACKUP_DIR}")
     print("Health check: /api/health")

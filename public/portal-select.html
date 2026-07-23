@@ -120,6 +120,20 @@
       color:#70839c;
       font-size:13px;
     }
+    .edition-pill{
+      display:inline-flex;
+      flex-direction:column;
+      gap:2px;
+      margin:10px auto 0;
+      padding:8px 14px;
+      border-radius:12px;
+      border:1px solid #d4e0f2;
+      background:linear-gradient(145deg,#fffdf8,#f3f7fd);
+      color:#0f2744;
+      font-weight:800;
+      font-size:13px;
+    }
+    .edition-pill small{font-size:11px;color:#1e4f8c;font-weight:700}
     @media (max-width:900px){
       .choices{grid-template-columns:1fr}
     }
@@ -130,6 +144,7 @@
     <header class="head">
       <h1>اختر منصة العمل</h1>
       <p>بعد تسجيل الدخول، اختر مسار الدخول المناسب.</p>
+      <div class="edition-pill">قاعدة النظام: التطوير المرعب<small dir="ltr">Launch Quality · v50 · Terrifying Dev</small></div>
     </header>
 
     <section class="choices">
@@ -157,7 +172,7 @@
       </article>
     </section>
 
-    <div class="foot">Launch Quality LLC</div>
+    <div class="foot">Launch Quality LLC · التطوير المرعب</div>
   </main>
 
   <script>
@@ -198,7 +213,7 @@
       localStorage.setItem("jawdah_portal_choice", c);
       if (token) localStorage.setItem("jawdah_cloud_token", token);
       // Always carry portal + token in the URL so app.html never falls back to login
-      let url = "/app.html?fresh=20260723v9&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
+      let url = "/app.html?fresh=20260723v11&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
       if (token) url += "&token=" + encodeURIComponent(token);
       location.replace(url);
     }

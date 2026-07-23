@@ -48,7 +48,7 @@
   // Kill every stale PWA cache hard (old shells were hiding UI updates).
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("/sw.js?v=kill50").catch(function(){});
+      navigator.serviceWorker.register("/sw.js?v=kill51").catch(function(){});
       navigator.serviceWorker.getRegistrations().then(function (regs) {
         return Promise.all((regs || []).map(function (reg) { return reg.unregister(); }));
       }).catch(function () {});
