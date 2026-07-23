@@ -9,6 +9,31 @@ body.saas-luxury.app-ready #lqBrandWatermark {
   display: none !important;
 }
 
+#lqFixedBgLogo{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  opacity: .16;
+}
+#lqFixedBgLogo img{
+  width: min(56vw, 860px);
+  max-height: 76vh;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 28px rgba(14, 30, 58, .18));
+}
+body.saas-luxury.app-ready #lqFixedBgLogo{
+  opacity: .12;
+}
+body.login-ultra.saas-login #lqFixedBgLogo{
+  opacity: .18;
+}
+body.login-ultra.saas-login #lqFixedBgLogo img{
+  width: min(52vw, 780px);
+}
+
 body.saas-luxury.app-ready #sec-dashboard::before {
   display: none !important;
   background: none !important;
