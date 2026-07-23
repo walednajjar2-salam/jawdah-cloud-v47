@@ -700,6 +700,7 @@
             <div class="form">
               <select id="ecPayInvoice"></select>
               <input id="ecPayAmount" type="number" min="0" step="0.001" placeholder="مبلغ التحصيل OMR">
+              <input id="ecPayDate" type="date">
             </div>
             <button class="gold-btn" type="button" onclick="payEstateContractInvoice()">تحصيل الآن</button>
           </div>
@@ -720,8 +721,24 @@
             <div id="estateSettlementPreviewBox"></div>
           </div>
         </div>
+        <div class="layout">
+          <div class="card">
+            <h3>إقفال مالي شهري (Estate Month-End)</h3>
+            <div class="form">
+              <input id="emcMonth" type="month">
+              <label class="mini"><input id="emcForce" type="checkbox"> إقفال إجباري عند وجود ذمم (إدارة فقط)</label>
+              <textarea id="emcNote" placeholder="ملاحظات الإقفال الشهري"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="closeEstateMonth()">إقفال الشهر الآن</button>
+          </div>
+          <div class="card">
+            <h3>تقرير إقفال الشهر</h3>
+            <div id="estateMonthClosePreviewBox"></div>
+          </div>
+        </div>
         <div class="card"><h3>فواتير عقود الإيجار</h3><div id="estateContractInvoicesTable"></div></div>
         <div class="card"><h3>سجل تسويات العقود</h3><div id="estateContractSettlementsTable"></div></div>
+        <div class="card"><h3>سجل الإقفالات الشهرية</h3><div id="estateMonthClosesTable"></div></div>
         <div class="card"><h3>سجل حالات الشقق والغرف</h3><div id="estateStatusHistoryTable"></div></div>
       </section>
 

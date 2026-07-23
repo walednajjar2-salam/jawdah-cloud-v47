@@ -166,6 +166,7 @@ TABLES = {
     "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "closed_at", "close_note", "notes"],
     "estate_contract_invoices": ["id", "invoice_no", "contract_id", "due_date", "amount", "paid_amount", "status", "issued_at", "note"],
     "estate_contract_settlements": ["id", "contract_id", "close_date", "total_scheduled", "total_paid", "outstanding_due", "future_cancelled", "closed_by", "note", "created_at"],
+    "estate_month_closes": ["id", "month_key", "status", "total_invoiced", "total_collected", "outstanding_due", "closed_by", "closed_at", "note"],
     "estate_status_history": ["id", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "old_status", "new_status", "changed_by", "changed_at", "note"],
     "estate_reservation_invoices": ["id", "invoice_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "client_name", "issued_by", "issue_date", "due_date", "rent_price", "deposit_amount", "prepaid_amount", "total_amount", "status", "note"],
     "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
@@ -1295,6 +1296,17 @@ def init_db() -> None:
                 note TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(contract_id) REFERENCES estate_contracts(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_month_closes (
+                id TEXT PRIMARY KEY,
+                month_key TEXT UNIQUE NOT NULL,
+                status TEXT NOT NULL DEFAULT 'Closed',
+                total_invoiced REAL NOT NULL DEFAULT 0,
+                total_collected REAL NOT NULL DEFAULT 0,
+                outstanding_due REAL NOT NULL DEFAULT 0,
+                closed_by TEXT,
+                closed_at TEXT NOT NULL,
+                note TEXT
             );
             CREATE TABLE IF NOT EXISTS estate_status_history (
                 id TEXT PRIMARY KEY,
@@ -2507,6 +2519,8 @@ def generate_estate_contract_invoices(
     created = 0
     skipped = 0
     for due in due_dates:
+        if is_estate_month_closed(db, due):
+            raise ValueError(f"لا يمكن إنشاء دفعة بتاريخ {due} لأن الشهر مقفل ماليًا")
         exists_row = db.execute(
             "SELECT id FROM estate_contract_invoices WHERE contract_id=? AND due_date=? LIMIT 1",
             (contract_id, due),
@@ -2528,6 +2542,20 @@ def generate_estate_contract_invoices(
         insert(db, "estate_contract_invoices", row)
         created += 1
     return {"created": created, "skipped": skipped, "count": len(due_dates)}
+
+
+def month_key_from_date_str(value: str) -> str:
+    d = datetime.fromisoformat(str(value)).date()
+    return d.strftime("%Y-%m")
+
+
+def is_estate_month_closed(db: sqlite3.Connection, date_str: str) -> bool:
+    mk = month_key_from_date_str(date_str)
+    row = db.execute(
+        "SELECT id FROM estate_month_closes WHERE month_key=? AND lower(status)='closed' LIMIT 1",
+        (mk,),
+    ).fetchone()
+    return bool(row)
 
 
 def log_estate_status_history(
@@ -3942,6 +3970,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_contract_close" and method == "POST":
                     user = self.require_user(db, "estate_apartments")
                     return None if not user else self.api_estate_contract_close(db, user)
+                if parts[0] == "estate_month_close" and method == "POST":
+                    user = self.require_user(db, "estate_apartments")
+                    return None if not user else self.api_estate_month_close(db, user)
                 if parts[0] == "estate_operations_check" and method == "GET":
                     user = self.require_user(db, "estate_apartments:read")
                     return None if not user else self.api_estate_operations_check(db, user)
@@ -4839,10 +4870,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
         data = self.read_json()
         invoice_id = str(data.get("invoice_id") or "").strip()
         amount = round(float(data.get("amount") or 0), 3)
+        payment_date = str(data.get("payment_date") or today()).strip() or today()
         if not invoice_id:
             return self.send_json({"ok": False, "error": "invoice_id مطلوب"}, 400)
         if amount <= 0:
             return self.send_json({"ok": False, "error": "مبلغ التحصيل يجب أن يكون أكبر من صفر"}, 400)
+        try:
+            _ = datetime.fromisoformat(payment_date).date()
+        except Exception:
+            return self.send_json({"ok": False, "error": "تاريخ التحصيل غير صحيح"}, 400)
+        if is_estate_month_closed(db, payment_date):
+            return self.send_json({"ok": False, "error": "لا يمكن تسجيل تحصيل داخل شهر مقفل ماليًا"}, 400)
         row = db.execute("SELECT * FROM estate_contract_invoices WHERE id=?", (invoice_id,)).fetchone()
         if not row:
             return self.send_json({"ok": False, "error": "فاتورة العقد غير موجودة"}, 404)
@@ -4865,7 +4903,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "accounts",
             {
                 "id": uid("ACC"),
-                "entry_date": today(),
+                "entry_date": payment_date,
                 "type": "income",
                 "category": "Estate Contract Collection",
                 "description": f"Collection {row['invoice_no']}",
@@ -4875,9 +4913,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "amount": amount,
             },
         )
-        audit(db, user, "pay", "estate_contract_invoices", invoice_id, f"Collected {amount} for {row['invoice_no']}")
+        audit(db, user, "pay", "estate_contract_invoices", invoice_id, f"Collected {amount} for {row['invoice_no']} on {payment_date}")
         db.commit()
-        self.send_json({"ok": True, "invoice_id": invoice_id, "paid_amount": new_paid, "status": new_status})
+        self.send_json({"ok": True, "invoice_id": invoice_id, "paid_amount": new_paid, "status": new_status, "payment_date": payment_date})
 
     def api_estate_contract_close(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -4894,6 +4932,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
             close_dt = datetime.fromisoformat(close_date).date()
         except Exception:
             return self.send_json({"ok": False, "error": "تاريخ الإغلاق غير صحيح"}, 400)
+        if is_estate_month_closed(db, close_dt.isoformat()):
+            return self.send_json({"ok": False, "error": "لا يمكن إغلاق عقد بتاريخ داخل شهر مقفل ماليًا"}, 400)
         force_close = bool(data.get("force_close"))
         note = str(data.get("note") or "Contract closed").strip()
         rows = rows_to_dicts(
@@ -4988,6 +5028,102 @@ class JawdahHandler(BaseHTTPRequestHandler):
         db.commit()
         self.send_json({"ok": True, "contract_id": contract_id, "status": "Closed", "settlement": settlement, "preview": preview})
 
+    def api_estate_month_close(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        month_key = str(data.get("month_key") or "").strip()
+        force = bool(data.get("force"))
+        note = str(data.get("note") or "").strip()
+        try:
+            if len(month_key) != 7:
+                raise ValueError("invalid")
+            month_start = datetime.fromisoformat(month_key + "-01").date()
+        except Exception:
+            return self.send_json({"ok": False, "error": "month_key يجب أن يكون بصيغة YYYY-MM"}, 400)
+        if month_start > date.today():
+            return self.send_json({"ok": False, "error": "لا يمكن إقفال شهر مستقبلي"}, 400)
+        month_end = add_months(month_start, 1) - timedelta(days=1)
+        inv_rows = rows_to_dicts(
+            db.execute(
+                "SELECT * FROM estate_contract_invoices WHERE strftime('%Y-%m', due_date)=?",
+                (month_key,),
+            ).fetchall()
+        )
+        total_invoiced = round(sum(float(x.get("amount") or 0) for x in inv_rows), 3)
+        total_collected = round(sum(float(x.get("paid_amount") or 0) for x in inv_rows), 3)
+        outstanding_due = round(sum(max(0.0, float(x.get("amount") or 0) - float(x.get("paid_amount") or 0)) for x in inv_rows), 3)
+        overdue_open = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, invoice_no, due_date, amount, paid_amount
+                FROM estate_contract_invoices
+                WHERE date(due_date) <= date(?) AND lower(status)!='paid'
+                ORDER BY due_date ASC
+                """,
+                (month_end.isoformat(),),
+            ).fetchall()
+        )
+        preview = {
+            "month_key": month_key,
+            "period": {"start": month_start.isoformat(), "end": month_end.isoformat()},
+            "total_invoiced": total_invoiced,
+            "total_collected": total_collected,
+            "outstanding_due": outstanding_due,
+            "overdue_open_count": len(overdue_open),
+            "overdue_open_items": [
+                {
+                    "id": r["id"],
+                    "invoice_no": r["invoice_no"],
+                    "due_date": r["due_date"],
+                    "remaining": round(max(0.0, float(r.get("amount") or 0) - float(r.get("paid_amount") or 0)), 3),
+                }
+                for r in overdue_open[:25]
+            ],
+        }
+        if overdue_open and not force:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "يوجد ذمم مفتوحة حتى نهاية هذا الشهر. عالج المتأخرات أو استخدم force=true بصلاحية الإدارة.",
+                    "preview": preview,
+                },
+                400,
+            )
+        role = str(user.get("role") or "").strip().lower()
+        if overdue_open and force and role not in ("owner", "admin"):
+            return self.send_json({"ok": False, "error": "force لإقفال الشهر مسموح فقط للمالك/الإدارة"}, 403)
+        exists_close = db.execute("SELECT id FROM estate_month_closes WHERE month_key=?", (month_key,)).fetchone()
+        closed_by = str(user.get("name") or user.get("username") or "System")
+        if exists_close:
+            db.execute(
+                """
+                UPDATE estate_month_closes
+                SET status='Closed', total_invoiced=?, total_collected=?, outstanding_due=?, closed_by=?, closed_at=?, note=?
+                WHERE month_key=?
+                """,
+                (total_invoiced, total_collected, outstanding_due, closed_by, now_iso(), note, month_key),
+            )
+            close_id = exists_close["id"]
+        else:
+            close_id = uid("EMC")
+            insert(
+                db,
+                "estate_month_closes",
+                {
+                    "id": close_id,
+                    "month_key": month_key,
+                    "status": "Closed",
+                    "total_invoiced": total_invoiced,
+                    "total_collected": total_collected,
+                    "outstanding_due": outstanding_due,
+                    "closed_by": closed_by,
+                    "closed_at": now_iso(),
+                    "note": note,
+                },
+            )
+        audit(db, user, "month_close", "estate_month_closes", close_id, f"Closed month {month_key} | outstanding={outstanding_due}")
+        db.commit()
+        self.send_json({"ok": True, "month_close_id": close_id, "month_key": month_key, "preview": preview})
+
     def api_estate_operations_check(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         checks: List[Dict[str, Any]] = []
         required_tables = [
@@ -5001,6 +5137,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "estate_contracts",
             "estate_contract_invoices",
             "estate_contract_settlements",
+            "estate_month_closes",
         ]
         for t in required_tables:
             exists_row = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1", (t,)).fetchone()
@@ -5036,6 +5173,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "SELECT COUNT(*) FROM estate_contracts WHERE lower(status)='active' AND date(end_date) < date(?)",
             (today(),),
         ).fetchone()[0]
+        closed_months = db.execute("SELECT COUNT(*) FROM estate_month_closes WHERE lower(status)='closed'").fetchone()[0]
         checks.append({"name": "status_history_exists", "ok": int(status_history_count or 0) > 0, "value": int(status_history_count or 0)})
         checks.append({"name": "overdue_contract_invoices", "ok": int(overdue_contract_invoices or 0) == 0, "value": int(overdue_contract_invoices or 0)})
         checks.append({"name": "active_contracts_past_end", "ok": int(active_past_end or 0) == 0, "value": int(active_past_end or 0)})
@@ -5062,6 +5200,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "overdue_contract_invoices": int(overdue_contract_invoices or 0),
                     "due_soon_contract_invoices": int(due_soon_contract_invoices or 0),
                     "active_contracts_past_end": int(active_past_end or 0),
+                    "closed_months": int(closed_months or 0),
                 },
             }
         )

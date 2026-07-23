@@ -3819,6 +3819,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const maint = estateRows('estate_maintenance');
     const contracts = estateRows('estate_contracts');
     const settlements = estateRows('estate_contract_settlements');
+    const monthCloses = estateRows('estate_month_closes');
     const cInv = estateRows('estate_contract_invoices');
     const hist = estateRows('estate_status_history');
     const rInv = estateRows('estate_reservation_invoices');
@@ -3916,6 +3917,11 @@ window.printHospitalityFolio = printHospitalityFolio;
     if(csTable) csTable.innerHTML = tableHtml(
       [['العقد','contract_id',(v)=>htmlEscape((contracts.find(c=>c.id===v)||{}).contract_no||v)],['تاريخ الإغلاق','close_date'],['مجدول','total_scheduled',(v)=>money(v)],['مدفوع','total_paid',(v)=>money(v)],['متأخرات','outstanding_due',(v)=>money(v)],['مستقبلي ملغى','future_cancelled'],['المغلق','closed_by'],['ملاحظة','note'],['وقت الإنشاء','created_at']],
       settlements
+    );
+    const mcTable = $('#estateMonthClosesTable');
+    if(mcTable) mcTable.innerHTML = tableHtml(
+      [['الشهر','month_key'],['الحالة','status',(v)=>statusBadge(v)],['مجدول','total_invoiced',(v)=>money(v)],['محصّل','total_collected',(v)=>money(v)],['ذمم','outstanding_due',(v)=>money(v)],['أغلق بواسطة','closed_by'],['وقت الإغلاق','closed_at'],['ملاحظة','note']],
+      monthCloses
     );
   }
   window.renderEstatePlatform = function(){
@@ -4206,12 +4212,60 @@ window.printHospitalityFolio = printHospitalityFolio;
       if(!(amount>0)) return toastErr('أدخل مبلغ تحصيل صحيح');
       await api('estate_contract_pay_invoice',{
         method:'POST',
-        body:JSON.stringify({ invoice_id: invoiceId, amount })
+        body:JSON.stringify({ invoice_id: invoiceId, amount, payment_date: String($('#ecPayDate')?.value || '').trim() })
       });
       toast('تم تسجيل التحصيل بنجاح');
       await loadAll();
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }
+  };
+  window.closeEstateMonth = async function(){
+    const monthKey = String($('#emcMonth')?.value || '').trim();
+    if(!monthKey) return toastErr('اختر الشهر أولاً');
+    const payload = {
+      month_key: monthKey,
+      force: !!$('#emcForce')?.checked,
+      note: String($('#emcNote')?.value || '').trim(),
+    };
+    const box = $('#estateMonthClosePreviewBox');
+    if(box) box.innerHTML = '<p class="mini">جاري إعداد إقفال الشهر...</p>';
+    try{
+      const headers = {'Content-Type':'application/json'};
+      if(Jawdah.token) headers.Authorization = 'Bearer ' + Jawdah.token;
+      const res = await fetch('/api/estate_month_close',{ method:'POST', headers, body:JSON.stringify(payload) });
+      const body = await res.json().catch(()=>({}));
+      if(!res.ok || body.ok===false){
+        const p = body.preview || null;
+        if(box && p){
+          box.innerHTML = `
+            <p class="badge overdue">${htmlEscape(body.error||'تعذر إقفال الشهر')}</p>
+            <div class="statement-row"><span>الشهر</span><b>${htmlEscape(p.month_key||'')}</b></div>
+            <div class="statement-row"><span>إجمالي مجدول</span><b>${money(p.total_invoiced||0)}</b></div>
+            <div class="statement-row"><span>إجمالي محصل</span><b>${money(p.total_collected||0)}</b></div>
+            <div class="statement-row"><span>ذمم مستحقة</span><b class="badge overdue">${money(p.outstanding_due||0)}</b></div>
+            <div class="statement-row"><span>فواتير مفتوحة حتى نهاية الشهر</span><b>${fmt(p.overdue_open_count||0)}</b></div>
+          `;
+        }else if(box){
+          box.innerHTML = `<p class="badge overdue">${htmlEscape(body.error||'تعذر الإقفال')}</p>`;
+        }
+        throw new Error(body.error || 'تعذر إقفال الشهر');
+      }
+      const p = body.preview || {};
+      if(box){
+        box.innerHTML = `
+          <p class="badge paid">تم إقفال الشهر بنجاح</p>
+          <div class="statement-row"><span>الشهر</span><b>${htmlEscape(p.month_key||'')}</b></div>
+          <div class="statement-row"><span>إجمالي مجدول</span><b>${money(p.total_invoiced||0)}</b></div>
+          <div class="statement-row"><span>إجمالي محصل</span><b>${money(p.total_collected||0)}</b></div>
+          <div class="statement-row"><span>ذمم حتى الإقفال</span><b>${money(p.outstanding_due||0)}</b></div>
+        `;
+      }
+      toast('تم إقفال الشهر المالي للعقارات');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){
+      toastErr(e);
+    }
   };
   window.closeEstateContract = async function(){
     const contractId = String($('#ecCloseContract')?.value || '').trim();
@@ -4283,6 +4337,7 @@ window.printHospitalityFolio = printHospitalityFolio;
           <div class="kpi"><span>سجل الحالات</span><strong>${fmt(m.status_history_rows||0)}</strong></div>
           <div class="kpi"><span>فواتير متأخرة</span><strong>${fmt(m.overdue_contract_invoices||0)}</strong></div>
           <div class="kpi"><span>تستحق خلال 7 أيام</span><strong>${fmt(m.due_soon_contract_invoices||0)}</strong></div>
+          <div class="kpi"><span>أشهر مقفلة</span><strong>${fmt(m.closed_months||0)}</strong></div>
         </div>
         ${checks.map(c=>`<div class="statement-row"><span>${htmlEscape(c.name||'check')}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'OK':'Needs fix'} · ${fmt(c.value||0)}</b></div>`).join('')}
       `;
@@ -4301,6 +4356,11 @@ window.printHospitalityFolio = printHospitalityFolio;
   });
   syncEstateApartmentStateFields();
   syncEstateRoomStateFields();
+  if($('#ecPayDate')) $('#ecPayDate').value = today();
+  if($('#emcMonth')){
+    const d = new Date();
+    $('#emcMonth').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
 })();
 
 (function(){
