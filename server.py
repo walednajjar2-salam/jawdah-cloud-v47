@@ -80,6 +80,7 @@ MAX_JOURNAL_FILES_PER_ENTRY = 5
 HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
+LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
 APP_VERSION = "Launch-Quality-LLC-v49-production"
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 BACKUP_DIR = Path(os.environ.get("JAWDAH_BACKUP_DIR", str(DATA_DIR / "backups"))).resolve()
@@ -128,11 +129,13 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches"},
-    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read"},
-    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read"},
+    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
+    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
 }
+ROLE_PERMISSIONS["operations"].update({"estate_actions_convert", "estate_actions_contract_create"})
+ROLE_PERMISSIONS["accountant"].update({"estate_actions_contract_close", "estate_actions_month_close", "estate_actions_pricing_edit"})
 
 TABLES = {
     "branches": ["id", "code", "name", "city", "address", "manager", "active", "notes", "created_at"],
@@ -155,15 +158,29 @@ TABLES = {
     "bank_transactions": ["id", "bank_date", "bank_name", "reference", "type", "description", "amount", "matched_account_id", "matched_invoice_id", "matched_payment_id", "status"],
     "chart_accounts": ["id", "code", "name", "type", "parent_code", "active", "notes"],
     "financial_periods": ["id", "period_name", "start_date", "end_date", "status", "closed_by", "closed_at", "notes"],
+    "accounting_budgets": ["id", "month_key", "revenue_target", "expense_budget", "collection_target", "cash_reserve_target", "notes", "created_at", "updated_at"],
     "approvals": ["id", "entity", "entity_id", "request_type", "status", "requested_by", "approved_by", "requested_at", "approved_at", "notes"],
     "bank_reconciliations": ["id", "bank_name", "period_name", "book_balance", "bank_balance", "difference", "status", "reconciled_by", "reconciled_at", "notes", "matched_count", "unmatched_count", "period_start", "period_end"],
     "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
-    "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
+    "estate_properties": ["id", "name", "status", "location", "building_count", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_buildings": ["id", "property_id", "name", "status", "location", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_apartments": ["id", "property_id", "building_id", "name", "status", "room_count", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_accessories": ["id", "property_id", "building_id", "apartment_id", "room_id", "name", "category", "status", "qty", "unit_cost", "supplier", "invoice_no", "responsible_name", "notes", "last_update"],
+    "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
+    "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "closed_at", "close_note", "notes"],
+    "estate_contract_invoices": ["id", "invoice_no", "contract_id", "due_date", "amount", "paid_amount", "status", "issued_at", "note"],
+    "estate_contract_settlements": ["id", "contract_id", "close_date", "total_scheduled", "total_paid", "outstanding_due", "future_cancelled", "closed_by", "note", "created_at"],
+    "estate_month_closes": ["id", "month_key", "status", "total_invoiced", "total_collected", "outstanding_due", "closed_by", "closed_at", "note"],
+    "estate_status_history": ["id", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "old_status", "new_status", "changed_by", "changed_at", "note"],
+    "estate_reservation_invoices": ["id", "invoice_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "client_name", "issued_by", "issue_date", "due_date", "rent_price", "deposit_amount", "prepaid_amount", "total_amount", "status", "note"],
+    "users": ["id", "username", "name", "role", "active", "email", "must_change_password", "password_changed_at", "created_at", "last_login"],
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
-PRIMARY_OWNER_USERNAMES = {"owner", "waleed.najjar", "yaqoub.khasibi", "yaqoub"}
-DAILY_OPS_MANAGER_USERNAMES = {"razan", "owner", "waleed.najjar", "yaqoub.khasibi", "yaqoub"}
+FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi", "ahmed", "ahmed.najjar"}
+PRIMARY_OWNER_USERNAMES = {"waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
+DAILY_OPS_MANAGER_USERNAMES = {"razan", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
 
 WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
 
@@ -1082,6 +1099,17 @@ def init_db() -> None:
                 closed_at TEXT,
                 notes TEXT
             );
+            CREATE TABLE IF NOT EXISTS accounting_budgets (
+                id TEXT PRIMARY KEY,
+                month_key TEXT UNIQUE NOT NULL,
+                revenue_target REAL NOT NULL DEFAULT 0,
+                expense_budget REAL NOT NULL DEFAULT 0,
+                collection_target REAL NOT NULL DEFAULT 0,
+                cash_reserve_target REAL NOT NULL DEFAULT 0,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS approvals (
                 id TEXT PRIMARY KEY,
                 entity TEXT NOT NULL,
@@ -1116,6 +1144,242 @@ def init_db() -> None:
                 cost REAL NOT NULL DEFAULT 0,
                 notes TEXT,
                 FOREIGN KEY(property_id) REFERENCES properties(id)
+            );
+            CREATE TABLE IF NOT EXISTS estate_properties (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                location TEXT,
+                building_count INTEGER NOT NULL DEFAULT 0,
+                apartment_count INTEGER NOT NULL DEFAULT 0,
+                room_count INTEGER NOT NULL DEFAULT 0,
+                base_rent_price REAL NOT NULL DEFAULT 0,
+                service_charge REAL NOT NULL DEFAULT 0,
+                attachments TEXT,
+                manager_name TEXT,
+                tenant_client_id TEXT,
+                tenant_phone TEXT,
+                notes TEXT,
+                image TEXT,
+                last_update TEXT
+            );
+            CREATE TABLE IF NOT EXISTS estate_buildings (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                location TEXT,
+                apartment_count INTEGER NOT NULL DEFAULT 0,
+                room_count INTEGER NOT NULL DEFAULT 0,
+                base_rent_price REAL NOT NULL DEFAULT 0,
+                service_charge REAL NOT NULL DEFAULT 0,
+                attachments TEXT,
+                manager_name TEXT,
+                tenant_client_id TEXT,
+                tenant_phone TEXT,
+                notes TEXT,
+                image TEXT,
+                last_update TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_apartments (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                building_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'vacant',
+                room_count INTEGER NOT NULL DEFAULT 0,
+                rent_price REAL NOT NULL DEFAULT 0,
+                booking_deposit REAL NOT NULL DEFAULT 0,
+                prepaid_amount REAL NOT NULL DEFAULT 0,
+                reservation_start_date TEXT,
+                reservation_end_date TEXT,
+                booked_client_name TEXT,
+                booked_client_phone TEXT,
+                booked_client_id TEXT,
+                booked_by_employee TEXT,
+                maintenance_notes TEXT,
+                maintenance_cost REAL NOT NULL DEFAULT 0,
+                attachments TEXT,
+                manager_name TEXT,
+                tenant_client_id TEXT,
+                tenant_phone TEXT,
+                notes TEXT,
+                image TEXT,
+                last_update TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE,
+                FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_rooms (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                building_id TEXT NOT NULL,
+                apartment_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                room_type TEXT,
+                status TEXT NOT NULL DEFAULT 'vacant',
+                rent_price REAL NOT NULL DEFAULT 0,
+                booking_deposit REAL NOT NULL DEFAULT 0,
+                prepaid_amount REAL NOT NULL DEFAULT 0,
+                reservation_start_date TEXT,
+                reservation_end_date TEXT,
+                booked_client_name TEXT,
+                booked_client_phone TEXT,
+                booked_client_id TEXT,
+                booked_by_employee TEXT,
+                maintenance_notes TEXT,
+                maintenance_cost REAL NOT NULL DEFAULT 0,
+                attachments TEXT,
+                manager_name TEXT,
+                tenant_client_id TEXT,
+                tenant_phone TEXT,
+                notes TEXT,
+                image TEXT,
+                last_update TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE,
+                FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE CASCADE,
+                FOREIGN KEY(apartment_id) REFERENCES estate_apartments(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_accessories (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                name TEXT NOT NULL,
+                category TEXT,
+                status TEXT NOT NULL DEFAULT 'available',
+                qty INTEGER NOT NULL DEFAULT 1,
+                unit_cost REAL NOT NULL DEFAULT 0,
+                supplier TEXT,
+                invoice_no TEXT,
+                responsible_name TEXT,
+                notes TEXT,
+                last_update TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE,
+                FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE SET NULL,
+                FOREIGN KEY(apartment_id) REFERENCES estate_apartments(id) ON DELETE SET NULL,
+                FOREIGN KEY(room_id) REFERENCES estate_rooms(id) ON DELETE SET NULL
+            );
+            CREATE TABLE IF NOT EXISTS estate_maintenance (
+                id TEXT PRIMARY KEY,
+                property_id TEXT,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'Open',
+                priority TEXT NOT NULL DEFAULT 'Medium',
+                responsible_name TEXT,
+                assigned_team TEXT,
+                parts_details TEXT,
+                parts_cost REAL NOT NULL DEFAULT 0,
+                labor_cost REAL NOT NULL DEFAULT 0,
+                invoice_no TEXT,
+                invoice_date TEXT,
+                vendor_name TEXT,
+                total_cost REAL NOT NULL DEFAULT 0,
+                approved_by TEXT,
+                maintenance_date TEXT NOT NULL,
+                next_followup_date TEXT,
+                closed_at TEXT,
+                notes TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE SET NULL,
+                FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE SET NULL,
+                FOREIGN KEY(apartment_id) REFERENCES estate_apartments(id) ON DELETE SET NULL,
+                FOREIGN KEY(room_id) REFERENCES estate_rooms(id) ON DELETE SET NULL
+            );
+            CREATE TABLE IF NOT EXISTS estate_contracts (
+                id TEXT PRIMARY KEY,
+                contract_no TEXT UNIQUE NOT NULL,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                property_id TEXT,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                client_id TEXT NOT NULL,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL,
+                rent_amount REAL NOT NULL DEFAULT 0,
+                payment_cycle TEXT NOT NULL DEFAULT 'monthly',
+                status TEXT NOT NULL DEFAULT 'Active',
+                created_by TEXT,
+                created_at TEXT NOT NULL,
+                closed_at TEXT,
+                close_note TEXT,
+                notes TEXT
+            );
+            CREATE TABLE IF NOT EXISTS estate_contract_invoices (
+                id TEXT PRIMARY KEY,
+                invoice_no TEXT UNIQUE NOT NULL,
+                contract_id TEXT NOT NULL,
+                due_date TEXT NOT NULL,
+                amount REAL NOT NULL DEFAULT 0,
+                paid_amount REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'Pending',
+                issued_at TEXT NOT NULL,
+                note TEXT,
+                FOREIGN KEY(contract_id) REFERENCES estate_contracts(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_contract_settlements (
+                id TEXT PRIMARY KEY,
+                contract_id TEXT NOT NULL,
+                close_date TEXT NOT NULL,
+                total_scheduled REAL NOT NULL DEFAULT 0,
+                total_paid REAL NOT NULL DEFAULT 0,
+                outstanding_due REAL NOT NULL DEFAULT 0,
+                future_cancelled INTEGER NOT NULL DEFAULT 0,
+                closed_by TEXT,
+                note TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(contract_id) REFERENCES estate_contracts(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_month_closes (
+                id TEXT PRIMARY KEY,
+                month_key TEXT UNIQUE NOT NULL,
+                status TEXT NOT NULL DEFAULT 'Closed',
+                total_invoiced REAL NOT NULL DEFAULT 0,
+                total_collected REAL NOT NULL DEFAULT 0,
+                outstanding_due REAL NOT NULL DEFAULT 0,
+                closed_by TEXT,
+                closed_at TEXT NOT NULL,
+                note TEXT
+            );
+            CREATE TABLE IF NOT EXISTS estate_status_history (
+                id TEXT PRIMARY KEY,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                property_id TEXT,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                old_status TEXT,
+                new_status TEXT NOT NULL,
+                changed_by TEXT,
+                changed_at TEXT NOT NULL,
+                note TEXT
+            );
+            CREATE TABLE IF NOT EXISTS estate_reservation_invoices (
+                id TEXT PRIMARY KEY,
+                invoice_no TEXT UNIQUE NOT NULL,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                property_id TEXT,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                client_id TEXT,
+                client_name TEXT,
+                issued_by TEXT,
+                issue_date TEXT NOT NULL,
+                due_date TEXT,
+                rent_price REAL NOT NULL DEFAULT 0,
+                deposit_amount REAL NOT NULL DEFAULT 0,
+                prepaid_amount REAL NOT NULL DEFAULT 0,
+                total_amount REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'Open',
+                note TEXT
             );
             CREATE TABLE IF NOT EXISTS audit_log (
                 id TEXT PRIMARY KEY,
@@ -1326,6 +1590,66 @@ def init_db() -> None:
         ensure_column(db, "hospitality_folios", "status", "TEXT NOT NULL DEFAULT 'open'")
         ensure_column(db, "hospitality_folios", "notes", "TEXT")
         for col, definition in [
+            ("status", "TEXT NOT NULL DEFAULT 'active'"),
+            ("base_rent_price", "REAL NOT NULL DEFAULT 0"),
+            ("service_charge", "REAL NOT NULL DEFAULT 0"),
+        ]:
+            ensure_column(db, "estate_properties", col, definition)
+        for col, definition in [
+            ("status", "TEXT NOT NULL DEFAULT 'active'"),
+            ("base_rent_price", "REAL NOT NULL DEFAULT 0"),
+            ("service_charge", "REAL NOT NULL DEFAULT 0"),
+        ]:
+            ensure_column(db, "estate_buildings", col, definition)
+        for col, definition in [
+            ("status", "TEXT NOT NULL DEFAULT 'vacant'"),
+            ("rent_price", "REAL NOT NULL DEFAULT 0"),
+            ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
+            ("prepaid_amount", "REAL NOT NULL DEFAULT 0"),
+            ("reservation_start_date", "TEXT"),
+            ("reservation_end_date", "TEXT"),
+            ("booked_client_name", "TEXT"),
+            ("booked_client_phone", "TEXT"),
+            ("booked_client_id", "TEXT"),
+            ("booked_by_employee", "TEXT"),
+            ("maintenance_notes", "TEXT"),
+            ("maintenance_cost", "REAL NOT NULL DEFAULT 0"),
+        ]:
+            ensure_column(db, "estate_apartments", col, definition)
+        for col, definition in [
+            ("rent_price", "REAL NOT NULL DEFAULT 0"),
+            ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
+            ("prepaid_amount", "REAL NOT NULL DEFAULT 0"),
+            ("reservation_start_date", "TEXT"),
+            ("reservation_end_date", "TEXT"),
+            ("booked_client_name", "TEXT"),
+            ("booked_client_phone", "TEXT"),
+            ("booked_client_id", "TEXT"),
+            ("booked_by_employee", "TEXT"),
+            ("maintenance_notes", "TEXT"),
+            ("maintenance_cost", "REAL NOT NULL DEFAULT 0"),
+        ]:
+            ensure_column(db, "estate_rooms", col, definition)
+        for col, definition in [
+            ("assigned_team", "TEXT"),
+            ("labor_cost", "REAL NOT NULL DEFAULT 0"),
+            ("invoice_date", "TEXT"),
+            ("vendor_name", "TEXT"),
+            ("approved_by", "TEXT"),
+            ("closed_at", "TEXT"),
+        ]:
+            ensure_column(db, "estate_maintenance", col, definition)
+        for col, definition in [
+            ("payment_cycle", "TEXT NOT NULL DEFAULT 'monthly'"),
+            ("status", "TEXT NOT NULL DEFAULT 'Active'"),
+            ("created_by", "TEXT"),
+            ("created_at", "TEXT"),
+            ("closed_at", "TEXT"),
+            ("close_note", "TEXT"),
+            ("notes", "TEXT"),
+        ]:
+            ensure_column(db, "estate_contracts", col, definition)
+        for col, definition in [
             ("credential_data", "TEXT"),
             ("public_key", "TEXT"),
             ("algorithm", "TEXT"),
@@ -1450,8 +1774,13 @@ def seed_chart_accounts(db: sqlite3.Connection) -> None:
 
 
 def has_permission(user: Dict[str, Any], permission: str) -> bool:
-    role = user.get("role")
-    perms = ROLE_PERMISSIONS.get(role, set())
+    role = str(user.get("role") or "viewer").lower()
+    uname = str(user.get("username") or "").strip().lower()
+    if uname in FULL_ACCESS_USERNAMES:
+        return True
+    # Owner/Admin privileges are limited to explicit full-access usernames.
+    effective_role = "operations" if role in ("owner", "admin") else role
+    perms = ROLE_PERMISSIONS.get(effective_role, set())
     if "all" in perms:
         return True
     if permission in perms:
@@ -2154,6 +2483,219 @@ def next_invoice_no(db: sqlite3.Connection) -> tuple[str, int, int]:
     ).fetchone()[0]
     seq = int(row or 0) + 1
     return f"{prefix}{seq:04d}", year, seq
+
+
+def next_estate_reservation_invoice_no(db: sqlite3.Connection) -> str:
+    year = date.today().year
+    prefix = f"RSV-{year}-"
+    row = db.execute(
+        "SELECT MAX(CAST(substr(invoice_no, -4) AS INTEGER)) FROM estate_reservation_invoices WHERE invoice_no LIKE ?",
+        (prefix + "%",),
+    ).fetchone()[0]
+    seq = int(row or 0) + 1
+    return f"{prefix}{seq:04d}"
+
+
+def next_estate_contract_no(db: sqlite3.Connection) -> str:
+    year = date.today().year
+    prefix = f"EST-{year}-"
+    row = db.execute(
+        "SELECT MAX(CAST(substr(contract_no, -4) AS INTEGER)) FROM estate_contracts WHERE contract_no LIKE ?",
+        (prefix + "%",),
+    ).fetchone()[0]
+    seq = int(row or 0) + 1
+    return f"{prefix}{seq:04d}"
+
+
+def next_estate_contract_invoice_no(db: sqlite3.Connection) -> str:
+    year = date.today().year
+    prefix = f"ECI-{year}-"
+    row = db.execute(
+        "SELECT MAX(CAST(substr(invoice_no, -4) AS INTEGER)) FROM estate_contract_invoices WHERE invoice_no LIKE ?",
+        (prefix + "%",),
+    ).fetchone()[0]
+    seq = int(row or 0) + 1
+    return f"{prefix}{seq:04d}"
+
+
+def estate_contract_schedule_due_dates(start_date: str, end_date: str, payment_cycle: str) -> List[str]:
+    s = datetime.fromisoformat(str(start_date)).date()
+    e = datetime.fromisoformat(str(end_date)).date()
+    if e < s:
+        raise ValueError("Invalid contract date range")
+    cycle = str(payment_cycle or "monthly").strip().lower()
+    if cycle == "once":
+        return [s.isoformat()]
+    step = 1 if cycle == "monthly" else (3 if cycle == "quarterly" else 12)
+    dates: List[str] = []
+    cur = s
+    while cur <= e:
+        dates.append(cur.isoformat())
+        nxt = add_months(cur, step)
+        if nxt == cur:
+            break
+        cur = nxt
+    if not dates:
+        dates.append(s.isoformat())
+    return dates
+
+
+def generate_estate_contract_invoices(
+    db: sqlite3.Connection,
+    contract_row: Dict[str, Any],
+    actor_name: str,
+    replace_open: bool = False,
+) -> Dict[str, Any]:
+    contract_id = str(contract_row.get("id") or "")
+    if not contract_id:
+        raise ValueError("Contract id missing")
+    if replace_open:
+        db.execute("DELETE FROM estate_contract_invoices WHERE contract_id=? AND lower(status)='pending'", (contract_id,))
+    due_dates = estate_contract_schedule_due_dates(
+        str(contract_row.get("start_date") or ""),
+        str(contract_row.get("end_date") or ""),
+        str(contract_row.get("payment_cycle") or "monthly"),
+    )
+    amount = round(float(contract_row.get("rent_amount") or 0), 3)
+    if amount <= 0:
+        raise ValueError("Rent amount must be positive")
+    created = 0
+    skipped = 0
+    for due in due_dates:
+        if is_estate_month_closed(db, due):
+            raise ValueError(f"لا يمكن إنشاء دفعة بتاريخ {due} لأن الشهر مقفل ماليًا")
+        exists_row = db.execute(
+            "SELECT id FROM estate_contract_invoices WHERE contract_id=? AND due_date=? LIMIT 1",
+            (contract_id, due),
+        ).fetchone()
+        if exists_row:
+            skipped += 1
+            continue
+        row = {
+            "id": uid("ECI"),
+            "invoice_no": next_estate_contract_invoice_no(db),
+            "contract_id": contract_id,
+            "due_date": due,
+            "amount": amount,
+            "paid_amount": 0,
+            "status": "Pending",
+            "issued_at": today(),
+            "note": f"Auto schedule by {actor_name}",
+        }
+        insert(db, "estate_contract_invoices", row)
+        created += 1
+    return {"created": created, "skipped": skipped, "count": len(due_dates)}
+
+
+def month_key_from_date_str(value: str) -> str:
+    d = datetime.fromisoformat(str(value)).date()
+    return d.strftime("%Y-%m")
+
+
+def is_estate_month_closed(db: sqlite3.Connection, date_str: str) -> bool:
+    mk = month_key_from_date_str(date_str)
+    row = db.execute(
+        "SELECT id FROM estate_month_closes WHERE month_key=? AND lower(status)='closed' LIMIT 1",
+        (mk,),
+    ).fetchone()
+    return bool(row)
+
+
+def log_estate_status_history(
+    db: sqlite3.Connection,
+    entity_type: str,
+    entity_id: str,
+    payload: Dict[str, Any],
+    old_status: str,
+    new_status: str,
+    actor_name: str,
+    note: str = "",
+) -> None:
+    insert(
+        db,
+        "estate_status_history",
+        {
+            "id": uid("ESH"),
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "property_id": payload.get("property_id"),
+            "building_id": payload.get("building_id"),
+            "apartment_id": payload.get("apartment_id") if entity_type == "room" else payload.get("id"),
+            "room_id": payload.get("id") if entity_type == "room" else None,
+            "old_status": old_status or None,
+            "new_status": new_status,
+            "changed_by": actor_name,
+            "changed_at": now_iso(),
+            "note": note,
+        },
+    )
+
+
+def ensure_estate_reservation_invoice(
+    db: sqlite3.Connection,
+    entity_type: str,
+    entity_id: str,
+    payload: Dict[str, Any],
+    actor_name: str,
+) -> None:
+    open_row = db.execute(
+        "SELECT id FROM estate_reservation_invoices WHERE entity_type=? AND entity_id=? AND lower(status)='open' ORDER BY rowid DESC LIMIT 1",
+        (entity_type, entity_id),
+    ).fetchone()
+    if open_row:
+        return
+    deposit = round(float(payload.get("booking_deposit") or 0), 3)
+    prepaid = round(float(payload.get("prepaid_amount") or 0), 3)
+    rent = round(float(payload.get("rent_price") or 0), 3)
+    total = round(max(0.0, deposit + prepaid), 3)
+    if total <= 0:
+        return
+    issue_date = today()
+    due_date = str(payload.get("reservation_start_date") or issue_date)
+    client_id = str(payload.get("booked_client_id") or "").strip() or None
+    client_name = str(payload.get("booked_client_name") or "").strip() or ""
+    if client_id and not client_name:
+        c = db.execute("SELECT name FROM clients WHERE id=?", (client_id,)).fetchone()
+        if c:
+            client_name = str(c["name"] or "")
+    row = {
+        "id": uid("RSV"),
+        "invoice_no": next_estate_reservation_invoice_no(db),
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "property_id": payload.get("property_id"),
+        "building_id": payload.get("building_id"),
+        "apartment_id": payload.get("apartment_id") if entity_type == "room" else entity_id,
+        "room_id": entity_id if entity_type == "room" else None,
+        "client_id": client_id,
+        "client_name": client_name or "Reservation Client",
+        "issued_by": actor_name,
+        "issue_date": issue_date,
+        "due_date": due_date,
+        "rent_price": rent,
+        "deposit_amount": deposit,
+        "prepaid_amount": prepaid,
+        "total_amount": total,
+        "status": "Open",
+        "note": f"Auto reservation invoice for {entity_type} {entity_id}",
+    }
+    insert(db, "estate_reservation_invoices", row)
+    insert(
+        db,
+        "accounts",
+        {
+            "id": uid("ACC"),
+            "entry_date": issue_date,
+            "type": "income",
+            "category": "Estate Reservation",
+            "description": f"Reservation {row['invoice_no']} - {entity_type} {entity_id}",
+            "client_id": client_id,
+            # accounts.property_id references legacy properties table, not estate_properties
+            "property_id": None,
+            "invoice_id": None,
+            "amount": total,
+        },
+    )
 
 
 def invoice_tax_breakdown(subtotal: float, vat_rate: float | None = None) -> Dict[str, float]:
@@ -2920,11 +3462,12 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
         ("ali", "علي", "maintenance", "444444"),
         ("admin", "System Admin", "admin", "555555"),
     ]
-    allowed_usernames = {row[0] for row in team}
     for username, name, role, password in team:
         ensure_user(db, username, name, role, password)
-    placeholders = ",".join(["?"] * len(allowed_usernames))
-    db.execute(f"UPDATE users SET active=0 WHERE username NOT IN ({placeholders})", tuple(sorted(allowed_usernames)))
+    # Keep Ahmed enabled as executive manager without rotating his password.
+    db.execute(
+        "UPDATE users SET role='admin', active=1 WHERE lower(username) IN ('ahmed.najjar','ahmed')"
+    )
 
 
 class JawdahHandler(BaseHTTPRequestHandler):
@@ -3097,7 +3640,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(raw)))
-            if safe.endswith(".html"):
+            if full.suffix.lower() in {".exe", ".msi", ".zip", ".apk"}:
+                self.send_header("Content-Disposition", f'attachment; filename="{full.name}"')
+                self.send_header("Cache-Control", "no-cache, must-revalidate")
+            elif safe.endswith(".html"):
                 self.send_header("Cache-Control", "no-cache, must-revalidate")
             elif safe.endswith((".css", ".js")):
                 self.send_header("Cache-Control", "public, max-age=300, must-revalidate")
@@ -3280,6 +3826,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "accountant_reports" and method == "GET":
                     user = self.require_user(db, "reports:read")
                     return None if not user else self.api_accountant_reports(db, query)
+                if parts[0] == "accounting_platform_overview" and method == "GET":
+                    user = self.require_user(db, "accounts:read")
+                    return None if not user else self.api_accounting_platform_overview(db, query)
+                if parts[0] == "accounting_cfo_overview" and method == "GET":
+                    user = self.require_user(db, "accounts:read")
+                    return None if not user else self.api_accounting_cfo_overview(db, query)
                 if parts[0] == "financial_statements" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_financial_statements(db)
@@ -3457,6 +4009,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 ):
                     user = self.require_user(db, "properties")
                     return None if not user else self.api_property_photo(db, user, parts[1])
+                if parts[0] == "estate_convert_reservation" and method == "POST":
+                    user = self.require_user(db, "estate_actions_convert")
+                    return None if not user else self.api_estate_convert_reservation(db, user)
+                if parts[0] == "estate_convert_to_contract" and method == "POST":
+                    user = self.require_user(db, "estate_actions_contract_create")
+                    return None if not user else self.api_estate_convert_to_contract(db, user)
+                if parts[0] == "estate_contract_generate_schedule" and method == "POST":
+                    user = self.require_user(db, "estate_actions_contract_create")
+                    return None if not user else self.api_estate_contract_generate_schedule(db, user)
+                if parts[0] == "estate_contract_pay_invoice" and method == "POST":
+                    user = self.require_user(db, "estate_apartments")
+                    return None if not user else self.api_estate_contract_pay_invoice(db, user)
+                if parts[0] == "estate_contract_close" and method == "POST":
+                    user = self.require_user(db, "estate_actions_contract_close")
+                    return None if not user else self.api_estate_contract_close(db, user)
+                if parts[0] == "estate_month_close" and method == "POST":
+                    user = self.require_user(db, "estate_actions_month_close")
+                    return None if not user else self.api_estate_month_close(db, user)
+                if parts[0] == "estate_operations_check" and method == "GET":
+                    user = self.require_user(db, "estate_apartments:read")
+                    return None if not user else self.api_estate_operations_check(db, user)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -4162,6 +4735,532 @@ class JawdahHandler(BaseHTTPRequestHandler):
         except Exception as exc:
             return self.send_json({"ok": False, "error": "تعذر حفظ الصورة", "detail": str(exc)}, 500)
 
+    def api_estate_convert_reservation(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        entity_type = str(data.get("entity_type") or "").strip().lower()
+        entity_id = str(data.get("entity_id") or "").strip()
+        tenant_client_id = str(data.get("tenant_client_id") or "").strip() or None
+        note = str(data.get("note") or "Converted from reserved to occupied").strip()
+        if entity_type not in ("apartment", "room"):
+            return self.send_json({"ok": False, "error": "entity_type must be apartment or room"}, 400)
+        if not entity_id:
+            return self.send_json({"ok": False, "error": "entity_id مطلوب"}, 400)
+        table = "estate_apartments" if entity_type == "apartment" else "estate_rooms"
+        row = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "العنصر غير موجود"}, 404)
+        current_status = str(row["status"] or "").strip().lower()
+        if current_status != "reserved":
+            return self.send_json({"ok": False, "error": "يمكن التحويل فقط من حالة محجوزة"}, 400)
+        if not tenant_client_id:
+            tenant_client_id = str(row["booked_client_id"] or "").strip() or None
+        if tenant_client_id and not exists(db, "clients", tenant_client_id):
+            return self.send_json({"ok": False, "error": "العميل المحدد غير موجود"}, 400)
+        tenant_phone = str(row["tenant_phone"] or "").strip() or str(row["booked_client_phone"] or "").strip() or None
+        db.execute(
+            f"""
+            UPDATE {table}
+            SET status='occupied',
+                tenant_client_id=?,
+                tenant_phone=?,
+                reservation_start_date=NULL,
+                reservation_end_date=NULL,
+                last_update=?
+            WHERE id=?
+            """,
+            (tenant_client_id, tenant_phone, today(), entity_id),
+        )
+        log_estate_status_history(
+            db,
+            entity_type,
+            entity_id,
+            dict(row),
+            "reserved",
+            "occupied",
+            str(user.get("name") or user.get("username") or "System"),
+            note,
+        )
+        db.execute(
+            "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed by conversion to occupied at ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
+            (now_iso(), entity_type, entity_id),
+        )
+        audit(db, user, "convert_reservation", table, entity_id, note)
+        db.commit()
+        self.send_json({"ok": True, "entity_type": entity_type, "entity_id": entity_id, "status": "occupied"})
+
+    def api_estate_convert_to_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        entity_type = str(data.get("entity_type") or "").strip().lower()
+        entity_id = str(data.get("entity_id") or "").strip()
+        if entity_type not in ("apartment", "room"):
+            return self.send_json({"ok": False, "error": "entity_type must be apartment or room"}, 400)
+        if not entity_id:
+            return self.send_json({"ok": False, "error": "entity_id مطلوب"}, 400)
+        table = "estate_apartments" if entity_type == "apartment" else "estate_rooms"
+        row = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "العنصر غير موجود"}, 404)
+        status_now = str(row["status"] or "").strip().lower()
+        if status_now not in ("reserved", "occupied"):
+            return self.send_json({"ok": False, "error": "يجب أن تكون الحالة محجوزة أو مؤجرة قبل إنشاء العقد"}, 400)
+        active_exists = db.execute(
+            "SELECT id, contract_no FROM estate_contracts WHERE entity_type=? AND entity_id=? AND lower(status)='active' ORDER BY rowid DESC LIMIT 1",
+            (entity_type, entity_id),
+        ).fetchone()
+        if active_exists:
+            return self.send_json({"ok": False, "error": f"يوجد عقد نشط مسبقًا: {active_exists['contract_no']}"}, 400)
+
+        tenant_client_id = str(data.get("tenant_client_id") or "").strip() or str(row["tenant_client_id"] or "").strip() or str(row["booked_client_id"] or "").strip()
+        if not tenant_client_id:
+            return self.send_json({"ok": False, "error": "حدد العميل/المستأجر قبل إنشاء العقد"}, 400)
+        if not exists(db, "clients", tenant_client_id):
+            return self.send_json({"ok": False, "error": "العميل المحدد غير موجود"}, 400)
+        c_row = db.execute("SELECT name, phone FROM clients WHERE id=?", (tenant_client_id,)).fetchone()
+        tenant_phone = str(data.get("tenant_phone") or "").strip() or str(row["tenant_phone"] or "").strip() or str(c_row["phone"] if c_row else "") or None
+
+        start_date = str(data.get("start_date") or row["reservation_start_date"] or today()).strip()
+        end_date = str(data.get("end_date") or row["reservation_end_date"] or "").strip()
+        if not end_date:
+            d0 = datetime.fromisoformat(start_date).date()
+            end_date = (d0 + timedelta(days=365)).isoformat()
+        try:
+            sdt = datetime.fromisoformat(start_date).date()
+            edt = datetime.fromisoformat(end_date).date()
+        except Exception:
+            return self.send_json({"ok": False, "error": "تواريخ العقد غير صحيحة"}, 400)
+        if edt < sdt:
+            return self.send_json({"ok": False, "error": "تاريخ نهاية العقد يجب أن يكون بعد البداية"}, 400)
+
+        rent_amount = round(float(data.get("rent_amount") or row["rent_price"] or 0), 3)
+        if rent_amount <= 0:
+            return self.send_json({"ok": False, "error": "سعر الإيجار يجب أن يكون أكبر من صفر"}, 400)
+        payment_cycle = str(data.get("payment_cycle") or "monthly").strip().lower()
+        if payment_cycle not in ("monthly", "quarterly", "yearly", "once"):
+            payment_cycle = "monthly"
+
+        contract_row = {
+            "id": uid("ESC"),
+            "contract_no": next_estate_contract_no(db),
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "property_id": row["property_id"],
+            "building_id": row["building_id"],
+            "apartment_id": (entity_id if entity_type == "apartment" else row["apartment_id"]),
+            "room_id": (entity_id if entity_type == "room" else None),
+            "client_id": tenant_client_id,
+            "start_date": sdt.isoformat(),
+            "end_date": edt.isoformat(),
+            "rent_amount": rent_amount,
+            "payment_cycle": payment_cycle,
+            "status": "Active",
+            "created_by": str(user.get("name") or user.get("username") or "System"),
+            "created_at": now_iso(),
+            "notes": str(data.get("notes") or "Generated from reservation flow"),
+        }
+        insert(db, "estate_contracts", contract_row)
+        schedule_result = generate_estate_contract_invoices(
+            db,
+            contract_row,
+            str(user.get("name") or user.get("username") or "System"),
+            replace_open=False,
+        )
+        db.execute(
+            f"""
+            UPDATE {table}
+            SET status='occupied',
+                tenant_client_id=?,
+                tenant_phone=?,
+                reservation_start_date=NULL,
+                reservation_end_date=NULL,
+                last_update=?
+            WHERE id=?
+            """,
+            (tenant_client_id, tenant_phone, today(), entity_id),
+        )
+        if status_now == "reserved":
+            db.execute(
+                "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed by contract activation at ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
+                (now_iso(), entity_type, entity_id),
+            )
+        log_estate_status_history(
+            db,
+            entity_type,
+            entity_id,
+            dict(row),
+            status_now,
+            "occupied",
+            str(user.get("name") or user.get("username") or "System"),
+            "Contract activated",
+        )
+        audit(db, user, "create_contract", "estate_contracts", contract_row["id"], f"Estate contract {contract_row['contract_no']} for {entity_type} {entity_id}")
+        db.commit()
+        self.send_json({"ok": True, "contract": contract_row, "entity_id": entity_id, "entity_type": entity_type, "schedule": schedule_result})
+
+    def api_estate_contract_generate_schedule(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
+        if not contract:
+            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+        if str(contract["status"] or "").strip().lower() != "active":
+            return self.send_json({"ok": False, "error": "يمكن جدولة دفعات العقود النشطة فقط"}, 400)
+        replace_open = bool(data.get("replace_open"))
+        try:
+            result = generate_estate_contract_invoices(
+                db,
+                dict(contract),
+                str(user.get("name") or user.get("username") or "System"),
+                replace_open=replace_open,
+            )
+        except ValueError as exc:
+            return self.send_json({"ok": False, "error": str(exc)}, 400)
+        audit(db, user, "generate_schedule", "estate_contracts", contract_id, f"created={result.get('created')} skipped={result.get('skipped')} replace_open={replace_open}")
+        db.commit()
+        self.send_json({"ok": True, "contract_id": contract_id, "result": result})
+
+    def api_estate_contract_pay_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        invoice_id = str(data.get("invoice_id") or "").strip()
+        amount = round(float(data.get("amount") or 0), 3)
+        payment_date = str(data.get("payment_date") or today()).strip() or today()
+        if not invoice_id:
+            return self.send_json({"ok": False, "error": "invoice_id مطلوب"}, 400)
+        if amount <= 0:
+            return self.send_json({"ok": False, "error": "مبلغ التحصيل يجب أن يكون أكبر من صفر"}, 400)
+        try:
+            _ = datetime.fromisoformat(payment_date).date()
+        except Exception:
+            return self.send_json({"ok": False, "error": "تاريخ التحصيل غير صحيح"}, 400)
+        if is_estate_month_closed(db, payment_date):
+            return self.send_json({"ok": False, "error": "لا يمكن تسجيل تحصيل داخل شهر مقفل ماليًا"}, 400)
+        row = db.execute("SELECT * FROM estate_contract_invoices WHERE id=?", (invoice_id,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "فاتورة العقد غير موجودة"}, 404)
+        remaining = round(float(row["amount"] or 0) - float(row["paid_amount"] or 0), 3)
+        if remaining <= 0:
+            return self.send_json({"ok": False, "error": "الفاتورة مسددة بالكامل"}, 400)
+        if amount - remaining > 0.001:
+            return self.send_json({"ok": False, "error": f"المبلغ يتجاوز المتبقي {fmt_omr(remaining)}"}, 400)
+        new_paid = round(float(row["paid_amount"] or 0) + amount, 3)
+        new_status = "Paid" if new_paid >= float(row["amount"] or 0) - 0.001 else "Partial"
+        db.execute(
+            "UPDATE estate_contract_invoices SET paid_amount=?, status=? WHERE id=?",
+            (new_paid, new_status, invoice_id),
+        )
+        contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (row["contract_id"],)).fetchone()
+        client_id = contract["client_id"] if contract else None
+        estate_property_ref = contract["property_id"] if contract else None
+        insert(
+            db,
+            "accounts",
+            {
+                "id": uid("ACC"),
+                "entry_date": payment_date,
+                "type": "income",
+                "category": "Estate Contract Collection",
+                "description": f"Collection {row['invoice_no']} (estate:{estate_property_ref or '-'})",
+                "client_id": client_id,
+                # accounts.property_id references legacy properties table, not estate_properties
+                "property_id": None,
+                "invoice_id": None,
+                "amount": amount,
+            },
+        )
+        audit(db, user, "pay", "estate_contract_invoices", invoice_id, f"Collected {amount} for {row['invoice_no']} on {payment_date}")
+        db.commit()
+        self.send_json({"ok": True, "invoice_id": invoice_id, "paid_amount": new_paid, "status": new_status, "payment_date": payment_date})
+
+    def api_estate_contract_close(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
+        if not contract:
+            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+        if str(contract["status"] or "").strip().lower() != "active":
+            return self.send_json({"ok": False, "error": "يمكن إغلاق العقود النشطة فقط"}, 400)
+        close_date = str(data.get("close_date") or today()).strip() or today()
+        try:
+            close_dt = datetime.fromisoformat(close_date).date()
+        except Exception:
+            return self.send_json({"ok": False, "error": "تاريخ الإغلاق غير صحيح"}, 400)
+        if is_estate_month_closed(db, close_dt.isoformat()):
+            return self.send_json({"ok": False, "error": "لا يمكن إغلاق عقد بتاريخ داخل شهر مقفل ماليًا"}, 400)
+        force_close = bool(data.get("force_close"))
+        note = str(data.get("note") or "Contract closed").strip()
+        rows = rows_to_dicts(
+            db.execute(
+                "SELECT * FROM estate_contract_invoices WHERE contract_id=? ORDER BY due_date ASC",
+                (contract_id,),
+            ).fetchall()
+        )
+        overdue_rows: List[Dict[str, Any]] = []
+        future_cancel_ids: List[str] = []
+        total_scheduled = 0.0
+        total_paid = 0.0
+        outstanding_due = 0.0
+        for r in rows:
+            amount = round(float(r.get("amount") or 0), 3)
+            paid_amount = round(float(r.get("paid_amount") or 0), 3)
+            rem = round(max(0.0, amount - paid_amount), 3)
+            total_scheduled += amount
+            total_paid += paid_amount
+            due_s = str(r.get("due_date") or "")
+            due_dt = None
+            try:
+                due_dt = datetime.fromisoformat(due_s).date()
+            except Exception:
+                pass
+            if rem > 0:
+                if due_dt and due_dt <= close_dt:
+                    outstanding_due += rem
+                    overdue_rows.append(
+                        {
+                            "id": r.get("id"),
+                            "invoice_no": r.get("invoice_no"),
+                            "due_date": due_s,
+                            "remaining": rem,
+                        }
+                    )
+                elif due_dt and due_dt > close_dt and paid_amount <= 0:
+                    future_cancel_ids.append(str(r.get("id")))
+        preview = {
+            "contract_id": contract_id,
+            "contract_no": contract["contract_no"],
+            "close_date": close_dt.isoformat(),
+            "total_scheduled": round(total_scheduled, 3),
+            "total_paid": round(total_paid, 3),
+            "outstanding_due": round(outstanding_due, 3),
+            "future_cancelled_count": len(future_cancel_ids),
+            "overdue_items": overdue_rows,
+        }
+        if outstanding_due > 0 and not force_close:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "لا يمكن إغلاق العقد قبل معالجة المتأخرات المستحقة. سدّد أو استخدم force_close بصلاحية مناسبة.",
+                    "settlement_preview": preview,
+                },
+                400,
+            )
+        role = str(user.get("role") or "").strip().lower()
+        if outstanding_due > 0 and force_close and role not in ("owner", "admin"):
+            return self.send_json({"ok": False, "error": "force_close مسموح فقط للمالك/الإدارة"}, 403)
+        if future_cancel_ids:
+            marks = ",".join("?" for _ in future_cancel_ids)
+            db.execute(
+                f"UPDATE estate_contract_invoices SET status='Cancelled', note=COALESCE(note,'') || ' | Cancelled due to contract close at ' || ? WHERE id IN ({marks})",
+                [now_iso(), *future_cancel_ids],
+            )
+        db.execute(
+            "UPDATE estate_contracts SET status='Closed', end_date=?, closed_at=?, close_note=? WHERE id=?",
+            (close_dt.isoformat(), now_iso(), note, contract_id),
+        )
+        settlement = {
+            "id": uid("ECS"),
+            "contract_id": contract_id,
+            "close_date": close_dt.isoformat(),
+            "total_scheduled": round(total_scheduled, 3),
+            "total_paid": round(total_paid, 3),
+            "outstanding_due": round(outstanding_due, 3),
+            "future_cancelled": len(future_cancel_ids),
+            "closed_by": str(user.get("name") or user.get("username") or "System"),
+            "note": note,
+            "created_at": now_iso(),
+        }
+        insert(db, "estate_contract_settlements", settlement)
+        audit(
+            db,
+            user,
+            "close_contract",
+            "estate_contracts",
+            contract_id,
+            f"Closed {contract['contract_no']} | outstanding={settlement['outstanding_due']} | future_cancelled={settlement['future_cancelled']}",
+        )
+        db.commit()
+        self.send_json({"ok": True, "contract_id": contract_id, "status": "Closed", "settlement": settlement, "preview": preview})
+
+    def api_estate_month_close(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        month_key = str(data.get("month_key") or "").strip()
+        force = bool(data.get("force"))
+        note = str(data.get("note") or "").strip()
+        try:
+            if len(month_key) != 7:
+                raise ValueError("invalid")
+            month_start = datetime.fromisoformat(month_key + "-01").date()
+        except Exception:
+            return self.send_json({"ok": False, "error": "month_key يجب أن يكون بصيغة YYYY-MM"}, 400)
+        if month_start > date.today():
+            return self.send_json({"ok": False, "error": "لا يمكن إقفال شهر مستقبلي"}, 400)
+        month_end = add_months(month_start, 1) - timedelta(days=1)
+        inv_rows = rows_to_dicts(
+            db.execute(
+                "SELECT * FROM estate_contract_invoices WHERE strftime('%Y-%m', due_date)=?",
+                (month_key,),
+            ).fetchall()
+        )
+        total_invoiced = round(sum(float(x.get("amount") or 0) for x in inv_rows), 3)
+        total_collected = round(sum(float(x.get("paid_amount") or 0) for x in inv_rows), 3)
+        outstanding_due = round(sum(max(0.0, float(x.get("amount") or 0) - float(x.get("paid_amount") or 0)) for x in inv_rows), 3)
+        overdue_open = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, invoice_no, due_date, amount, paid_amount
+                FROM estate_contract_invoices
+                WHERE date(due_date) <= date(?) AND lower(status)!='paid'
+                ORDER BY due_date ASC
+                """,
+                (month_end.isoformat(),),
+            ).fetchall()
+        )
+        preview = {
+            "month_key": month_key,
+            "period": {"start": month_start.isoformat(), "end": month_end.isoformat()},
+            "total_invoiced": total_invoiced,
+            "total_collected": total_collected,
+            "outstanding_due": outstanding_due,
+            "overdue_open_count": len(overdue_open),
+            "overdue_open_items": [
+                {
+                    "id": r["id"],
+                    "invoice_no": r["invoice_no"],
+                    "due_date": r["due_date"],
+                    "remaining": round(max(0.0, float(r.get("amount") or 0) - float(r.get("paid_amount") or 0)), 3),
+                }
+                for r in overdue_open[:25]
+            ],
+        }
+        if overdue_open and not force:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "يوجد ذمم مفتوحة حتى نهاية هذا الشهر. عالج المتأخرات أو استخدم force=true بصلاحية الإدارة.",
+                    "preview": preview,
+                },
+                400,
+            )
+        role = str(user.get("role") or "").strip().lower()
+        if overdue_open and force and role not in ("owner", "admin"):
+            return self.send_json({"ok": False, "error": "force لإقفال الشهر مسموح فقط للمالك/الإدارة"}, 403)
+        exists_close = db.execute("SELECT id FROM estate_month_closes WHERE month_key=?", (month_key,)).fetchone()
+        closed_by = str(user.get("name") or user.get("username") or "System")
+        if exists_close:
+            db.execute(
+                """
+                UPDATE estate_month_closes
+                SET status='Closed', total_invoiced=?, total_collected=?, outstanding_due=?, closed_by=?, closed_at=?, note=?
+                WHERE month_key=?
+                """,
+                (total_invoiced, total_collected, outstanding_due, closed_by, now_iso(), note, month_key),
+            )
+            close_id = exists_close["id"]
+        else:
+            close_id = uid("EMC")
+            insert(
+                db,
+                "estate_month_closes",
+                {
+                    "id": close_id,
+                    "month_key": month_key,
+                    "status": "Closed",
+                    "total_invoiced": total_invoiced,
+                    "total_collected": total_collected,
+                    "outstanding_due": outstanding_due,
+                    "closed_by": closed_by,
+                    "closed_at": now_iso(),
+                    "note": note,
+                },
+            )
+        audit(db, user, "month_close", "estate_month_closes", close_id, f"Closed month {month_key} | outstanding={outstanding_due}")
+        db.commit()
+        self.send_json({"ok": True, "month_close_id": close_id, "month_key": month_key, "preview": preview})
+
+    def api_estate_operations_check(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        checks: List[Dict[str, Any]] = []
+        required_tables = [
+            "estate_properties",
+            "estate_buildings",
+            "estate_apartments",
+            "estate_rooms",
+            "estate_accessories",
+            "estate_maintenance",
+            "estate_status_history",
+            "estate_reservation_invoices",
+            "estate_contracts",
+            "estate_contract_invoices",
+            "estate_contract_settlements",
+            "estate_month_closes",
+        ]
+        for t in required_tables:
+            exists_row = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1", (t,)).fetchone()
+            checks.append({"name": f"table:{t}", "ok": bool(exists_row), "value": 1 if exists_row else 0})
+        dangling_reserved = db.execute(
+            """
+            SELECT COUNT(*)
+            FROM (
+              SELECT 'apartment' AS entity_type, id, status FROM estate_apartments
+              UNION ALL
+              SELECT 'room' AS entity_type, id, status FROM estate_rooms
+            ) e
+            WHERE lower(status)='reserved'
+              AND NOT EXISTS (
+                SELECT 1 FROM estate_reservation_invoices i
+                WHERE i.entity_type=e.entity_type AND i.entity_id=e.id AND lower(i.status)='open'
+              )
+            """
+        ).fetchone()[0]
+        checks.append({"name": "reserved_with_open_invoice", "ok": int(dangling_reserved or 0) == 0, "value": int(dangling_reserved or 0)})
+        active_contracts = db.execute("SELECT COUNT(*) FROM estate_contracts WHERE lower(status)='active'").fetchone()[0]
+        reserved_total = db.execute("SELECT COUNT(*) FROM estate_apartments WHERE lower(status)='reserved'").fetchone()[0] + db.execute("SELECT COUNT(*) FROM estate_rooms WHERE lower(status)='reserved'").fetchone()[0]
+        status_history_count = db.execute("SELECT COUNT(*) FROM estate_status_history").fetchone()[0]
+        overdue_contract_invoices = db.execute(
+            "SELECT COUNT(*) FROM estate_contract_invoices WHERE lower(status)!='paid' AND date(due_date) < date(?)",
+            (today(),),
+        ).fetchone()[0]
+        due_soon_contract_invoices = db.execute(
+            "SELECT COUNT(*) FROM estate_contract_invoices WHERE lower(status)!='paid' AND date(due_date) >= date(?) AND date(due_date) <= date(?, '+7 day')",
+            (today(), today()),
+        ).fetchone()[0]
+        active_past_end = db.execute(
+            "SELECT COUNT(*) FROM estate_contracts WHERE lower(status)='active' AND date(end_date) < date(?)",
+            (today(),),
+        ).fetchone()[0]
+        closed_months = db.execute("SELECT COUNT(*) FROM estate_month_closes WHERE lower(status)='closed'").fetchone()[0]
+        checks.append({"name": "status_history_exists", "ok": int(status_history_count or 0) > 0, "value": int(status_history_count or 0)})
+        checks.append({"name": "overdue_contract_invoices", "ok": int(overdue_contract_invoices or 0) == 0, "value": int(overdue_contract_invoices or 0)})
+        checks.append({"name": "active_contracts_past_end", "ok": int(active_past_end or 0) == 0, "value": int(active_past_end or 0)})
+        score = 100 - (15 if int(dangling_reserved or 0) > 0 else 0)
+        if status_history_count == 0:
+            score -= 10
+        if int(overdue_contract_invoices or 0) > 0:
+            score -= min(20, int(overdue_contract_invoices or 0) * 2)
+        if int(active_past_end or 0) > 0:
+            score -= min(15, int(active_past_end or 0) * 2)
+        if any(not c["ok"] for c in checks if c["name"].startswith("table:")):
+            score -= 30
+        score = max(0, min(100, score))
+        self.send_json(
+            {
+                "ok": True,
+                "score": score,
+                "checks": checks,
+                "metrics": {
+                    "reserved_total": int(reserved_total or 0),
+                    "active_contracts": int(active_contracts or 0),
+                    "status_history_rows": int(status_history_count or 0),
+                    "dangling_reserved_without_invoice": int(dangling_reserved or 0),
+                    "overdue_contract_invoices": int(overdue_contract_invoices or 0),
+                    "due_soon_contract_invoices": int(due_soon_contract_invoices or 0),
+                    "active_contracts_past_end": int(active_past_end or 0),
+                    "closed_months": int(closed_months or 0),
+                },
+            }
+        )
+
     def api_crud(self, db: sqlite3.Connection, method: str, parts: List[str], query: str) -> None:
         table = parts[0]
         item_id = parts[1] if len(parts) > 1 else None
@@ -4195,6 +5294,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 row = db.execute("SELECT image FROM properties WHERE id=?", (item_id,)).fetchone()
                 if row:
                     delete_property_photo_file(row["image"])
+            if table in ("estate_properties", "estate_buildings", "estate_apartments", "estate_rooms"):
+                row = db.execute(f"SELECT image FROM {table} WHERE id=?", (item_id,)).fetchone()
+                if row:
+                    delete_upload_file(str(row["image"] or ""), "estate_images")
             reason = protected_delete_reason(db, table, item_id)
             if reason:
                 return self.send_json({"ok": False, "error": reason}, 400)
@@ -4204,21 +5307,38 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True})
 
     def save_user(self, db: sqlite3.Connection, user: Dict[str, Any], method: str, data: Dict[str, Any], item_id: Optional[str]) -> None:
+        def as_flag(value: Any, default: bool) -> int:
+            if value is None:
+                return 1 if default else 0
+            if isinstance(value, bool):
+                return 1 if value else 0
+            raw = str(value).strip().lower()
+            if raw in ("1", "true", "yes", "on", "y", "t"):
+                return 1
+            if raw in ("0", "false", "no", "off", "n", "f"):
+                return 0
+            return 1 if default else 0
         if method == "POST":
             required = ["username", "name", "role", "password"]
             missing = [k for k in required if not data.get(k)]
             if missing:
                 return self.send_json({"ok": False, "error": f"Missing: {', '.join(missing)}"}, 400)
             username = str(data.get("username") or "").strip().lower()
-            if username not in CORE_USERNAMES:
-                return self.send_json({"ok": False, "error": "الإصدار الحالي يدعم فقط الحسابات الأساسية الستة"}, 403)
+            if not username:
+                return self.send_json({"ok": False, "error": "اسم المستخدم مطلوب"}, 400)
+            role_value = str(data.get("role") or "").strip().lower()
+            if role_value in ("owner", "admin") and username not in FULL_ACCESS_USERNAMES:
+                return self.send_json({"ok": False, "error": "صلاحية كاملة (Owner/Admin) متاحة فقط لحسابات وليد ويعقوب وأحمد"}, 403)
             pwd_error = validate_new_password(str(data.get("password") or ""), str(data.get("username") or ""))
             if pwd_error:
                 return self.send_json({"ok": False, "error": pwd_error}, 400)
+            email_val = str(data.get("email") or "").strip() or None
             row = {
                 "id": data.get("id") or uid("USR"), "username": username, "name": data["name"].strip(),
-                "role": data["role"], "active": int(bool(data.get("active", True))), "password_hash": password_hash(str(data["password"])),
-                "created_at": now_iso(), "last_login": None,
+                "role": role_value or "viewer", "active": as_flag(data.get("active"), True), "email": email_val,
+                "must_change_password": as_flag(data.get("must_change_password"), True),
+                "password_hash": password_hash(str(data["password"])),
+                "password_changed_at": None, "created_at": now_iso(), "last_login": None,
             }
             insert(db, "users", row)
             audit(db, user, "create", "users", row["id"], f"Created user {row['username']}")
@@ -4230,13 +5350,30 @@ class JawdahHandler(BaseHTTPRequestHandler):
         current = db.execute("SELECT * FROM users WHERE id=?", (item_id,)).fetchone()
         if not current:
             return self.send_json({"ok": False, "error": "User not found"}, 404)
-        fields = {"username": data.get("username", current["username"]), "name": data.get("name", current["name"]), "role": data.get("role", current["role"]), "active": int(bool(data.get("active", current["active"]))) }
-        db.execute("UPDATE users SET username=?,name=?,role=?,active=? WHERE id=?", (fields["username"], fields["name"], fields["role"], fields["active"], item_id))
+        username = str(data.get("username", current["username"]) or current["username"]).strip().lower()
+        role_value = str(data.get("role", current["role"]) or current["role"]).strip().lower()
+        if role_value in ("owner", "admin") and username not in FULL_ACCESS_USERNAMES:
+            return self.send_json({"ok": False, "error": "صلاحية كاملة (Owner/Admin) متاحة فقط لحسابات وليد ويعقوب وأحمد"}, 403)
+        fields = {
+            "username": username,
+            "name": str(data.get("name", current["name"]) or current["name"]).strip(),
+            "role": role_value or "viewer",
+            "active": as_flag(data.get("active"), bool(current["active"])),
+            "email": str(data.get("email", current["email"]) or "").strip() or None,
+            "must_change_password": as_flag(data.get("must_change_password"), bool(current["must_change_password"])),
+        }
+        db.execute(
+            "UPDATE users SET username=?,name=?,role=?,active=?,email=?,must_change_password=? WHERE id=?",
+            (fields["username"], fields["name"], fields["role"], fields["active"], fields["email"], fields["must_change_password"], item_id),
+        )
         if data.get("password"):
             pwd_error = validate_new_password(str(data.get("password") or ""), str(fields.get("username") or ""))
             if pwd_error:
                 return self.send_json({"ok": False, "error": pwd_error}, 400)
-            db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(str(data["password"])), item_id))
+            db.execute(
+                "UPDATE users SET password_hash=?, password_changed_at=?, must_change_password=? WHERE id=?",
+                (password_hash(str(data["password"])), now_iso(), as_flag(data.get("must_change_password"), True), item_id),
+            )
         audit(db, user, "update", "users", item_id, f"Updated user {fields['username']}")
         db.commit()
         return self.send_json({"ok": True})
@@ -4246,6 +5383,33 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": False, "error": "سجل التدقيق للقراءة فقط"}, 403)
         row_id = item_id or data.get("id") or uid(table[:3].upper())
         data["id"] = row_id
+        actor_name = str(user.get("name") or user.get("username") or "System")
+        estate_prev_status = ""
+        estate_new_status = ""
+        estate_entity_type = ""
+        estate_reserved_transition = False
+        if method == "PUT" and table in ("estate_properties", "estate_buildings", "estate_apartments", "estate_rooms"):
+            pricing_fields = {"base_rent_price", "service_charge", "rent_price", "booking_deposit", "prepaid_amount"}
+            touching_pricing = any(field in data for field in pricing_fields)
+            pricing_changed = touching_pricing
+            if touching_pricing and item_id:
+                current_row = db.execute(f"SELECT * FROM {table} WHERE id=?", (item_id,)).fetchone()
+                if current_row:
+                    pricing_changed = False
+                    for field in pricing_fields:
+                        if field not in data:
+                            continue
+                        try:
+                            old_v = round(float(current_row[field] or 0), 3)
+                            new_v = round(float(data.get(field) or 0), 3)
+                        except Exception:
+                            old_v = current_row[field]
+                            new_v = data.get(field)
+                        if old_v != new_v:
+                            pricing_changed = True
+                            break
+            if pricing_changed and not has_permission(user, "estate_actions_pricing_edit"):
+                return self.send_json({"ok": False, "error": "تعديل التسعير العقاري يتطلب صلاحية estate_actions_pricing_edit"}, 403)
         if table == "clients":
             if not str(data.get("name") or "").strip():
                 return self.send_json({"ok": False, "error": "اسم العميل مطلوب"}, 400)
@@ -4262,6 +5426,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     )
                 except ValueError as exc:
                     return self.send_json({"ok": False, "error": str(exc)}, 400)
+        if table in ("estate_properties", "estate_buildings", "estate_apartments", "estate_rooms"):
+            image_upload = data.get("image_upload")
+            if isinstance(image_upload, dict) and (image_upload.get("image") or image_upload.get("data") or image_upload.get("base64")):
+                previous_image = None
+                if method == "PUT" and item_id:
+                    row = db.execute(f"SELECT image FROM {table} WHERE id=?", (item_id,)).fetchone()
+                    if row:
+                        previous_image = str(row["image"] or "").strip() or None
+                try:
+                    file_bytes, content_type = decode_upload_payload(image_upload)
+                    data["image"] = save_named_image_upload(
+                        "estate_images",
+                        f"{table}-{row_id}",
+                        file_bytes,
+                        content_type,
+                        MAX_PROPERTY_PHOTO_BYTES,
+                    )
+                except ValueError as exc:
+                    return self.send_json({"ok": False, "error": str(exc)}, 400)
+                if previous_image and previous_image != data.get("image") and is_stored_upload_url(previous_image, "estate_images"):
+                    delete_upload_file(previous_image, "estate_images")
         if table == "branches":
             if not str(data.get("name") or "").strip() or not str(data.get("code") or "").strip():
                 return self.send_json({"ok": False, "error": "رمز الفرع والاسم مطلوبان"}, 400)
@@ -4360,6 +5545,386 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if err:
                 return self.send_json({"ok": False, "error": err}, 400)
             data.update(prepared)
+        if table == "estate_properties":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_properties WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم العقار مطلوب"}, 400)
+            status_map = {"active": "active", "نشط": "active", "inactive": "inactive", "غير نشط": "inactive", "suspended": "suspended", "موقوف": "suspended", "موقوفة": "suspended"}
+            raw_status = str(data.get("status") or "active").strip().lower()
+            data["status"] = status_map.get(raw_status, "active")
+            data["building_count"] = int(float(data.get("building_count") or 0))
+            data["apartment_count"] = int(float(data.get("apartment_count") or 0))
+            data["room_count"] = int(float(data.get("room_count") or 0))
+            if data["building_count"] < 0 or data["apartment_count"] < 0 or data["room_count"] < 0:
+                return self.send_json({"ok": False, "error": "أعداد العقار لا يمكن أن تكون سالبة"}, 400)
+            data["base_rent_price"] = round(float(data.get("base_rent_price") or 0), 3)
+            data["service_charge"] = round(float(data.get("service_charge") or 0), 3)
+            if data["base_rent_price"] < 0 or data["service_charge"] < 0:
+                return self.send_json({"ok": False, "error": "الأسعار ورسوم الخدمة يجب أن تكون موجبة أو صفر"}, 400)
+        if table == "estate_buildings":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_buildings WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+            prop_id = str(data.get("property_id") or "").strip()
+            if not prop_id or not exists(db, "estate_properties", prop_id):
+                return self.send_json({"ok": False, "error": "اختر العقار الصحيح للبناية"}, 400)
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم/رقم البناية مطلوب"}, 400)
+            status_map = {"active": "active", "نشط": "active", "inactive": "inactive", "غير نشط": "inactive", "suspended": "suspended", "موقوف": "suspended", "موقوفة": "suspended"}
+            raw_status = str(data.get("status") or "active").strip().lower()
+            data["status"] = status_map.get(raw_status, "active")
+            data["property_id"] = prop_id
+            data["apartment_count"] = int(float(data.get("apartment_count") or 0))
+            data["room_count"] = int(float(data.get("room_count") or 0))
+            if data["apartment_count"] < 0 or data["room_count"] < 0:
+                return self.send_json({"ok": False, "error": "أعداد البناية لا يمكن أن تكون سالبة"}, 400)
+            data["base_rent_price"] = round(float(data.get("base_rent_price") or 0), 3)
+            data["service_charge"] = round(float(data.get("service_charge") or 0), 3)
+            if data["base_rent_price"] < 0 or data["service_charge"] < 0:
+                return self.send_json({"ok": False, "error": "الأسعار ورسوم الخدمة غير صحيحة"}, 400)
+        if table == "estate_apartments":
+            estate_entity_type = "apartment"
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_apartments WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    estate_prev_status = str(current["status"] or "")
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+            prop_id = str(data.get("property_id") or "").strip()
+            bld_id = str(data.get("building_id") or "").strip()
+            if not prop_id or not exists(db, "estate_properties", prop_id):
+                return self.send_json({"ok": False, "error": "اختر العقار أولاً"}, 400)
+            if not bld_id:
+                return self.send_json({"ok": False, "error": "اختر البناية أولاً"}, 400)
+            bld = db.execute("SELECT id, property_id FROM estate_buildings WHERE id=?", (bld_id,)).fetchone()
+            if not bld:
+                return self.send_json({"ok": False, "error": "البناية غير موجودة"}, 400)
+            if str(bld["property_id"] or "") != prop_id:
+                return self.send_json({"ok": False, "error": "البناية لا تتبع العقار المحدد"}, 400)
+            status_map = {
+                "draft": "draft",
+                "مسودة": "draft",
+                "vacant": "vacant",
+                "empty": "vacant",
+                "فارغة": "vacant",
+                "شاغرة": "vacant",
+                "occupied": "occupied",
+                "rented": "occupied",
+                "مؤجرة": "occupied",
+                "maintenance": "maintenance",
+                "صيانة": "maintenance",
+                "تحت الصيانة": "maintenance",
+                "reserved": "reserved",
+                "محجوزة": "reserved",
+                "محجوز": "reserved",
+            }
+            raw_status = str(data.get("status") or "vacant").strip().lower()
+            status_norm = status_map.get(raw_status)
+            if not status_norm:
+                return self.send_json({"ok": False, "error": "حالة الشقة غير معتمدة. المسموح: مؤجرة/فارغة/صيانة/محجوزة"}, 400)
+            data["status"] = status_norm
+            data["property_id"] = prop_id
+            data["building_id"] = bld_id
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم/رقم الشقة مطلوب"}, 400)
+            data["room_count"] = int(float(data.get("room_count") or 0))
+            if data["room_count"] < 0:
+                return self.send_json({"ok": False, "error": "عدد الغرف لا يمكن أن يكون سالبًا"}, 400)
+            data["rent_price"] = round(float(data.get("rent_price") or 0), 3)
+            data["booking_deposit"] = round(float(data.get("booking_deposit") or 0), 3)
+            data["prepaid_amount"] = round(float(data.get("prepaid_amount") or 0), 3)
+            data["maintenance_cost"] = round(float(data.get("maintenance_cost") or 0), 3)
+            if data["rent_price"] < 0 or data["booking_deposit"] < 0 or data["prepaid_amount"] < 0 or data["maintenance_cost"] < 0:
+                return self.send_json({"ok": False, "error": "الأسعار والتأمين والمدفوع مقدمًا يجب أن تكون أرقامًا موجبة أو صفر"}, 400)
+            if status_norm == "reserved":
+                if data["booking_deposit"] <= 0:
+                    return self.send_json({"ok": False, "error": "في حالة الحجز يجب إدخال تأمين الحجز"}, 400)
+                if data["prepaid_amount"] < 0:
+                    return self.send_json({"ok": False, "error": "المدفوع مقدمًا غير صحيح"}, 400)
+                start_date = str(data.get("reservation_start_date") or "").strip()
+                end_date = str(data.get("reservation_end_date") or "").strip()
+                if not start_date or not end_date:
+                    return self.send_json({"ok": False, "error": "الحجز يتطلب تاريخ بداية ونهاية"}, 400)
+                try:
+                    sdt = datetime.fromisoformat(start_date).date()
+                    edt = datetime.fromisoformat(end_date).date()
+                except Exception:
+                    return self.send_json({"ok": False, "error": "تواريخ الحجز غير صحيحة"}, 400)
+                if edt < sdt:
+                    return self.send_json({"ok": False, "error": "تاريخ نهاية الحجز يجب أن يكون بعد البداية"}, 400)
+                booked_name = str(data.get("booked_client_name") or "").strip()
+                booked_phone = str(data.get("booked_client_phone") or "").strip()
+                booked_employee = str(data.get("booked_by_employee") or "").strip()
+                if not booked_name or not booked_phone or not booked_employee:
+                    return self.send_json({"ok": False, "error": "حالة محجوزة تتطلب اسم العميل وهاتفه واسم الموظف الذي حجز"}, 400)
+                booked_client_id = str(data.get("booked_client_id") or "").strip()
+                if booked_client_id and not exists(db, "clients", booked_client_id):
+                    return self.send_json({"ok": False, "error": "معرف العميل المحجوز له غير موجود"}, 400)
+                estate_reserved_transition = method == "POST" or estate_prev_status.lower() != "reserved"
+            if status_norm == "maintenance":
+                if not str(data.get("maintenance_notes") or "").strip():
+                    return self.send_json({"ok": False, "error": "حالة الصيانة تتطلب وصف أعمال الصيانة"}, 400)
+            if status_norm != "reserved":
+                data["booked_client_name"] = str(data.get("booked_client_name") or "").strip() or None
+                data["booked_client_phone"] = str(data.get("booked_client_phone") or "").strip() or None
+                data["booked_client_id"] = str(data.get("booked_client_id") or "").strip() or None
+                data["booked_by_employee"] = str(data.get("booked_by_employee") or "").strip() or None
+                data["reservation_start_date"] = None
+                data["reservation_end_date"] = None
+            if status_norm != "maintenance":
+                data["maintenance_notes"] = str(data.get("maintenance_notes") or "").strip() or None
+            estate_new_status = status_norm
+        if table == "estate_rooms":
+            estate_entity_type = "room"
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_rooms WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    estate_prev_status = str(current["status"] or "")
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+            prop_id = str(data.get("property_id") or "").strip()
+            bld_id = str(data.get("building_id") or "").strip()
+            apt_id = str(data.get("apartment_id") or "").strip()
+            if not prop_id or not exists(db, "estate_properties", prop_id):
+                return self.send_json({"ok": False, "error": "اختر العقار الصحيح للغرفة"}, 400)
+            bld = db.execute("SELECT id, property_id FROM estate_buildings WHERE id=?", (bld_id,)).fetchone() if bld_id else None
+            if not bld:
+                return self.send_json({"ok": False, "error": "اختر البناية الصحيحة للغرفة"}, 400)
+            if str(bld["property_id"] or "") != prop_id:
+                return self.send_json({"ok": False, "error": "البناية لا تتبع العقار المحدد"}, 400)
+            apt = db.execute("SELECT id, property_id, building_id FROM estate_apartments WHERE id=?", (apt_id,)).fetchone() if apt_id else None
+            if not apt:
+                return self.send_json({"ok": False, "error": "اختر الشقة الصحيحة للغرفة"}, 400)
+            if str(apt["property_id"] or "") != prop_id or str(apt["building_id"] or "") != bld_id:
+                return self.send_json({"ok": False, "error": "الشقة لا تتبع نفس العقار/البناية"}, 400)
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم/رقم الغرفة مطلوب"}, 400)
+            status_map = {
+                "draft": "draft", "مسودة": "draft",
+                "vacant": "vacant", "فارغة": "vacant", "شاغرة": "vacant",
+                "occupied": "occupied", "مؤجرة": "occupied",
+                "maintenance": "maintenance", "صيانة": "maintenance", "تحت الصيانة": "maintenance",
+                "reserved": "reserved", "محجوزة": "reserved", "محجوز": "reserved",
+            }
+            raw_status = str(data.get("status") or "vacant").strip().lower()
+            status_norm = status_map.get(raw_status)
+            if not status_norm:
+                return self.send_json({"ok": False, "error": "حالة الغرفة غير معتمدة"}, 400)
+            data["status"] = status_norm
+            data["property_id"] = prop_id
+            data["building_id"] = bld_id
+            data["apartment_id"] = apt_id
+            data["rent_price"] = round(float(data.get("rent_price") or 0), 3)
+            data["booking_deposit"] = round(float(data.get("booking_deposit") or 0), 3)
+            data["prepaid_amount"] = round(float(data.get("prepaid_amount") or 0), 3)
+            data["maintenance_cost"] = round(float(data.get("maintenance_cost") or 0), 3)
+            if data["rent_price"] < 0 or data["booking_deposit"] < 0 or data["prepaid_amount"] < 0 or data["maintenance_cost"] < 0:
+                return self.send_json({"ok": False, "error": "قيم الأسعار/التأمين/المقدم/الصيانة غير صحيحة"}, 400)
+            if status_norm == "reserved":
+                booked_name = str(data.get("booked_client_name") or "").strip()
+                booked_phone = str(data.get("booked_client_phone") or "").strip()
+                booked_employee = str(data.get("booked_by_employee") or "").strip()
+                start_date = str(data.get("reservation_start_date") or "").strip()
+                end_date = str(data.get("reservation_end_date") or "").strip()
+                if not start_date or not end_date:
+                    return self.send_json({"ok": False, "error": "حجز الغرفة يتطلب تاريخ بداية ونهاية"}, 400)
+                try:
+                    sdt = datetime.fromisoformat(start_date).date()
+                    edt = datetime.fromisoformat(end_date).date()
+                except Exception:
+                    return self.send_json({"ok": False, "error": "تواريخ حجز الغرفة غير صحيحة"}, 400)
+                if edt < sdt:
+                    return self.send_json({"ok": False, "error": "نهاية الحجز يجب أن تكون بعد بدايته"}, 400)
+                if data["booking_deposit"] <= 0 or not booked_name or not booked_phone or not booked_employee:
+                    return self.send_json({"ok": False, "error": "الغرفة المحجوزة تتطلب التأمين + بيانات العميل + الموظف الحاجز"}, 400)
+                booked_client_id = str(data.get("booked_client_id") or "").strip()
+                if booked_client_id and not exists(db, "clients", booked_client_id):
+                    return self.send_json({"ok": False, "error": "معرف العميل المحجوز له غير موجود"}, 400)
+                estate_reserved_transition = method == "POST" or estate_prev_status.lower() != "reserved"
+            if status_norm == "maintenance":
+                if not str(data.get("maintenance_notes") or "").strip():
+                    return self.send_json({"ok": False, "error": "حالة صيانة الغرفة تتطلب تفاصيل الصيانة"}, 400)
+            if status_norm != "reserved":
+                data["booked_client_name"] = None
+                data["booked_client_phone"] = None
+                data["booked_client_id"] = None
+                data["booked_by_employee"] = None
+                data["reservation_start_date"] = None
+                data["reservation_end_date"] = None
+            if status_norm != "maintenance":
+                data["maintenance_notes"] = None
+            estate_new_status = status_norm
+        if table == "estate_accessories":
+            estate_entity_type = "accessory"
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_accessories WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    estate_prev_status = str(current["status"] or "")
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+            prop_id = str(data.get("property_id") or "").strip()
+            bld_id = str(data.get("building_id") or "").strip()
+            apt_id = str(data.get("apartment_id") or "").strip()
+            room_id = str(data.get("room_id") or "").strip()
+            if not prop_id or not exists(db, "estate_properties", prop_id):
+                return self.send_json({"ok": False, "error": "اختر العقار الصحيح للملحق"}, 400)
+            if bld_id:
+                bld = db.execute("SELECT id, property_id FROM estate_buildings WHERE id=?", (bld_id,)).fetchone()
+                if not bld:
+                    return self.send_json({"ok": False, "error": "البناية المحددة للملحق غير موجودة"}, 400)
+                if str(bld["property_id"] or "") != prop_id:
+                    return self.send_json({"ok": False, "error": "البناية لا تتبع العقار المحدد"}, 400)
+            if apt_id:
+                apt = db.execute("SELECT id, property_id, building_id FROM estate_apartments WHERE id=?", (apt_id,)).fetchone()
+                if not apt:
+                    return self.send_json({"ok": False, "error": "الشقة المحددة للملحق غير موجودة"}, 400)
+                if str(apt["property_id"] or "") != prop_id:
+                    return self.send_json({"ok": False, "error": "الشقة لا تتبع العقار المحدد"}, 400)
+                if bld_id and str(apt["building_id"] or "") != bld_id:
+                    return self.send_json({"ok": False, "error": "الشقة لا تتبع البناية المحددة"}, 400)
+            if room_id:
+                room = db.execute("SELECT id, property_id, building_id, apartment_id FROM estate_rooms WHERE id=?", (room_id,)).fetchone()
+                if not room:
+                    return self.send_json({"ok": False, "error": "الغرفة المحددة للملحق غير موجودة"}, 400)
+                if str(room["property_id"] or "") != prop_id:
+                    return self.send_json({"ok": False, "error": "الغرفة لا تتبع العقار المحدد"}, 400)
+                if bld_id and str(room["building_id"] or "") != bld_id:
+                    return self.send_json({"ok": False, "error": "الغرفة لا تتبع البناية المحددة"}, 400)
+                if apt_id and str(room["apartment_id"] or "") != apt_id:
+                    return self.send_json({"ok": False, "error": "الغرفة لا تتبع الشقة المحددة"}, 400)
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم الملحق مطلوب"}, 400)
+            status_map = {
+                "available": "available", "متاح": "available", "جاهز": "available",
+                "installed": "installed", "مركب": "installed",
+                "maintenance": "maintenance", "صيانة": "maintenance", "تحت الصيانة": "maintenance",
+                "retired": "retired", "موقوف": "retired", "ملغى": "retired",
+            }
+            raw_status = str(data.get("status") or "available").strip().lower()
+            status_norm = status_map.get(raw_status)
+            if not status_norm:
+                return self.send_json({"ok": False, "error": "حالة الملحق غير معتمدة"}, 400)
+            data["status"] = status_norm
+            data["property_id"] = prop_id
+            data["building_id"] = bld_id or None
+            data["apartment_id"] = apt_id or None
+            data["room_id"] = room_id or None
+            data["qty"] = int(float(data.get("qty") or 1))
+            data["unit_cost"] = round(float(data.get("unit_cost") or 0), 3)
+            if data["qty"] <= 0:
+                return self.send_json({"ok": False, "error": "كمية الملحق يجب أن تكون أكبر من صفر"}, 400)
+            if data["unit_cost"] < 0:
+                return self.send_json({"ok": False, "error": "تكلفة الملحق يجب أن تكون موجبة أو صفر"}, 400)
+            estate_new_status = status_norm
+        if table == "estate_maintenance":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_maintenance WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+            if not str(data.get("title") or "").strip():
+                return self.send_json({"ok": False, "error": "عنوان طلب الصيانة مطلوب"}, 400)
+            status_raw = str(data.get("status") or "Open").strip().lower()
+            status_map = {
+                "open": "Open",
+                "in progress": "In Progress",
+                "closed": "Closed",
+            }
+            data["status"] = status_map.get(status_raw, "Open")
+            data.setdefault("priority", "Medium")
+            data["parts_cost"] = round(float(data.get("parts_cost") or 0), 3)
+            data["labor_cost"] = round(float(data.get("labor_cost") or 0), 3)
+            data["total_cost"] = round(float(data.get("total_cost") or 0), 3)
+            if data["parts_cost"] < 0 or data["labor_cost"] < 0 or data["total_cost"] < 0:
+                return self.send_json({"ok": False, "error": "تكاليف الصيانة يجب أن تكون موجبة أو صفر"}, 400)
+            if data["total_cost"] <= 0:
+                data["total_cost"] = round(data["parts_cost"] + data["labor_cost"], 3)
+            for f_name, t_name in [("property_id", "estate_properties"), ("building_id", "estate_buildings"), ("apartment_id", "estate_apartments"), ("room_id", "estate_rooms")]:
+                val_id = str(data.get(f_name) or "").strip()
+                if val_id and not exists(db, t_name, val_id):
+                    return self.send_json({"ok": False, "error": f"المعرف المرتبط بـ {f_name} غير موجود"}, 400)
+            if not str(data.get("maintenance_date") or "").strip():
+                data["maintenance_date"] = today()
+            if data["status"] == "Closed" and not str(data.get("closed_at") or "").strip():
+                data["closed_at"] = now_iso()
+        if table == "estate_contracts":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_contracts WHERE id=?", (item_id,)).fetchone()
+                if not current:
+                    return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+                merged = dict(current)
+                merged.update(data)
+                data = merged
+                if str(current["status"] or "").strip().lower() == "active":
+                    locked = {"entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "contract_no"}
+                    changed_locked = [k for k in locked if str(current[k] or "") != str(data.get(k) or "")]
+                    if changed_locked and user.get("role") not in ("owner", "admin"):
+                        return self.send_json({"ok": False, "error": "لا يمكن تعديل بيانات العقد الأساسية بعد التفعيل إلا للمالك/الإدارة"}, 403)
+            if method == "POST":
+                required = ["entity_type", "entity_id", "client_id", "start_date", "end_date", "rent_amount"]
+                missing = [k for k in required if not str(data.get(k) or "").strip()]
+                if missing:
+                    return self.send_json({"ok": False, "error": f"بيانات العقد ناقصة: {', '.join(missing)}"}, 400)
+                data.setdefault("contract_no", next_estate_contract_no(db))
+                data.setdefault("status", "Active")
+                data.setdefault("payment_cycle", "monthly")
+                data.setdefault("created_by", actor_name)
+                data.setdefault("created_at", now_iso())
+            data["rent_amount"] = round(float(data.get("rent_amount") or 0), 3)
+            if data["rent_amount"] <= 0:
+                return self.send_json({"ok": False, "error": "قيمة الإيجار يجب أن تكون أكبر من صفر"}, 400)
+            try:
+                sd = datetime.fromisoformat(str(data.get("start_date") or "")).date()
+                ed = datetime.fromisoformat(str(data.get("end_date") or "")).date()
+            except Exception:
+                return self.send_json({"ok": False, "error": "تواريخ العقد غير صحيحة"}, 400)
+            if ed < sd:
+                return self.send_json({"ok": False, "error": "تاريخ نهاية العقد يجب أن يكون بعد البداية"}, 400)
+            cycle = str(data.get("payment_cycle") or "monthly").strip().lower()
+            if cycle not in ("monthly", "quarterly", "yearly", "once"):
+                cycle = "monthly"
+            data["payment_cycle"] = cycle
+            if str(data.get("entity_type") or "").strip().lower() not in ("apartment", "room"):
+                return self.send_json({"ok": False, "error": "entity_type يجب أن يكون apartment أو room"}, 400)
+            if not exists(db, "clients", str(data.get("client_id") or "").strip()):
+                return self.send_json({"ok": False, "error": "العميل غير موجود"}, 400)
+            et = str(data.get("entity_type") or "").strip().lower()
+            eid = str(data.get("entity_id") or "").strip()
+            src_table = "estate_apartments" if et == "apartment" else "estate_rooms"
+            if not exists(db, src_table, eid):
+                return self.send_json({"ok": False, "error": "العنصر المرتبط بالعقد غير موجود"}, 400)
+        if table == "estate_contract_invoices":
+            return self.send_json({"ok": False, "error": "فواتير العقود تُدار عبر محرك الجدولة والتحصيل فقط"}, 403)
+        if table == "accounting_budgets":
+            month_key = str(data.get("month_key") or "").strip()
+            try:
+                if len(month_key) != 7:
+                    raise ValueError("invalid")
+                _ = datetime.fromisoformat(month_key + "-01").date()
+            except Exception:
+                return self.send_json({"ok": False, "error": "month_key يجب أن يكون بصيغة YYYY-MM"}, 400)
+            data["month_key"] = month_key
+            data["revenue_target"] = round(float(data.get("revenue_target") or 0), 3)
+            data["expense_budget"] = round(float(data.get("expense_budget") or 0), 3)
+            data["collection_target"] = round(float(data.get("collection_target") or 0), 3)
+            data["cash_reserve_target"] = round(float(data.get("cash_reserve_target") or 0), 3)
+            if data["revenue_target"] < 0 or data["expense_budget"] < 0 or data["collection_target"] < 0 or data["cash_reserve_target"] < 0:
+                return self.send_json({"ok": False, "error": "قيم الأهداف يجب أن تكون موجبة أو صفر"}, 400)
+            if method == "POST":
+                data.setdefault("created_at", now_iso())
+            data["updated_at"] = now_iso()
         if table == "invoices":
             return self.send_json({"ok": False, "error": "الفاتورة تُنشأ من العقد — من قائمة العقود اضغط «فاتورة» أو اعتمد العقد لتوليد الجدول"}, 400)
         if table == "payments":
@@ -4629,6 +6194,43 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if method == "POST":
             insert(db, table, clean)
             audit(db, user, "create", table, row_id, "Created record")
+            if table in ("estate_apartments", "estate_rooms", "estate_accessories"):
+                if not estate_new_status:
+                    estate_new_status = str(clean.get("status") or "")
+                log_estate_status_history(
+                    db,
+                    estate_entity_type or ("apartment" if table == "estate_apartments" else ("room" if table == "estate_rooms" else "accessory")),
+                    row_id,
+                    clean,
+                    "",
+                    estate_new_status,
+                    actor_name,
+                    "Initial status on create",
+                )
+                if table in ("estate_apartments", "estate_rooms") and estate_new_status == "reserved":
+                    ensure_estate_reservation_invoice(
+                        db,
+                        estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
+                        row_id,
+                        clean,
+                        actor_name,
+                    )
+                    audit(db, user, "auto_invoice", "estate_reservation_invoices", row_id, f"Auto reservation invoice created for {table}")
+            if table == "estate_contracts":
+                schedule_result = generate_estate_contract_invoices(
+                    db,
+                    clean,
+                    actor_name,
+                    replace_open=False,
+                )
+                audit(
+                    db,
+                    user,
+                    "generate_schedule",
+                    "estate_contracts",
+                    row_id,
+                    f"Auto schedule created={schedule_result.get('created')} skipped={schedule_result.get('skipped')}",
+                )
             if table == "contracts":
                 sync_property_status_for_contract(db, clean.get("property_id") or "", clean.get("status") or "Draft")
             if table == "contracts" and user.get("role") == "operations":
@@ -4664,6 +6266,35 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if changed:
                     audit_details = " | ".join(changed[:12])
             audit(db, user, "update", table, item_id, audit_details)
+            if table in ("estate_apartments", "estate_rooms", "estate_accessories"):
+                current_status = str(clean.get("status") or "")
+                if not current_status:
+                    current_status = estate_new_status
+                if current_status and (current_status != estate_prev_status):
+                    log_estate_status_history(
+                        db,
+                        estate_entity_type or ("apartment" if table == "estate_apartments" else ("room" if table == "estate_rooms" else "accessory")),
+                        str(item_id),
+                        clean,
+                        estate_prev_status,
+                        current_status,
+                        actor_name,
+                        "Status changed by update",
+                    )
+                if table in ("estate_apartments", "estate_rooms") and current_status != "reserved" and estate_prev_status.lower() == "reserved":
+                    db.execute(
+                        "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed after status moved to ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
+                        (current_status, estate_entity_type or ("apartment" if table == "estate_apartments" else "room"), str(item_id)),
+                    )
+                if table in ("estate_apartments", "estate_rooms") and current_status == "reserved" and estate_reserved_transition:
+                    ensure_estate_reservation_invoice(
+                        db,
+                        estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
+                        str(item_id),
+                        clean,
+                        actor_name,
+                    )
+                    audit(db, user, "auto_invoice", "estate_reservation_invoices", str(item_id), f"Auto reservation invoice created for {table}")
             if table == "hospitality_bookings" and timeline_change_details:
                 audit(
                     db,
@@ -5860,6 +7491,262 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if payload.get("error"):
             return self.send_json({"ok": False, "error": payload["error"]}, 400)
         self.send_json({"ok": True, "type": report_type, "report": payload})
+
+    def api_accounting_platform_overview(self, db: sqlite3.Connection, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        months = max(3, min(18, int((params.get("months") or ["12"])[0] or 12)))
+        today_d = date.today()
+        invoices = rows_to_dicts(db.execute("SELECT invoice_no, issue_date, due_date, amount, paid_amount, status, client_id FROM invoices").fetchall())
+        estate_inv = rows_to_dicts(db.execute("SELECT invoice_no, issued_at, due_date, amount, paid_amount, status FROM estate_contract_invoices").fetchall())
+        accounts_rows = rows_to_dicts(db.execute("SELECT entry_date, type, amount, category FROM accounts").fetchall())
+        periods = rows_to_dicts(db.execute("SELECT id, period_name, start_date, end_date, status, closed_at FROM financial_periods ORDER BY start_date DESC").fetchall())
+        month_closes = rows_to_dicts(db.execute("SELECT month_key, status, total_invoiced, total_collected, outstanding_due, closed_at FROM estate_month_closes ORDER BY month_key DESC").fetchall())
+        bank_total = float(db.execute("SELECT COALESCE(SUM(CASE WHEN type IN ('deposit','in','income') THEN amount ELSE -amount END),0) FROM bank_transactions").fetchone()[0] or 0)
+
+        billed_total = 0.0
+        collected_total = 0.0
+        overdue_total = 0.0
+        aging = {"0-30": 0.0, "31-60": 0.0, "61-90": 0.0, "90+": 0.0}
+
+        def consume_invoice_rows(rows: List[Dict[str, Any]], issue_key: str) -> None:
+            nonlocal billed_total, collected_total, overdue_total
+            for r in rows:
+                amount = float(r.get("amount") or 0)
+                paid = float(r.get("paid_amount") or 0)
+                rem = max(0.0, amount - paid)
+                billed_total += amount
+                collected_total += paid
+                due_s = str(r.get("due_date") or "").strip()
+                if rem <= 0 or not due_s:
+                    continue
+                try:
+                    due_d = datetime.fromisoformat(due_s).date()
+                except Exception:
+                    continue
+                if due_d < today_d:
+                    overdue_total += rem
+                    days = (today_d - due_d).days
+                    if days <= 30:
+                        aging["0-30"] += rem
+                    elif days <= 60:
+                        aging["31-60"] += rem
+                    elif days <= 90:
+                        aging["61-90"] += rem
+                    else:
+                        aging["90+"] += rem
+
+        consume_invoice_rows(invoices, "issue_date")
+        consume_invoice_rows(estate_inv, "issued_at")
+
+        monthly: List[Dict[str, Any]] = []
+        for i in range(months - 1, -1, -1):
+            anchor = add_months(today_d.replace(day=1), -i)
+            mk = anchor.strftime("%Y-%m")
+            income = sum(float(a.get("amount") or 0) for a in accounts_rows if str(a.get("entry_date") or "").startswith(mk) and str(a.get("type") or "").lower() == "income")
+            expense = sum(float(a.get("amount") or 0) for a in accounts_rows if str(a.get("entry_date") or "").startswith(mk) and str(a.get("type") or "").lower() == "expense")
+            billed_m = sum(float(x.get("amount") or 0) for x in invoices if str(x.get("issue_date") or "").startswith(mk)) + sum(float(x.get("amount") or 0) for x in estate_inv if str(x.get("issued_at") or "").startswith(mk))
+            collected_m = sum(float(x.get("paid_amount") or 0) for x in invoices if str(x.get("issue_date") or "").startswith(mk)) + sum(float(x.get("paid_amount") or 0) for x in estate_inv if str(x.get("issued_at") or "").startswith(mk))
+            monthly.append({"month": mk, "income": round(income, 3), "expense": round(expense, 3), "net": round(income - expense, 3), "billed": round(billed_m, 3), "collected": round(collected_m, 3)})
+
+        forecast_30 = 0.0
+        for r in invoices + estate_inv:
+            amount = float(r.get("amount") or 0)
+            paid = float(r.get("paid_amount") or 0)
+            rem = max(0.0, amount - paid)
+            due_s = str(r.get("due_date") or "").strip()
+            if rem <= 0 or not due_s:
+                continue
+            try:
+                due_d = datetime.fromisoformat(due_s).date()
+            except Exception:
+                continue
+            if today_d <= due_d <= (today_d + timedelta(days=30)):
+                forecast_30 += rem
+
+        open_periods = [p for p in periods if str(p.get("status") or "").lower() == "open"]
+        closed_periods = [p for p in periods if str(p.get("status") or "").lower() == "closed"]
+        latest_close = month_closes[0] if month_closes else None
+        overdue_count = int(
+            sum(
+                1
+                for r in invoices + estate_inv
+                if max(0.0, float(r.get("amount") or 0) - float(r.get("paid_amount") or 0)) > 0
+                and str(r.get("due_date") or "") < today()
+            )
+        )
+
+        decisions: List[Dict[str, Any]] = []
+        if overdue_total > 0:
+            decisions.append({"severity": "high", "title": "تحصيل عاجل", "detail": f"المتأخرات الحالية {fmt_omr(overdue_total)}", "action_section": "invoices"})
+        if len(open_periods) > 2:
+            decisions.append({"severity": "medium", "title": "فترات كثيرة مفتوحة", "detail": f"يوجد {len(open_periods)} فترات مفتوحة — يفضل الإقفال التدريجي", "action_section": "financial-periods"})
+        if bank_total < 0:
+            decisions.append({"severity": "high", "title": "رصيد البنك سلبي", "detail": f"الرصيد الحالي {fmt_omr(bank_total)}", "action_section": "bank"})
+        if not decisions:
+            decisions.append({"severity": "ok", "title": "الوضع المحاسبي مستقر", "detail": "لا توجد مخاطر مالية عاجلة حسب المؤشرات الحالية", "action_section": "accounts"})
+
+        health = 100
+        if overdue_total > 0:
+            health -= min(35, int(overdue_total / 500))
+        if len(open_periods) > 2:
+            health -= min(20, len(open_periods) * 3)
+        if bank_total < 0:
+            health -= 15
+        health = max(0, min(100, health))
+
+        self.send_json(
+            {
+                "ok": True,
+                "kpis": {
+                    "billed_total": round(billed_total, 3),
+                    "collected_total": round(collected_total, 3),
+                    "overdue_total": round(overdue_total, 3),
+                    "forecast_next_30_days": round(forecast_30, 3),
+                    "bank_balance": round(bank_total, 3),
+                    "open_periods": len(open_periods),
+                    "closed_periods": len(closed_periods),
+                    "overdue_count": overdue_count,
+                    "health": health,
+                },
+                "aging": {k: round(v, 3) for k, v in aging.items()},
+                "cashflow_monthly": monthly,
+                "decisions": decisions,
+                "latest_month_close": latest_close,
+                "periods_summary": {
+                    "open": len(open_periods),
+                    "closed": len(closed_periods),
+                    "latest_open": open_periods[0] if open_periods else None,
+                },
+            }
+        )
+
+    def api_accounting_cfo_overview(self, db: sqlite3.Connection, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        months = max(3, min(24, int((params.get("months") or ["12"])[0] or 12)))
+        today_d = date.today()
+        budgets = {
+            str(x["month_key"]): x
+            for x in rows_to_dicts(
+                db.execute(
+                    "SELECT month_key, revenue_target, expense_budget, collection_target, cash_reserve_target, notes FROM accounting_budgets"
+                ).fetchall()
+            )
+        }
+        accounts_rows = rows_to_dicts(db.execute("SELECT entry_date, type, amount FROM accounts").fetchall())
+        inv_rows = rows_to_dicts(db.execute("SELECT issue_date, due_date, amount, paid_amount FROM invoices").fetchall())
+        est_inv_rows = rows_to_dicts(db.execute("SELECT issued_at, due_date, amount, paid_amount FROM estate_contract_invoices").fetchall())
+        month_closes = {str(x["month_key"]): x for x in rows_to_dicts(db.execute("SELECT month_key, status, closed_at FROM estate_month_closes").fetchall())}
+
+        def month_totals(mk: str) -> Dict[str, float]:
+            revenue = sum(float(a.get("amount") or 0) for a in accounts_rows if str(a.get("entry_date") or "").startswith(mk) and str(a.get("type") or "").lower() == "income")
+            expense = sum(float(a.get("amount") or 0) for a in accounts_rows if str(a.get("entry_date") or "").startswith(mk) and str(a.get("type") or "").lower() == "expense")
+            billed = sum(float(x.get("amount") or 0) for x in inv_rows if str(x.get("issue_date") or "").startswith(mk)) + sum(float(x.get("amount") or 0) for x in est_inv_rows if str(x.get("issued_at") or "").startswith(mk))
+            collected = sum(float(x.get("paid_amount") or 0) for x in inv_rows if str(x.get("issue_date") or "").startswith(mk)) + sum(float(x.get("paid_amount") or 0) for x in est_inv_rows if str(x.get("issued_at") or "").startswith(mk))
+            return {"revenue": round(revenue, 3), "expense": round(expense, 3), "net": round(revenue - expense, 3), "billed": round(billed, 3), "collected": round(collected, 3)}
+
+        rows: List[Dict[str, Any]] = []
+        for i in range(months - 1, -1, -1):
+            mk = add_months(today_d.replace(day=1), -i).strftime("%Y-%m")
+            actual = month_totals(mk)
+            b = budgets.get(mk) or {}
+            rev_target = float(b.get("revenue_target") or 0)
+            exp_budget = float(b.get("expense_budget") or 0)
+            col_target = float(b.get("collection_target") or 0)
+            reserve_target = float(b.get("cash_reserve_target") or 0)
+            billed = float(actual["billed"] or 0)
+            collected = float(actual["collected"] or 0)
+            collection_rate = round((collected / billed * 100.0), 2) if billed > 0 else 0.0
+            rows.append(
+                {
+                    "month": mk,
+                    "actual_revenue": actual["revenue"],
+                    "target_revenue": rev_target,
+                    "variance_revenue": round(actual["revenue"] - rev_target, 3),
+                    "actual_expense": actual["expense"],
+                    "budget_expense": exp_budget,
+                    "variance_expense": round(exp_budget - actual["expense"], 3),
+                    "actual_net": actual["net"],
+                    "billed": actual["billed"],
+                    "collected": actual["collected"],
+                    "collection_rate": collection_rate,
+                    "collection_target": col_target,
+                    "cash_reserve_target": reserve_target,
+                    "month_closed": bool(month_closes.get(mk)),
+                }
+            )
+
+        recent = rows[-3:] if len(rows) >= 3 else rows
+        avg_collection_rate = 0.0
+        if recent:
+            avg_collection_rate = sum(float(r.get("collection_rate") or 0) for r in recent) / max(1, len(recent))
+        avg_collection_ratio = max(0.0, min(1.0, avg_collection_rate / 100.0))
+        open_receivables = 0.0
+        for r in inv_rows + est_inv_rows:
+            amount = float(r.get("amount") or 0)
+            paid = float(r.get("paid_amount") or 0)
+            open_receivables += max(0.0, amount - paid)
+        purchase_due = float(db.execute("SELECT COALESCE(SUM(amount-paid_amount),0) FROM purchase_invoices WHERE status!='Paid'").fetchone()[0] or 0)
+        payroll_pending = float(db.execute("SELECT COALESCE(SUM(net_salary),0) FROM salaries WHERE lower(status)='pending'").fetchone()[0] or 0)
+        obligations_30 = round(max(0.0, purchase_due) + max(0.0, payroll_pending), 3)
+        bank_balance = float(db.execute("SELECT COALESCE(SUM(CASE WHEN type IN ('deposit','in','income') THEN amount ELSE -amount END),0) FROM bank_transactions").fetchone()[0] or 0)
+        scen = {
+            "conservative": max(0.40, avg_collection_ratio - 0.15),
+            "base": max(0.0, min(1.0, avg_collection_ratio)),
+            "optimistic": min(0.98, avg_collection_ratio + 0.12),
+        }
+        scenarios: List[Dict[str, Any]] = []
+        for name, ratio in scen.items():
+            projected_col = round(open_receivables * ratio, 3)
+            projected_cash_30 = round(bank_balance + projected_col - obligations_30, 3)
+            scenarios.append(
+                {
+                    "name": name,
+                    "collection_ratio": round(ratio * 100.0, 2),
+                    "projected_collection_30": projected_col,
+                    "projected_cash_30": projected_cash_30,
+                }
+            )
+        current = rows[-1] if rows else {}
+        alerts: List[Dict[str, Any]] = []
+        if current:
+            rev_target = float(current.get("target_revenue") or 0)
+            exp_budget = float(current.get("budget_expense") or 0)
+            col_target = float(current.get("collection_target") or 0)
+            reserve_target = float(current.get("cash_reserve_target") or 0)
+            if rev_target > 0 and float(current.get("actual_revenue") or 0) < rev_target * 0.9:
+                alerts.append({"code": "revenue_below_target", "severity": "high", "message": "الإيراد أقل من الهدف الشهري بأكثر من 10%"})
+            if exp_budget > 0 and float(current.get("actual_expense") or 0) > exp_budget * 1.1:
+                alerts.append({"code": "expense_over_budget", "severity": "high", "message": "المصروفات تجاوزت الموازنة بأكثر من 10%"})
+            if col_target > 0 and float(current.get("collected") or 0) < col_target * 0.9:
+                alerts.append({"code": "collection_below_target", "severity": "medium", "message": "التحصيل أقل من الهدف الشهري"})
+            if reserve_target > 0 and scenarios:
+                base_cash = float(next((x["projected_cash_30"] for x in scenarios if x["name"] == "base"), 0))
+                if base_cash < reserve_target:
+                    alerts.append({"code": "cash_reserve_risk", "severity": "high", "message": "التوقع النقدي الأساسي أقل من حد الاحتياطي المطلوب"})
+
+        decisions: List[Dict[str, Any]] = []
+        if alerts:
+            for a in alerts:
+                go = "invoices" if "collection" in a["code"] or "revenue" in a["code"] else ("admin-expenses" if "expense" in a["code"] else "bank")
+                decisions.append({"severity": a["severity"], "title": a["code"], "detail": a["message"], "action_section": go})
+        else:
+            decisions.append({"severity": "ok", "title": "stable", "detail": "المؤشرات المالية ضمن الحدود المحددة", "action_section": "accounts"})
+
+        self.send_json(
+            {
+                "ok": True,
+                "months": rows,
+                "kpis": {
+                    "bank_balance": round(bank_balance, 3),
+                    "open_receivables": round(open_receivables, 3),
+                    "obligations_30_days": obligations_30,
+                    "avg_collection_rate": round(avg_collection_rate, 2),
+                },
+                "scenarios": scenarios,
+                "alerts": alerts,
+                "decisions": decisions,
+            }
+        )
 
     def api_report_accountant(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
         params = urllib.parse.parse_qs(query or "")
@@ -7560,20 +9447,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 line = f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                 self.wfile.write(line.encode("utf-8"))
                 self.wfile.flush()
-                time.sleep(15)
+                time.sleep(LIVE_STREAM_INTERVAL_SEC)
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
 
 
 UI_SECTIONS_ALL = [
-    "dashboard", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
+    "dashboard", "estate-platform", "accounting-platform", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
     "admin-expenses", "maintenance", "reports", "messages", "walid", "enterprise",
     "production", "timeline", "backup", "settings", "accounts", "purchases", "payroll",
     "inventory", "bank", "chart-accounts", "statements", "bank-reconciliation",
     "financial-periods", "approvals", "users", "qa",
 ]
 UI_WRITE_SECTIONS_ALL = [
-    "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
+    "estate-platform", "accounting-platform", "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
     "accounts", "purchases", "payroll", "revenues", "admin-expenses", "bank",
     "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
     "users", "approvals", "backup",
@@ -7588,7 +9475,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     "admin": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
     "accountant": {
         "sections": [
-            "dashboard", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "revenues",
+            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "revenues",
             "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
             "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
             "reports", "backup", "messages", "timeline", "walid", "approvals",
@@ -7600,19 +9487,19 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     },
     "operations": {
         "sections": [
-            "dashboard", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
+            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
             "maintenance", "inventory", "reports", "messages", "timeline", "backup",
             "walid", "approvals", "production",
         ],
         "kpis": ["properties", "rented", "vacant", "occupancy", "maintenance", "expiring", "health"],
     },
     "maintenance": {
-        "sections": ["dashboard", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
+        "sections": ["dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
         "kpis": ["maintenance", "properties", "vacant", "inventory_value", "health"],
     },
     "viewer": {
         "sections": [
-            "dashboard", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
+            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
             "maintenance", "messages", "timeline", "backup",
         ],
         "kpis": ["properties", "occupancy", "health", "overdue", "net"],
@@ -7622,14 +9509,14 @@ UI_WRITE_BY_ROLE: Dict[str, List[str]] = {
     "owner": list(UI_WRITE_SECTIONS_ALL),
     "admin": list(UI_WRITE_SECTIONS_ALL),
     "accountant": [
-        "invoices", "hospitality", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
+        "accounting-platform", "invoices", "hospitality", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
         "bank", "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
         "approvals", "backup",
     ],
     "operations": [
-        "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
+        "estate-platform", "accounting-platform", "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
     ],
-    "maintenance": ["maintenance", "inventory"],
+    "maintenance": ["estate-platform", "accounting-platform", "maintenance", "inventory"],
     "viewer": [],
 }
 
