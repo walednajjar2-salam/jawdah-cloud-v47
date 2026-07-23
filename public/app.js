@@ -3688,6 +3688,20 @@ window.printHospitalityFolio = printHospitalityFolio;
     if(v==='maintenance') return 'تحت الصيانة';
     return 'شاغرة';
   };
+  const apartmentStatusLabel = (s)=>{
+    const v=String(s||'').toLowerCase();
+    if(v==='reserved') return 'محجوزة';
+    if(v==='occupied') return 'مؤجرة';
+    if(v==='maintenance') return 'صيانة';
+    return 'فارغة';
+  };
+  function syncEstateApartmentStateFields(){
+    const st = String($('#eaStatus')?.value || 'vacant').toLowerCase();
+    const reservedBox = $('#eaReservedFields');
+    const maintenanceBox = $('#eaMaintenanceFields');
+    if(reservedBox) reservedBox.classList.toggle('hidden', st !== 'reserved');
+    if(maintenanceBox) maintenanceBox.classList.toggle('hidden', st !== 'maintenance');
+  }
   function optFrom(rows,labelFn){
     return '<option value="">— اختر —</option>'+rows.map(r=>`<option value="${htmlEscape(r.id)}">${htmlEscape(labelFn(r))}</option>`).join('');
   }
@@ -3742,7 +3756,12 @@ window.printHospitalityFolio = printHospitalityFolio;
     const events = [];
     estateRows('estate_properties').forEach(x=>events.push({date:x.last_update||'', title:`عقار: ${x.name||x.id}`, subtitle:`الموقع: ${x.location||'—'}`, meta:`${x.building_count||0} بنايات · ${x.apartment_count||0} شقق · ${x.room_count||0} غرف`, tone:'ok', icon:'🏢'}));
     estateRows('estate_buildings').forEach(x=>events.push({date:x.last_update||'', title:`بناية: ${x.name||x.id}`, subtitle:`العقار: ${pickName(estateRows('estate_properties'), x.property_id)}`, meta:`${x.apartment_count||0} شقق · ${x.room_count||0} غرف`, tone:'info', icon:'🏬'}));
-    estateRows('estate_apartments').forEach(x=>events.push({date:x.last_update||'', title:`شقة: ${x.name||x.id}`, subtitle:`البناية: ${pickName(estateRows('estate_buildings'), x.building_id)}`, meta:`${x.room_count||0} غرف`, tone:'info', icon:'🧱'}));
+    estateRows('estate_apartments').forEach(x=>{
+      const st = apartmentStatusLabel(x.status);
+      const pricing = Number(x.rent_price||0)>0 ? ` · سعر ${money(x.rent_price)}` : '';
+      const reserved = String(x.status||'').toLowerCase()==='reserved' ? ` · تأمين ${money(x.booking_deposit||0)} · مقدم ${money(x.prepaid_amount||0)}` : '';
+      events.push({date:x.last_update||'', title:`شقة: ${x.name||x.id}`, subtitle:`البناية: ${pickName(estateRows('estate_buildings'), x.building_id)}`, meta:`${x.room_count||0} غرف · ${st}${pricing}${reserved}`, tone:String(x.status||'').toLowerCase()==='maintenance'?'warn':'info', icon:'🧱'});
+    });
     estateRows('estate_rooms').forEach(x=>events.push({date:x.last_update||'', title:`غرفة: ${x.name||x.id}`, subtitle:`الشقة: ${pickName(estateRows('estate_apartments'), x.apartment_id)}`, meta:`الحالة: ${roomStatusLabel(x.status)}`, tone:x.status==='maintenance'?'warn':'ok', icon:'🛏️'}));
     estateRows('estate_maintenance').forEach(x=>events.push({date:x.maintenance_date||'', title:`صيانة: ${x.title||x.id}`, subtitle:`المسؤول: ${x.responsible_name||'—'}`, meta:`رقم فاتورة: ${x.invoice_no||'—'} · تكلفة: ${money(x.total_cost||0)}`, tone:String(x.status||'').toLowerCase().includes('closed')?'ok':'warn', icon:'🔧'}));
     return events.filter(e=>isInside(e.date)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).slice(0,80);
@@ -3769,7 +3788,26 @@ window.printHospitalityFolio = printHospitalityFolio;
     );
     const aTable = $('#estateApartmentsTable');
     if(aTable) aTable.innerHTML = tableHtml(
-      [['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','name'],['عدد الغرف','room_count'],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      [
+        ['العقار','property_id',(v)=>pickName(props,v)],
+        ['البناية','building_id',(v)=>pickName(blds,v)],
+        ['الشقة','name'],
+        ['الحالة','status',(v)=>statusBadge(apartmentStatusLabel(v))],
+        ['عدد الغرف','room_count'],
+        ['سعر الإيجار','rent_price',(v)=>money(v)],
+        ['تأمين الحجز','booking_deposit',(v)=>money(v)],
+        ['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],
+        ['بيانات الحجز','id',(_,r)=>{
+          if(String(r.status||'').toLowerCase()!=='reserved') return '—';
+          return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`;
+        }],
+        ['الصيانة','id',(_,r)=>{
+          if(String(r.status||'').toLowerCase()!=='maintenance') return '—';
+          return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`;
+        }],
+        ['المسؤول','manager_name'],
+        ['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]
+      ],
       apts,
       r=>`<button class="ghost" onclick="editRecord('estate_apartments','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_apartments','${r.id}')">حذف</button>`
     );
@@ -3794,6 +3832,8 @@ window.printHospitalityFolio = printHospitalityFolio;
     const apts = estateRows('estate_apartments');
     const rooms = estateRows('estate_rooms');
     const maint = estateRows('estate_maintenance');
+    const reservedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='reserved').length;
+    const occupiedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
     const occupied = rooms.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
     const openMaint = maint.filter(x=>!String(x.status||'').toLowerCase().includes('closed')).length;
     const kpi = $('#estateKpiRow');
@@ -3802,6 +3842,8 @@ window.printHospitalityFolio = printHospitalityFolio;
         <div class="kpi"><span>العقارات</span><strong>${fmt(props.length)}</strong></div>
         <div class="kpi"><span>البنايات</span><strong>${fmt(blds.length)}</strong></div>
         <div class="kpi"><span>الشقق</span><strong>${fmt(apts.length)}</strong></div>
+        <div class="kpi"><span>شقق مؤجرة</span><strong>${fmt(occupiedApts)}</strong></div>
+        <div class="kpi"><span>شقق محجوزة</span><strong>${fmt(reservedApts)}</strong></div>
         <div class="kpi"><span>الغرف</span><strong>${fmt(rooms.length)}</strong></div>
         <div class="kpi"><span>غرف مؤجرة</span><strong>${fmt(occupied)}</strong></div>
         <div class="kpi"><span>صيانة مفتوحة</span><strong>${fmt(openMaint)}</strong></div>
@@ -3863,11 +3905,25 @@ window.printHospitalityFolio = printHospitalityFolio;
   window.createEstateApartment = function(){
     const tenant = val('eaTenantClient') || null;
     const tenantObj = byId('clients', tenant);
+    const status = String(val('eaStatus') || 'vacant').toLowerCase();
+    const bookedClientName = val('eaBookedClientName') || (status==='reserved' ? (tenantObj.name || '') : '');
+    const bookedClientPhone = val('eaBookedClientPhone') || (status==='reserved' ? (tenantObj.phone || '') : '');
+    const bookedClientId = val('eaBookedClientId') || (status==='reserved' ? tenant : '');
     return postEstate('estate_apartments',{
       property_id: val('eaProperty'),
       building_id: val('eaBuilding'),
       name: val('eaName'),
+      status,
       room_count: num('eaRoomCount'),
+      rent_price: num('eaRentPrice'),
+      booking_deposit: num('eaBookingDeposit'),
+      prepaid_amount: num('eaPrepaidAmount'),
+      booked_client_name: bookedClientName,
+      booked_client_phone: bookedClientPhone,
+      booked_client_id: bookedClientId,
+      booked_by_employee: val('eaBookedByEmployee'),
+      maintenance_notes: val('eaMaintenanceNotes'),
+      maintenance_cost: num('eaMaintenanceCost'),
       attachments: val('eaAttachments'),
       manager_name: val('eaManager'),
       tenant_client_id: tenant,
@@ -3918,7 +3974,9 @@ window.printHospitalityFolio = printHospitalityFolio;
   document.addEventListener('change', (e)=>{
     const id = e?.target?.id;
     if(['eaProperty','erProperty','emProperty','erBuilding','emBuilding','emApartment'].includes(id)) fillEstateSelects();
+    if(id==='eaStatus') syncEstateApartmentStateFields();
   });
+  syncEstateApartmentStateFields();
 })();
 
 (function(){

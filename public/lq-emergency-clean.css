@@ -127,6 +127,15 @@ body.login-ultra.saas-login #loginScreen .login-auth--float {
 }
 .estate-icon-card h4{margin:6px 0 2px;color:#1f4ea5}
 .estate-icon-card p{margin:0;color:#5f738d;font-size:12px}
+.estate-state-fields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.estate-state-fields textarea{
+  grid-column:1/-1;
+}
 @media (max-width:960px){
   .estate-icon-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}
+  .estate-state-fields{grid-template-columns:1fr}
 }

@@ -160,7 +160,7 @@ TABLES = {
     "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
     "estate_properties": ["id", "name", "location", "building_count", "apartment_count", "room_count", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_buildings": ["id", "property_id", "name", "location", "apartment_count", "room_count", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_apartments": ["id", "property_id", "building_id", "name", "room_count", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_apartments": ["id", "property_id", "building_id", "name", "status", "room_count", "rent_price", "booking_deposit", "prepaid_amount", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "parts_details", "parts_cost", "invoice_no", "total_cost", "maintenance_date", "next_followup_date", "notes"],
     "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
@@ -1158,7 +1158,17 @@ def init_db() -> None:
                 property_id TEXT NOT NULL,
                 building_id TEXT NOT NULL,
                 name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'vacant',
                 room_count INTEGER NOT NULL DEFAULT 0,
+                rent_price REAL NOT NULL DEFAULT 0,
+                booking_deposit REAL NOT NULL DEFAULT 0,
+                prepaid_amount REAL NOT NULL DEFAULT 0,
+                booked_client_name TEXT,
+                booked_client_phone TEXT,
+                booked_client_id TEXT,
+                booked_by_employee TEXT,
+                maintenance_notes TEXT,
+                maintenance_cost REAL NOT NULL DEFAULT 0,
                 attachments TEXT,
                 manager_name TEXT,
                 tenant_client_id TEXT,
@@ -1418,6 +1428,19 @@ def init_db() -> None:
         ensure_column(db, "hospitality_folios", "balance_amount", "REAL NOT NULL DEFAULT 0")
         ensure_column(db, "hospitality_folios", "status", "TEXT NOT NULL DEFAULT 'open'")
         ensure_column(db, "hospitality_folios", "notes", "TEXT")
+        for col, definition in [
+            ("status", "TEXT NOT NULL DEFAULT 'vacant'"),
+            ("rent_price", "REAL NOT NULL DEFAULT 0"),
+            ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
+            ("prepaid_amount", "REAL NOT NULL DEFAULT 0"),
+            ("booked_client_name", "TEXT"),
+            ("booked_client_phone", "TEXT"),
+            ("booked_client_id", "TEXT"),
+            ("booked_by_employee", "TEXT"),
+            ("maintenance_notes", "TEXT"),
+            ("maintenance_cost", "REAL NOT NULL DEFAULT 0"),
+        ]:
+            ensure_column(db, "estate_apartments", col, definition)
         for col, definition in [
             ("credential_data", "TEXT"),
             ("public_key", "TEXT"),
@@ -4453,6 +4476,74 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if err:
                 return self.send_json({"ok": False, "error": err}, 400)
             data.update(prepared)
+        if table == "estate_apartments":
+            prop_id = str(data.get("property_id") or "").strip()
+            bld_id = str(data.get("building_id") or "").strip()
+            if not prop_id or not exists(db, "estate_properties", prop_id):
+                return self.send_json({"ok": False, "error": "اختر العقار أولاً"}, 400)
+            if not bld_id:
+                return self.send_json({"ok": False, "error": "اختر البناية أولاً"}, 400)
+            bld = db.execute("SELECT id, property_id FROM estate_buildings WHERE id=?", (bld_id,)).fetchone()
+            if not bld:
+                return self.send_json({"ok": False, "error": "البناية غير موجودة"}, 400)
+            if str(bld["property_id"] or "") != prop_id:
+                return self.send_json({"ok": False, "error": "البناية لا تتبع العقار المحدد"}, 400)
+            status_map = {
+                "vacant": "vacant",
+                "empty": "vacant",
+                "فارغة": "vacant",
+                "شاغرة": "vacant",
+                "occupied": "occupied",
+                "rented": "occupied",
+                "مؤجرة": "occupied",
+                "maintenance": "maintenance",
+                "صيانة": "maintenance",
+                "تحت الصيانة": "maintenance",
+                "reserved": "reserved",
+                "محجوزة": "reserved",
+                "محجوز": "reserved",
+            }
+            raw_status = str(data.get("status") or "vacant").strip().lower()
+            status_norm = status_map.get(raw_status)
+            if not status_norm:
+                return self.send_json({"ok": False, "error": "حالة الشقة غير معتمدة. المسموح: مؤجرة/فارغة/صيانة/محجوزة"}, 400)
+            data["status"] = status_norm
+            data["property_id"] = prop_id
+            data["building_id"] = bld_id
+            if not str(data.get("name") or "").strip():
+                return self.send_json({"ok": False, "error": "اسم/رقم الشقة مطلوب"}, 400)
+            data["room_count"] = int(float(data.get("room_count") or 0))
+            if data["room_count"] < 0:
+                return self.send_json({"ok": False, "error": "عدد الغرف لا يمكن أن يكون سالبًا"}, 400)
+            data["rent_price"] = round(float(data.get("rent_price") or 0), 3)
+            data["booking_deposit"] = round(float(data.get("booking_deposit") or 0), 3)
+            data["prepaid_amount"] = round(float(data.get("prepaid_amount") or 0), 3)
+            data["maintenance_cost"] = round(float(data.get("maintenance_cost") or 0), 3)
+            if data["rent_price"] < 0 or data["booking_deposit"] < 0 or data["prepaid_amount"] < 0 or data["maintenance_cost"] < 0:
+                return self.send_json({"ok": False, "error": "الأسعار والتأمين والمدفوع مقدمًا يجب أن تكون أرقامًا موجبة أو صفر"}, 400)
+            if status_norm == "reserved":
+                if data["booking_deposit"] <= 0:
+                    return self.send_json({"ok": False, "error": "في حالة الحجز يجب إدخال تأمين الحجز"}, 400)
+                if data["prepaid_amount"] < 0:
+                    return self.send_json({"ok": False, "error": "المدفوع مقدمًا غير صحيح"}, 400)
+                booked_name = str(data.get("booked_client_name") or "").strip()
+                booked_phone = str(data.get("booked_client_phone") or "").strip()
+                booked_employee = str(data.get("booked_by_employee") or "").strip()
+                if not booked_name or not booked_phone or not booked_employee:
+                    return self.send_json({"ok": False, "error": "حالة محجوزة تتطلب اسم العميل وهاتفه واسم الموظف الذي حجز"}, 400)
+                booked_client_id = str(data.get("booked_client_id") or "").strip()
+                if booked_client_id and not exists(db, "clients", booked_client_id):
+                    return self.send_json({"ok": False, "error": "معرف العميل المحجوز له غير موجود"}, 400)
+            if status_norm == "maintenance":
+                if not str(data.get("maintenance_notes") or "").strip():
+                    return self.send_json({"ok": False, "error": "حالة الصيانة تتطلب وصف أعمال الصيانة"}, 400)
+            if status_norm != "reserved":
+                data["booked_client_name"] = str(data.get("booked_client_name") or "").strip() or None
+                data["booked_client_phone"] = str(data.get("booked_client_phone") or "").strip() or None
+                data["booked_client_id"] = str(data.get("booked_client_id") or "").strip() or None
+                data["booked_by_employee"] = str(data.get("booked_by_employee") or "").strip() or None
+            if status_norm != "maintenance":
+                data["maintenance_notes"] = str(data.get("maintenance_notes") or "").strip() or None
         if table == "invoices":
             return self.send_json({"ok": False, "error": "الفاتورة تُنشأ من العقد — من قائمة العقود اضغط «فاتورة» أو اعتمد العقد لتوليد الجدول"}, 400)
         if table == "payments":

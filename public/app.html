@@ -546,7 +546,26 @@
               <select id="eaProperty"></select>
               <select id="eaBuilding"></select>
               <input id="eaName" placeholder="اسم/رقم الشقة">
+              <select id="eaStatus">
+                <option value="vacant">فارغة</option>
+                <option value="occupied">مؤجرة</option>
+                <option value="maintenance">صيانة</option>
+                <option value="reserved">محجوزة</option>
+              </select>
               <input id="eaRoomCount" type="number" min="0" placeholder="عدد الغرف">
+              <input id="eaRentPrice" type="number" min="0" step="0.001" placeholder="سعر الإيجار OMR">
+              <div id="eaReservedFields" class="estate-state-fields hidden">
+                <input id="eaBookingDeposit" type="number" min="0" step="0.001" placeholder="تأمين الحجز OMR">
+                <input id="eaPrepaidAmount" type="number" min="0" step="0.001" placeholder="المدفوع مقدمًا OMR">
+                <input id="eaBookedClientName" placeholder="اسم العميل المحجوز له">
+                <input id="eaBookedClientPhone" placeholder="هاتف العميل">
+                <input id="eaBookedClientId" placeholder="رقم الهوية/المرجع">
+                <input id="eaBookedByEmployee" placeholder="الموظف الذي حجز">
+              </div>
+              <div id="eaMaintenanceFields" class="estate-state-fields hidden">
+                <input id="eaMaintenanceCost" type="number" min="0" step="0.001" placeholder="تكلفة الصيانة OMR">
+                <textarea id="eaMaintenanceNotes" placeholder="تفاصيل أعمال الصيانة المطلوبة"></textarea>
+              </div>
               <input id="eaAttachments" placeholder="الملحقات">
               <input id="eaManager" placeholder="مسؤول الشقة">
               <select id="eaTenantClient"></select>
