@@ -581,7 +581,13 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const api = async (path, opts={}) => {
   const headers = {'Content-Type':'application/json'};
   if(Jawdah.token) headers.Authorization = 'Bearer ' + Jawdah.token;
-  const res = await fetch('/api/' + path.replace(/^\//,''), {...opts, headers:{...headers, ...(opts.headers||{})}});
+  let url = '/api/' + path.replace(/^\//,'');
+  // Always also pass token in query — some proxies drop Authorization on GET
+  if(Jawdah.token){
+    const sep = url.includes('?') ? '&' : '?';
+    url += sep + 'token=' + encodeURIComponent(Jawdah.token);
+  }
+  const res = await fetch(url, {...opts, headers:{...headers, ...(opts.headers||{})}});
   const text = await res.text();
   let data;
   try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false,error:text || 'Invalid response'}; }
@@ -711,7 +717,8 @@ async function login(){
     if(res.must_change_password) Jawdah.user.must_change_password=true;
     // Always show dedicated platforms page after login (العقارات / الضيافة / المحاسبة)
     localStorage.removeItem('jawdah_portal_choice');
-    location.replace('/portal-select.html?from=login&t=' + Date.now());
+    const tok = encodeURIComponent(res.token || '');
+    location.replace('/portal-select.html?from=login&t=' + Date.now() + '&token=' + tok);
     return;
   }catch(e){ toastErr(e,'اسم المستخدم أو كلمة المرور غير صحيحة'); }
   finally{
@@ -793,8 +800,11 @@ async function checkSession(){
     applySavedPortalChoice();
     maybeSendWelcomeMessage(Jawdah.user);
   }catch(e){
-    localStorage.removeItem('jawdah_cloud_token');
-    Jawdah.token='';
+    // Keep token on transient failures; only clear on confirmed auth failure
+    if(e && (e.status===401 || /Authentication required|Invalid or expired/i.test(String(e.message||'')))){
+      localStorage.removeItem('jawdah_cloud_token');
+      Jawdah.token='';
+    }
     showLoginShell();
   }
 }

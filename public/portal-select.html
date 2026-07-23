@@ -161,33 +161,64 @@
   </main>
 
   <script>
-    async function ensureSession() {
-      const token = localStorage.getItem("jawdah_cloud_token");
+    function readToken() {
+      try {
+        const qs = new URLSearchParams(location.search || "");
+        const qTok = (qs.get("token") || "").trim();
+        if (qTok) {
+          localStorage.setItem("jawdah_cloud_token", qTok);
+          qs.delete("token");
+          const next = location.pathname + (qs.toString() ? ("?" + qs.toString()) : "");
+          history.replaceState({}, "", next);
+          return qTok;
+        }
+      } catch (_) {}
+      return (localStorage.getItem("jawdah_cloud_token") || "").trim();
+    }
+
+    function goLogin(reason) {
+      location.replace("/app.html?v=" + encodeURIComponent(reason || "need-login"));
+    }
+
+    async function ensureSession(strict) {
+      const token = readToken();
       if (!token) {
-        location.replace("/app.html?v=need-login");
+        goLogin("need-login");
         return false;
       }
+      if (!strict) return true;
       try {
-        const res = await fetch("/api/me", { headers: { Authorization: "Bearer " + token } });
+        const res = await fetch("/api/me?token=" + encodeURIComponent(token), {
+          headers: { Authorization: "Bearer " + token }
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error("invalid session");
         return true;
       } catch (_) {
-        localStorage.removeItem("jawdah_cloud_token");
-        location.replace("/app.html?v=session-expired");
+        // Do NOT wipe token on transient network errors; send user to app to re-validate
+        goLogin("session-check-failed");
         return false;
       }
     }
 
     async function enterPortal(choice) {
-      const ok = await ensureSession();
-      if (!ok) return;
+      const token = readToken();
+      if (!token) {
+        goLogin("need-login");
+        return;
+      }
       const c = (choice === "hospitality") ? "hospitality" : ((choice === "accounting") ? "accounting" : "realestate");
       localStorage.setItem("jawdah_portal_choice", c);
-      location.replace("/app.html?portal=" + encodeURIComponent(c) + "&t=" + Date.now());
+      localStorage.setItem("jawdah_cloud_token", token);
+      location.replace(
+        "/app.html?portal=" + encodeURIComponent(c) +
+        "&t=" + Date.now() +
+        "&token=" + encodeURIComponent(token)
+      );
     }
 
-    ensureSession();
+    // Soft check only: keep platforms visible if token exists
+    ensureSession(false);
   </script>
 </body>
 </html>
