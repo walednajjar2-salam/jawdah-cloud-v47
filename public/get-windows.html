@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>تحميل ويندوز — جودة الانطلاقة</title>
+  <style>
+    :root{--bg:#07111f;--gold:#f5d76e;--cyan:#2fdcc4;--text:#f7fbff;--muted:#a8b7c8;--line:rgba(245,215,110,.35)}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Tahoma,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at 20% 10%,rgba(47,220,196,.18),transparent 35%),linear-gradient(160deg,#040914,#07111f 55%,#0a2430);color:var(--text);display:grid;place-items:center;padding:20px}
+    main{width:min(720px,100%);border:1px solid var(--line);border-radius:22px;padding:28px;background:rgba(255,255,255,.06)}
+    h1{margin:0 0 8px;color:var(--gold);font-size:28px}
+    p{color:var(--muted);line-height:1.8;margin:8px 0}
+    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:14px;padding:16px 18px;margin-top:14px}
+    .primary{background:linear-gradient(135deg,var(--cyan),#dffdf8);color:#042027;font-size:1.15rem}
+    .secondary{background:linear-gradient(135deg,#0078D4,#005A9E);color:#fff}
+    .ghost{border:1px solid var(--line);color:#e8fffb;background:rgba(0,0,0,.2)}
+    .box{margin-top:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;background:rgba(0,0,0,.22)}
+    code,pre{direction:ltr;text-align:left;display:block;white-space:pre-wrap;word-break:break-all;color:#e8fffb;background:#0008;border-radius:10px;padding:10px;font-size:.85rem}
+    ol{line-height:1.9;color:#dce9f3}
+    .ok{color:#9dffc3;font-weight:700}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>تحميل تطبيق ويندوز</h1>
+    <p class="ok">اختر الطريقة الأسهل أولاً (ZIP) — تعمل مباشرة بدون تعقيد.</p>
+
+    <a class="btn primary" href="/releases/windows/LaunchQuality-Portable.zip" download>1) تحميل الحزمة السهلة ZIP</a>
+    <a class="btn secondary" href="/lq-setup.exe" download="LaunchQuality-Setup.exe">2) تحميل المثبّت EXE</a>
+    <a class="btn ghost" href="/app.html">فتح النظام من المتصفح الآن</a>
+
+    <div class="box">
+      <strong>بعد تحميل ZIP:</strong>
+      <ol>
+        <li>فك الضغط</li>
+        <li>اضغط مرتين على <b>تشغيل-جودة-الانطلاقة.bat</b></li>
+        <li>إذا أردت اختصار سطح المكتب: اضغط <b>تثبيت-اختصار-سطح-المكتب.bat</b></li>
+      </ol>
+    </div>
+
+    <div class="box">
+      <strong>إذا ظهر تحذير Windows عند EXE:</strong>
+      <ol>
+        <li>اضغط More info / مزيد من المعلومات</li>
+        <li>ثم Run anyway / تشغيل على أي حال</li>
+      </ol>
+    </div>
+
+    <div class="box">
+      <strong>تثبيت بأمر واحد (PowerShell):</strong>
+      <pre>irm https://web-production-08d73.up.railway.app/releases/windows/install.ps1 | iex</pre>
+    </div>
+  </main>
+</body>
+</html>

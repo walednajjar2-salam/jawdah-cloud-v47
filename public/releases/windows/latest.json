@@ -1,12 +1,14 @@
 {
   "channel": "stable",
-  "version": "49.1.0",
-  "installer_url": "https://github.com/walednajjar2-salam/jawdah-cloud-v47/releases/download/windows-v49.1.0/LaunchQuality-Setup.exe",
+  "version": "49.1.1",
+  "installer_url": "https://web-production-08d73.up.railway.app/lq-setup.exe",
+  "portable_url": "https://web-production-08d73.up.railway.app/lq-portable.zip",
+  "setup_page": "https://web-production-08d73.up.railway.app/get-windows",
   "sha256": "653594bdd11021af766d5a058aad1929f5f0e60cbc50275fc57b850a5a127dff",
-  "published_at": "2026-07-23T16:32:00Z",
+  "published_at": "2026-07-23T16:36:29Z",
   "release_notes": [
-    "Windows installer ready for employees.",
-    "Official download via GitHub Releases (bypasses Railway cache/404).",
-    "Includes automatic update task."
+    "Fixed HEAD 501 that could abort browser downloads.",
+    "Added portable ZIP (BAT) that avoids SmartScreen friction.",
+    "Added short aliases /lq-setup.exe and /get-windows."
   ]
 }
