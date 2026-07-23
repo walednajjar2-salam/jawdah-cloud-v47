@@ -709,8 +709,10 @@ async function login(){
     localStorage.setItem('jawdah_last_user', username);
     localStorage.setItem('jawdah_last_remember', remember ? '1' : '0');
     if(res.must_change_password) Jawdah.user.must_change_password=true;
-    showAppShell();
-    await loadAll(); renderBiometricHub(); startOwnerLiveAutoRefresh(); applySavedPortalChoice(); openPortalSwitch(true); haptic(12); maybeSendWelcomeMessage(Jawdah.user);
+    // Always show dedicated platforms page after login (العقارات / الضيافة / المحاسبة)
+    localStorage.removeItem('jawdah_portal_choice');
+    location.replace('/portal-select.html?from=login&t=' + Date.now());
+    return;
   }catch(e){ toastErr(e,'اسم المستخدم أو كلمة المرور غير صحيحة'); }
   finally{
     if(btn){
@@ -760,6 +762,18 @@ function showAppShell(){
 }
 async function checkSession(){
   Jawdah.token=Jawdah.token||localStorage.getItem('jawdah_cloud_token')||'';
+  // Accept token from portal-select redirect query once
+  try{
+    const qs=new URLSearchParams(location.search||'');
+    const qToken=qs.get('token');
+    if(qToken){
+      Jawdah.token=qToken;
+      localStorage.setItem('jawdah_cloud_token', qToken);
+      qs.delete('token');
+      const next=location.pathname + (qs.toString() ? ('?'+qs.toString()) : '') + (location.hash||'');
+      history.replaceState({}, '', next);
+    }
+  }catch(_){/* ignore */}
   if(!Jawdah.token){
     showLoginShell();
     return;
@@ -767,12 +781,16 @@ async function checkSession(){
   try{
     const me=await api('me');
     Jawdah.user=me.user;
+    const portalChoice = localStorage.getItem('jawdah_portal_choice');
+    if(!portalChoice){
+      location.replace('/portal-select.html?from=session&t=' + Date.now());
+      return;
+    }
     showAppShell();
     await loadAll();
     renderBiometricHub();
     startOwnerLiveAutoRefresh();
     applySavedPortalChoice();
-    openPortalSwitch(true);
     maybeSendWelcomeMessage(Jawdah.user);
   }catch(e){
     localStorage.removeItem('jawdah_cloud_token');
@@ -3561,7 +3579,11 @@ function choosePortal(portal){
   else showSection('estate-platform');
 }
 function applySavedPortalChoice(){
-  const choice = localStorage.getItem('jawdah_portal_choice') || 'realestate';
+  const choice = localStorage.getItem('jawdah_portal_choice');
+  if(!choice){
+    location.replace('/portal-select.html?from=app&t=' + Date.now());
+    return;
+  }
   if(choice==='hospitality') showSection('hospitality');
   else if(choice==='accounting') showSection('accounting-platform');
   else showSection('estate-platform');

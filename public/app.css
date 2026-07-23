@@ -898,21 +898,23 @@ body[data-theme="luxury-pink"] .gold-btn{
   z-index:1200;
   display:grid;
   place-items:center;
-  background:rgba(6,10,18,.48);
+  background:rgba(6,10,18,.72);
   backdrop-filter:blur(12px);
   -webkit-backdrop-filter:blur(12px);
 }
+.portal-switch-overlay.hidden{display:none!important}
 .portal-switch-card{
-  width:min(640px,92vw);
+  width:min(920px,94vw);
   border-radius:22px;
-  border:1px solid rgba(255,255,255,.22);
-  background:linear-gradient(170deg,rgba(255,255,255,.2),rgba(255,255,255,.08));
-  padding:18px 16px;
-  box-shadow:0 24px 60px rgba(0,0,0,.35);
+  border:1px solid rgba(245,215,110,.35);
+  background:linear-gradient(170deg,rgba(15,23,42,.96),rgba(8,14,28,.94));
+  padding:22px 18px;
+  box-shadow:0 24px 60px rgba(0,0,0,.45);
+  color:#f8fbff;
 }
 .portal-switch-grid{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:12px;
 }
 .portal-tile{
@@ -920,7 +922,7 @@ body[data-theme="luxury-pink"] .gold-btn{
   border-radius:18px;
   padding:18px 14px;
   min-height:152px;
-  background:linear-gradient(160deg,rgba(255,255,255,.24),rgba(255,255,255,.09));
+  background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.06));
   color:#f8fbff;
   display:flex;
   flex-direction:column;

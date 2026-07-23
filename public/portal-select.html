@@ -164,7 +164,7 @@
     async function ensureSession() {
       const token = localStorage.getItem("jawdah_cloud_token");
       if (!token) {
-        location.replace("/Launch_Quality_LLC.html?v=need-login");
+        location.replace("/app.html?v=need-login");
         return false;
       }
       try {
@@ -174,7 +174,7 @@
         return true;
       } catch (_) {
         localStorage.removeItem("jawdah_cloud_token");
-        location.replace("/Launch_Quality_LLC.html?v=session-expired");
+        location.replace("/app.html?v=session-expired");
         return false;
       }
     }
@@ -184,8 +184,7 @@
       if (!ok) return;
       const c = (choice === "hospitality") ? "hospitality" : ((choice === "accounting") ? "accounting" : "realestate");
       localStorage.setItem("jawdah_portal_choice", c);
-      const token = localStorage.getItem("jawdah_cloud_token") || "";
-      location.replace("/app.html?v=portal-choice-" + c + "-" + Date.now() + "&token=" + encodeURIComponent(token));
+      location.replace("/app.html?portal=" + encodeURIComponent(c) + "&t=" + Date.now());
     }
 
     ensureSession();
