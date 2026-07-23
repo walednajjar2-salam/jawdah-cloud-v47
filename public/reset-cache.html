@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ar" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Launch Quality · Reset Cache</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1220;color:#e5edf9;font-family:Tajawal,Segoe UI,Arial,sans-serif}
+    .box{max-width:760px;padding:24px;border:1px solid #2a3b57;border-radius:14px;background:#111a2c}
+    h1{margin:0 0 10px;font-size:22px}
+    p{margin:6px 0;line-height:1.7;color:#b8c7dd}
+    .ok{color:#86efac}
+    .warn{color:#fcd34d}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Reset Cache جاري التنفيذ…</h1>
+    <p>يتم الآن حذف Service Worker والكاش المحلي لضمان تحميل الواجهة المحدثة بالكامل.</p>
+    <p id="status" class="warn">الرجاء الانتظار…</p>
+  </div>
+  <script>
+    (async function () {
+      const status = document.getElementById("status");
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all((regs || []).map((r) => r.unregister()));
+        }
+        if (window.caches && caches.keys) {
+          const keys = await caches.keys();
+          await Promise.all((keys || []).map((k) => caches.delete(k)));
+        }
+        status.textContent = "تم تنظيف الكاش بنجاح — سيتم تحويلك الآن.";
+        status.className = "ok";
+      } catch (err) {
+        status.textContent = "تمت المحاولة، سيتم التحويل للنسخة الجديدة الآن.";
+        status.className = "warn";
+      }
+      const target = "/app.html?v=hard-reset-" + Date.now();
+      setTimeout(function(){ location.replace(target); }, 800);
+    })();
+  </script>
+</body>
+</html>
