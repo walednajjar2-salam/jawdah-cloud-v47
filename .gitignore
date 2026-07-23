@@ -9,3 +9,7 @@ jawdah-cloud-v47/
 lanch-qulaty/
 _zip-check/
 backups/
+dist/
+tools/windows/setup/payload/
+scripts/LaunchQuality-Setup.exe
+downloads/*.exe

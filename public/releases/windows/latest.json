@@ -1,12 +1,12 @@
 {
   "channel": "stable",
-  "version": "49.0.0",
+  "version": "49.1.0",
   "installer_url": "https://web-production-08d73.up.railway.app/releases/windows/LaunchQuality-Setup.exe",
-  "sha256": "",
-  "published_at": "2026-07-23T00:00:00Z",
+  "sha256": "653594bdd11021af766d5a058aad1929f5f0e60cbc50275fc57b850a5a127dff",
+  "published_at": "2026-07-23T16:23:55Z",
   "release_notes": [
-    "Stable production build.",
-    "Real estate workflow hardening.",
-    "Automatic update channel enabled."
+    "Windows installer ready for employees.",
+    "Opens production cloud app in Edge/Chrome app mode.",
+    "Includes automatic update task."
   ]
 }

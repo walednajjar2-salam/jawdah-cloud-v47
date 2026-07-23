@@ -5,13 +5,28 @@
 - ✅ السيرفر النهائي: سياسة ثابتة معتمدة.
 - ✅ تحديث Windows التلقائي: جاهز (manifest + updater + scheduled task).
 - ✅ قنوات العقار/العقد/الفاتورة: مفعلة ومختبرة.
-- ⛔ ملف المثبّت `LaunchQuality-Setup.exe`: **غير مولّد بعد** (لا يوجد `dist/` ولا أداة Inno Setup في هذه البيئة).
+- ✅ ملف المثبّت `LaunchQuality-Setup.exe`: جاهز للتحميل من `public/releases/windows/` (يُبنى عبر `scripts/build_windows_installer.sh`).
 
 ---
 
 ## A) مسار إنشاء ملف المثبّت (مرة واحدة لكل إصدار)
 
-> ينفذ على جهاز Windows (أو CI Windows runner).
+> يُنفَّذ من Linux أو Windows عبر سكربت البناء الجاهز.
+
+### الطريقة الموصى بها (جاهزة الآن)
+
+```bash
+./scripts/build_windows_installer.sh 49.1.0
+```
+
+الناتج:
+- `public/releases/windows/LaunchQuality-Setup.exe`
+- `public/releases/windows/latest.json` (مع SHA256)
+
+رابط التحميل المباشر بعد النشر على السيرفر:
+- `https://web-production-08d73.up.railway.app/releases/windows/LaunchQuality-Setup.exe`
+
+### طريقة Inno Setup التقليدية (اختيارية)
 
 1. تثبيت **Inno Setup 6** (يتضمن `ISCC.exe`).
 2. تجهيز مخرجات التطبيق داخل:
@@ -69,8 +84,7 @@
 
 ## D) متى يصبح لدينا ملف المثبّت؟
 
-يصبح لدينا ملف المثبّت **فور تنفيذ قسم A** على Windows مع توفر `dist/LaunchQuality.exe`.
-
-بصيغة عملية:
-- إذا تم تشغيل خطوة البناء على Windows الآن، ستحصل على `LaunchQuality-Setup.exe` مباشرة بعد اكتمال أمر `ISCC`.
-
+✅ جاهز الآن:
+- الملف: `public/releases/windows/LaunchQuality-Setup.exe`
+- الإصدار: انظر `public/releases/windows/latest.json`
+- إعادة البناء: `./scripts/build_windows_installer.sh <version>`
