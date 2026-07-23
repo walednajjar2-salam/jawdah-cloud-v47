@@ -3778,6 +3778,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "accountant_reports" and method == "GET":
                     user = self.require_user(db, "reports:read")
                     return None if not user else self.api_accountant_reports(db, query)
+                if parts[0] == "accounting_platform_overview" and method == "GET":
+                    user = self.require_user(db, "accounts:read")
+                    return None if not user else self.api_accounting_platform_overview(db, query)
                 if parts[0] == "financial_statements" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_financial_statements(db)
@@ -7273,6 +7276,134 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if payload.get("error"):
             return self.send_json({"ok": False, "error": payload["error"]}, 400)
         self.send_json({"ok": True, "type": report_type, "report": payload})
+
+    def api_accounting_platform_overview(self, db: sqlite3.Connection, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        months = max(3, min(18, int((params.get("months") or ["12"])[0] or 12)))
+        today_d = date.today()
+        invoices = rows_to_dicts(db.execute("SELECT invoice_no, issue_date, due_date, amount, paid_amount, status, client_id FROM invoices").fetchall())
+        estate_inv = rows_to_dicts(db.execute("SELECT invoice_no, issued_at, due_date, amount, paid_amount, status FROM estate_contract_invoices").fetchall())
+        accounts_rows = rows_to_dicts(db.execute("SELECT entry_date, type, amount, category FROM accounts").fetchall())
+        periods = rows_to_dicts(db.execute("SELECT id, period_name, start_date, end_date, status, closed_at FROM financial_periods ORDER BY start_date DESC").fetchall())
+        month_closes = rows_to_dicts(db.execute("SELECT month_key, status, total_invoiced, total_collected, outstanding_due, closed_at FROM estate_month_closes ORDER BY month_key DESC").fetchall())
+        bank_total = float(db.execute("SELECT COALESCE(SUM(CASE WHEN type IN ('deposit','in','income') THEN amount ELSE -amount END),0) FROM bank_transactions").fetchone()[0] or 0)
+
+        billed_total = 0.0
+        collected_total = 0.0
+        overdue_total = 0.0
+        aging = {"0-30": 0.0, "31-60": 0.0, "61-90": 0.0, "90+": 0.0}
+
+        def consume_invoice_rows(rows: List[Dict[str, Any]], issue_key: str) -> None:
+            nonlocal billed_total, collected_total, overdue_total
+            for r in rows:
+                amount = float(r.get("amount") or 0)
+                paid = float(r.get("paid_amount") or 0)
+                rem = max(0.0, amount - paid)
+                billed_total += amount
+                collected_total += paid
+                due_s = str(r.get("due_date") or "").strip()
+                if rem <= 0 or not due_s:
+                    continue
+                try:
+                    due_d = datetime.fromisoformat(due_s).date()
+                except Exception:
+                    continue
+                if due_d < today_d:
+                    overdue_total += rem
+                    days = (today_d - due_d).days
+                    if days <= 30:
+                        aging["0-30"] += rem
+                    elif days <= 60:
+                        aging["31-60"] += rem
+                    elif days <= 90:
+                        aging["61-90"] += rem
+                    else:
+                        aging["90+"] += rem
+
+        consume_invoice_rows(invoices, "issue_date")
+        consume_invoice_rows(estate_inv, "issued_at")
+
+        monthly: List[Dict[str, Any]] = []
+        for i in range(months - 1, -1, -1):
+            anchor = add_months(today_d.replace(day=1), -i)
+            mk = anchor.strftime("%Y-%m")
+            income = sum(float(a.get("amount") or 0) for a in accounts_rows if str(a.get("entry_date") or "").startswith(mk) and str(a.get("type") or "").lower() == "income")
+            expense = sum(float(a.get("amount") or 0) for a in accounts_rows if str(a.get("entry_date") or "").startswith(mk) and str(a.get("type") or "").lower() == "expense")
+            billed_m = sum(float(x.get("amount") or 0) for x in invoices if str(x.get("issue_date") or "").startswith(mk)) + sum(float(x.get("amount") or 0) for x in estate_inv if str(x.get("issued_at") or "").startswith(mk))
+            collected_m = sum(float(x.get("paid_amount") or 0) for x in invoices if str(x.get("issue_date") or "").startswith(mk)) + sum(float(x.get("paid_amount") or 0) for x in estate_inv if str(x.get("issued_at") or "").startswith(mk))
+            monthly.append({"month": mk, "income": round(income, 3), "expense": round(expense, 3), "net": round(income - expense, 3), "billed": round(billed_m, 3), "collected": round(collected_m, 3)})
+
+        forecast_30 = 0.0
+        for r in invoices + estate_inv:
+            amount = float(r.get("amount") or 0)
+            paid = float(r.get("paid_amount") or 0)
+            rem = max(0.0, amount - paid)
+            due_s = str(r.get("due_date") or "").strip()
+            if rem <= 0 or not due_s:
+                continue
+            try:
+                due_d = datetime.fromisoformat(due_s).date()
+            except Exception:
+                continue
+            if today_d <= due_d <= (today_d + timedelta(days=30)):
+                forecast_30 += rem
+
+        open_periods = [p for p in periods if str(p.get("status") or "").lower() == "open"]
+        closed_periods = [p for p in periods if str(p.get("status") or "").lower() == "closed"]
+        latest_close = month_closes[0] if month_closes else None
+        overdue_count = int(
+            sum(
+                1
+                for r in invoices + estate_inv
+                if max(0.0, float(r.get("amount") or 0) - float(r.get("paid_amount") or 0)) > 0
+                and str(r.get("due_date") or "") < today()
+            )
+        )
+
+        decisions: List[Dict[str, Any]] = []
+        if overdue_total > 0:
+            decisions.append({"severity": "high", "title": "تحصيل عاجل", "detail": f"المتأخرات الحالية {fmt_omr(overdue_total)}", "action_section": "invoices"})
+        if len(open_periods) > 2:
+            decisions.append({"severity": "medium", "title": "فترات كثيرة مفتوحة", "detail": f"يوجد {len(open_periods)} فترات مفتوحة — يفضل الإقفال التدريجي", "action_section": "financial-periods"})
+        if bank_total < 0:
+            decisions.append({"severity": "high", "title": "رصيد البنك سلبي", "detail": f"الرصيد الحالي {fmt_omr(bank_total)}", "action_section": "bank"})
+        if not decisions:
+            decisions.append({"severity": "ok", "title": "الوضع المحاسبي مستقر", "detail": "لا توجد مخاطر مالية عاجلة حسب المؤشرات الحالية", "action_section": "accounts"})
+
+        health = 100
+        if overdue_total > 0:
+            health -= min(35, int(overdue_total / 500))
+        if len(open_periods) > 2:
+            health -= min(20, len(open_periods) * 3)
+        if bank_total < 0:
+            health -= 15
+        health = max(0, min(100, health))
+
+        self.send_json(
+            {
+                "ok": True,
+                "kpis": {
+                    "billed_total": round(billed_total, 3),
+                    "collected_total": round(collected_total, 3),
+                    "overdue_total": round(overdue_total, 3),
+                    "forecast_next_30_days": round(forecast_30, 3),
+                    "bank_balance": round(bank_total, 3),
+                    "open_periods": len(open_periods),
+                    "closed_periods": len(closed_periods),
+                    "overdue_count": overdue_count,
+                    "health": health,
+                },
+                "aging": {k: round(v, 3) for k, v in aging.items()},
+                "cashflow_monthly": monthly,
+                "decisions": decisions,
+                "latest_month_close": latest_close,
+                "periods_summary": {
+                    "open": len(open_periods),
+                    "closed": len(closed_periods),
+                    "latest_open": open_periods[0] if open_periods else None,
+                },
+            }
+        )
 
     def api_report_accountant(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
         params = urllib.parse.parse_qs(query or "")

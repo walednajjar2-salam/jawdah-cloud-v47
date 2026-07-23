@@ -3676,29 +3676,7 @@ window.printHospitalityFolio = printHospitalityFolio;
 })();
 
 (function(){
-  window.renderAccountingPlatform = function(){
-    const hostKpi = $('#accPlatformKpis');
-    const inv = Jawdah.data.invoices || [];
-    const acc = Jawdah.data.accounts || [];
-    const banks = Jawdah.data.bank_transactions || [];
-    const periods = Jawdah.data.financial_periods || [];
-    const billed = inv.reduce((s,x)=>s+Number(x.amount||0),0);
-    const paid = inv.reduce((s,x)=>s+Number(x.paid_amount||0),0);
-    const overdue = inv.reduce((s,x)=>{
-      const rem = Math.max(0, Number(x.amount||0)-Number(x.paid_amount||0));
-      return s + ((rem>0 && String(x.due_date||'') < today()) ? rem : 0);
-    },0);
-    const income = acc.filter(x=>x.type==='income').reduce((s,x)=>s+Number(x.amount||0),0);
-    const expense = acc.filter(x=>x.type==='expense').reduce((s,x)=>s+Number(x.amount||0),0);
-    const net = income-expense;
-    if(hostKpi){
-      hostKpi.innerHTML = `
-        <div class="kpi"><span>إجمالي مفوتر</span><strong>${money(billed)}</strong></div>
-        <div class="kpi"><span>إجمالي محصل</span><strong>${money(paid)}</strong></div>
-        <div class="kpi"><span>متأخرات</span><strong>${money(overdue)}</strong></div>
-        <div class="kpi"><span>صافي</span><strong>${money(net)}</strong></div>
-      `;
-    }
+  window.renderAccountingPlatform = async function(){
     const quick = $('#accPlatformQuick');
     if(quick){
       quick.innerHTML = [
@@ -3709,35 +3687,90 @@ window.printHospitalityFolio = printHospitalityFolio;
         ['الرواتب','payroll','👔'],
         ['القوائم المالية','statements','📘'],
         ['تسوية البنك','bank-reconciliation','⚖️'],
-        ['الفترات المالية','financial-periods','📅']
+        ['الفترات المالية','financial-periods','📅'],
+        ['تقارير محاسبية','reports','📈']
       ].map(x=>`<button class="ghost" type="button" onclick="showSection('${x[1]}')">${x[2]} ${x[0]}</button>`).join('');
     }
-    const alerts = $('#accPlatformAlerts');
-    if(alerts){
-      const openPeriods = periods.filter(p=>String(p.status||'').toLowerCase()==='open').length;
-      alerts.innerHTML = `
-        <div class="statement-row"><span>فواتير متأخرة</span><b class="${overdue>0?'low-stock':'linked-ok'}">${money(overdue)}</b></div>
-        <div class="statement-row"><span>فترات مفتوحة</span><b>${fmt(openPeriods)}</b></div>
-        <div class="statement-row"><span>حركة البنك</span><b>${fmt(banks.length)}</b></div>
-      `;
-    }
-    const invHost = $('#accPlatformInvoices');
-    if(invHost){
-      const rows = [...inv].sort((a,b)=>String(b.issue_date||'').localeCompare(String(a.issue_date||''))).slice(0,8);
-      invHost.innerHTML = rows.length ? tableHtml(
-        [['الفاتورة','invoice_no'],['العميل','client_id',(v)=>htmlEscape(byId('clients',v).name||'')],['الاستحقاق','due_date'],['المبلغ','amount',(v)=>money(v)],['المدفوع','paid_amount',(v)=>money(v)],['الحالة','status',(v)=>statusBadge(v)]],
-        rows
-      ) : '<p class="mini">لا توجد فواتير بعد</p>';
-    }
-    const bankHost = $('#accPlatformBankPeriods');
-    if(bankHost){
-      const open = periods.filter(p=>String(p.status||'').toLowerCase()==='open');
-      const closed = periods.filter(p=>String(p.status||'').toLowerCase()==='closed');
-      bankHost.innerHTML = `
-        <div class="statement-row"><span>فترات مفتوحة</span><b>${fmt(open.length)}</b></div>
-        <div class="statement-row"><span>فترات مغلقة</span><b>${fmt(closed.length)}</b></div>
-        <div class="statement-row"><span>قيود بنك</span><b>${fmt(banks.length)}</b></div>
-      `;
+    try{
+      const res = await api('accounting_platform_overview?months=12');
+      const k = res.kpis || {};
+      const hostKpi = $('#accPlatformKpis');
+      if(hostKpi){
+        hostKpi.innerHTML = `
+          <div class="kpi"><span>إجمالي مفوتر</span><strong>${money(k.billed_total||0)}</strong></div>
+          <div class="kpi"><span>إجمالي محصل</span><strong>${money(k.collected_total||0)}</strong></div>
+          <div class="kpi"><span>متأخرات</span><strong>${money(k.overdue_total||0)}</strong></div>
+          <div class="kpi"><span>توقع 30 يوم</span><strong>${money(k.forecast_next_30_days||0)}</strong></div>
+          <div class="kpi"><span>رصيد البنك</span><strong>${money(k.bank_balance||0)}</strong></div>
+          <div class="kpi"><span>صحة المحاسبة</span><strong>${fmt(k.health||0)}%</strong></div>
+        `;
+      }
+      const alerts = $('#accPlatformAlerts');
+      if(alerts){
+        alerts.innerHTML = `
+          <div class="statement-row"><span>فواتير متأخرة</span><b class="${Number(k.overdue_total||0)>0?'low-stock':'linked-ok'}">${money(k.overdue_total||0)}</b></div>
+          <div class="statement-row"><span>عدد المتأخرات</span><b>${fmt(k.overdue_count||0)}</b></div>
+          <div class="statement-row"><span>فترات مفتوحة</span><b>${fmt(k.open_periods||0)}</b></div>
+          <div class="statement-row"><span>فترات مغلقة</span><b>${fmt(k.closed_periods||0)}</b></div>
+        `;
+      }
+      const invHost = $('#accPlatformInvoices');
+      if(invHost){
+        const rows = (Jawdah.data.invoices||[]).slice().sort((a,b)=>String(b.issue_date||'').localeCompare(String(a.issue_date||''))).slice(0,8);
+        invHost.innerHTML = rows.length ? tableHtml(
+          [['الفاتورة','invoice_no'],['العميل','client_id',(v)=>htmlEscape(byId('clients',v).name||'')],['الاستحقاق','due_date'],['المبلغ','amount',(v)=>money(v)],['المدفوع','paid_amount',(v)=>money(v)],['الحالة','status',(v)=>statusBadge(v)]],
+          rows
+        ) : '<p class="mini">لا توجد فواتير بعد</p>';
+      }
+      const bankHost = $('#accPlatformBankPeriods');
+      if(bankHost){
+        const p = res.periods_summary || {};
+        const latestClose = res.latest_month_close || {};
+        bankHost.innerHTML = `
+          <div class="statement-row"><span>فترات مفتوحة</span><b>${fmt(p.open||0)}</b></div>
+          <div class="statement-row"><span>فترات مغلقة</span><b>${fmt(p.closed||0)}</b></div>
+          <div class="statement-row"><span>آخر إقفال شهري</span><b>${htmlEscape(latestClose.month_key||'—')}</b></div>
+          <div class="statement-row"><span>رصيد البنك</span><b>${money(k.bank_balance||0)}</b></div>
+        `;
+      }
+      const cashHost = $('#accPlatformCashflow');
+      if(cashHost){
+        const rows = Array.isArray(res.cashflow_monthly) ? res.cashflow_monthly : [];
+        cashHost.innerHTML = rows.length ? tableHtml(
+          [['الشهر','month'],['إيراد','income',(v)=>money(v)],['مصروف','expense',(v)=>money(v)],['صافي','net',(v)=>money(v)],['مفوتر','billed',(v)=>money(v)],['محصل','collected',(v)=>money(v)]],
+          rows
+        ) : '<p class="mini">لا توجد بيانات تدفق نقدي.</p>';
+      }
+      const agingHost = $('#accPlatformAging');
+      if(agingHost){
+        const a = res.aging || {};
+        agingHost.innerHTML = `
+          <div class="statement-row"><span>0-30 يوم</span><b>${money(a['0-30']||0)}</b></div>
+          <div class="statement-row"><span>31-60 يوم</span><b>${money(a['31-60']||0)}</b></div>
+          <div class="statement-row"><span>61-90 يوم</span><b>${money(a['61-90']||0)}</b></div>
+          <div class="statement-row"><span>90+ يوم</span><b class="low-stock">${money(a['90+']||0)}</b></div>
+        `;
+      }
+      const foreHost = $('#accPlatformForecast');
+      if(foreHost){
+        foreHost.innerHTML = `
+          <div class="statement-row"><span>توقع التحصيل خلال 30 يوم</span><b>${money(k.forecast_next_30_days||0)}</b></div>
+          <div class="statement-row"><span>إجمالي المتأخرات الحالية</span><b class="${Number(k.overdue_total||0)>0?'low-stock':'linked-ok'}">${money(k.overdue_total||0)}</b></div>
+          <div class="statement-row"><span>الفواتير المتأخرة (عدد)</span><b>${fmt(k.overdue_count||0)}</b></div>
+        `;
+      }
+      const decHost = $('#accPlatformDecisions');
+      if(decHost){
+        const dec = Array.isArray(res.decisions) ? res.decisions : [];
+        decHost.innerHTML = dec.map(d=>{
+          const cls = d.severity==='high' ? 'overdue' : (d.severity==='medium'?'pending':'paid');
+          const go = String(d.action_section||'accounts').replace(/[^a-z0-9-]/gi,'');
+          return `<div class="statement-row"><span>${htmlEscape(d.title||'قرار')}</span><b class="badge ${cls}">${htmlEscape(d.detail||'')}</b><button class="ghost" type="button" onclick="showSection('${go||'accounts'}')">فتح</button></div>`;
+        }).join('') || '<p class="mini">لا توجد قرارات عاجلة.</p>';
+      }
+    }catch(e){
+      const host = $('#accPlatformAlerts');
+      if(host) host.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
     }
     ensureEnglishDigits(document.getElementById('sec-accounting-platform'));
   };
