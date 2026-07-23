@@ -3059,7 +3059,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
-        safe = Path(path.lstrip("/")).as_posix()
+        # Decode URL-encoded paths (e.g. %20) so files with spaces can be served.
+        safe = Path(urllib.parse.unquote(path).lstrip("/")).as_posix()
         if safe.startswith("uploads/"):
             # Secure contract and sensitive uploads behind authenticated sessions.
             protected_prefixes = ("uploads/contracts/", "uploads/client_cards/", "uploads/payment_proofs/", "uploads/work_journal/")
