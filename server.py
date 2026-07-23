@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
