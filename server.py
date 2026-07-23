@@ -163,8 +163,9 @@ TABLES = {
     "estate_apartments": ["id", "property_id", "building_id", "name", "status", "room_count", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
-    "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "notes"],
+    "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "closed_at", "close_note", "notes"],
     "estate_contract_invoices": ["id", "invoice_no", "contract_id", "due_date", "amount", "paid_amount", "status", "issued_at", "note"],
+    "estate_contract_settlements": ["id", "contract_id", "close_date", "total_scheduled", "total_paid", "outstanding_due", "future_cancelled", "closed_by", "note", "created_at"],
     "estate_status_history": ["id", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "old_status", "new_status", "changed_by", "changed_at", "note"],
     "estate_reservation_invoices": ["id", "invoice_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "client_name", "issued_by", "issue_date", "due_date", "rent_price", "deposit_amount", "prepaid_amount", "total_amount", "status", "note"],
     "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
@@ -1266,6 +1267,8 @@ def init_db() -> None:
                 status TEXT NOT NULL DEFAULT 'Active',
                 created_by TEXT,
                 created_at TEXT NOT NULL,
+                closed_at TEXT,
+                close_note TEXT,
                 notes TEXT
             );
             CREATE TABLE IF NOT EXISTS estate_contract_invoices (
@@ -1278,6 +1281,19 @@ def init_db() -> None:
                 status TEXT NOT NULL DEFAULT 'Pending',
                 issued_at TEXT NOT NULL,
                 note TEXT,
+                FOREIGN KEY(contract_id) REFERENCES estate_contracts(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_contract_settlements (
+                id TEXT PRIMARY KEY,
+                contract_id TEXT NOT NULL,
+                close_date TEXT NOT NULL,
+                total_scheduled REAL NOT NULL DEFAULT 0,
+                total_paid REAL NOT NULL DEFAULT 0,
+                outstanding_due REAL NOT NULL DEFAULT 0,
+                future_cancelled INTEGER NOT NULL DEFAULT 0,
+                closed_by TEXT,
+                note TEXT,
+                created_at TEXT NOT NULL,
                 FOREIGN KEY(contract_id) REFERENCES estate_contracts(id) ON DELETE CASCADE
             );
             CREATE TABLE IF NOT EXISTS estate_status_history (
@@ -1578,6 +1594,8 @@ def init_db() -> None:
             ("status", "TEXT NOT NULL DEFAULT 'Active'"),
             ("created_by", "TEXT"),
             ("created_at", "TEXT"),
+            ("closed_at", "TEXT"),
+            ("close_note", "TEXT"),
             ("notes", "TEXT"),
         ]:
             ensure_column(db, "estate_contracts", col, definition)
@@ -3921,6 +3939,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_contract_pay_invoice" and method == "POST":
                     user = self.require_user(db, "estate_apartments")
                     return None if not user else self.api_estate_contract_pay_invoice(db, user)
+                if parts[0] == "estate_contract_close" and method == "POST":
+                    user = self.require_user(db, "estate_apartments")
+                    return None if not user else self.api_estate_contract_close(db, user)
                 if parts[0] == "estate_operations_check" and method == "GET":
                     user = self.require_user(db, "estate_apartments:read")
                     return None if not user else self.api_estate_operations_check(db, user)
@@ -4858,6 +4879,115 @@ class JawdahHandler(BaseHTTPRequestHandler):
         db.commit()
         self.send_json({"ok": True, "invoice_id": invoice_id, "paid_amount": new_paid, "status": new_status})
 
+    def api_estate_contract_close(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
+        if not contract:
+            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+        if str(contract["status"] or "").strip().lower() != "active":
+            return self.send_json({"ok": False, "error": "يمكن إغلاق العقود النشطة فقط"}, 400)
+        close_date = str(data.get("close_date") or today()).strip() or today()
+        try:
+            close_dt = datetime.fromisoformat(close_date).date()
+        except Exception:
+            return self.send_json({"ok": False, "error": "تاريخ الإغلاق غير صحيح"}, 400)
+        force_close = bool(data.get("force_close"))
+        note = str(data.get("note") or "Contract closed").strip()
+        rows = rows_to_dicts(
+            db.execute(
+                "SELECT * FROM estate_contract_invoices WHERE contract_id=? ORDER BY due_date ASC",
+                (contract_id,),
+            ).fetchall()
+        )
+        overdue_rows: List[Dict[str, Any]] = []
+        future_cancel_ids: List[str] = []
+        total_scheduled = 0.0
+        total_paid = 0.0
+        outstanding_due = 0.0
+        for r in rows:
+            amount = round(float(r.get("amount") or 0), 3)
+            paid_amount = round(float(r.get("paid_amount") or 0), 3)
+            rem = round(max(0.0, amount - paid_amount), 3)
+            total_scheduled += amount
+            total_paid += paid_amount
+            due_s = str(r.get("due_date") or "")
+            due_dt = None
+            try:
+                due_dt = datetime.fromisoformat(due_s).date()
+            except Exception:
+                pass
+            if rem > 0:
+                if due_dt and due_dt <= close_dt:
+                    outstanding_due += rem
+                    overdue_rows.append(
+                        {
+                            "id": r.get("id"),
+                            "invoice_no": r.get("invoice_no"),
+                            "due_date": due_s,
+                            "remaining": rem,
+                        }
+                    )
+                elif due_dt and due_dt > close_dt and paid_amount <= 0:
+                    future_cancel_ids.append(str(r.get("id")))
+        preview = {
+            "contract_id": contract_id,
+            "contract_no": contract["contract_no"],
+            "close_date": close_dt.isoformat(),
+            "total_scheduled": round(total_scheduled, 3),
+            "total_paid": round(total_paid, 3),
+            "outstanding_due": round(outstanding_due, 3),
+            "future_cancelled_count": len(future_cancel_ids),
+            "overdue_items": overdue_rows,
+        }
+        if outstanding_due > 0 and not force_close:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "لا يمكن إغلاق العقد قبل معالجة المتأخرات المستحقة. سدّد أو استخدم force_close بصلاحية مناسبة.",
+                    "settlement_preview": preview,
+                },
+                400,
+            )
+        role = str(user.get("role") or "").strip().lower()
+        if outstanding_due > 0 and force_close and role not in ("owner", "admin"):
+            return self.send_json({"ok": False, "error": "force_close مسموح فقط للمالك/الإدارة"}, 403)
+        if future_cancel_ids:
+            marks = ",".join("?" for _ in future_cancel_ids)
+            db.execute(
+                f"UPDATE estate_contract_invoices SET status='Cancelled', note=COALESCE(note,'') || ' | Cancelled due to contract close at ' || ? WHERE id IN ({marks})",
+                [now_iso(), *future_cancel_ids],
+            )
+        db.execute(
+            "UPDATE estate_contracts SET status='Closed', end_date=?, closed_at=?, close_note=? WHERE id=?",
+            (close_dt.isoformat(), now_iso(), note, contract_id),
+        )
+        settlement = {
+            "id": uid("ECS"),
+            "contract_id": contract_id,
+            "close_date": close_dt.isoformat(),
+            "total_scheduled": round(total_scheduled, 3),
+            "total_paid": round(total_paid, 3),
+            "outstanding_due": round(outstanding_due, 3),
+            "future_cancelled": len(future_cancel_ids),
+            "closed_by": str(user.get("name") or user.get("username") or "System"),
+            "note": note,
+            "created_at": now_iso(),
+        }
+        insert(db, "estate_contract_settlements", settlement)
+        audit(
+            db,
+            user,
+            "close_contract",
+            "estate_contracts",
+            contract_id,
+            f"Closed {contract['contract_no']} | outstanding={settlement['outstanding_due']} | future_cancelled={settlement['future_cancelled']}",
+        )
+        db.commit()
+        self.send_json({"ok": True, "contract_id": contract_id, "status": "Closed", "settlement": settlement, "preview": preview})
+
     def api_estate_operations_check(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         checks: List[Dict[str, Any]] = []
         required_tables = [
@@ -4870,6 +5000,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "estate_reservation_invoices",
             "estate_contracts",
             "estate_contract_invoices",
+            "estate_contract_settlements",
         ]
         for t in required_tables:
             exists_row = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1", (t,)).fetchone()
@@ -4901,13 +5032,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "SELECT COUNT(*) FROM estate_contract_invoices WHERE lower(status)!='paid' AND date(due_date) >= date(?) AND date(due_date) <= date(?, '+7 day')",
             (today(), today()),
         ).fetchone()[0]
+        active_past_end = db.execute(
+            "SELECT COUNT(*) FROM estate_contracts WHERE lower(status)='active' AND date(end_date) < date(?)",
+            (today(),),
+        ).fetchone()[0]
         checks.append({"name": "status_history_exists", "ok": int(status_history_count or 0) > 0, "value": int(status_history_count or 0)})
         checks.append({"name": "overdue_contract_invoices", "ok": int(overdue_contract_invoices or 0) == 0, "value": int(overdue_contract_invoices or 0)})
+        checks.append({"name": "active_contracts_past_end", "ok": int(active_past_end or 0) == 0, "value": int(active_past_end or 0)})
         score = 100 - (15 if int(dangling_reserved or 0) > 0 else 0)
         if status_history_count == 0:
             score -= 10
         if int(overdue_contract_invoices or 0) > 0:
             score -= min(20, int(overdue_contract_invoices or 0) * 2)
+        if int(active_past_end or 0) > 0:
+            score -= min(15, int(active_past_end or 0) * 2)
         if any(not c["ok"] for c in checks if c["name"].startswith("table:")):
             score -= 30
         score = max(0, min(100, score))
@@ -4923,6 +5061,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "dangling_reserved_without_invoice": int(dangling_reserved or 0),
                     "overdue_contract_invoices": int(overdue_contract_invoices or 0),
                     "due_soon_contract_invoices": int(due_soon_contract_invoices or 0),
+                    "active_contracts_past_end": int(active_past_end or 0),
                 },
             }
         )

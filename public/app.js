@@ -3762,6 +3762,11 @@ window.printHospitalityFolio = printHospitalityFolio;
     if(scheduleSel){
       scheduleSel.innerHTML = '<option value="">— اختر عقدًا —</option>'+contracts.map(c=>`<option value="${htmlEscape(c.id)}">${htmlEscape(c.contract_no||c.id)} · ${htmlEscape(c.entity_type||'')}</option>`).join('');
     }
+    const closeSel = $('#ecCloseContract');
+    if(closeSel){
+      const active = contracts.filter(c=>String(c.status||'').toLowerCase()==='active');
+      closeSel.innerHTML = '<option value="">— اختر عقدًا نشطًا —</option>'+active.map(c=>`<option value="${htmlEscape(c.id)}">${htmlEscape(c.contract_no||c.id)} · ينتهي ${htmlEscape(c.end_date||'')}</option>`).join('');
+    }
     const invs = estateRows('estate_contract_invoices').filter(x=>String(x.status||'').toLowerCase()!=='paid');
     const paySel = $('#ecPayInvoice');
     if(paySel){
@@ -3813,6 +3818,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const rooms = estateRows('estate_rooms');
     const maint = estateRows('estate_maintenance');
     const contracts = estateRows('estate_contracts');
+    const settlements = estateRows('estate_contract_settlements');
     const cInv = estateRows('estate_contract_invoices');
     const hist = estateRows('estate_status_history');
     const rInv = estateRows('estate_reservation_invoices');
@@ -3906,6 +3912,11 @@ window.printHospitalityFolio = printHospitalityFolio;
       [['رقم الفاتورة','invoice_no'],['العقد','contract_id',(v)=>htmlEscape((contracts.find(c=>c.id===v)||{}).contract_no||v)],['الاستحقاق','due_date'],['المبلغ','amount',(v)=>money(v)],['المدفوع','paid_amount',(v)=>money(v)],['المتبقي','id',(_,r)=>money(Math.max(0,Number(r.amount||0)-Number(r.paid_amount||0)))],['الحالة','status',(v)=>statusBadge(v)],['الإصدار','issued_at']],
       cInv
     );
+    const csTable = $('#estateContractSettlementsTable');
+    if(csTable) csTable.innerHTML = tableHtml(
+      [['العقد','contract_id',(v)=>htmlEscape((contracts.find(c=>c.id===v)||{}).contract_no||v)],['تاريخ الإغلاق','close_date'],['مجدول','total_scheduled',(v)=>money(v)],['مدفوع','total_paid',(v)=>money(v)],['متأخرات','outstanding_due',(v)=>money(v)],['مستقبلي ملغى','future_cancelled'],['المغلق','closed_by'],['ملاحظة','note'],['وقت الإنشاء','created_at']],
+      settlements
+    );
   }
   window.renderEstatePlatform = function(){
     renderEstateIcons();
@@ -3918,6 +3929,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const rInv = estateRows('estate_reservation_invoices');
     const contracts = estateRows('estate_contracts');
     const cInv = estateRows('estate_contract_invoices');
+    const settlements = estateRows('estate_contract_settlements');
     const reservedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='reserved').length;
     const occupiedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
     const occupied = rooms.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
@@ -3936,6 +3948,7 @@ window.printHospitalityFolio = printHospitalityFolio;
         <div class="kpi"><span>فواتير حجز</span><strong>${fmt(rInv.length)}</strong></div>
         <div class="kpi"><span>عقود نشطة</span><strong>${fmt(contracts.filter(x=>String(x.status||'').toLowerCase()==='active').length)}</strong></div>
         <div class="kpi"><span>فواتير عقود</span><strong>${fmt(cInv.length)}</strong></div>
+        <div class="kpi"><span>تسويات عقود</span><strong>${fmt(settlements.length)}</strong></div>
       `;
     }
     const timeline = $('#estateTimelineBox');
@@ -4199,6 +4212,57 @@ window.printHospitalityFolio = printHospitalityFolio;
       await loadAll();
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }
+  };
+  window.closeEstateContract = async function(){
+    const contractId = String($('#ecCloseContract')?.value || '').trim();
+    if(!contractId) return toastErr('اختر عقدًا نشطًا');
+    const payload = {
+      contract_id: contractId,
+      close_date: String($('#ecCloseDate')?.value || '').trim(),
+      force_close: !!$('#ecForceClose')?.checked,
+      note: String($('#ecCloseNote')?.value || '').trim(),
+    };
+    const box = $('#estateSettlementPreviewBox');
+    if(box) box.innerHTML = '<p class="mini">جاري إغلاق العقد وإعداد التسوية...</p>';
+    try{
+      const headers = {'Content-Type':'application/json'};
+      if(Jawdah.token) headers.Authorization = 'Bearer ' + Jawdah.token;
+      const res = await fetch('/api/estate_contract_close',{ method:'POST', headers, body:JSON.stringify(payload) });
+      const body = await res.json().catch(()=>({}));
+      if(!res.ok || body.ok===false){
+        const p = body.settlement_preview || null;
+        if(box && p){
+          box.innerHTML = `
+            <p class="badge overdue">${htmlEscape(body.error||'تعذر الإغلاق')}</p>
+            <div class="statement-row"><span>العقد</span><b>${htmlEscape(p.contract_no||'')}</b></div>
+            <div class="statement-row"><span>تاريخ الإغلاق</span><b>${htmlEscape(p.close_date||'')}</b></div>
+            <div class="statement-row"><span>المتأخرات</span><b class="badge overdue">${money(p.outstanding_due||0)}</b></div>
+            <div class="statement-row"><span>فواتير مستقبلية ستُلغى</span><b>${fmt(p.future_cancelled_count||0)}</b></div>
+            ${(p.overdue_items||[]).map(x=>`<div class="statement-row"><span>${htmlEscape(x.invoice_no||x.id||'')}</span><b>${money(x.remaining||0)} · ${htmlEscape(x.due_date||'')}</b></div>`).join('')}
+          `;
+        } else if(box){
+          box.innerHTML = `<p class="badge overdue">${htmlEscape(body.error||'تعذر الإغلاق')}</p>`;
+        }
+        throw new Error(body.error || 'تعذر إغلاق العقد');
+      }
+      const s = body.settlement || {};
+      if(box){
+        box.innerHTML = `
+          <p class="badge paid">تم إغلاق العقد وإصدار التسوية بنجاح</p>
+          <div class="statement-row"><span>العقد</span><b>${htmlEscape(body.preview?.contract_no || '')}</b></div>
+          <div class="statement-row"><span>تاريخ الإغلاق</span><b>${htmlEscape(s.close_date || '')}</b></div>
+          <div class="statement-row"><span>إجمالي مجدول</span><b>${money(s.total_scheduled||0)}</b></div>
+          <div class="statement-row"><span>إجمالي مدفوع</span><b>${money(s.total_paid||0)}</b></div>
+          <div class="statement-row"><span>متأخرات</span><b>${money(s.outstanding_due||0)}</b></div>
+          <div class="statement-row"><span>فواتير مستقبلية ملغاة</span><b>${fmt(s.future_cancelled||0)}</b></div>
+        `;
+      }
+      toast('تم إغلاق العقد وتسوية الحساب');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){
+      toastErr(e);
+    }
   };
   let __estateOpsCheckLoading = false;
   window.loadEstateOperationsCheck = async function(silent){

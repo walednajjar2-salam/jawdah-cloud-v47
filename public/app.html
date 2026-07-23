@@ -704,7 +704,24 @@
             <button class="gold-btn" type="button" onclick="payEstateContractInvoice()">تحصيل الآن</button>
           </div>
         </div>
+        <div class="layout">
+          <div class="card">
+            <h3>إغلاق العقد + تسوية نهائية</h3>
+            <div class="form">
+              <select id="ecCloseContract"></select>
+              <input id="ecCloseDate" type="date">
+              <label class="mini"><input id="ecForceClose" type="checkbox"> إغلاق إجباري (مع متأخرات) — صلاحية إدارة فقط</label>
+              <textarea id="ecCloseNote" placeholder="ملاحظة الإغلاق/التسوية"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="closeEstateContract()">إغلاق العقد وإصدار التسوية</button>
+          </div>
+          <div class="card">
+            <h3>تقرير التسوية الأخير</h3>
+            <div id="estateSettlementPreviewBox"></div>
+          </div>
+        </div>
         <div class="card"><h3>فواتير عقود الإيجار</h3><div id="estateContractInvoicesTable"></div></div>
+        <div class="card"><h3>سجل تسويات العقود</h3><div id="estateContractSettlementsTable"></div></div>
         <div class="card"><h3>سجل حالات الشقق والغرف</h3><div id="estateStatusHistoryTable"></div></div>
       </section>
 
