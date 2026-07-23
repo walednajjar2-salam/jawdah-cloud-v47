@@ -4016,6 +4016,7 @@ window.printHospitalityFolio = printHospitalityFolio;
           <div class="toolbar" style="margin-bottom:10px">
             <button class="ghost" type="button" onclick="runModuleIntegrityFix(true)">معاينة الإصلاح الآمن</button>
             ${canFix ? '<button class="gold-btn" type="button" onclick="runModuleIntegrityFix(false)">تنفيذ الإصلاح الآمن</button>' : '<span class="badge pending">تنفيذ الإصلاح يتطلب صلاحية admin/owner</span>'}
+            ${canFix ? '<button class="gold-btn" type="button" onclick="runModuleIntegrityAutoRun()">تنفيذ + إعادة فحص فوري</button>' : ''}
           </div>
           <div class="kpis grid">
             <div class="kpi"><span>درجة التكامل</span><strong>${fmt(res.score||0)}%</strong></div>
@@ -4084,6 +4085,58 @@ window.printHospitalityFolio = printHospitalityFolio;
       }
     }catch(e){
       toastErr(e,'تعذر تنفيذ الإصلاح الآمن');
+    }
+  };
+
+  window.runModuleIntegrityAutoRun=async function(){
+    const host=$('#moduleIntegrityBox');
+    if(!host) return;
+    const ok = confirm('تنفيذ الإصلاح الآمن ثم إعادة الفحص تلقائيًا الآن؟');
+    if(!ok) return;
+    host.insertAdjacentHTML('afterbegin','<p class="mini">جاري تنفيذ الإصلاح وإعادة الفحص...</p>');
+    try{
+      const res = await api('module_integrity_autorun',{
+        method:'POST',
+        body: JSON.stringify({ confirm: true }),
+      });
+      const before = res.before || {};
+      const after = res.after || {};
+      const fix = res.fix || {};
+      const delta = res.delta || {};
+      const bsum = before.summary || {};
+      const asum = after.summary || {};
+      const fsum = fix.summary || {};
+      const actions = Array.isArray(fix.actions) ? fix.actions : [];
+      host.insertAdjacentHTML('afterbegin',`
+        <div class="card inner-card" style="margin-top:12px">
+          <h3>تقرير التنفيذ التلقائي (Before / After)</h3>
+          <div class="kpis grid">
+            <div class="kpi"><span>الدرجة قبل</span><strong>${fmt(before.score||0)}%</strong></div>
+            <div class="kpi"><span>الدرجة بعد</span><strong>${fmt(after.score||0)}%</strong></div>
+            <div class="kpi"><span>التغير</span><strong>${fmt(delta.score_change||0)}</strong></div>
+            <div class="kpi"><span>المشاكل (قبل ← بعد)</span><strong>${fmt(delta.issues_before||0)} → ${fmt(delta.issues_after||0)}</strong></div>
+          </div>
+          <p class="mini">الإصلاح: مرشّح ${fmt(fsum.candidates||0)} · منفذ ${fmt(fsum.applied||0)}</p>
+          <div class="status-line" style="margin:8px 0 12px">
+            <span class="badge">Critical: ${fmt(bsum.critical||0)} → ${fmt(asum.critical||0)}</span>
+            <span class="badge">High: ${fmt(bsum.high||0)} → ${fmt(asum.high||0)}</span>
+            <span class="badge">Total: ${fmt(bsum.total_issues||0)} → ${fmt(asum.total_issues||0)}</span>
+          </div>
+          ${actions.length ? tableHtml(
+            [
+              ['الإجراء','name',(v)=>htmlEscape(String(v||''))],
+              ['المرشح','candidates',(v)=>fmt(v||0)],
+              ['المنفذ','applied',(v)=>fmt(v||0)],
+              ['ملاحظات','notes',(v)=>htmlEscape(String(v||''))],
+            ],
+            actions
+          ) : '<p class="mini">لا توجد إجراءات منفذة.</p>'}
+        </div>
+      `);
+      toast('تم التنفيذ وإعادة الفحص بنجاح');
+      await loadProductionStatus();
+    }catch(e){
+      toastErr(e,'تعذر تنفيذ Auto-run');
     }
   };
 })();

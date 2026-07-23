@@ -3168,6 +3168,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "module_integrity_fix" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_module_integrity_fix(db, user)
+                if parts[0] == "module_integrity_autorun" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_module_integrity_autorun(db, user)
                 if parts[0] == "operational_intel" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_operational_intel(db, user)
@@ -5894,7 +5897,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             },
         })
 
-    def api_module_integrity(self, db: sqlite3.Connection) -> None:
+    def api_module_integrity(self, db: sqlite3.Connection, return_payload_only: bool = False) -> Optional[Dict[str, Any]]:
         issues: List[Dict[str, Any]] = []
 
         def add_issue(module: str, severity: str, title: str, entity_id: Any = None, details: str = "") -> None:
@@ -6159,7 +6162,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             key = str(issue.get("module") or "general")
             by_module[key] = by_module.get(key, 0) + 1
 
-        self.send_json({
+        payload = {
             "ok": True,
             "score": score,
             "summary": {
@@ -6170,11 +6173,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
             },
             "by_module": by_module,
             "issues": issues[:300],
-        })
+        }
+        if return_payload_only:
+            return payload
+        self.send_json(payload)
+        return None
 
-    def api_module_integrity_fix(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+    def api_module_integrity_fix(
+        self,
+        db: sqlite3.Connection,
+        user: Dict[str, Any],
+        return_payload_only: bool = False,
+        override_dry_run: Optional[bool] = None,
+    ) -> Optional[Dict[str, Any]]:
         payload = self.read_json() if self.command == "POST" else {}
-        dry_run = bool((payload or {}).get("dry_run", True))
+        dry_run = bool((payload or {}).get("dry_run", True)) if override_dry_run is None else bool(override_dry_run)
         max_rows = 200
         actions: List[Dict[str, Any]] = []
 
@@ -6474,20 +6487,47 @@ class JawdahHandler(BaseHTTPRequestHandler):
             )
             db.commit()
 
+        result = {
+            "ok": True,
+            "dry_run": dry_run,
+            "summary": {
+                "candidates": candidate_total,
+                "applied": applied_total if not dry_run else 0,
+                "mode": "preview" if dry_run else "applied",
+            },
+            "actions": actions,
+            "notes": [
+                "Auto-fix applies only deterministic safe operations.",
+                "Broken references (e.g. contract points to missing property/client) are reported in integrity scan and require manual business decision.",
+            ],
+        }
+        if return_payload_only:
+            return result
+        self.send_json(result)
+        return None
+
+    def api_module_integrity_autorun(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        before = self.api_module_integrity(db, return_payload_only=True) or {}
+        fix_result = self.api_module_integrity_fix(
+            db,
+            user,
+            return_payload_only=True,
+            override_dry_run=False,
+        ) or {}
+        after = self.api_module_integrity(db, return_payload_only=True) or {}
+        before_score = float(before.get("score") or 0)
+        after_score = float(after.get("score") or 0)
         self.send_json(
             {
                 "ok": True,
-                "dry_run": dry_run,
-                "summary": {
-                    "candidates": candidate_total,
-                    "applied": applied_total if not dry_run else 0,
-                    "mode": "preview" if dry_run else "applied",
+                "before": before,
+                "fix": fix_result,
+                "after": after,
+                "delta": {
+                    "score_change": round(after_score - before_score, 2),
+                    "issues_before": int((before.get("summary") or {}).get("total_issues") or 0),
+                    "issues_after": int((after.get("summary") or {}).get("total_issues") or 0),
                 },
-                "actions": actions,
-                "notes": [
-                    "Auto-fix applies only deterministic safe operations.",
-                    "Broken references (e.g. contract points to missing property/client) are reported in integrity scan and require manual business decision.",
-                ],
             }
         )
 
