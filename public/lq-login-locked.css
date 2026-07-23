@@ -30,6 +30,20 @@ body.saas-login #loginScreen{
   background:transparent !important;
 }
 
+/* .hidden must always win over the display:grid rule above */
+body.login-ultra #loginScreen.hidden,
+body.saas-login #loginScreen.hidden,
+#loginScreen.hidden{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+  height:0 !important;
+  max-height:0 !important;
+  min-height:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+}
+
 /* Fixed transparent cinematic background */
 body.login-ultra #loginScreen .login-bg,
 body.login-ultra #loginScreen .login-bg-glow,
