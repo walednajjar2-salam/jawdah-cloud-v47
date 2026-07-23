@@ -199,8 +199,8 @@
             throw new Error(data.error || "فشل تسجيل الدخول");
           }
           localStorage.setItem("jawdah_cloud_token", data.token);
-          status.textContent = "تم تسجيل الدخول بنجاح، جاري التحويل...";
-          location.replace("/app.html?v=clean-login-1");
+          status.textContent = "تم تسجيل الدخول بنجاح، جاري فتح اختيار المنصة...";
+          location.replace("/portal-select.html?v=portal-1");
         } catch (err) {
           status.className = "status err";
           status.textContent = (err && err.message) ? err.message : "تعذر تسجيل الدخول";
