@@ -553,6 +553,7 @@
               <select id="eaBuilding"></select>
               <input id="eaName" placeholder="اسم/رقم الشقة">
               <select id="eaStatus">
+                <option value="draft">مسودة</option>
                 <option value="vacant">فارغة</option>
                 <option value="occupied">مؤجرة</option>
                 <option value="maintenance">صيانة</option>
@@ -592,7 +593,7 @@
               <select id="erApartment"></select>
               <input id="erName" placeholder="اسم/رقم الغرفة">
               <input id="erType" placeholder="نوع الغرفة">
-              <select id="erStatus"><option value="vacant">شاغرة</option><option value="reserved">محجوزة</option><option value="occupied">مؤجرة</option><option value="maintenance">تحت الصيانة</option></select>
+              <select id="erStatus"><option value="draft">مسودة</option><option value="vacant">شاغرة</option><option value="reserved">محجوزة</option><option value="occupied">مؤجرة</option><option value="maintenance">تحت الصيانة</option></select>
               <input id="erRentPrice" type="number" min="0" step="0.001" placeholder="سعر الغرفة OMR">
               <div id="erReservedFields" class="estate-state-fields hidden">
                 <input id="erBookingDeposit" type="number" min="0" step="0.001" placeholder="تأمين حجز الغرفة OMR">
@@ -660,6 +661,30 @@
           <div class="card"><h3>تنبيهات الحجز</h3><div id="estateReservationAlerts"></div></div>
           <div class="card"><h3>فواتير الحجز التلقائية</h3><div id="estateReservationInvoicesTable"></div></div>
         </div>
+        <div class="layout">
+          <div class="card">
+            <h3>تحويل الحجز/الإشغال إلى عقد إيجار نشط</h3>
+            <div class="form">
+              <select id="ecEntityType"><option value="apartment">شقة</option><option value="room">غرفة</option></select>
+              <select id="ecEntityId"></select>
+              <select id="ecTenantClient"></select>
+              <input id="ecStartDate" type="date">
+              <input id="ecEndDate" type="date">
+              <input id="ecRentAmount" type="number" step="0.001" min="0" placeholder="قيمة الإيجار OMR">
+              <select id="ecPaymentCycle"><option value="monthly">شهري</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option><option value="once">مرة واحدة</option></select>
+              <textarea id="ecNotes" placeholder="ملاحظات العقد"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="createEstateContractFromFlow()">إنشاء عقد نشط الآن</button>
+          </div>
+          <div class="card">
+            <h3>تأكيد العمليات التشغيلية</h3>
+            <div class="toolbar">
+              <button class="gold-btn" type="button" onclick="loadEstateOperationsCheck()">تشغيل فحص العمليات</button>
+            </div>
+            <div id="estateOpsCheckBox"></div>
+          </div>
+        </div>
+        <div class="card"><h3>عقود الإيجار النشطة</h3><div id="estateContractsTable"></div></div>
         <div class="card"><h3>سجل حالات الشقق والغرف</h3><div id="estateStatusHistoryTable"></div></div>
       </section>
 

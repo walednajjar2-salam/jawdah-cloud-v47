@@ -3683,6 +3683,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   const pickName = (arr,id)=>htmlEscape((arr.find(x=>x.id===id)||{}).name||'');
   const roomStatusLabel = (s)=>{
     const v=String(s||'').toLowerCase();
+    if(v==='draft') return 'مسودة';
     if(v==='reserved') return 'محجوزة';
     if(v==='occupied') return 'مؤجرة';
     if(v==='maintenance') return 'تحت الصيانة';
@@ -3690,6 +3691,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   };
   const apartmentStatusLabel = (s)=>{
     const v=String(s||'').toLowerCase();
+    if(v==='draft') return 'مسودة';
     if(v==='reserved') return 'محجوزة';
     if(v==='occupied') return 'مؤجرة';
     if(v==='maintenance') return 'صيانة';
@@ -3727,6 +3729,8 @@ window.printHospitalityFolio = printHospitalityFolio;
     const propHtml = optFrom(props, r=>r.name||r.id);
     const clientHtml = '<option value="">— بدون مستأجر —</option>'+clients.map(c=>`<option value="${htmlEscape(c.id)}">${htmlEscape(c.name||c.id)}</option>`).join('');
     ['epTenantClient','ebTenantClient','eaTenantClient','erTenantClient'].forEach(id=>{ const el=$('#'+id); if(el) el.innerHTML=clientHtml; });
+    const ecTenant = $('#ecTenantClient');
+    if(ecTenant) ecTenant.innerHTML = clientHtml;
     ['ebProperty','eaProperty','erProperty','emProperty'].forEach(id=>{ const el=$('#'+id); if(el) el.innerHTML=propHtml; });
 
     const propId = $('#eaProperty')?.value || $('#erProperty')?.value || $('#emProperty')?.value || '';
@@ -3744,6 +3748,15 @@ window.printHospitalityFolio = printHospitalityFolio;
     const rHtml = optFrom(rFiltered, r=>r.name||r.id);
     const emRoom = $('#emRoom');
     if(emRoom) emRoom.innerHTML = rHtml;
+
+    const ecType = String($('#ecEntityType')?.value || 'apartment');
+    const contractSrc = ecType === 'room'
+      ? rooms.filter(x=>['reserved','occupied'].includes(String(x.status||'').toLowerCase()))
+      : apts.filter(x=>['reserved','occupied'].includes(String(x.status||'').toLowerCase()));
+    const ecEntity = $('#ecEntityId');
+    if(ecEntity){
+      ecEntity.innerHTML = '<option value="">— اختر —</option>'+contractSrc.map(x=>`<option value="${htmlEscape(x.id)}">${htmlEscape(x.name||x.id)} · ${htmlEscape(ecType==='room'?roomStatusLabel(x.status):apartmentStatusLabel(x.status))}</option>`).join('');
+    }
   }
   function renderEstateIcons(){
     const host = $('#estateIconGrid');
@@ -3786,6 +3799,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const apts = estateRows('estate_apartments');
     const rooms = estateRows('estate_rooms');
     const maint = estateRows('estate_maintenance');
+    const contracts = estateRows('estate_contracts');
     const hist = estateRows('estate_status_history');
     const rInv = estateRows('estate_reservation_invoices');
     const tenantCell = (id, phone)=> id ? `${clientName(id)}<br><small>${htmlEscape(phone||'')}</small>` : '—';
@@ -3827,10 +3841,14 @@ window.printHospitalityFolio = printHospitalityFolio;
       ],
       apts,
       r=>{
-        const convertBtn = String(r.status||'').toLowerCase()==='reserved'
+        const st = String(r.status||'').toLowerCase();
+        const convertBtn = st==='reserved'
           ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مؤجرة</button> `
           : '';
-        return `${convertBtn}<button class="ghost" onclick="editRecord('estate_apartments','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_apartments','${r.id}')">حذف</button>`;
+        const contractBtn = ['reserved','occupied'].includes(st)
+          ? `<button class="gold-btn" onclick="openEstateContractFlow('apartment','${r.id}')">إنشاء عقد نشط</button> `
+          : '';
+        return `${convertBtn}${contractBtn}<button class="ghost" onclick="editRecord('estate_apartments','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_apartments','${r.id}')">حذف</button>`;
       }
     );
     const rTable = $('#estateRoomsTable');
@@ -3838,10 +3856,14 @@ window.printHospitalityFolio = printHospitalityFolio;
       [['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','name'],['النوع','room_type'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['سعر الغرفة','rent_price',(v)=>money(v)],['تأمين الحجز','booking_deposit',(v)=>money(v)],['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],['فترة الحجز','id',(_,r)=>String(r.status||'').toLowerCase()==='reserved' ? `${htmlEscape(r.reservation_start_date||'—')} → ${htmlEscape(r.reservation_end_date||'—')}` : '—'],['تفاصيل الحجز/الصيانة','id',(_,r)=>{const st=String(r.status||'').toLowerCase(); if(st==='reserved') return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`; if(st==='maintenance') return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`; return '—';}],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
       rooms,
       r=>{
-        const convertBtn = String(r.status||'').toLowerCase()==='reserved'
+        const st = String(r.status||'').toLowerCase();
+        const convertBtn = st==='reserved'
           ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مؤجرة</button> `
           : '';
-        return `${convertBtn}<button class="ghost" onclick="editRecord('estate_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_rooms','${r.id}')">حذف</button>`;
+        const contractBtn = ['reserved','occupied'].includes(st)
+          ? `<button class="gold-btn" onclick="openEstateContractFlow('room','${r.id}')">إنشاء عقد نشط</button> `
+          : '';
+        return `${convertBtn}${contractBtn}<button class="ghost" onclick="editRecord('estate_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_rooms','${r.id}')">حذف</button>`;
       }
     );
     const mTable = $('#estateMaintenanceTable');
@@ -3860,6 +3882,11 @@ window.printHospitalityFolio = printHospitalityFolio;
       [['التاريخ','changed_at'],['الكيان','entity_type',(v)=>v==='room'?'غرفة':'شقة'],['المعرف','entity_id'],['من حالة','old_status',(v)=>v||'—'],['إلى حالة','new_status'],['بواسطة','changed_by'],['ملاحظة','note']],
       hist
     );
+    const cTable = $('#estateContractsTable');
+    if(cTable) cTable.innerHTML = tableHtml(
+      [['رقم العقد','contract_no'],['النوع','entity_type',(v)=>v==='room'?'غرفة':'شقة'],['المعرف','entity_id'],['العميل','client_id',(v)=>clientName(v)],['البداية','start_date'],['النهاية','end_date'],['الإيجار','rent_amount',(v)=>money(v)],['الدورية','payment_cycle'],['الحالة','status',(v)=>statusBadge(v)],['أنشئ بواسطة','created_by']],
+      contracts
+    );
   }
   window.renderEstatePlatform = function(){
     renderEstateIcons();
@@ -3870,6 +3897,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const rooms = estateRows('estate_rooms');
     const maint = estateRows('estate_maintenance');
     const rInv = estateRows('estate_reservation_invoices');
+    const contracts = estateRows('estate_contracts');
     const reservedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='reserved').length;
     const occupiedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
     const occupied = rooms.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
@@ -3886,6 +3914,7 @@ window.printHospitalityFolio = printHospitalityFolio;
         <div class="kpi"><span>غرف مؤجرة</span><strong>${fmt(occupied)}</strong></div>
         <div class="kpi"><span>صيانة مفتوحة</span><strong>${fmt(openMaint)}</strong></div>
         <div class="kpi"><span>فواتير حجز</span><strong>${fmt(rInv.length)}</strong></div>
+        <div class="kpi"><span>عقود نشطة</span><strong>${fmt(contracts.filter(x=>String(x.status||'').toLowerCase()==='active').length)}</strong></div>
       `;
     }
     const timeline = $('#estateTimelineBox');
@@ -3912,6 +3941,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       alertsBox.innerHTML = lines.join('') || '<p class="badge paid">لا توجد تنبيهات حجز حالياً</p>';
     }
     ensureEnglishDigits(document.getElementById('sec-estate-platform'));
+    if(typeof loadEstateOperationsCheck==='function') loadEstateOperationsCheck(true);
   };
   function nowDay(){ return today ? today() : new Date().toISOString().slice(0,10); }
   async function postEstate(table,payload){
@@ -4070,9 +4100,75 @@ window.printHospitalityFolio = printHospitalityFolio;
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }
   };
+  window.openEstateContractFlow = function(entityType, entityId){
+    const t = entityType === 'room' ? 'room' : 'apartment';
+    const typeSel = $('#ecEntityType');
+    if(typeSel) typeSel.value = t;
+    fillEstateSelects();
+    const idSel = $('#ecEntityId');
+    if(idSel) idSel.value = entityId;
+    const srcRows = t==='room' ? estateRows('estate_rooms') : estateRows('estate_apartments');
+    const row = srcRows.find(x=>x.id===entityId) || {};
+    const tenantSel = $('#ecTenantClient');
+    if(tenantSel){
+      const cid = row.tenant_client_id || row.booked_client_id || '';
+      if(cid) tenantSel.value = cid;
+    }
+    if($('#ecRentAmount')) $('#ecRentAmount').value = Number(row.rent_price||0) || '';
+    if($('#ecStartDate')) $('#ecStartDate').value = row.reservation_start_date || today();
+    if($('#ecEndDate')) $('#ecEndDate').value = row.reservation_end_date || '';
+  };
+  window.createEstateContractFromFlow = async function(){
+    try{
+      const entityType = String($('#ecEntityType')?.value || 'apartment');
+      const entityId = String($('#ecEntityId')?.value || '').trim();
+      if(!entityId) return toastErr('اختر الشقة/الغرفة أولاً');
+      const payload = {
+        entity_type: entityType,
+        entity_id: entityId,
+        tenant_client_id: String($('#ecTenantClient')?.value || '').trim(),
+        start_date: String($('#ecStartDate')?.value || '').trim(),
+        end_date: String($('#ecEndDate')?.value || '').trim(),
+        rent_amount: Number($('#ecRentAmount')?.value || 0),
+        payment_cycle: String($('#ecPaymentCycle')?.value || 'monthly').trim(),
+        notes: String($('#ecNotes')?.value || '').trim(),
+      };
+      await api('estate_convert_to_contract',{ method:'POST', body:JSON.stringify(payload) });
+      toast('تم إنشاء عقد الإيجار النشط بنجاح');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  };
+  let __estateOpsCheckLoading = false;
+  window.loadEstateOperationsCheck = async function(silent){
+    if(__estateOpsCheckLoading) return;
+    __estateOpsCheckLoading = true;
+    const host = $('#estateOpsCheckBox');
+    if(host && !silent) host.innerHTML = '<p class="mini">جاري فحص العمليات...</p>';
+    try{
+      const res = await api('estate_operations_check');
+      if(!host) return;
+      const checks = Array.isArray(res.checks)?res.checks:[];
+      const m = res.metrics || {};
+      host.innerHTML = `
+        <div class="kpis grid">
+          <div class="kpi"><span>درجة الجاهزية</span><strong>${fmt(res.score||0)}%</strong></div>
+          <div class="kpi"><span>محجوز</span><strong>${fmt(m.reserved_total||0)}</strong></div>
+          <div class="kpi"><span>عقود نشطة</span><strong>${fmt(m.active_contracts||0)}</strong></div>
+          <div class="kpi"><span>سجل الحالات</span><strong>${fmt(m.status_history_rows||0)}</strong></div>
+        </div>
+        ${checks.map(c=>`<div class="statement-row"><span>${htmlEscape(c.name||'check')}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'OK':'Needs fix'} · ${fmt(c.value||0)}</b></div>`).join('')}
+      `;
+      ensureEnglishDigits(host);
+    }catch(e){
+      if(host) host.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }finally{
+      __estateOpsCheckLoading = false;
+    }
+  };
   document.addEventListener('change', (e)=>{
     const id = e?.target?.id;
-    if(['eaProperty','erProperty','emProperty','erBuilding','emBuilding','emApartment'].includes(id)) fillEstateSelects();
+    if(['eaProperty','erProperty','emProperty','erBuilding','emBuilding','emApartment','ecEntityType'].includes(id)) fillEstateSelects();
     if(id==='eaStatus') syncEstateApartmentStateFields();
     if(id==='erStatus') syncEstateRoomStateFields();
   });
