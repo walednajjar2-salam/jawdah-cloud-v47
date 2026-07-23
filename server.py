@@ -175,8 +175,9 @@ TABLES = {
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
-PRIMARY_OWNER_USERNAMES = {"owner", "waleed.najjar", "yaqoub.khasibi", "yaqoub"}
-DAILY_OPS_MANAGER_USERNAMES = {"razan", "owner", "waleed.najjar", "yaqoub.khasibi", "yaqoub"}
+FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
+PRIMARY_OWNER_USERNAMES = set(FULL_ACCESS_USERNAMES)
+DAILY_OPS_MANAGER_USERNAMES = {"razan", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
 
 WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
 
@@ -1770,8 +1771,13 @@ def seed_chart_accounts(db: sqlite3.Connection) -> None:
 
 
 def has_permission(user: Dict[str, Any], permission: str) -> bool:
-    role = user.get("role")
-    perms = ROLE_PERMISSIONS.get(role, set())
+    role = str(user.get("role") or "viewer").lower()
+    uname = str(user.get("username") or "").strip().lower()
+    if uname in FULL_ACCESS_USERNAMES:
+        return True
+    # Owner/Admin privileges are limited to explicit full-access usernames.
+    effective_role = "operations" if role in ("owner", "admin") else role
+    perms = ROLE_PERMISSIONS.get(effective_role, set())
     if "all" in perms:
         return True
     if permission in perms:
@@ -3452,11 +3458,8 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
         ("ali", "علي", "maintenance", "444444"),
         ("admin", "System Admin", "admin", "555555"),
     ]
-    allowed_usernames = {row[0] for row in team}
     for username, name, role, password in team:
         ensure_user(db, username, name, role, password)
-    placeholders = ",".join(["?"] * len(allowed_usernames))
-    db.execute(f"UPDATE users SET active=0 WHERE username NOT IN ({placeholders})", tuple(sorted(allowed_usernames)))
 
 
 class JawdahHandler(BaseHTTPRequestHandler):
@@ -5309,15 +5312,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if missing:
                 return self.send_json({"ok": False, "error": f"Missing: {', '.join(missing)}"}, 400)
             username = str(data.get("username") or "").strip().lower()
-            if username not in CORE_USERNAMES:
-                return self.send_json({"ok": False, "error": "الإصدار الحالي يدعم فقط الحسابات الأساسية الستة"}, 403)
+            if not username:
+                return self.send_json({"ok": False, "error": "اسم المستخدم مطلوب"}, 400)
+            role_value = str(data.get("role") or "").strip().lower()
+            if role_value in ("owner", "admin") and username not in FULL_ACCESS_USERNAMES:
+                return self.send_json({"ok": False, "error": "صلاحية كاملة (Owner/Admin) متاحة فقط لحسابي وليد ويعقوب"}, 403)
             pwd_error = validate_new_password(str(data.get("password") or ""), str(data.get("username") or ""))
             if pwd_error:
                 return self.send_json({"ok": False, "error": pwd_error}, 400)
             email_val = str(data.get("email") or "").strip() or None
             row = {
                 "id": data.get("id") or uid("USR"), "username": username, "name": data["name"].strip(),
-                "role": data["role"], "active": as_flag(data.get("active"), True), "email": email_val,
+                "role": role_value or "viewer", "active": as_flag(data.get("active"), True), "email": email_val,
                 "must_change_password": as_flag(data.get("must_change_password"), True),
                 "password_hash": password_hash(str(data["password"])),
                 "password_changed_at": None, "created_at": now_iso(), "last_login": None,
@@ -5333,12 +5339,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if not current:
             return self.send_json({"ok": False, "error": "User not found"}, 404)
         username = str(data.get("username", current["username"]) or current["username"]).strip().lower()
-        if username not in CORE_USERNAMES:
-            return self.send_json({"ok": False, "error": "اسم المستخدم يجب أن يكون ضمن الحسابات الأساسية الستة"}, 403)
+        role_value = str(data.get("role", current["role"]) or current["role"]).strip().lower()
+        if role_value in ("owner", "admin") and username not in FULL_ACCESS_USERNAMES:
+            return self.send_json({"ok": False, "error": "صلاحية كاملة (Owner/Admin) متاحة فقط لحسابي وليد ويعقوب"}, 403)
         fields = {
             "username": username,
             "name": str(data.get("name", current["name"]) or current["name"]).strip(),
-            "role": data.get("role", current["role"]),
+            "role": role_value or "viewer",
             "active": as_flag(data.get("active"), bool(current["active"])),
             "email": str(data.get("email", current["email"]) or "").strip() or None,
             "must_change_password": as_flag(data.get("must_change_password"), bool(current["must_change_password"])),
