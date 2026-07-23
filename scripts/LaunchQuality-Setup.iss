@@ -30,6 +30,8 @@ Name: "startupicon"; Description: "Start Launch Quality with Windows"; GroupDesc
 ; Put only packaged app binaries/resources here
 ; Exclude database/source/session/cache files by policy.
 Source: "..\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.sqlite;*.sqlite3;*.db;*.py;*.pyc;__pycache__\*;*.log;*.cache;*.tmp;data\*;backups\*;uploads\*;sessions\*"
+Source: "Update-LaunchQuality.ps1"; DestDir: "{app}\updater"; Flags: ignoreversion
+Source: "Enable-LaunchQuality-AutoUpdate.ps1"; DestDir: "{app}\updater"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Launch Quality"; Filename: "{app}\{#MyAppExeName}"
@@ -38,3 +40,4 @@ Name: "{userstartup}\Launch Quality"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch Quality"; Flags: nowait postinstall skipifsilent
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\updater\Enable-LaunchQuality-AutoUpdate.ps1"""; Flags: runhidden waituntilterminated

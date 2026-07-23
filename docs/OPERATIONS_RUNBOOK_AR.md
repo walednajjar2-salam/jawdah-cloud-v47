@@ -137,3 +137,16 @@ sudo systemctl status launchquality-server
 
 - لا يتم إدخال بيانات تجريبية في قاعدة الشركة الرسمية.
 - أي اختبار يتم على نسخة sandbox منفصلة أولًا.
+
+---
+
+## 10) قفل الإنتاج + تحديث Windows التلقائي
+
+- مرجع الاعتماد النهائي:
+  - `docs/FINAL_SERVER_WINDOWS_AUTUPDATE_AR.md`
+- قناة تحديث ويندوز:
+  - `public/releases/windows/latest.json`
+- سكربت التحديث:
+  - `scripts/Update-LaunchQuality.ps1`
+- تفعيل Scheduled Task:
+  - `scripts/Enable-LaunchQuality-AutoUpdate.ps1`
