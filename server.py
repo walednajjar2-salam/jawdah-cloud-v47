@@ -128,10 +128,10 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_maintenance"},
-    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance"},
-    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance", "accounting_budgets"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_maintenance", "accounting_budgets:read"},
+    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance", "accounting_budgets:read"},
+    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance:read", "accounting_budgets:read"},
 }
 
 TABLES = {
@@ -155,6 +155,7 @@ TABLES = {
     "bank_transactions": ["id", "bank_date", "bank_name", "reference", "type", "description", "amount", "matched_account_id", "matched_invoice_id", "matched_payment_id", "status"],
     "chart_accounts": ["id", "code", "name", "type", "parent_code", "active", "notes"],
     "financial_periods": ["id", "period_name", "start_date", "end_date", "status", "closed_by", "closed_at", "notes"],
+    "accounting_budgets": ["id", "month_key", "revenue_target", "expense_budget", "collection_target", "cash_reserve_target", "notes", "created_at", "updated_at"],
     "approvals": ["id", "entity", "entity_id", "request_type", "status", "requested_by", "approved_by", "requested_at", "approved_at", "notes"],
     "bank_reconciliations": ["id", "bank_name", "period_name", "book_balance", "bank_balance", "difference", "status", "reconciled_by", "reconciled_at", "notes", "matched_count", "unmatched_count", "period_start", "period_end"],
     "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
@@ -1092,6 +1093,17 @@ def init_db() -> None:
                 closed_by TEXT,
                 closed_at TEXT,
                 notes TEXT
+            );
+            CREATE TABLE IF NOT EXISTS accounting_budgets (
+                id TEXT PRIMARY KEY,
+                month_key TEXT UNIQUE NOT NULL,
+                revenue_target REAL NOT NULL DEFAULT 0,
+                expense_budget REAL NOT NULL DEFAULT 0,
+                collection_target REAL NOT NULL DEFAULT 0,
+                cash_reserve_target REAL NOT NULL DEFAULT 0,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
             );
             CREATE TABLE IF NOT EXISTS approvals (
                 id TEXT PRIMARY KEY,
@@ -3781,6 +3793,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "accounting_platform_overview" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_accounting_platform_overview(db, query)
+                if parts[0] == "accounting_cfo_overview" and method == "GET":
+                    user = self.require_user(db, "accounts:read")
+                    return None if not user else self.api_accounting_cfo_overview(db, query)
                 if parts[0] == "financial_statements" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_financial_statements(db)
@@ -5710,6 +5725,24 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": False, "error": "العنصر المرتبط بالعقد غير موجود"}, 400)
         if table == "estate_contract_invoices":
             return self.send_json({"ok": False, "error": "فواتير العقود تُدار عبر محرك الجدولة والتحصيل فقط"}, 403)
+        if table == "accounting_budgets":
+            month_key = str(data.get("month_key") or "").strip()
+            try:
+                if len(month_key) != 7:
+                    raise ValueError("invalid")
+                _ = datetime.fromisoformat(month_key + "-01").date()
+            except Exception:
+                return self.send_json({"ok": False, "error": "month_key يجب أن يكون بصيغة YYYY-MM"}, 400)
+            data["month_key"] = month_key
+            data["revenue_target"] = round(float(data.get("revenue_target") or 0), 3)
+            data["expense_budget"] = round(float(data.get("expense_budget") or 0), 3)
+            data["collection_target"] = round(float(data.get("collection_target") or 0), 3)
+            data["cash_reserve_target"] = round(float(data.get("cash_reserve_target") or 0), 3)
+            if data["revenue_target"] < 0 or data["expense_budget"] < 0 or data["collection_target"] < 0 or data["cash_reserve_target"] < 0:
+                return self.send_json({"ok": False, "error": "قيم الأهداف يجب أن تكون موجبة أو صفر"}, 400)
+            if method == "POST":
+                data.setdefault("created_at", now_iso())
+            data["updated_at"] = now_iso()
         if table == "invoices":
             return self.send_json({"ok": False, "error": "الفاتورة تُنشأ من العقد — من قائمة العقود اضغط «فاتورة» أو اعتمد العقد لتوليد الجدول"}, 400)
         if table == "payments":
@@ -7402,6 +7435,134 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "closed": len(closed_periods),
                     "latest_open": open_periods[0] if open_periods else None,
                 },
+            }
+        )
+
+    def api_accounting_cfo_overview(self, db: sqlite3.Connection, query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        months = max(3, min(24, int((params.get("months") or ["12"])[0] or 12)))
+        today_d = date.today()
+        budgets = {
+            str(x["month_key"]): x
+            for x in rows_to_dicts(
+                db.execute(
+                    "SELECT month_key, revenue_target, expense_budget, collection_target, cash_reserve_target, notes FROM accounting_budgets"
+                ).fetchall()
+            )
+        }
+        accounts_rows = rows_to_dicts(db.execute("SELECT entry_date, type, amount FROM accounts").fetchall())
+        inv_rows = rows_to_dicts(db.execute("SELECT issue_date, due_date, amount, paid_amount FROM invoices").fetchall())
+        est_inv_rows = rows_to_dicts(db.execute("SELECT issued_at, due_date, amount, paid_amount FROM estate_contract_invoices").fetchall())
+        month_closes = {str(x["month_key"]): x for x in rows_to_dicts(db.execute("SELECT month_key, status, closed_at FROM estate_month_closes").fetchall())}
+
+        def month_totals(mk: str) -> Dict[str, float]:
+            revenue = sum(float(a.get("amount") or 0) for a in accounts_rows if str(a.get("entry_date") or "").startswith(mk) and str(a.get("type") or "").lower() == "income")
+            expense = sum(float(a.get("amount") or 0) for a in accounts_rows if str(a.get("entry_date") or "").startswith(mk) and str(a.get("type") or "").lower() == "expense")
+            billed = sum(float(x.get("amount") or 0) for x in inv_rows if str(x.get("issue_date") or "").startswith(mk)) + sum(float(x.get("amount") or 0) for x in est_inv_rows if str(x.get("issued_at") or "").startswith(mk))
+            collected = sum(float(x.get("paid_amount") or 0) for x in inv_rows if str(x.get("issue_date") or "").startswith(mk)) + sum(float(x.get("paid_amount") or 0) for x in est_inv_rows if str(x.get("issued_at") or "").startswith(mk))
+            return {"revenue": round(revenue, 3), "expense": round(expense, 3), "net": round(revenue - expense, 3), "billed": round(billed, 3), "collected": round(collected, 3)}
+
+        rows: List[Dict[str, Any]] = []
+        for i in range(months - 1, -1, -1):
+            mk = add_months(today_d.replace(day=1), -i).strftime("%Y-%m")
+            actual = month_totals(mk)
+            b = budgets.get(mk) or {}
+            rev_target = float(b.get("revenue_target") or 0)
+            exp_budget = float(b.get("expense_budget") or 0)
+            col_target = float(b.get("collection_target") or 0)
+            reserve_target = float(b.get("cash_reserve_target") or 0)
+            billed = float(actual["billed"] or 0)
+            collected = float(actual["collected"] or 0)
+            collection_rate = round((collected / billed * 100.0), 2) if billed > 0 else 0.0
+            rows.append(
+                {
+                    "month": mk,
+                    "actual_revenue": actual["revenue"],
+                    "target_revenue": rev_target,
+                    "variance_revenue": round(actual["revenue"] - rev_target, 3),
+                    "actual_expense": actual["expense"],
+                    "budget_expense": exp_budget,
+                    "variance_expense": round(exp_budget - actual["expense"], 3),
+                    "actual_net": actual["net"],
+                    "billed": actual["billed"],
+                    "collected": actual["collected"],
+                    "collection_rate": collection_rate,
+                    "collection_target": col_target,
+                    "cash_reserve_target": reserve_target,
+                    "month_closed": bool(month_closes.get(mk)),
+                }
+            )
+
+        recent = rows[-3:] if len(rows) >= 3 else rows
+        avg_collection_rate = 0.0
+        if recent:
+            avg_collection_rate = sum(float(r.get("collection_rate") or 0) for r in recent) / max(1, len(recent))
+        avg_collection_ratio = max(0.0, min(1.0, avg_collection_rate / 100.0))
+        open_receivables = 0.0
+        for r in inv_rows + est_inv_rows:
+            amount = float(r.get("amount") or 0)
+            paid = float(r.get("paid_amount") or 0)
+            open_receivables += max(0.0, amount - paid)
+        purchase_due = float(db.execute("SELECT COALESCE(SUM(amount-paid_amount),0) FROM purchase_invoices WHERE status!='Paid'").fetchone()[0] or 0)
+        payroll_pending = float(db.execute("SELECT COALESCE(SUM(net_salary),0) FROM salaries WHERE lower(status)='pending'").fetchone()[0] or 0)
+        obligations_30 = round(max(0.0, purchase_due) + max(0.0, payroll_pending), 3)
+        bank_balance = float(db.execute("SELECT COALESCE(SUM(CASE WHEN type IN ('deposit','in','income') THEN amount ELSE -amount END),0) FROM bank_transactions").fetchone()[0] or 0)
+        scen = {
+            "conservative": max(0.40, avg_collection_ratio - 0.15),
+            "base": max(0.0, min(1.0, avg_collection_ratio)),
+            "optimistic": min(0.98, avg_collection_ratio + 0.12),
+        }
+        scenarios: List[Dict[str, Any]] = []
+        for name, ratio in scen.items():
+            projected_col = round(open_receivables * ratio, 3)
+            projected_cash_30 = round(bank_balance + projected_col - obligations_30, 3)
+            scenarios.append(
+                {
+                    "name": name,
+                    "collection_ratio": round(ratio * 100.0, 2),
+                    "projected_collection_30": projected_col,
+                    "projected_cash_30": projected_cash_30,
+                }
+            )
+        current = rows[-1] if rows else {}
+        alerts: List[Dict[str, Any]] = []
+        if current:
+            rev_target = float(current.get("target_revenue") or 0)
+            exp_budget = float(current.get("budget_expense") or 0)
+            col_target = float(current.get("collection_target") or 0)
+            reserve_target = float(current.get("cash_reserve_target") or 0)
+            if rev_target > 0 and float(current.get("actual_revenue") or 0) < rev_target * 0.9:
+                alerts.append({"code": "revenue_below_target", "severity": "high", "message": "الإيراد أقل من الهدف الشهري بأكثر من 10%"})
+            if exp_budget > 0 and float(current.get("actual_expense") or 0) > exp_budget * 1.1:
+                alerts.append({"code": "expense_over_budget", "severity": "high", "message": "المصروفات تجاوزت الموازنة بأكثر من 10%"})
+            if col_target > 0 and float(current.get("collected") or 0) < col_target * 0.9:
+                alerts.append({"code": "collection_below_target", "severity": "medium", "message": "التحصيل أقل من الهدف الشهري"})
+            if reserve_target > 0 and scenarios:
+                base_cash = float(next((x["projected_cash_30"] for x in scenarios if x["name"] == "base"), 0))
+                if base_cash < reserve_target:
+                    alerts.append({"code": "cash_reserve_risk", "severity": "high", "message": "التوقع النقدي الأساسي أقل من حد الاحتياطي المطلوب"})
+
+        decisions: List[Dict[str, Any]] = []
+        if alerts:
+            for a in alerts:
+                go = "invoices" if "collection" in a["code"] or "revenue" in a["code"] else ("admin-expenses" if "expense" in a["code"] else "bank")
+                decisions.append({"severity": a["severity"], "title": a["code"], "detail": a["message"], "action_section": go})
+        else:
+            decisions.append({"severity": "ok", "title": "stable", "detail": "المؤشرات المالية ضمن الحدود المحددة", "action_section": "accounts"})
+
+        self.send_json(
+            {
+                "ok": True,
+                "months": rows,
+                "kpis": {
+                    "bank_balance": round(bank_balance, 3),
+                    "open_receivables": round(open_receivables, 3),
+                    "obligations_30_days": obligations_30,
+                    "avg_collection_rate": round(avg_collection_rate, 2),
+                },
+                "scenarios": scenarios,
+                "alerts": alerts,
+                "decisions": decisions,
             }
         )
 

@@ -775,6 +775,21 @@
           <div class="card"><h3>توقعات التحصيل (30 يوم)</h3><div id="accPlatformForecast"></div></div>
           <div class="card"><h3>بطاقات القرار الإداري</h3><div id="accPlatformDecisions"></div></div>
         </div>
+        <div class="layout">
+          <div class="card">
+            <h3>أهداف الموازنة الشهرية (Budget Targets)</h3>
+            <div class="form">
+              <input id="accBudgetMonth" type="month">
+              <input id="accBudgetRevenue" type="number" min="0" step="0.001" placeholder="هدف الإيرادات OMR">
+              <input id="accBudgetExpense" type="number" min="0" step="0.001" placeholder="سقف المصروفات OMR">
+              <input id="accBudgetCollection" type="number" min="0" step="0.001" placeholder="هدف التحصيل OMR">
+              <input id="accBudgetReserve" type="number" min="0" step="0.001" placeholder="حد الاحتياطي النقدي OMR">
+              <textarea id="accBudgetNotes" placeholder="ملاحظات الهدف الشهري"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="saveAccountingBudgetTarget()">حفظ هدف الشهر</button>
+          </div>
+          <div class="card"><h3>سجل أهداف الموازنة</h3><div id="accPlatformBudgetTable"></div></div>
+        </div>
       </section>
 
       <section id="sec-owner-staff" class="section"><div id="ownerStaffBox"></div></section>

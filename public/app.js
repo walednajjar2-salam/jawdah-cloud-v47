@@ -3692,7 +3692,10 @@ window.printHospitalityFolio = printHospitalityFolio;
       ].map(x=>`<button class="ghost" type="button" onclick="showSection('${x[1]}')">${x[2]} ${x[0]}</button>`).join('');
     }
     try{
-      const res = await api('accounting_platform_overview?months=12');
+      const [res, cfo] = await Promise.all([
+        api('accounting_platform_overview?months=12'),
+        api('accounting_cfo_overview?months=12')
+      ]);
       const k = res.kpis || {};
       const hostKpi = $('#accPlatformKpis');
       if(hostKpi){
@@ -3735,15 +3738,20 @@ window.printHospitalityFolio = printHospitalityFolio;
       }
       const cashHost = $('#accPlatformCashflow');
       if(cashHost){
-        const rows = Array.isArray(res.cashflow_monthly) ? res.cashflow_monthly : [];
+        const rows = Array.isArray(cfo.months) ? cfo.months : [];
         cashHost.innerHTML = rows.length ? tableHtml(
-          [['الشهر','month'],['إيراد','income',(v)=>money(v)],['مصروف','expense',(v)=>money(v)],['صافي','net',(v)=>money(v)],['مفوتر','billed',(v)=>money(v)],['محصل','collected',(v)=>money(v)]],
+          [['الشهر','month'],['فعلي الإيراد','actual_revenue',(v)=>money(v)],['مستهدف الإيراد','target_revenue',(v)=>money(v)],['الانحراف','variance_revenue',(v)=>money(v)],['فعلي المصروف','actual_expense',(v)=>money(v)],['موازنة المصروف','budget_expense',(v)=>money(v)],['صافي','actual_net',(v)=>money(v)],['معدل التحصيل %','collection_rate',(v)=>fmt(v)]],
           rows
         ) : '<p class="mini">لا توجد بيانات تدفق نقدي.</p>';
       }
       const agingHost = $('#accPlatformAging');
       if(agingHost){
-        const a = res.aging || {};
+        const a = cfo.months?.length ? {
+          "0-30": (cfo.months[cfo.months.length-1].collection_target||0) - (cfo.months[cfo.months.length-1].collected||0),
+          "31-60": 0,
+          "61-90": 0,
+          "90+": (res.kpis?.overdue_total||0)
+        } : {};
         agingHost.innerHTML = `
           <div class="statement-row"><span>0-30 يوم</span><b>${money(a['0-30']||0)}</b></div>
           <div class="statement-row"><span>31-60 يوم</span><b>${money(a['31-60']||0)}</b></div>
@@ -3753,26 +3761,57 @@ window.printHospitalityFolio = printHospitalityFolio;
       }
       const foreHost = $('#accPlatformForecast');
       if(foreHost){
+        const scenarios = Array.isArray(cfo.scenarios) ? cfo.scenarios : [];
         foreHost.innerHTML = `
           <div class="statement-row"><span>توقع التحصيل خلال 30 يوم</span><b>${money(k.forecast_next_30_days||0)}</b></div>
           <div class="statement-row"><span>إجمالي المتأخرات الحالية</span><b class="${Number(k.overdue_total||0)>0?'low-stock':'linked-ok'}">${money(k.overdue_total||0)}</b></div>
           <div class="statement-row"><span>الفواتير المتأخرة (عدد)</span><b>${fmt(k.overdue_count||0)}</b></div>
+          ${scenarios.map(s=>`<div class="statement-row"><span>${htmlEscape(String(s.name||''))} Scenario</span><b>${money(s.projected_cash_30||0)} · ${fmt(s.collection_ratio||0)}%</b></div>`).join('')}
         `;
       }
       const decHost = $('#accPlatformDecisions');
       if(decHost){
-        const dec = Array.isArray(res.decisions) ? res.decisions : [];
+        const dec = Array.isArray(cfo.decisions) ? cfo.decisions : [];
         decHost.innerHTML = dec.map(d=>{
           const cls = d.severity==='high' ? 'overdue' : (d.severity==='medium'?'pending':'paid');
           const go = String(d.action_section||'accounts').replace(/[^a-z0-9-]/gi,'');
           return `<div class="statement-row"><span>${htmlEscape(d.title||'قرار')}</span><b class="badge ${cls}">${htmlEscape(d.detail||'')}</b><button class="ghost" type="button" onclick="showSection('${go||'accounts'}')">فتح</button></div>`;
         }).join('') || '<p class="mini">لا توجد قرارات عاجلة.</p>';
       }
+      const budgetHost = $('#accPlatformBudgetTable');
+      if(budgetHost){
+        const rows = (Jawdah.data.accounting_budgets || []).slice().sort((a,b)=>String(b.month_key||'').localeCompare(String(a.month_key||'')));
+        budgetHost.innerHTML = rows.length ? tableHtml(
+          [['الشهر','month_key'],['هدف الإيراد','revenue_target',(v)=>money(v)],['سقف المصروف','expense_budget',(v)=>money(v)],['هدف التحصيل','collection_target',(v)=>money(v)],['احتياطي نقدي','cash_reserve_target',(v)=>money(v)],['ملاحظات','notes']],
+          rows,
+          r=>`<button class="ghost" onclick="editRecord('accounting_budgets','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounting_budgets','${r.id}')">حذف</button>`
+        ) : '<p class="mini">لا توجد أهداف موازنة بعد.</p>';
+      }
     }catch(e){
       const host = $('#accPlatformAlerts');
       if(host) host.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
     }
     ensureEnglishDigits(document.getElementById('sec-accounting-platform'));
+  };
+  window.saveAccountingBudgetTarget = async function(){
+    try{
+      const month = String($('#accBudgetMonth')?.value || '').trim();
+      if(!month) return toastErr('اختر شهر الهدف');
+      await api('accounting_budgets',{
+        method:'POST',
+        body:JSON.stringify({
+          month_key: month,
+          revenue_target: Number($('#accBudgetRevenue')?.value || 0),
+          expense_budget: Number($('#accBudgetExpense')?.value || 0),
+          collection_target: Number($('#accBudgetCollection')?.value || 0),
+          cash_reserve_target: Number($('#accBudgetReserve')?.value || 0),
+          notes: String($('#accBudgetNotes')?.value || '').trim(),
+        })
+      });
+      toast('تم حفظ هدف الموازنة الشهرية');
+      await loadAll();
+      if($('#sec-accounting-platform')?.classList.contains('active')) renderAccountingPlatform();
+    }catch(e){ toastErr(e); }
   };
 
   const ESTATE_ICON_SET = [
@@ -4463,6 +4502,10 @@ window.printHospitalityFolio = printHospitalityFolio;
   if($('#emcMonth')){
     const d = new Date();
     $('#emcMonth').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+  if($('#accBudgetMonth')){
+    const d = new Date();
+    $('#accBudgetMonth').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   }
 })();
 
