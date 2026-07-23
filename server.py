@@ -128,10 +128,10 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches"},
-    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read"},
-    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_maintenance"},
+    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance"},
+    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_maintenance:read"},
 }
 
 TABLES = {
@@ -158,6 +158,11 @@ TABLES = {
     "approvals": ["id", "entity", "entity_id", "request_type", "status", "requested_by", "approved_by", "requested_at", "approved_at", "notes"],
     "bank_reconciliations": ["id", "bank_name", "period_name", "book_balance", "bank_balance", "difference", "status", "reconciled_by", "reconciled_at", "notes", "matched_count", "unmatched_count", "period_start", "period_end"],
     "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
+    "estate_properties": ["id", "name", "location", "building_count", "apartment_count", "room_count", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_buildings": ["id", "property_id", "name", "location", "apartment_count", "room_count", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_apartments": ["id", "property_id", "building_id", "name", "room_count", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "parts_details", "parts_cost", "invoice_no", "total_cost", "maintenance_date", "next_followup_date", "notes"],
     "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
@@ -1116,6 +1121,94 @@ def init_db() -> None:
                 cost REAL NOT NULL DEFAULT 0,
                 notes TEXT,
                 FOREIGN KEY(property_id) REFERENCES properties(id)
+            );
+            CREATE TABLE IF NOT EXISTS estate_properties (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                location TEXT,
+                building_count INTEGER NOT NULL DEFAULT 0,
+                apartment_count INTEGER NOT NULL DEFAULT 0,
+                room_count INTEGER NOT NULL DEFAULT 0,
+                attachments TEXT,
+                manager_name TEXT,
+                tenant_client_id TEXT,
+                tenant_phone TEXT,
+                notes TEXT,
+                image TEXT,
+                last_update TEXT
+            );
+            CREATE TABLE IF NOT EXISTS estate_buildings (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                location TEXT,
+                apartment_count INTEGER NOT NULL DEFAULT 0,
+                room_count INTEGER NOT NULL DEFAULT 0,
+                attachments TEXT,
+                manager_name TEXT,
+                tenant_client_id TEXT,
+                tenant_phone TEXT,
+                notes TEXT,
+                image TEXT,
+                last_update TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_apartments (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                building_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                room_count INTEGER NOT NULL DEFAULT 0,
+                attachments TEXT,
+                manager_name TEXT,
+                tenant_client_id TEXT,
+                tenant_phone TEXT,
+                notes TEXT,
+                image TEXT,
+                last_update TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE,
+                FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_rooms (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                building_id TEXT NOT NULL,
+                apartment_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                room_type TEXT,
+                status TEXT NOT NULL DEFAULT 'vacant',
+                attachments TEXT,
+                manager_name TEXT,
+                tenant_client_id TEXT,
+                tenant_phone TEXT,
+                notes TEXT,
+                image TEXT,
+                last_update TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE CASCADE,
+                FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE CASCADE,
+                FOREIGN KEY(apartment_id) REFERENCES estate_apartments(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS estate_maintenance (
+                id TEXT PRIMARY KEY,
+                property_id TEXT,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'Open',
+                priority TEXT NOT NULL DEFAULT 'Medium',
+                responsible_name TEXT,
+                parts_details TEXT,
+                parts_cost REAL NOT NULL DEFAULT 0,
+                invoice_no TEXT,
+                total_cost REAL NOT NULL DEFAULT 0,
+                maintenance_date TEXT NOT NULL,
+                next_followup_date TEXT,
+                notes TEXT,
+                FOREIGN KEY(property_id) REFERENCES estate_properties(id) ON DELETE SET NULL,
+                FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE SET NULL,
+                FOREIGN KEY(apartment_id) REFERENCES estate_apartments(id) ON DELETE SET NULL,
+                FOREIGN KEY(room_id) REFERENCES estate_rooms(id) ON DELETE SET NULL
             );
             CREATE TABLE IF NOT EXISTS audit_log (
                 id TEXT PRIMARY KEY,
@@ -7566,14 +7659,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
 
 UI_SECTIONS_ALL = [
-    "dashboard", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
+    "dashboard", "estate-platform", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
     "admin-expenses", "maintenance", "reports", "messages", "walid", "enterprise",
     "production", "timeline", "backup", "settings", "accounts", "purchases", "payroll",
     "inventory", "bank", "chart-accounts", "statements", "bank-reconciliation",
     "financial-periods", "approvals", "users", "qa",
 ]
 UI_WRITE_SECTIONS_ALL = [
-    "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
+    "estate-platform", "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
     "accounts", "purchases", "payroll", "revenues", "admin-expenses", "bank",
     "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
     "users", "approvals", "backup",
@@ -7588,7 +7681,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     "admin": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
     "accountant": {
         "sections": [
-            "dashboard", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "revenues",
+            "dashboard", "estate-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "revenues",
             "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
             "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
             "reports", "backup", "messages", "timeline", "walid", "approvals",
@@ -7600,19 +7693,19 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     },
     "operations": {
         "sections": [
-            "dashboard", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
+            "dashboard", "estate-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
             "maintenance", "inventory", "reports", "messages", "timeline", "backup",
             "walid", "approvals", "production",
         ],
         "kpis": ["properties", "rented", "vacant", "occupancy", "maintenance", "expiring", "health"],
     },
     "maintenance": {
-        "sections": ["dashboard", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
+        "sections": ["dashboard", "estate-platform", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
         "kpis": ["maintenance", "properties", "vacant", "inventory_value", "health"],
     },
     "viewer": {
         "sections": [
-            "dashboard", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
+            "dashboard", "estate-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
             "maintenance", "messages", "timeline", "backup",
         ],
         "kpis": ["properties", "occupancy", "health", "overdue", "net"],
@@ -7627,9 +7720,9 @@ UI_WRITE_BY_ROLE: Dict[str, List[str]] = {
         "approvals", "backup",
     ],
     "operations": [
-        "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
+        "estate-platform", "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
     ],
-    "maintenance": ["maintenance", "inventory"],
+    "maintenance": ["estate-platform", "maintenance", "inventory"],
     "viewer": [],
 }
 

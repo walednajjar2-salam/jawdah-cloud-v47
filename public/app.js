@@ -38,6 +38,7 @@ function ownerTimelineFilterLabel(v){
 const PROPERTY_STATUSES = ['شاغرة', 'محجوزة', 'مستأجرة', 'تحت الصيانة', 'موقوفة'];
 const NAV_SAAS_ITEMS = [
   ['dashboard','لوحة التحكم','🏠'],
+  ['estate-platform','منصة العقارات','🏢'],
   ['daily-ops','العمليات اليومية','🗂️'],
   ['hospitality','الضيافة','🏨'],
   ['properties','المشاريع','🏢'],
@@ -58,7 +59,7 @@ const NAV_SAAS_ITEMS = [
   ['settings','الإعدادات','⚙️']
 ];
 const SECTION_TITLES = {
-  dashboard:'لوحة التحكم','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'الضيافة',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
+  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'الضيافة',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
   revenues:'الإيرادات',invoices:'المدفوعات','admin-expenses':'المصروفات',maintenance:'الصيانة',
   reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي',production:'المتابعة',timeline:'الجدول الزمني',
   backup:'المستندات',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
@@ -827,6 +828,7 @@ function showSection(id){
   if(resolved==='owner-staff' && window.LQ_OWNER_STAFF) LQ_OWNER_STAFF.render();
   if(resolved==='owner-live' && typeof renderOwnerLiveHub==='function') renderOwnerLiveHub();
   if(resolved==='hospitality' && typeof renderHospitalityPortal==='function') renderHospitalityPortal();
+  if(resolved==='estate-platform' && typeof renderEstatePlatform==='function') renderEstatePlatform();
   if(resolved==='dashboard') renderDashboard();
   populateSelects();
   if(resolved==='reports' && typeof renderReports === 'function') renderReports();
@@ -3076,11 +3078,12 @@ function choosePortal(portal){
   localStorage.setItem('jawdah_portal_choice', choice);
   closePortalSwitch();
   if(choice==='hospitality') showSection('hospitality');
-  else showSection('dashboard');
+  else showSection('estate-platform');
 }
 function applySavedPortalChoice(){
   const choice = localStorage.getItem('jawdah_portal_choice') || 'realestate';
   if(choice==='hospitality') showSection('hospitality');
+  else showSection('estate-platform');
 }
 function canManageDailyOps(){
   const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
@@ -3669,6 +3672,256 @@ window.printHospitalityFolio = printHospitalityFolio;
 })();
 
 (function(){
+  const ESTATE_ICON_SET = [
+    { id:'property', title:'العقار', subtitle:'الأصل الرئيسي', photo:'https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=400&q=80' },
+    { id:'building', title:'البناية', subtitle:'مبنى سكني/تشغيلي', photo:'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80' },
+    { id:'apartment', title:'الشقة', subtitle:'وحدة داخل البناية', photo:'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=400&q=80' },
+    { id:'room', title:'الغرفة', subtitle:'تفصيل الوحدة', photo:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=400&q=80' },
+  ];
+  const estateRows = (k)=>Array.isArray(Jawdah.data?.[k]) ? Jawdah.data[k] : [];
+  const clientName = (id)=>htmlEscape(byId('clients',id).name||'');
+  const pickName = (arr,id)=>htmlEscape((arr.find(x=>x.id===id)||{}).name||'');
+  const roomStatusLabel = (s)=>{
+    const v=String(s||'').toLowerCase();
+    if(v==='reserved') return 'محجوزة';
+    if(v==='occupied') return 'مؤجرة';
+    if(v==='maintenance') return 'تحت الصيانة';
+    return 'شاغرة';
+  };
+  function optFrom(rows,labelFn){
+    return '<option value="">— اختر —</option>'+rows.map(r=>`<option value="${htmlEscape(r.id)}">${htmlEscape(labelFn(r))}</option>`).join('');
+  }
+  function fillEstateSelects(){
+    const props = estateRows('estate_properties');
+    const blds = estateRows('estate_buildings');
+    const apts = estateRows('estate_apartments');
+    const rooms = estateRows('estate_rooms');
+    const clients = Jawdah.data.clients || [];
+    const propHtml = optFrom(props, r=>r.name||r.id);
+    const clientHtml = '<option value="">— بدون مستأجر —</option>'+clients.map(c=>`<option value="${htmlEscape(c.id)}">${htmlEscape(c.name||c.id)}</option>`).join('');
+    ['epTenantClient','ebTenantClient','eaTenantClient','erTenantClient'].forEach(id=>{ const el=$('#'+id); if(el) el.innerHTML=clientHtml; });
+    ['ebProperty','eaProperty','erProperty','emProperty'].forEach(id=>{ const el=$('#'+id); if(el) el.innerHTML=propHtml; });
+
+    const propId = $('#eaProperty')?.value || $('#erProperty')?.value || $('#emProperty')?.value || '';
+    const bFiltered = propId ? blds.filter(x=>x.property_id===propId) : blds;
+    const bHtml = optFrom(bFiltered, r=>r.name||r.id);
+    ['eaBuilding','erBuilding','emBuilding'].forEach(id=>{ const el=$('#'+id); if(el) el.innerHTML=bHtml; });
+
+    const bId = $('#erBuilding')?.value || $('#emBuilding')?.value || '';
+    const aFiltered = bId ? apts.filter(x=>x.building_id===bId) : apts;
+    const aHtml = optFrom(aFiltered, r=>r.name||r.id);
+    ['erApartment','emApartment'].forEach(id=>{ const el=$('#'+id); if(el) el.innerHTML=aHtml; });
+
+    const aId = $('#emApartment')?.value || '';
+    const rFiltered = aId ? rooms.filter(x=>x.apartment_id===aId) : rooms;
+    const rHtml = optFrom(rFiltered, r=>r.name||r.id);
+    const emRoom = $('#emRoom');
+    if(emRoom) emRoom.innerHTML = rHtml;
+  }
+  function renderEstateIcons(){
+    const host = $('#estateIconGrid');
+    if(!host) return;
+    host.innerHTML = ESTATE_ICON_SET.map(i=>`
+      <article class="estate-icon-card">
+        <div class="estate-icon-circle"><img src="${htmlEscape(i.photo)}" alt="${htmlEscape(i.title)}"></div>
+        <h4>${htmlEscape(i.title)}</h4>
+        <p>${htmlEscape(i.subtitle)}</p>
+      </article>
+    `).join('');
+  }
+  function buildEstateTimeline(){
+    const from = $('#estateTimelineFrom')?.value || '';
+    const to = $('#estateTimelineTo')?.value || '';
+    const isInside = (d)=> {
+      const x = String(d||'');
+      if(!x) return true;
+      if(from && x < from) return false;
+      if(to && x > to) return false;
+      return true;
+    };
+    const events = [];
+    estateRows('estate_properties').forEach(x=>events.push({date:x.last_update||'', title:`عقار: ${x.name||x.id}`, subtitle:`الموقع: ${x.location||'—'}`, meta:`${x.building_count||0} بنايات · ${x.apartment_count||0} شقق · ${x.room_count||0} غرف`, tone:'ok', icon:'🏢'}));
+    estateRows('estate_buildings').forEach(x=>events.push({date:x.last_update||'', title:`بناية: ${x.name||x.id}`, subtitle:`العقار: ${pickName(estateRows('estate_properties'), x.property_id)}`, meta:`${x.apartment_count||0} شقق · ${x.room_count||0} غرف`, tone:'info', icon:'🏬'}));
+    estateRows('estate_apartments').forEach(x=>events.push({date:x.last_update||'', title:`شقة: ${x.name||x.id}`, subtitle:`البناية: ${pickName(estateRows('estate_buildings'), x.building_id)}`, meta:`${x.room_count||0} غرف`, tone:'info', icon:'🧱'}));
+    estateRows('estate_rooms').forEach(x=>events.push({date:x.last_update||'', title:`غرفة: ${x.name||x.id}`, subtitle:`الشقة: ${pickName(estateRows('estate_apartments'), x.apartment_id)}`, meta:`الحالة: ${roomStatusLabel(x.status)}`, tone:x.status==='maintenance'?'warn':'ok', icon:'🛏️'}));
+    estateRows('estate_maintenance').forEach(x=>events.push({date:x.maintenance_date||'', title:`صيانة: ${x.title||x.id}`, subtitle:`المسؤول: ${x.responsible_name||'—'}`, meta:`رقم فاتورة: ${x.invoice_no||'—'} · تكلفة: ${money(x.total_cost||0)}`, tone:String(x.status||'').toLowerCase().includes('closed')?'ok':'warn', icon:'🔧'}));
+    return events.filter(e=>isInside(e.date)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).slice(0,80);
+  }
+  function renderEstateTables(){
+    const props = estateRows('estate_properties');
+    const blds = estateRows('estate_buildings');
+    const apts = estateRows('estate_apartments');
+    const rooms = estateRows('estate_rooms');
+    const maint = estateRows('estate_maintenance');
+    const tenantCell = (id, phone)=> id ? `${clientName(id)}<br><small>${htmlEscape(phone||'')}</small>` : '—';
+
+    const propTable = $('#estatePropertiesTable');
+    if(propTable) propTable.innerHTML = tableHtml(
+      [['الاسم','name'],['الموقع','location'],['عدد البنايات','building_count'],['عدد الشقق','apartment_count'],['عدد الغرف','room_count'],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)],['ملحقات','attachments'],['ملاحظات','notes']],
+      props,
+      r=>`<button class="ghost" onclick="editRecord('estate_properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_properties','${r.id}')">حذف</button>`
+    );
+    const bTable = $('#estateBuildingsTable');
+    if(bTable) bTable.innerHTML = tableHtml(
+      [['العقار','property_id',(v)=>pickName(props,v)],['البناية','name'],['الموقع','location'],['عدد الشقق','apartment_count'],['عدد الغرف','room_count'],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      blds,
+      r=>`<button class="ghost" onclick="editRecord('estate_buildings','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_buildings','${r.id}')">حذف</button>`
+    );
+    const aTable = $('#estateApartmentsTable');
+    if(aTable) aTable.innerHTML = tableHtml(
+      [['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','name'],['عدد الغرف','room_count'],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      apts,
+      r=>`<button class="ghost" onclick="editRecord('estate_apartments','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_apartments','${r.id}')">حذف</button>`
+    );
+    const rTable = $('#estateRoomsTable');
+    if(rTable) rTable.innerHTML = tableHtml(
+      [['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','name'],['النوع','room_type'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      rooms,
+      r=>`<button class="ghost" onclick="editRecord('estate_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_rooms','${r.id}')">حذف</button>`
+    );
+    const mTable = $('#estateMaintenanceTable');
+    if(mTable) mTable.innerHTML = tableHtml(
+      [['التاريخ','maintenance_date'],['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','room_id',(v)=>pickName(rooms,v)],['العنوان','title'],['المسؤول','responsible_name'],['القطع','parts_details'],['رقم الفاتورة','invoice_no'],['تكلفة القطع','parts_cost',(v)=>money(v)],['الإجمالي','total_cost',(v)=>money(v)],['الحالة','status',(v)=>statusBadge(v)]],
+      maint,
+      r=>`<button class="ghost" onclick="editRecord('estate_maintenance','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_maintenance','${r.id}')">حذف</button>`
+    );
+  }
+  window.renderEstatePlatform = function(){
+    renderEstateIcons();
+    fillEstateSelects();
+    const props = estateRows('estate_properties');
+    const blds = estateRows('estate_buildings');
+    const apts = estateRows('estate_apartments');
+    const rooms = estateRows('estate_rooms');
+    const maint = estateRows('estate_maintenance');
+    const occupied = rooms.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
+    const openMaint = maint.filter(x=>!String(x.status||'').toLowerCase().includes('closed')).length;
+    const kpi = $('#estateKpiRow');
+    if(kpi){
+      kpi.innerHTML = `
+        <div class="kpi"><span>العقارات</span><strong>${fmt(props.length)}</strong></div>
+        <div class="kpi"><span>البنايات</span><strong>${fmt(blds.length)}</strong></div>
+        <div class="kpi"><span>الشقق</span><strong>${fmt(apts.length)}</strong></div>
+        <div class="kpi"><span>الغرف</span><strong>${fmt(rooms.length)}</strong></div>
+        <div class="kpi"><span>غرف مؤجرة</span><strong>${fmt(occupied)}</strong></div>
+        <div class="kpi"><span>صيانة مفتوحة</span><strong>${fmt(openMaint)}</strong></div>
+      `;
+    }
+    const timeline = $('#estateTimelineBox');
+    if(timeline){
+      const events = buildEstateTimeline();
+      timeline.innerHTML = events.map(e=>`<article class="prop-tl-item ${e.tone}"><div class="prop-tl-date"><b>${htmlEscape(e.date||'')}</b><span>${e.icon}</span></div><div class="prop-tl-body"><h4>${htmlEscape(e.title||'')}</h4><p>${htmlEscape(e.subtitle||'')}</p><div class="status-line"><span class="badge">${htmlEscape(e.meta||'')}</span></div></div></article>`).join('') || '<div class="card"><p class="mini">لا توجد أحداث ضمن الفترة المحددة.</p></div>';
+    }
+    renderEstateTables();
+    ensureEnglishDigits(document.getElementById('sec-estate-platform'));
+  };
+  function nowDay(){ return today ? today() : new Date().toISOString().slice(0,10); }
+  async function postEstate(table,payload){
+    try{
+      await api(table,{method:'POST',body:JSON.stringify(payload)});
+      toast('تم الحفظ');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  }
+  window.createEstateProperty = function(){
+    const tenant = val('epTenantClient') || null;
+    const tenantObj = byId('clients', tenant);
+    return postEstate('estate_properties',{
+      name: val('epName'),
+      location: val('epLocation'),
+      building_count: num('epBuildingCount'),
+      apartment_count: num('epApartmentCount'),
+      room_count: num('epRoomCount'),
+      attachments: val('epAttachments'),
+      manager_name: val('epManager'),
+      tenant_client_id: tenant,
+      tenant_phone: val('epTenantPhone') || tenantObj.phone || '',
+      notes: val('epNotes'),
+      image: val('epImage'),
+      last_update: nowDay(),
+    });
+  };
+  window.createEstateBuilding = function(){
+    const tenant = val('ebTenantClient') || null;
+    const tenantObj = byId('clients', tenant);
+    return postEstate('estate_buildings',{
+      property_id: val('ebProperty'),
+      name: val('ebName'),
+      location: val('ebLocation'),
+      apartment_count: num('ebApartmentCount'),
+      room_count: num('ebRoomCount'),
+      attachments: val('ebAttachments'),
+      manager_name: val('ebManager'),
+      tenant_client_id: tenant,
+      tenant_phone: val('ebTenantPhone') || tenantObj.phone || '',
+      notes: val('ebNotes'),
+      image: val('ebImage'),
+      last_update: nowDay(),
+    });
+  };
+  window.createEstateApartment = function(){
+    const tenant = val('eaTenantClient') || null;
+    const tenantObj = byId('clients', tenant);
+    return postEstate('estate_apartments',{
+      property_id: val('eaProperty'),
+      building_id: val('eaBuilding'),
+      name: val('eaName'),
+      room_count: num('eaRoomCount'),
+      attachments: val('eaAttachments'),
+      manager_name: val('eaManager'),
+      tenant_client_id: tenant,
+      tenant_phone: val('eaTenantPhone') || tenantObj.phone || '',
+      notes: val('eaNotes'),
+      image: val('eaImage'),
+      last_update: nowDay(),
+    });
+  };
+  window.createEstateRoom = function(){
+    const tenant = val('erTenantClient') || null;
+    const tenantObj = byId('clients', tenant);
+    return postEstate('estate_rooms',{
+      property_id: val('erProperty'),
+      building_id: val('erBuilding'),
+      apartment_id: val('erApartment'),
+      name: val('erName'),
+      room_type: val('erType'),
+      status: val('erStatus'),
+      attachments: val('erAttachments'),
+      manager_name: val('erManager'),
+      tenant_client_id: tenant,
+      tenant_phone: val('erTenantPhone') || tenantObj.phone || '',
+      notes: val('erNotes'),
+      image: val('erImage'),
+      last_update: nowDay(),
+    });
+  };
+  window.createEstateMaintenance = function(){
+    return postEstate('estate_maintenance',{
+      property_id: val('emProperty') || null,
+      building_id: val('emBuilding') || null,
+      apartment_id: val('emApartment') || null,
+      room_id: val('emRoom') || null,
+      title: val('emTitle'),
+      status: val('emStatus') || 'Open',
+      priority: val('emPriority') || 'Medium',
+      responsible_name: val('emResponsible'),
+      parts_details: val('emPartsDetails'),
+      parts_cost: num('emPartsCost'),
+      invoice_no: val('emInvoiceNo'),
+      total_cost: num('emTotalCost'),
+      maintenance_date: val('emDate') || nowDay(),
+      next_followup_date: val('emNextDate'),
+      notes: val('emNotes'),
+    });
+  };
+  document.addEventListener('change', (e)=>{
+    const id = e?.target?.id;
+    if(['eaProperty','erProperty','emProperty','erBuilding','emBuilding','emApartment'].includes(id)) fillEstateSelects();
+  });
+})();
+
+(function(){
   function sum(arr, fn){ return (arr||[]).reduce((s,x)=>s+Number(fn(x)||0),0); }
   function daysLate(due){ const d = new Date(due+'T00:00:00'); const n = new Date(); return Math.max(0, Math.floor((n-d)/(1000*60*60*24))); }
   function accEngine(){
@@ -3842,7 +4095,7 @@ window.printHospitalityFolio = printHospitalityFolio;
 
 (function(){
   const financeItems=[['purchases','فواتير المشتريات','🧾'],['revenues','الإيرادات','💎'],['statements','قائمة الدخل والميزانية','📘'],['payroll','الرواتب','👔'],['admin-expenses','مصاريف إدارية وعمومية','🏢'],['inventory','المخزن','📦'],['bank','كشف البنك','🏦'],['chart-accounts','دليل الحسابات','📒'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']];
-  const baseSections=[['dashboard','لوحة التحكم','🏛️'],['properties','العقارات','🏠'],['clients','العملاء','👥'],['contracts','العقود والتجديد','📑'],['invoices','الفواتير','🧾'],['accounts','الحسابات','💰'],...financeItems,['maintenance','الصيانة','🔧'],['reports','التقارير','📊'],['users','المستخدمين','🛡️'],['backup','التخزين والنسخ','💾'],['qa','اختبار التشغيل','✅']];
+  const baseSections=[['dashboard','لوحة التحكم','🏛️'],['estate-platform','منصة العقارات','🏢'],['properties','العقارات','🏠'],['clients','العملاء','👥'],['contracts','العقود والتجديد','📑'],['invoices','الفواتير','🧾'],['accounts','الحسابات','💰'],...financeItems,['maintenance','الصيانة','🔧'],['reports','التقارير','📊'],['users','المستخدمين','🛡️'],['backup','التخزين والنسخ','💾'],['qa','اختبار التشغيل','✅']];
   const prevBuildNav=buildNav;
   buildNav=function(){ prevBuildNav && prevBuildNav(); };
   const oldPopulate=populateSelects;
