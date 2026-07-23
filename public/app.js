@@ -3995,6 +3995,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(res.score)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div><div class="kpi"><span>روابط غير سليمة</span><strong>${fmt((alerts.broken_contract_links||0)+(alerts.broken_invoice_links||0))}</strong></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${fmt(c.value)}</b></div>`).join('')}</div>`;
       ensureEnglishDigits(box);
       if(typeof window.loadModuleIntegrity==='function') window.loadModuleIntegrity();
+      if(typeof window.loadModuleFixHistoryKpi==='function') window.loadModuleFixHistoryKpi();
       if(typeof window.loadModuleFixHistory==='function') window.loadModuleFixHistory();
     }catch(e){toastErr(e)}
   };
@@ -4307,5 +4308,69 @@ window.printHospitalityFolio = printHospitalityFolio;
       setTimeout(()=>URL.revokeObjectURL(a.href),1000);
       toast('تم تصدير سجل الإصلاح');
     }catch(e){ toastErr(e,'تعذر تصدير سجل الإصلاح'); }
+  };
+
+  window.loadModuleFixHistoryKpi=async function(){
+    const host = $('#moduleFixKpiBox');
+    if(!host) return;
+    if(!host.dataset.init){
+      host.dataset.init = '1';
+      host.innerHTML = `
+        <div class="card inner-card">
+          <div class="toolbar" style="justify-content:space-between;align-items:flex-end">
+            <h3 style="margin:0">KPI سجل الإصلاحات</h3>
+            <label class="mini">الفترة
+              <select id="mfxKpiDays" onchange="loadModuleFixHistoryKpi()">
+                <option value="1">آخر 24 ساعة</option>
+                <option value="7">آخر 7 أيام</option>
+                <option value="30">آخر 30 يوم</option>
+                <option value="90">آخر 90 يوم</option>
+              </select>
+            </label>
+          </div>
+          <div id="mfxKpiCards"><p class="mini">جاري التحميل...</p></div>
+          <div id="mfxKpiTopUsers" style="margin-top:10px"></div>
+        </div>
+      `;
+    }
+    const cardsHost = $('#mfxKpiCards');
+    const usersHost = $('#mfxKpiTopUsers');
+    if(cardsHost) cardsHost.innerHTML = '<p class="mini">جاري تحميل KPI...</p>';
+    if(usersHost) usersHost.innerHTML = '';
+    try{
+      const days = Number($('#mfxKpiDays')?.value || 1);
+      const res = await api('module_integrity_history_kpi?days='+encodeURIComponent(String(days)));
+      const k = res.kpi || {};
+      const topUsers = Array.isArray(res.top_users) ? res.top_users : [];
+      if(cardsHost){
+        cardsHost.innerHTML = `
+          <div class="kpis grid">
+            <div class="kpi"><span>محاولات</span><strong>${fmt(k.attempts||0)}</strong></div>
+            <div class="kpi"><span>نجاح</span><strong>${fmt(k.success||0)}</strong></div>
+            <div class="kpi"><span>رفض</span><strong>${fmt(k.rejected||0)}</strong></div>
+            <div class="kpi"><span>نسبة النجاح</span><strong>${fmt(k.success_rate||0)}%</strong></div>
+            <div class="kpi"><span>تطبيقات ناجحة</span><strong>${fmt(k.apply_success||0)}</strong></div>
+            <div class="kpi"><span>إجمالي منفذ</span><strong>${fmt(k.applied_total||0)}</strong></div>
+            <div class="kpi"><span>إجمالي مرشح</span><strong>${fmt(k.candidates_total||0)}</strong></div>
+            <div class="kpi"><span>فعالية التطبيق</span><strong>${fmt(k.apply_effectiveness||0)}%</strong></div>
+          </div>
+        `;
+      }
+      if(usersHost){
+        usersHost.innerHTML = topUsers.length
+          ? `<h4 style="margin:8px 0">أكثر المستخدمين تنفيذًا</h4>${tableHtml(
+              [
+                ['المستخدم','username',(v)=>htmlEscape(String(v||''))],
+                ['عدد العمليات','runs',(v)=>fmt(v||0)],
+                ['منفذ فعلي','applied_total',(v)=>fmt(v||0)],
+              ],
+              topUsers
+            )}`
+          : '<p class="mini">لا توجد بيانات مستخدمين ضمن الفترة.</p>';
+      }
+      ensureEnglishDigits(host);
+    }catch(e){
+      if(cardsHost) cardsHost.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
   };
 })();

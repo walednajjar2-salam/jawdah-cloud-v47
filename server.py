@@ -3245,6 +3245,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "module_integrity_history" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_module_integrity_history(db, user, query)
+                if parts[0] == "module_integrity_history_kpi" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_module_integrity_history_kpi(db, user, query)
                 if parts[0] == "module_integrity_fix" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_module_integrity_fix(db, user)
@@ -6984,6 +6987,104 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 }
             )
         self.send_json({"ok": True, "history": out, "limit": filters.get("limit"), "filters": filters})
+
+    def api_module_integrity_history_kpi(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        try:
+            days = int((params.get("days") or ["1"])[0] or 1)
+        except Exception:
+            days = 1
+        days = max(1, min(365, days))
+        since_dt = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+
+        total = int(
+            db.execute(
+                "SELECT COUNT(*) FROM module_fix_runs WHERE datetime(created_at) >= datetime(?)",
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        ok_total = int(
+            db.execute(
+                "SELECT COUNT(*) FROM module_fix_runs WHERE datetime(created_at) >= datetime(?) AND lower(status)='ok'",
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        rejected_total = int(
+            db.execute(
+                "SELECT COUNT(*) FROM module_fix_runs WHERE datetime(created_at) >= datetime(?) AND lower(status) LIKE 'rejected%'",
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        apply_ok = int(
+            db.execute(
+                """
+                SELECT COUNT(*) FROM module_fix_runs
+                WHERE datetime(created_at) >= datetime(?)
+                  AND lower(status)='ok'
+                  AND lower(mode) IN ('apply','autorun')
+                """,
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        applied_sum = int(
+            db.execute(
+                """
+                SELECT COALESCE(SUM(applied),0) FROM module_fix_runs
+                WHERE datetime(created_at) >= datetime(?) AND lower(status)='ok'
+                """,
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        candidates_sum = int(
+            db.execute(
+                """
+                SELECT COALESCE(SUM(candidates),0) FROM module_fix_runs
+                WHERE datetime(created_at) >= datetime(?) AND lower(status)='ok'
+                """,
+                (since_dt,),
+            ).fetchone()[0]
+            or 0
+        )
+        success_rate = round((ok_total / total) * 100, 1) if total > 0 else 0.0
+        apply_effectiveness = round((applied_sum / candidates_sum) * 100, 1) if candidates_sum > 0 else 0.0
+
+        top_users = rows_to_dicts(
+            db.execute(
+                """
+                SELECT username, COUNT(*) as runs, COALESCE(SUM(applied),0) as applied_total
+                FROM module_fix_runs
+                WHERE datetime(created_at) >= datetime(?)
+                GROUP BY username
+                ORDER BY runs DESC, applied_total DESC
+                LIMIT 5
+                """,
+                (since_dt,),
+            ).fetchall()
+        )
+
+        self.send_json(
+            {
+                "ok": True,
+                "window_days": days,
+                "since": since_dt,
+                "kpi": {
+                    "attempts": total,
+                    "success": ok_total,
+                    "rejected": rejected_total,
+                    "apply_success": apply_ok,
+                    "applied_total": applied_sum,
+                    "candidates_total": candidates_sum,
+                    "success_rate": success_rate,
+                    "apply_effectiveness": apply_effectiveness,
+                },
+                "top_users": top_users,
+            }
+        )
 
     def api_operational_intel(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         dash = build_dashboard(db)
