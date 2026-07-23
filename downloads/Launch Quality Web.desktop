@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Launch Quality Web
+Comment=Open Launch Quality web entry page
+Exec=xdg-open "/home/ubuntu/Desktop/LaunchQuality-Web/launch-quality-app.html"
+Icon=/home/ubuntu/Desktop/LaunchQuality-Web/assets/quality-icon.png
+Terminal=false
+Categories=Office;Finance;

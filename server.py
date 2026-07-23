@@ -3565,6 +3565,19 @@ class JawdahHandler(BaseHTTPRequestHandler):
         else:
             self.serve_static(parsed.path)
 
+    def do_HEAD(self) -> None:
+        """Browsers/download managers often probe with HEAD first.
+        Without this method Python returns 501 and some clients abort the download.
+        """
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path.startswith("/api/"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            return
+        self.serve_static(parsed.path, head_only=True)
+
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self.send_cors_headers()
@@ -3582,7 +3595,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         self.handle_api("DELETE", parsed.path, parsed.query)
 
-    def serve_static(self, path: str) -> None:
+    def serve_static(self, path: str, head_only: bool = False) -> None:
+        # Short stable aliases so old/cached 404 bookmarks still fail less often.
+        if path in ("/lq-setup.exe", "/windows-setup.exe", "/LaunchQuality-Setup.exe"):
+            path = "/releases/windows/LaunchQuality-Setup.exe"
+        if path in ("/windows-setup", "/get-windows"):
+            path = "/get-windows.html"
+        if path in ("/lq-portable.zip", "/windows-portable.zip"):
+            path = "/releases/windows/LaunchQuality-Portable.zip"
+
+        def _send_bytes(raw: bytes, ctype: str, *, disposition: str | None = None, cache: str | None = None) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(raw)))
+            if disposition:
+                self.send_header("Content-Disposition", disposition)
+            if cache:
+                self.send_header("Cache-Control", cache)
+            self.end_headers()
+            if not head_only:
+                self.wfile.write(raw)
+
         if path in ("/", ""):
             self.send_response(302)
             self.send_header("Location", "/app.html")
@@ -3616,19 +3649,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.send_cors_headers()
                     self.end_headers()
-                    self.wfile.write(json.dumps({"ok": False, "error": "Authentication required"}).encode("utf-8"))
+                    if not head_only:
+                        self.wfile.write(json.dumps({"ok": False, "error": "Authentication required"}).encode("utf-8"))
                     return
             upload_root = UPLOAD_DIR.resolve()
             full = (UPLOAD_DIR / safe.removeprefix("uploads/")).resolve()
             if str(full).startswith(str(upload_root)) and full.exists() and full.is_file():
                 raw = full.read_bytes()
                 ctype = mimetypes.guess_type(str(full))[0] or "application/octet-stream"
-                self.send_response(200)
-                self.send_header("Content-Type", ctype)
-                self.send_header("Content-Length", str(len(raw)))
-                self.send_header("Cache-Control", "public, max-age=86400")
-                self.end_headers()
-                self.wfile.write(raw)
+                _send_bytes(raw, ctype, cache="public, max-age=86400")
                 return
         full = (PUBLIC_DIR / safe).resolve()
         public_root = PUBLIC_DIR.resolve()
@@ -3637,49 +3666,34 @@ class JawdahHandler(BaseHTTPRequestHandler):
             ctype = mimetypes.guess_type(str(full))[0] or "application/octet-stream"
             if full.suffix in {".html", ".css", ".js"}:
                 ctype += "; charset=utf-8"
-            self.send_response(200)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(raw)))
-            if full.suffix.lower() in {".exe", ".msi", ".zip", ".apk"}:
-                self.send_header("Content-Disposition", f'attachment; filename="{full.name}"')
-                self.send_header("Cache-Control", "no-cache, must-revalidate")
+            disposition = None
+            cache = None
+            if full.suffix.lower() in {".exe", ".msi", ".zip", ".apk", ".bat", ".ps1", ".cmd"}:
+                disposition = f'attachment; filename="{full.name}"'
+                cache = "no-cache, must-revalidate"
             elif safe.endswith(".html"):
-                self.send_header("Cache-Control", "no-cache, must-revalidate")
+                cache = "no-cache, must-revalidate"
             elif safe.endswith((".css", ".js")):
-                self.send_header("Cache-Control", "public, max-age=300, must-revalidate")
+                cache = "public, max-age=300, must-revalidate"
             elif full.suffix in {".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico"}:
                 if "brand-logo" in safe or "login-logo" in safe:
-                    self.send_header("Cache-Control", "no-cache, must-revalidate")
+                    cache = "no-cache, must-revalidate"
                 else:
-                    self.send_header("Cache-Control", "public, max-age=86400")
-            self.end_headers()
-            self.wfile.write(raw)
+                    cache = "public, max-age=86400"
+            _send_bytes(raw, ctype, disposition=disposition, cache=cache)
             return
         # Safe fallback for serving the main interface.
         if path == "/app.html":
             raw = FALLBACK_APP_HTML.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(raw)))
-            self.send_header("Cache-Control", "no-cache, must-revalidate")
-            self.end_headers()
-            self.wfile.write(raw)
+            _send_bytes(raw, "text/html; charset=utf-8", cache="no-cache, must-revalidate")
             return
         if path == "/app.css":
             raw = FALLBACK_CSS.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/css; charset=utf-8")
-            self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
+            _send_bytes(raw, "text/css; charset=utf-8")
             return
         if path == "/app.js":
             raw = FALLBACK_JS.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/javascript; charset=utf-8")
-            self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
+            _send_bytes(raw, "application/javascript; charset=utf-8")
             return
         self.send_error(404, "File not found")
 
