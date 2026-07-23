@@ -3826,13 +3826,23 @@ window.printHospitalityFolio = printHospitalityFolio;
         ['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]
       ],
       apts,
-      r=>`<button class="ghost" onclick="editRecord('estate_apartments','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_apartments','${r.id}')">حذف</button>`
+      r=>{
+        const convertBtn = String(r.status||'').toLowerCase()==='reserved'
+          ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مؤجرة</button> `
+          : '';
+        return `${convertBtn}<button class="ghost" onclick="editRecord('estate_apartments','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_apartments','${r.id}')">حذف</button>`;
+      }
     );
     const rTable = $('#estateRoomsTable');
     if(rTable) rTable.innerHTML = tableHtml(
       [['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','name'],['النوع','room_type'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['سعر الغرفة','rent_price',(v)=>money(v)],['تأمين الحجز','booking_deposit',(v)=>money(v)],['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],['فترة الحجز','id',(_,r)=>String(r.status||'').toLowerCase()==='reserved' ? `${htmlEscape(r.reservation_start_date||'—')} → ${htmlEscape(r.reservation_end_date||'—')}` : '—'],['تفاصيل الحجز/الصيانة','id',(_,r)=>{const st=String(r.status||'').toLowerCase(); if(st==='reserved') return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`; if(st==='maintenance') return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`; return '—';}],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
       rooms,
-      r=>`<button class="ghost" onclick="editRecord('estate_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_rooms','${r.id}')">حذف</button>`
+      r=>{
+        const convertBtn = String(r.status||'').toLowerCase()==='reserved'
+          ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مؤجرة</button> `
+          : '';
+        return `${convertBtn}<button class="ghost" onclick="editRecord('estate_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_rooms','${r.id}')">حذف</button>`;
+      }
     );
     const mTable = $('#estateMaintenanceTable');
     if(mTable) mTable.innerHTML = tableHtml(
@@ -4045,6 +4055,20 @@ window.printHospitalityFolio = printHospitalityFolio;
       closed_at: val('emClosedAt'),
       notes: val('emNotes'),
     });
+  };
+  window.convertEstateReservation = async function(entityType, entityId){
+    try{
+      const t = entityType==='room' ? 'غرفة' : 'شقة';
+      const note = prompt(`ملاحظة التحويل (${t}) — اختياري`, 'تم التحويل إلى تأجير فعلي');
+      if(note===null) return;
+      await api('estate_convert_reservation',{
+        method:'POST',
+        body:JSON.stringify({ entity_type: entityType, entity_id: entityId, note: String(note||'').trim() })
+      });
+      toast('تم التحويل إلى مؤجرة وإغلاق فاتورة الحجز المفتوحة');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
   };
   document.addEventListener('change', (e)=>{
     const id = e?.target?.id;

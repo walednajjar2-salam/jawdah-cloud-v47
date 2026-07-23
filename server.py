@@ -3779,6 +3779,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 ):
                     user = self.require_user(db, "properties")
                     return None if not user else self.api_property_photo(db, user, parts[1])
+                if parts[0] == "estate_convert_reservation" and method == "POST":
+                    user = self.require_user(db, "estate_apartments")
+                    return None if not user else self.api_estate_convert_reservation(db, user)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -4483,6 +4486,59 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": False, "error": str(exc)}, 400)
         except Exception as exc:
             return self.send_json({"ok": False, "error": "تعذر حفظ الصورة", "detail": str(exc)}, 500)
+
+    def api_estate_convert_reservation(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        entity_type = str(data.get("entity_type") or "").strip().lower()
+        entity_id = str(data.get("entity_id") or "").strip()
+        tenant_client_id = str(data.get("tenant_client_id") or "").strip() or None
+        note = str(data.get("note") or "Converted from reserved to occupied").strip()
+        if entity_type not in ("apartment", "room"):
+            return self.send_json({"ok": False, "error": "entity_type must be apartment or room"}, 400)
+        if not entity_id:
+            return self.send_json({"ok": False, "error": "entity_id مطلوب"}, 400)
+        table = "estate_apartments" if entity_type == "apartment" else "estate_rooms"
+        row = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "العنصر غير موجود"}, 404)
+        current_status = str(row["status"] or "").strip().lower()
+        if current_status != "reserved":
+            return self.send_json({"ok": False, "error": "يمكن التحويل فقط من حالة محجوزة"}, 400)
+        if not tenant_client_id:
+            tenant_client_id = str(row["booked_client_id"] or "").strip() or None
+        if tenant_client_id and not exists(db, "clients", tenant_client_id):
+            return self.send_json({"ok": False, "error": "العميل المحدد غير موجود"}, 400)
+        tenant_phone = str(row["tenant_phone"] or "").strip() or str(row["booked_client_phone"] or "").strip() or None
+        db.execute(
+            f"""
+            UPDATE {table}
+            SET status='occupied',
+                tenant_client_id=?,
+                tenant_phone=?,
+                reservation_start_date=NULL,
+                reservation_end_date=NULL,
+                last_update=?
+            WHERE id=?
+            """,
+            (tenant_client_id, tenant_phone, today(), entity_id),
+        )
+        log_estate_status_history(
+            db,
+            entity_type,
+            entity_id,
+            dict(row),
+            "reserved",
+            "occupied",
+            str(user.get("name") or user.get("username") or "System"),
+            note,
+        )
+        db.execute(
+            "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed by conversion to occupied at ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
+            (now_iso(), entity_type, entity_id),
+        )
+        audit(db, user, "convert_reservation", table, entity_id, note)
+        db.commit()
+        self.send_json({"ok": True, "entity_type": entity_type, "entity_id": entity_id, "status": "occupied"})
 
     def api_crud(self, db: sqlite3.Connection, method: str, parts: List[str], query: str) -> None:
         table = parts[0]
