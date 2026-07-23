@@ -1,14 +1,15 @@
 {
   "channel": "stable",
-  "version": "49.1.1",
+  "version": "49.1.2",
   "installer_url": "https://web-production-08d73.up.railway.app/lq-setup.exe",
   "portable_url": "https://web-production-08d73.up.railway.app/lq-portable.zip",
   "setup_page": "https://web-production-08d73.up.railway.app/get-windows",
-  "sha256": "653594bdd11021af766d5a058aad1929f5f0e60cbc50275fc57b850a5a127dff",
-  "published_at": "2026-07-23T16:36:29Z",
+  "app_url": "https://web-production-08d73.up.railway.app/app.html",
+  "sha256": "2455e2921edbdc5d442aa83fe96e16ace0cfb8a7ac59449957157ec973c274da",
+  "published_at": "2026-07-23T16:43:36Z",
   "release_notes": [
-    "Fixed HEAD 501 that could abort browser downloads.",
-    "Added portable ZIP (BAT) that avoids SmartScreen friction.",
-    "Added short aliases /lq-setup.exe and /get-windows."
+    "Nothing is lost: production cloud app remains the source of truth.",
+    "Launcher opens a full maximized browser window.",
+    "Portable ZIP/BAT package for easy desktop shortcut."
   ]
 }
