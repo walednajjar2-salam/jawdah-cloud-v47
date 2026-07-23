@@ -252,6 +252,50 @@ def module_fix_preview_key(username: str, preview_id: str) -> str:
     return f"{str(username or '').strip().lower()}::{str(preview_id or '').strip()}"
 
 
+def log_module_fix_run(
+    db: sqlite3.Connection,
+    *,
+    username: str,
+    mode: str,
+    status: str,
+    preview_id: str = "",
+    modules: Optional[List[str]] = None,
+    max_rows: int = 0,
+    candidates: int = 0,
+    applied: int = 0,
+    score_before: Optional[float] = None,
+    score_after: Optional[float] = None,
+    issues_before: Optional[int] = None,
+    issues_after: Optional[int] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    try:
+        insert(
+            db,
+            "module_fix_runs",
+            {
+                "id": uid("MFX"),
+                "created_at": now_iso(),
+                "username": str(username or "unknown"),
+                "mode": str(mode or ""),
+                "status": str(status or ""),
+                "preview_id": str(preview_id or ""),
+                "modules": json.dumps(modules or [], ensure_ascii=False),
+                "max_rows": int(max_rows or 0),
+                "candidates": int(candidates or 0),
+                "applied": int(applied or 0),
+                "score_before": score_before,
+                "score_after": score_after,
+                "issues_before": issues_before,
+                "issues_after": issues_after,
+                "details_json": json.dumps(details or {}, ensure_ascii=False),
+            },
+        )
+    except Exception:
+        # Never block main API behavior if history logging fails.
+        pass
+
+
 def create_biometric_challenge(user_id: str, action: str) -> Dict[str, str]:
     cleanup_biometric_challenges()
     state = uid("BCH")
@@ -1051,6 +1095,23 @@ def init_db() -> None:
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(employee_user_id) REFERENCES users(id),
                 FOREIGN KEY(created_by_user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS module_fix_runs (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                username TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                status TEXT NOT NULL,
+                preview_id TEXT,
+                modules TEXT,
+                max_rows INTEGER,
+                candidates INTEGER NOT NULL DEFAULT 0,
+                applied INTEGER NOT NULL DEFAULT 0,
+                score_before REAL,
+                score_after REAL,
+                issues_before INTEGER,
+                issues_after INTEGER,
+                details_json TEXT
             );
             """
         )
@@ -3178,6 +3239,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "module_integrity" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_module_integrity(db)
+                if parts[0] == "module_integrity_history" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_module_integrity_history(db, user, query)
                 if parts[0] == "module_integrity_fix" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_module_integrity_fix(db, user)
@@ -6227,6 +6291,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
         confirm_text = str(override_confirm_text if override_confirm_text is not None else (payload or {}).get("confirm_text", "")).strip().upper()
         if not dry_run and require_preview_guard:
             if confirm_text != "APPLY":
+                log_module_fix_run(
+                    db,
+                    username=username,
+                    mode="apply",
+                    status="rejected_missing_confirm",
+                    preview_id=preview_id,
+                    modules=sorted(selected_modules),
+                    max_rows=max_rows,
+                    details={"error": "Second approval required"},
+                )
+                db.commit()
                 err = {
                     "ok": False,
                     "error": "Second approval required",
@@ -6236,6 +6311,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return err
                 return self.send_json(err, 400)
             if not preview_id:
+                log_module_fix_run(
+                    db,
+                    username=username,
+                    mode="apply",
+                    status="rejected_missing_preview",
+                    preview_id="",
+                    modules=sorted(selected_modules),
+                    max_rows=max_rows,
+                    details={"error": "Missing preview_id"},
+                )
+                db.commit()
                 err = {"ok": False, "error": "Missing preview_id", "detail": "Run dry-run first to get preview_id."}
                 if return_payload_only:
                     return err
@@ -6244,11 +6330,37 @@ class JawdahHandler(BaseHTTPRequestHandler):
             preview_info = MODULE_FIX_PREVIEWS.get(pkey) or {}
             preview_scope = set(str(x).strip().lower() for x in (preview_info.get("modules") or []))
             if not preview_info:
+                log_module_fix_run(
+                    db,
+                    username=username,
+                    mode="apply",
+                    status="rejected_invalid_preview",
+                    preview_id=preview_id,
+                    modules=sorted(selected_modules),
+                    max_rows=max_rows,
+                    details={"error": "Invalid preview_id"},
+                )
+                db.commit()
                 err = {"ok": False, "error": "Invalid preview_id", "detail": "Preview token not found or expired."}
                 if return_payload_only:
                     return err
                 return self.send_json(err, 400)
             if preview_scope != set(selected_modules) or int(preview_info.get("max_rows") or 0) != int(max_rows):
+                log_module_fix_run(
+                    db,
+                    username=username,
+                    mode="apply",
+                    status="rejected_scope_mismatch",
+                    preview_id=preview_id,
+                    modules=sorted(selected_modules),
+                    max_rows=max_rows,
+                    details={
+                        "error": "Preview scope mismatch",
+                        "preview_modules": sorted(preview_scope),
+                        "preview_max_rows": int(preview_info.get("max_rows") or 0),
+                    },
+                )
+                db.commit()
                 err = {
                     "ok": False,
                     "error": "Preview scope mismatch",
@@ -6601,8 +6713,40 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "expires_in_seconds": MODULE_FIX_PREVIEW_TTL_SECONDS,
                 "expires_at": MODULE_FIX_PREVIEWS[module_fix_preview_key(username, preview_id_new)]["expires_at"],
             }
+            log_module_fix_run(
+                db,
+                username=username,
+                mode="preview",
+                status="ok",
+                preview_id=preview_id_new,
+                modules=sorted(selected_modules),
+                max_rows=max_rows,
+                candidates=candidate_total,
+                applied=0,
+                details={
+                    "scope": result.get("scope"),
+                    "summary": result.get("summary"),
+                },
+            )
+            db.commit()
         elif preview_id:
             result["preview_validated"] = preview_id
+            log_module_fix_run(
+                db,
+                username=username,
+                mode="apply",
+                status="ok",
+                preview_id=preview_id,
+                modules=sorted(selected_modules),
+                max_rows=max_rows,
+                candidates=candidate_total,
+                applied=applied_total,
+                details={
+                    "scope": result.get("scope"),
+                    "summary": result.get("summary"),
+                },
+            )
+            db.commit()
         if return_payload_only:
             return result
         self.send_json(result)
@@ -6610,8 +6754,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_module_integrity_autorun(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json() if self.command == "POST" else {}
+        username = str(user.get("username") or user.get("name") or "").strip().lower()
         confirm_text = str((data or {}).get("confirm_text", "")).strip().upper() if isinstance(data, dict) else ""
         if confirm_text != "APPLY":
+            log_module_fix_run(
+                db,
+                username=username,
+                mode="autorun",
+                status="rejected_missing_confirm",
+                details={"error": "Second approval required"},
+            )
+            db.commit()
             return self.send_json(
                 {
                     "ok": False,
@@ -6657,6 +6810,23 @@ class JawdahHandler(BaseHTTPRequestHandler):
         after = self.api_module_integrity(db, return_payload_only=True) or {}
         before_score = float(before.get("score") or 0)
         after_score = float(after.get("score") or 0)
+        log_module_fix_run(
+            db,
+            username=username,
+            mode="autorun",
+            status="ok",
+            preview_id=preview_id,
+            modules=list((fix_result.get("scope") or {}).get("modules") or []),
+            max_rows=int((fix_result.get("scope") or {}).get("max_rows") or 0),
+            candidates=int((fix_result.get("summary") or {}).get("candidates") or 0),
+            applied=int((fix_result.get("summary") or {}).get("applied") or 0),
+            score_before=before_score,
+            score_after=after_score,
+            issues_before=int((before.get("summary") or {}).get("total_issues") or 0),
+            issues_after=int((after.get("summary") or {}).get("total_issues") or 0),
+            details={"delta": {"score_change": round(after_score - before_score, 2)}},
+        )
+        db.commit()
         self.send_json(
             {
                 "ok": True,
@@ -6672,6 +6842,64 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "scope": (fix_result.get("scope") if isinstance(fix_result, dict) else None) or {},
             }
         )
+
+    def api_module_integrity_history(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        try:
+            limit = int((params.get("limit") or ["50"])[0] or 50)
+        except Exception:
+            limit = 50
+        limit = max(10, min(500, limit))
+        mode_filter = str((params.get("mode") or [""])[0] or "").strip().lower()
+        status_filter = str((params.get("status") or [""])[0] or "").strip().lower()
+        sql = "SELECT * FROM module_fix_runs"
+        clauses: List[str] = []
+        args: List[Any] = []
+        if mode_filter:
+            clauses.append("lower(mode)=?")
+            args.append(mode_filter)
+        if status_filter:
+            clauses.append("lower(status)=?")
+            args.append(status_filter)
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        args.append(limit)
+        rows = rows_to_dicts(db.execute(sql, tuple(args)).fetchall())
+        out: List[Dict[str, Any]] = []
+        for row in rows:
+            modules: List[str] = []
+            try:
+                parsed = json.loads(str(row.get("modules") or "[]"))
+                if isinstance(parsed, list):
+                    modules = [str(x) for x in parsed]
+            except Exception:
+                modules = []
+            details = {}
+            try:
+                details = json.loads(str(row.get("details_json") or "{}"))
+            except Exception:
+                details = {}
+            out.append(
+                {
+                    "id": row.get("id"),
+                    "created_at": row.get("created_at"),
+                    "username": row.get("username"),
+                    "mode": row.get("mode"),
+                    "status": row.get("status"),
+                    "preview_id": row.get("preview_id"),
+                    "modules": modules,
+                    "max_rows": row.get("max_rows"),
+                    "candidates": row.get("candidates"),
+                    "applied": row.get("applied"),
+                    "score_before": row.get("score_before"),
+                    "score_after": row.get("score_after"),
+                    "issues_before": row.get("issues_before"),
+                    "issues_after": row.get("issues_after"),
+                    "details": details,
+                }
+            )
+        self.send_json({"ok": True, "history": out, "limit": limit, "filters": {"mode": mode_filter, "status": status_filter}})
 
     def api_operational_intel(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         dash = build_dashboard(db)

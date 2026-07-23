@@ -3995,6 +3995,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(res.score)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div><div class="kpi"><span>روابط غير سليمة</span><strong>${fmt((alerts.broken_contract_links||0)+(alerts.broken_invoice_links||0))}</strong></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${fmt(c.value)}</b></div>`).join('')}</div>`;
       ensureEnglishDigits(box);
       if(typeof window.loadModuleIntegrity==='function') window.loadModuleIntegrity();
+      if(typeof window.loadModuleFixHistory==='function') window.loadModuleFixHistory();
     }catch(e){toastErr(e)}
   };
 
@@ -4128,8 +4129,10 @@ window.printHospitalityFolio = printHospitalityFolio;
       if(!preview){
         toast('تم تنفيذ الإصلاح الوظيفي الآمن');
         if(typeof loadProductionStatus==='function') await loadProductionStatus();
+        if(typeof loadModuleFixHistory==='function') await loadModuleFixHistory();
       }else{
         toast('تمت معاينة الإصلاح الآمن');
+        if(typeof loadModuleFixHistory==='function') await loadModuleFixHistory();
       }
     }catch(e){
       toastErr(e,'تعذر تنفيذ الإصلاح الآمن');
@@ -4190,8 +4193,43 @@ window.printHospitalityFolio = printHospitalityFolio;
       `);
       toast('تم التنفيذ وإعادة الفحص بنجاح');
       await loadProductionStatus();
+      if(typeof loadModuleFixHistory==='function') await loadModuleFixHistory();
     }catch(e){
       toastErr(e,'تعذر تنفيذ Auto-run');
+    }
+  };
+
+  window.loadModuleFixHistory=async function(){
+    const host = $('#moduleFixHistoryBox');
+    if(!host) return;
+    host.innerHTML = '<p class="mini">جاري تحميل سجل موافقات الإصلاح...</p>';
+    try{
+      const res = await api('module_integrity_history?limit=60');
+      const rows = Array.isArray(res.history) ? res.history : [];
+      host.innerHTML = `
+        <div class="card inner-card">
+          <h3>سجل موافقات/تنفيذ الإصلاح</h3>
+          ${rows.length ? tableHtml(
+            [
+              ['الوقت','created_at',(v)=>htmlEscape(String(v||''))],
+              ['المستخدم','username',(v)=>htmlEscape(String(v||''))],
+              ['الوضع','mode',(v)=>htmlEscape(String(v||''))],
+              ['الحالة','status',(v)=>statusBadge(String(v||''))],
+              ['النطاق','modules',(v)=>htmlEscape(Array.isArray(v)?v.join(', '):String(v||''))],
+              ['max','max_rows',(v)=>fmt(v||0)],
+              ['مرشح','candidates',(v)=>fmt(v||0)],
+              ['منفذ','applied',(v)=>fmt(v||0)],
+              ['قبل','issues_before',(v)=>v==null?'—':fmt(v)],
+              ['بعد','issues_after',(v)=>v==null?'—':fmt(v)],
+              ['preview','preview_id',(v)=>htmlEscape(String(v||''))],
+            ],
+            rows
+          ) : '<p class="mini">لا يوجد سجل بعد.</p>'}
+        </div>
+      `;
+      ensureEnglishDigits(host);
+    }catch(e){
+      host.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
     }
   };
 })();
