@@ -587,7 +587,7 @@ const api = async (path, opts={}) => {
     const sep = url.includes('?') ? '&' : '?';
     url += sep + 'token=' + encodeURIComponent(Jawdah.token);
   }
-  const res = await fetch(url, {...opts, headers:{...headers, ...(opts.headers||{})}});
+  const res = await fetch(url, {...opts, credentials:'same-origin', headers:{...headers, ...(opts.headers||{})}});
   const text = await res.text();
   let data;
   try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {ok:false,error:text || 'Invalid response'}; }
@@ -733,7 +733,9 @@ async function login(){
 async function logout(){
   try{await api('logout',{method:'POST'});}catch(e){}
   localStorage.removeItem('jawdah_cloud_token');
+  localStorage.removeItem('jawdah_portal_choice');
   Jawdah.token='';
+  try{ document.cookie = 'lq_token=; Path=/; Max-Age=0; SameSite=Lax'; }catch(_){}
   if(ownerLiveTimer){ clearInterval(ownerLiveTimer); ownerLiveTimer=null; }
   if(timelineAutoTimer){ clearInterval(timelineAutoTimer); timelineAutoTimer=null; }
   if(liveSyncScheduled){ clearTimeout(liveSyncScheduled); liveSyncScheduled=null; }
@@ -769,14 +771,31 @@ function showAppShell(){
 }
 async function checkSession(){
   Jawdah.token=Jawdah.token||localStorage.getItem('jawdah_cloud_token')||'';
-  // Accept token from portal-select redirect query once
+  // Cookie fallback when localStorage is empty after portal navigation
+  if(!Jawdah.token){
+    try{
+      const m=document.cookie.match(/(?:^|;\s*)lq_token=([^;]+)/);
+      if(m&&m[1]){
+        Jawdah.token=decodeURIComponent(m[1]).trim();
+        if(Jawdah.token) localStorage.setItem('jawdah_cloud_token', Jawdah.token);
+      }
+    }catch(_){/* ignore */}
+  }
+  // Accept token + portal from portal-select redirect (query is source of truth)
   try{
     const qs=new URLSearchParams(location.search||'');
-    const qToken=qs.get('token');
+    const qToken=(qs.get('token')||'').trim();
+    const qPortal=(qs.get('portal')||'').trim();
     if(qToken){
       Jawdah.token=qToken;
       localStorage.setItem('jawdah_cloud_token', qToken);
       qs.delete('token');
+    }
+    if(qPortal === 'hospitality' || qPortal === 'accounting' || qPortal === 'realestate'){
+      localStorage.setItem('jawdah_portal_choice', qPortal);
+      qs.delete('portal');
+    }
+    if(qToken || qPortal){
       const next=location.pathname + (qs.toString() ? ('?'+qs.toString()) : '') + (location.hash||'');
       history.replaceState({}, '', next);
     }
@@ -785,27 +804,46 @@ async function checkSession(){
     showLoginShell();
     return;
   }
+
+  // 1) Auth only — never send authenticated users back to login for data errors
+  let me;
   try{
-    const me=await api('me');
-    Jawdah.user=me.user;
-    const portalChoice = localStorage.getItem('jawdah_portal_choice');
-    if(!portalChoice){
-      location.replace('/portal-select.html?from=session&t=' + Date.now());
+    me=await api('me');
+  }catch(e){
+    const authFail = e && (e.status===401 || /Authentication required|Invalid or expired/i.test(String(e.message||'')));
+    if(authFail){
+      localStorage.removeItem('jawdah_cloud_token');
+      Jawdah.token='';
+      try{ document.cookie = 'lq_token=; Path=/; Max-Age=0; SameSite=Lax'; }catch(_){}
+      showLoginShell();
       return;
     }
+    // Transient /api/me failure with a saved token: keep trying inside the app shell
     showAppShell();
+    try{ if(typeof toast==='function') toast('تعذر التحقق من الجلسة مؤقتاً — أعد المحاولة'); }catch(_){}
+    return;
+  }
+  Jawdah.user=me.user;
+
+  const portalChoice = localStorage.getItem('jawdah_portal_choice');
+  if(!portalChoice){
+    const tok = encodeURIComponent(Jawdah.token||'');
+    location.replace('/portal-select.html?from=session&t=' + Date.now() + '&token=' + tok);
+    return;
+  }
+
+  // 2) Enter app immediately after auth — loadAll failures must NOT show login
+  showAppShell();
+  try{
     await loadAll();
     renderBiometricHub();
     startOwnerLiveAutoRefresh();
     applySavedPortalChoice();
     maybeSendWelcomeMessage(Jawdah.user);
   }catch(e){
-    // Keep token on transient failures; only clear on confirmed auth failure
-    if(e && (e.status===401 || /Authentication required|Invalid or expired/i.test(String(e.message||'')))){
-      localStorage.removeItem('jawdah_cloud_token');
-      Jawdah.token='';
-    }
-    showLoginShell();
+    console.error('loadAll after login failed', e);
+    try{ if(typeof toastErr==='function') toastErr(e,'تعذر تحميل البيانات — أنت داخل النظام'); }catch(_){}
+    try{ applySavedPortalChoice(); }catch(_){}
   }
 }
 function renderDashLoadingSkeleton(){
@@ -3591,7 +3629,8 @@ function choosePortal(portal){
 function applySavedPortalChoice(){
   const choice = localStorage.getItem('jawdah_portal_choice');
   if(!choice){
-    location.replace('/portal-select.html?from=app&t=' + Date.now());
+    const tok = encodeURIComponent(Jawdah.token || localStorage.getItem('jawdah_cloud_token') || '');
+    location.replace('/portal-select.html?from=app&t=' + Date.now() + (tok ? ('&token=' + tok) : ''));
     return;
   }
   if(choice==='hospitality') showSection('hospitality');

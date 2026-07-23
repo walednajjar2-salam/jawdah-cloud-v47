@@ -173,52 +173,41 @@
           return qTok;
         }
       } catch (_) {}
+      // Cookie fallback if localStorage was cleared mid-navigation
+      try {
+        const m = document.cookie.match(/(?:^|;\s*)lq_token=([^;]+)/);
+        if (m && m[1]) {
+          const cTok = decodeURIComponent(m[1]).trim();
+          if (cTok) {
+            localStorage.setItem("jawdah_cloud_token", cTok);
+            return cTok;
+          }
+        }
+      } catch (_) {}
       return (localStorage.getItem("jawdah_cloud_token") || "").trim();
     }
 
     function goLogin(reason) {
+      // Never wipe token here — app login shell decides
       location.replace("/app.html?v=" + encodeURIComponent(reason || "need-login"));
-    }
-
-    async function ensureSession(strict) {
-      const token = readToken();
-      if (!token) {
-        goLogin("need-login");
-        return false;
-      }
-      if (!strict) return true;
-      try {
-        const res = await fetch("/api/me?token=" + encodeURIComponent(token), {
-          headers: { Authorization: "Bearer " + token }
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || data.ok === false) throw new Error("invalid session");
-        return true;
-      } catch (_) {
-        // Do NOT wipe token on transient network errors; send user to app to re-validate
-        goLogin("session-check-failed");
-        return false;
-      }
     }
 
     async function enterPortal(choice) {
       const token = readToken();
-      if (!token) {
-        goLogin("need-login");
-        return;
-      }
       const c = (choice === "hospitality") ? "hospitality" : ((choice === "accounting") ? "accounting" : "realestate");
       localStorage.setItem("jawdah_portal_choice", c);
-      localStorage.setItem("jawdah_cloud_token", token);
-      location.replace(
-        "/app.html?portal=" + encodeURIComponent(c) +
-        "&t=" + Date.now() +
-        "&token=" + encodeURIComponent(token)
-      );
+      if (token) localStorage.setItem("jawdah_cloud_token", token);
+      // Always carry portal + token in the URL so app.html never falls back to login
+      let url = "/app.html?portal=" + encodeURIComponent(c) + "&t=" + Date.now();
+      if (token) url += "&token=" + encodeURIComponent(token);
+      location.replace(url);
     }
 
-    // Soft check only: keep platforms visible if token exists
-    ensureSession(false);
+    // Keep platforms page visible. Only bounce to login if there is truly no session.
+    (function boot() {
+      const token = readToken();
+      if (!token) goLogin("need-login");
+    })();
   </script>
 </body>
 </html>
