@@ -533,6 +533,21 @@
 
         <div class="layout">
           <div class="card">
+            <h3>تنبيهات تنفيذية عقارية</h3>
+            <div id="estateExecAlertsBox"></div>
+          </div>
+          <div class="card">
+            <h3>تقرير الإشغال الشهري (مقارنة)</h3>
+            <div class="toolbar">
+              <input id="estateOccMonth" type="month">
+              <button class="ghost" type="button" onclick="renderEstatePlatform()">تحديث التقرير</button>
+            </div>
+            <div id="estateOccupancyReportBox"></div>
+          </div>
+        </div>
+
+        <div class="layout">
+          <div class="card">
             <h3>إضافة عقار</h3>
             <div class="form">
               <input id="epName" placeholder="اسم العقار">
@@ -762,6 +777,15 @@
           </div>
         </div>
         <div class="card"><h3>عقود الإيجار النشطة</h3><div id="estateContractsTable"></div></div>
+        <div class="card">
+          <h3>سجل تتبع موحد للوحدة</h3>
+          <div class="toolbar">
+            <select id="estateTraceEntityType"><option value="apartment">شقة</option><option value="room">غرفة</option></select>
+            <select id="estateTraceEntityId"></select>
+            <button class="ghost" type="button" onclick="renderEstatePlatform()">تحديث السجل</button>
+          </div>
+          <div id="estateUnitTraceBox"></div>
+        </div>
         <div class="layout">
           <div class="card">
             <h3>تنبيهات استحقاق دفعات العقود</h3>
@@ -786,7 +810,7 @@
               <label class="mini"><input id="ecForceClose" type="checkbox"> إغلاق إجباري (مع متأخرات) — صلاحية إدارة فقط</label>
               <textarea id="ecCloseNote" placeholder="ملاحظة الإغلاق/التسوية"></textarea>
             </div>
-            <button class="gold-btn" type="button" onclick="closeEstateContract()">إغلاق العقد وإصدار التسوية</button>
+            <button id="estateCloseContractBtn" class="gold-btn" type="button" onclick="closeEstateContract()">إغلاق العقد وإصدار التسوية</button>
           </div>
           <div class="card">
             <h3>تقرير التسوية الأخير</h3>
@@ -801,7 +825,7 @@
               <label class="mini"><input id="emcForce" type="checkbox"> إقفال إجباري عند وجود ذمم (إدارة فقط)</label>
               <textarea id="emcNote" placeholder="ملاحظات الإقفال الشهري"></textarea>
             </div>
-            <button class="gold-btn" type="button" onclick="closeEstateMonth()">إقفال الشهر الآن</button>
+            <button id="estateCloseMonthBtn" class="gold-btn" type="button" onclick="closeEstateMonth()">إقفال الشهر الآن</button>
           </div>
           <div class="card">
             <h3>تقرير إقفال الشهر</h3>

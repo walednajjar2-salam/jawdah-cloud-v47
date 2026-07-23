@@ -134,6 +134,8 @@ ROLE_PERMISSIONS = {
     "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
     "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
 }
+ROLE_PERMISSIONS["operations"].update({"estate_actions_convert", "estate_actions_contract_create"})
+ROLE_PERMISSIONS["accountant"].update({"estate_actions_contract_close", "estate_actions_month_close", "estate_actions_pricing_edit"})
 
 TABLES = {
     "branches": ["id", "code", "name", "city", "address", "manager", "active", "notes", "created_at"],
@@ -4004,22 +4006,22 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     user = self.require_user(db, "properties")
                     return None if not user else self.api_property_photo(db, user, parts[1])
                 if parts[0] == "estate_convert_reservation" and method == "POST":
-                    user = self.require_user(db, "estate_apartments")
+                    user = self.require_user(db, "estate_actions_convert")
                     return None if not user else self.api_estate_convert_reservation(db, user)
                 if parts[0] == "estate_convert_to_contract" and method == "POST":
-                    user = self.require_user(db, "estate_apartments")
+                    user = self.require_user(db, "estate_actions_contract_create")
                     return None if not user else self.api_estate_convert_to_contract(db, user)
                 if parts[0] == "estate_contract_generate_schedule" and method == "POST":
-                    user = self.require_user(db, "estate_apartments")
+                    user = self.require_user(db, "estate_actions_contract_create")
                     return None if not user else self.api_estate_contract_generate_schedule(db, user)
                 if parts[0] == "estate_contract_pay_invoice" and method == "POST":
                     user = self.require_user(db, "estate_apartments")
                     return None if not user else self.api_estate_contract_pay_invoice(db, user)
                 if parts[0] == "estate_contract_close" and method == "POST":
-                    user = self.require_user(db, "estate_apartments")
+                    user = self.require_user(db, "estate_actions_contract_close")
                     return None if not user else self.api_estate_contract_close(db, user)
                 if parts[0] == "estate_month_close" and method == "POST":
-                    user = self.require_user(db, "estate_apartments")
+                    user = self.require_user(db, "estate_actions_month_close")
                     return None if not user else self.api_estate_month_close(db, user)
                 if parts[0] == "estate_operations_check" and method == "GET":
                     user = self.require_user(db, "estate_apartments:read")
@@ -5381,6 +5383,28 @@ class JawdahHandler(BaseHTTPRequestHandler):
         estate_new_status = ""
         estate_entity_type = ""
         estate_reserved_transition = False
+        if method == "PUT" and table in ("estate_properties", "estate_buildings", "estate_apartments", "estate_rooms"):
+            pricing_fields = {"base_rent_price", "service_charge", "rent_price", "booking_deposit", "prepaid_amount"}
+            touching_pricing = any(field in data for field in pricing_fields)
+            pricing_changed = touching_pricing
+            if touching_pricing and item_id:
+                current_row = db.execute(f"SELECT * FROM {table} WHERE id=?", (item_id,)).fetchone()
+                if current_row:
+                    pricing_changed = False
+                    for field in pricing_fields:
+                        if field not in data:
+                            continue
+                        try:
+                            old_v = round(float(current_row[field] or 0), 3)
+                            new_v = round(float(data.get(field) or 0), 3)
+                        except Exception:
+                            old_v = current_row[field]
+                            new_v = data.get(field)
+                        if old_v != new_v:
+                            pricing_changed = True
+                            break
+            if pricing_changed and not has_permission(user, "estate_actions_pricing_edit"):
+                return self.send_json({"ok": False, "error": "تعديل التسعير العقاري يتطلب صلاحية estate_actions_pricing_edit"}, 403)
         if table == "clients":
             if not str(data.get("name") or "").strip():
                 return self.send_json({"ok": False, "error": "اسم العميل مطلوب"}, 400)

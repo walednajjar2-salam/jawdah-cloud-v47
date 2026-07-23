@@ -224,6 +224,68 @@ function canManageUsersSection(){
   const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
   return isPrimaryOwnerUser() || EXECUTIVE_MANAGER_USERNAMES.has(uname);
 }
+function estateRolePermissions(role){
+  const r = String(role||'').toLowerCase();
+  if(['owner','admin'].includes(r)) return new Set(['all']);
+  if(r==='operations'){
+    return new Set([
+      'estate_properties',
+      'estate_buildings',
+      'estate_apartments',
+      'estate_rooms',
+      'estate_accessories',
+      'estate_maintenance',
+      'estate_actions_convert',
+      'estate_actions_contract_create',
+    ]);
+  }
+  if(r==='accountant'){
+    return new Set([
+      'estate_properties:read',
+      'estate_buildings:read',
+      'estate_apartments:read',
+      'estate_rooms:read',
+      'estate_accessories:read',
+      'estate_maintenance',
+      'estate_actions_contract_close',
+      'estate_actions_month_close',
+      'estate_actions_pricing_edit',
+    ]);
+  }
+  if(r==='maintenance'){
+    return new Set([
+      'estate_properties:read',
+      'estate_buildings:read',
+      'estate_apartments:read',
+      'estate_rooms:read',
+      'estate_accessories:read',
+      'estate_maintenance',
+    ]);
+  }
+  return new Set([
+    'estate_properties:read',
+    'estate_buildings:read',
+    'estate_apartments:read',
+    'estate_rooms:read',
+    'estate_accessories:read',
+    'estate_maintenance:read',
+  ]);
+}
+function hasEstatePermission(permission){
+  const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
+  if(OWNER_USERNAMES.has(uname) || EXECUTIVE_MANAGER_USERNAMES.has(uname)) return true;
+  const perms = estateRolePermissions(Jawdah.user?.role);
+  if(perms.has('all') || perms.has(permission)) return true;
+  const base = String(permission||'').split(':',1)[0];
+  if(perms.has(base) && !String(permission||'').endsWith(':delete')) return true;
+  if(String(permission||'').endsWith(':read') && (perms.has(base) || perms.has(`${base}:read`))) return true;
+  return false;
+}
+const canEstateConvertReservation = ()=>hasEstatePermission('estate_actions_convert');
+const canEstateCreateContract = ()=>hasEstatePermission('estate_actions_contract_create');
+const canEstateCloseContract = ()=>hasEstatePermission('estate_actions_contract_close');
+const canEstateMonthClose = ()=>hasEstatePermission('estate_actions_month_close');
+const canEstatePricingEdit = ()=>hasEstatePermission('estate_actions_pricing_edit');
 function uiAllowedSection(id){
   if(id==='hospitality' || id==='owner-live') return true;
   const s=Jawdah.uiPermissions?.sections;
@@ -2487,6 +2549,13 @@ async function submitEditRecord(table,id){
       if(v === '' && ['client_id','property_id','invoice_id'].includes(el.dataset.editField)) v = null;
       data[el.dataset.editField] = v;
     });
+    if(
+      ['estate_properties','estate_buildings','estate_apartments','estate_rooms'].includes(table) &&
+      !canEstatePricingEdit() &&
+      Object.keys(data).some(k=>['base_rent_price','service_charge','rent_price','booking_deposit','prepaid_amount'].includes(k))
+    ){
+      return toastErr('لا تملك صلاحية تعديل التسعير العقاري');
+    }
     await api(`${table}/${id}`, {method:'PUT', body:JSON.stringify(data)});
     closeModal('genericModal');
     toast('تم حفظ التعديل');
@@ -4219,10 +4288,10 @@ window.printHospitalityFolio = printHospitalityFolio;
       apts,
       r=>{
         const st = String(r.status||'').toLowerCase();
-        const convertBtn = st==='reserved'
+        const convertBtn = st==='reserved' && canEstateConvertReservation()
           ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مؤجرة</button> `
           : '';
-        const contractBtn = ['reserved','occupied'].includes(st)
+        const contractBtn = ['reserved','occupied'].includes(st) && canEstateCreateContract()
           ? `<button class="gold-btn" onclick="openEstateContractFlow('apartment','${r.id}')">إنشاء عقد نشط</button> `
           : '';
         return `${convertBtn}${contractBtn}<button class="ghost" onclick="editRecord('estate_apartments','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_apartments','${r.id}')">حذف</button>`;
@@ -4234,10 +4303,10 @@ window.printHospitalityFolio = printHospitalityFolio;
       rooms,
       r=>{
         const st = String(r.status||'').toLowerCase();
-        const convertBtn = st==='reserved'
+        const convertBtn = st==='reserved' && canEstateConvertReservation()
           ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مؤجرة</button> `
           : '';
-        const contractBtn = ['reserved','occupied'].includes(st)
+        const contractBtn = ['reserved','occupied'].includes(st) && canEstateCreateContract()
           ? `<button class="gold-btn" onclick="openEstateContractFlow('room','${r.id}')">إنشاء عقد نشط</button> `
           : '';
         return `${convertBtn}${contractBtn}<button class="ghost" onclick="editRecord('estate_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_rooms','${r.id}')">حذف</button>`;
@@ -4360,12 +4429,183 @@ window.printHospitalityFolio = printHospitalityFolio;
       dueSoon.forEach(x=>lines.push(`<div class="statement-row"><span>${htmlEscape(x.invoice_no||x.id)}</span><b class="badge pending">تستحق قريبًا · ${htmlEscape(x.due_date||'')}</b></div>`));
       cAlert.innerHTML = lines.join('') || '<p class="badge paid">لا توجد تنبيهات استحقاق حالياً</p>';
     }
+    const execBox = $('#estateExecAlertsBox');
+    if(execBox){
+      const cards = buildEstateExecAlerts();
+      execBox.innerHTML = cards.map(c=>`<div class="statement-row"><span>${htmlEscape(c.title)}<small class="mini"> · ${htmlEscape(c.subtitle||'')}</small></span><b class="badge ${htmlEscape(c.tone||'')}">${fmt(c.value||0)}</b></div>${(c.details||[]).map(d=>`<div class="statement-row mini"><span>↳ ${htmlEscape(d)}</span><b></b></div>`).join('')}`).join('');
+    }
+    const monthInput = $('#estateOccMonth');
+    if(monthInput && !monthInput.value){
+      const d = new Date();
+      monthInput.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    }
+    const occHost = $('#estateOccupancyReportBox');
+    if(occHost){
+      const snapshot = computeEstateOccupancySnapshot(String(monthInput?.value || ''));
+      if(!snapshot){
+        occHost.innerHTML = '<p class="badge overdue">أدخل شهرًا صحيحًا بصيغة YYYY-MM</p>';
+      }else{
+        occHost.innerHTML = `
+          <div class="kpis grid">
+            <div class="kpi"><span>إشغال الشهر</span><strong>${fmt(snapshot.current.occupancy_pct)}%</strong></div>
+            <div class="kpi"><span>الوحدات المؤجرة</span><strong>${fmt(snapshot.current.occupied_units)}</strong></div>
+            <div class="kpi"><span>إجمالي الوحدات</span><strong>${fmt(snapshot.current.total_units)}</strong></div>
+            <div class="kpi"><span>تغير شهري MoM</span><strong class="${snapshot.delta_pct>=0?'linked-ok':'low-stock'}">${snapshot.delta_pct>=0?'+':''}${fmt(snapshot.delta_pct)}%</strong></div>
+          </div>
+          <div class="statement-row"><span>الشهر الحالي</span><b>${htmlEscape(snapshot.current.month_key)} · مؤجر ${fmt(snapshot.current.occupied_units)} من ${fmt(snapshot.current.total_units)}</b></div>
+          <div class="statement-row"><span>الشهر السابق</span><b>${htmlEscape(snapshot.previous?.month_key || '—')} · مؤجر ${fmt(snapshot.previous?.occupied_units || 0)} من ${fmt(snapshot.previous?.total_units || 0)}</b></div>
+          <div class="statement-row"><span>فرق الوحدات</span><b>${snapshot.delta_units>=0?'+':''}${fmt(snapshot.delta_units)} وحدة</b></div>
+        `;
+      }
+    }
+    renderEstateUnitTrace();
+    const closeContractBtn = $('#estateCloseContractBtn');
+    if(closeContractBtn){
+      closeContractBtn.disabled = !canEstateCloseContract();
+      closeContractBtn.title = canEstateCloseContract() ? '' : 'لا تملك صلاحية إغلاق العقود';
+    }
+    const closeMonthBtn = $('#estateCloseMonthBtn');
+    if(closeMonthBtn){
+      closeMonthBtn.disabled = !canEstateMonthClose();
+      closeMonthBtn.title = canEstateMonthClose() ? '' : 'لا تملك صلاحية إقفال الشهر';
+    }
     ensureEnglishDigits(document.getElementById('sec-estate-platform'));
     if(typeof loadEstateOperationsCheck==='function') loadEstateOperationsCheck(true);
   };
   function nowDay(){ return today ? today() : new Date().toISOString().slice(0,10); }
+  function monthStartEnd(monthKey){
+    const m = String(monthKey||'').trim();
+    if(!/^\d{4}-\d{2}$/.test(m)) return null;
+    const [y,mm] = m.split('-').map(Number);
+    if(!(y>2000 && mm>=1 && mm<=12)) return null;
+    const start = new Date(Date.UTC(y, mm-1, 1));
+    const end = new Date(Date.UTC(y, mm, 0));
+    return {
+      monthKey: m,
+      start: start.toISOString().slice(0,10),
+      end: end.toISOString().slice(0,10),
+      label: `${y}-${String(mm).padStart(2,'0')}`,
+    };
+  }
+  function previousMonthKey(monthKey){
+    const info = monthStartEnd(monthKey);
+    if(!info) return '';
+    const d = new Date(`${info.start}T00:00:00Z`);
+    d.setUTCDate(0);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+  }
+  function overlapsMonth(startDate, endDate, monthInfo){
+    const s = String(startDate||'').trim();
+    const e = String(endDate||'').trim();
+    if(!s || !e || !monthInfo) return false;
+    return !(e < monthInfo.start || s > monthInfo.end);
+  }
+  function computeEstateOccupancySnapshot(monthKey){
+    const curr = monthStartEnd(monthKey);
+    if(!curr) return null;
+    const prev = monthStartEnd(previousMonthKey(monthKey));
+    const units = estateRows('estate_apartments').map(x=>({entity_type:'apartment',entity_id:x.id,status:String(x.status||'').toLowerCase()}))
+      .concat(estateRows('estate_rooms').map(x=>({entity_type:'room',entity_id:x.id,status:String(x.status||'').toLowerCase()})));
+    const contracts = estateRows('estate_contracts').filter(x=>String(x.status||'').toLowerCase()!=='cancelled');
+    const eligibleUnits = units.filter(x=>!['maintenance','suspended'].includes(x.status));
+    const total = eligibleUnits.length;
+    const calc = (monthInfo)=>{
+      const activeKeys = new Set(
+        contracts
+          .filter(c=>String(c.status||'').toLowerCase()==='active' || overlapsMonth(c.start_date,c.end_date,monthInfo))
+          .filter(c=>overlapsMonth(c.start_date,c.end_date,monthInfo))
+          .map(c=>`${String(c.entity_type||'').toLowerCase()}::${c.entity_id}`)
+      );
+      const occupied = eligibleUnits.filter(u=>activeKeys.has(`${u.entity_type}::${u.entity_id}`)).length;
+      const reserved = units.filter(u=>u.status==='reserved').length;
+      const rate = total ? ((occupied/total)*100) : 0;
+      return { month_key: monthInfo.monthKey, total_units: total, occupied_units: occupied, reserved_units: reserved, occupancy_pct: Number(rate.toFixed(2)) };
+    };
+    const current = calc(curr);
+    const previous = prev ? calc(prev) : null;
+    return {
+      current,
+      previous,
+      delta_pct: Number((current.occupancy_pct - Number(previous?.occupancy_pct||0)).toFixed(2)),
+      delta_units: Number(current.occupied_units||0) - Number(previous?.occupied_units||0),
+    };
+  }
+  function buildEstateExecAlerts(){
+    const nowStr = nowDay();
+    const in7 = new Date();
+    in7.setDate(in7.getDate()+7);
+    const in7Str = in7.toISOString().slice(0,10);
+    const contracts = estateRows('estate_contracts');
+    const inv = estateRows('estate_contract_invoices');
+    const maint = estateRows('estate_maintenance');
+    const units = estateRows('estate_apartments').map(x=>({kind:'شقة',name:x.name,status:x.status,end:x.reservation_end_date}))
+      .concat(estateRows('estate_rooms').map(x=>({kind:'غرفة',name:x.name,status:x.status,end:x.reservation_end_date})));
+    const overdueInv = inv.filter(x=>String(x.status||'').toLowerCase()!=='paid' && String(x.due_date||'') < nowStr);
+    const dueSoonInv = inv.filter(x=>String(x.status||'').toLowerCase()!=='paid' && String(x.due_date||'') >= nowStr && String(x.due_date||'') <= in7Str);
+    const endingContracts = contracts.filter(x=>String(x.status||'').toLowerCase()==='active' && String(x.end_date||'') >= nowStr && String(x.end_date||'') <= in7Str);
+    const openMaintAging = maint
+      .filter(x=>!String(x.status||'').toLowerCase().includes('closed'))
+      .map(x=>{
+        const d = String(x.maintenance_date||'').trim();
+        const days = d ? Math.max(0, Math.floor((new Date(nowStr) - new Date(d)) / 86400000)) : 0;
+        return {title:x.title, days};
+      })
+      .filter(x=>x.days>=10);
+    const overdueReserved = units.filter(x=>String(x.status||'').toLowerCase()==='reserved' && String(x.end||'') && String(x.end||'') < nowStr);
+    return [
+      {tone: overdueInv.length ? 'overdue' : 'paid', title:'فواتير متأخرة', value: overdueInv.length, subtitle:'تحصيل فوري مطلوب', details: overdueInv.slice(0,4).map(x=>`${x.invoice_no||x.id} · ${x.due_date||'—'}`)},
+      {tone: dueSoonInv.length ? 'pending' : 'paid', title:'استحقاقات خلال 7 أيام', value: dueSoonInv.length, subtitle:'تنبيه استباقي', details: dueSoonInv.slice(0,4).map(x=>`${x.invoice_no||x.id} · ${x.due_date||'—'}`)},
+      {tone: endingContracts.length ? 'pending' : 'paid', title:'عقود على وشك الانتهاء', value: endingContracts.length, subtitle:'تجديد/إغلاق', details: endingContracts.slice(0,4).map(x=>`${x.contract_no||x.id} · ${x.end_date||'—'}`)},
+      {tone: openMaintAging.length ? 'overdue' : 'paid', title:'صيانة مفتوحة +10 أيام', value: openMaintAging.length, subtitle:'تدخل إداري مطلوب', details: openMaintAging.slice(0,4).map(x=>`${x.title||'طلب'} · ${x.days} يوم`)},
+      {tone: overdueReserved.length ? 'overdue' : 'paid', title:'حجوزات متأخرة للتحويل', value: overdueReserved.length, subtitle:'تسريع التحويل إلى عقد/إشغال', details: overdueReserved.slice(0,4).map(x=>`${x.kind} ${x.name||''} · ${x.end||'—'}`)},
+    ];
+  }
+  function renderEstateUnitTrace(){
+    const typeEl = $('#estateTraceEntityType');
+    const idEl = $('#estateTraceEntityId');
+    const host = $('#estateUnitTraceBox');
+    if(!typeEl || !idEl || !host) return;
+    const entityType = String(typeEl.value || 'apartment').toLowerCase();
+    const rows = entityType === 'room' ? estateRows('estate_rooms') : estateRows('estate_apartments');
+    const prevId = String(idEl.value || '');
+    idEl.innerHTML = rows.map(r=>`<option value="${htmlEscape(r.id)}">${htmlEscape(r.name||r.id)}</option>`).join('');
+    if(rows.some(r=>r.id===prevId)) idEl.value = prevId;
+    const entityId = String(idEl.value || (rows[0]?.id || ''));
+    if(!entityId){
+      host.innerHTML = '<p class="mini">لا توجد وحدات متاحة لعرض السجل</p>';
+      return;
+    }
+    const maintenanceRows = estateRows('estate_maintenance').filter(m=>String(m[entityType==='room'?'room_id':'apartment_id']||'')===entityId);
+    const contractRows = estateRows('estate_contracts').filter(c=>String(c.entity_type||'').toLowerCase()===entityType && String(c.entity_id||'')===entityId);
+    const contractIds = new Set(contractRows.map(c=>c.id));
+    const invoiceRows = estateRows('estate_contract_invoices').filter(i=>contractIds.has(i.contract_id));
+    const statusRows = estateRows('estate_status_history').filter(s=>String(s.entity_type||'').toLowerCase()===entityType && String(s.entity_id||'')===entityId);
+    const timelineRows = []
+      .concat(statusRows.map(x=>({date:x.changed_at||'', icon:'🔄', title:`حالة: ${x.old_status||'—'} → ${x.new_status||'—'}`, meta:x.note||''})))
+      .concat(maintenanceRows.map(x=>({date:x.maintenance_date||x.closed_at||'', icon:'🛠️', title:`صيانة: ${x.title||'—'} (${x.status||'Open'})`, meta:money(x.total_cost||0)})))
+      .concat(contractRows.map(x=>({date:x.created_at||x.start_date||'', icon:'📄', title:`عقد: ${x.contract_no||x.id} (${x.status||''})`, meta:`${x.start_date||'—'} → ${x.end_date||'—'}`})))
+      .concat(invoiceRows.map(x=>({date:x.issued_at||x.due_date||'', icon:'🧾', title:`فاتورة: ${x.invoice_no||x.id} (${x.status||''})`, meta:`${money(x.amount||0)} · استحقاق ${x.due_date||'—'}`})));
+    timelineRows.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+    host.innerHTML = timelineRows.map(e=>`<div class="statement-row"><span>${e.icon} ${htmlEscape(e.title||'')}</span><b>${htmlEscape(String(e.date||'').slice(0,10) || '—')} · ${htmlEscape(e.meta||'')}</b></div>`).join('') || '<p class="mini">لا توجد أحداث لهذه الوحدة بعد</p>';
+  }
+  function clearEstateForm(ids){
+    (ids||[]).forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(el.tagName === 'SELECT') el.selectedIndex = 0;
+      else el.value = '';
+    });
+  }
+  function applyEstateDailyDefaults(){
+    const t = nowDay();
+    if($('#emDate') && !$('#emDate').value) $('#emDate').value = t;
+    if($('#ecPayDate') && !$('#ecPayDate').value) $('#ecPayDate').value = t;
+    if($('#eaReservationStart') && !$('#eaReservationStart').value) $('#eaReservationStart').value = t;
+    if($('#erReservationStart') && !$('#erReservationStart').value) $('#erReservationStart').value = t;
+  }
   async function postEstate(table,payload){
     try{
+      applyEstateDailyDefaults();
       await api(table,{method:'POST',body:JSON.stringify(payload)});
       toast('تم الحفظ');
       await loadAll();
@@ -4381,7 +4621,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const imageUpload = await estateImageUploadPayload('epImageFile');
     const tenant = val('epTenantClient') || null;
     const tenantObj = byId('clients', tenant);
-    return postEstate('estate_properties',{
+    await postEstate('estate_properties',{
       name: val('epName'),
       status: val('epStatus') || 'active',
       location: val('epLocation'),
@@ -4399,12 +4639,13 @@ window.printHospitalityFolio = printHospitalityFolio;
       image_upload: imageUpload,
       last_update: nowDay(),
     });
+    clearEstateForm(['epName','epLocation','epBuildingCount','epApartmentCount','epRoomCount','epBaseRentPrice','epServiceCharge','epAttachments','epManager','epTenantPhone','epNotes','epImage','epImageFile']);
   };
   window.createEstateBuilding = async function(){
     const imageUpload = await estateImageUploadPayload('ebImageFile');
     const tenant = val('ebTenantClient') || null;
     const tenantObj = byId('clients', tenant);
-    return postEstate('estate_buildings',{
+    await postEstate('estate_buildings',{
       property_id: val('ebProperty'),
       name: val('ebName'),
       status: val('ebStatus') || 'active',
@@ -4422,6 +4663,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       image_upload: imageUpload,
       last_update: nowDay(),
     });
+    clearEstateForm(['ebName','ebLocation','ebApartmentCount','ebRoomCount','ebBaseRentPrice','ebServiceCharge','ebAttachments','ebManager','ebTenantPhone','ebNotes','ebImage','ebImageFile']);
   };
   window.createEstateApartment = async function(){
     const imageUpload = await estateImageUploadPayload('eaImageFile');
@@ -4431,7 +4673,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const bookedClientName = val('eaBookedClientName') || (status==='reserved' ? (tenantObj.name || '') : '');
     const bookedClientPhone = val('eaBookedClientPhone') || (status==='reserved' ? (tenantObj.phone || '') : '');
     const bookedClientId = val('eaBookedClientId') || (status==='reserved' ? tenant : '');
-    return postEstate('estate_apartments',{
+    await postEstate('estate_apartments',{
       property_id: val('eaProperty'),
       building_id: val('eaBuilding'),
       name: val('eaName'),
@@ -4457,6 +4699,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       image_upload: imageUpload,
       last_update: nowDay(),
     });
+    clearEstateForm(['eaName','eaRoomCount','eaRentPrice','eaBookingDeposit','eaPrepaidAmount','eaReservationStart','eaReservationEnd','eaBookedClientName','eaBookedClientPhone','eaBookedClientId','eaBookedByEmployee','eaMaintenanceNotes','eaMaintenanceCost','eaAttachments','eaManager','eaTenantPhone','eaNotes','eaImage','eaImageFile']);
   };
   window.createEstateRoom = async function(){
     const imageUpload = await estateImageUploadPayload('erImageFile');
@@ -4466,7 +4709,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const bookedClientName = val('erBookedClientName') || (status==='reserved' ? (tenantObj.name || '') : '');
     const bookedClientPhone = val('erBookedClientPhone') || (status==='reserved' ? (tenantObj.phone || '') : '');
     const bookedClientId = val('erBookedClientId') || (status==='reserved' ? tenant : '');
-    return postEstate('estate_rooms',{
+    await postEstate('estate_rooms',{
       property_id: val('erProperty'),
       building_id: val('erBuilding'),
       apartment_id: val('erApartment'),
@@ -4493,9 +4736,10 @@ window.printHospitalityFolio = printHospitalityFolio;
       image_upload: imageUpload,
       last_update: nowDay(),
     });
+    clearEstateForm(['erName','erType','erRentPrice','erBookingDeposit','erPrepaidAmount','erReservationStart','erReservationEnd','erBookedClientName','erBookedClientPhone','erBookedClientId','erBookedByEmployee','erMaintenanceNotes','erMaintenanceCost','erAttachments','erManager','erTenantPhone','erNotes','erImage','erImageFile']);
   };
-  window.createEstateMaintenance = function(){
-    return postEstate('estate_maintenance',{
+  window.createEstateMaintenance = async function(){
+    await postEstate('estate_maintenance',{
       property_id: val('emProperty') || null,
       building_id: val('emBuilding') || null,
       apartment_id: val('emApartment') || null,
@@ -4518,9 +4762,10 @@ window.printHospitalityFolio = printHospitalityFolio;
       closed_at: val('emClosedAt'),
       notes: val('emNotes'),
     });
+    clearEstateForm(['emTitle','emResponsible','emAssignedTeam','emPartsDetails','emPartsCost','emLaborCost','emInvoiceNo','emInvoiceDate','emVendorName','emTotalCost','emApprovedBy','emNextDate','emClosedAt','emNotes']);
   };
-  window.createEstateAccessory = function(){
-    return postEstate('estate_accessories',{
+  window.createEstateAccessory = async function(){
+    await postEstate('estate_accessories',{
       property_id: val('exProperty'),
       building_id: val('exBuilding') || null,
       apartment_id: val('exApartment') || null,
@@ -4536,9 +4781,11 @@ window.printHospitalityFolio = printHospitalityFolio;
       notes: val('exNotes'),
       last_update: nowDay(),
     });
+    clearEstateForm(['exName','exCategory','exQty','exUnitCost','exSupplier','exInvoiceNo','exResponsible','exNotes']);
   };
   window.convertEstateReservation = async function(entityType, entityId){
     try{
+      if(!canEstateConvertReservation()) return toastErr('لا تملك صلاحية تحويل الحجز');
       const t = entityType==='room' ? 'غرفة' : 'شقة';
       const note = prompt(`ملاحظة التحويل (${t}) — اختياري`, 'تم التحويل إلى تأجير فعلي');
       if(note===null) return;
@@ -4552,6 +4799,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     }catch(e){ toastErr(e); }
   };
   window.openEstateContractFlow = function(entityType, entityId){
+    if(!canEstateCreateContract()) return toastErr('لا تملك صلاحية إنشاء عقد نشط');
     const t = entityType === 'room' ? 'room' : 'apartment';
     const typeSel = $('#ecEntityType');
     if(typeSel) typeSel.value = t;
@@ -4571,6 +4819,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   };
   window.createEstateContractFromFlow = async function(){
     try{
+      if(!canEstateCreateContract()) return toastErr('لا تملك صلاحية إنشاء عقد نشط');
       const entityType = String($('#ecEntityType')?.value || 'apartment');
       const entityId = String($('#ecEntityId')?.value || '').trim();
       if(!entityId) return toastErr('اختر الشقة/الغرفة أولاً');
@@ -4592,6 +4841,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   };
   window.generateEstateContractSchedule = async function(replaceOpen){
     try{
+      if(!canEstateCreateContract()) return toastErr('لا تملك صلاحية جدولة دفعات العقود');
       const contractId = String($('#ecScheduleContract')?.value || '').trim();
       if(!contractId) return toastErr('اختر العقد أولاً');
       await api('estate_contract_generate_schedule',{
@@ -4619,6 +4869,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     }catch(e){ toastErr(e); }
   };
   window.closeEstateMonth = async function(){
+    if(!canEstateMonthClose()) return toastErr('لا تملك صلاحية إقفال الشهر');
     const monthKey = String($('#emcMonth')?.value || '').trim();
     if(!monthKey) return toastErr('اختر الشهر أولاً');
     const payload = {
@@ -4667,6 +4918,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     }
   };
   window.closeEstateContract = async function(){
+    if(!canEstateCloseContract()) return toastErr('لا تملك صلاحية إغلاق العقود');
     const contractId = String($('#ecCloseContract')?.value || '').trim();
     if(!contractId) return toastErr('اختر عقدًا نشطًا');
     const payload = {
@@ -4753,6 +5005,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     if(id==='epLocation') refreshEstateRealMap(String(e?.target?.value || '').trim());
     if(id==='eaStatus') syncEstateApartmentStateFields();
     if(id==='erStatus') syncEstateRoomStateFields();
+    if(id==='estateTraceEntityType' || id==='estateTraceEntityId' || id==='estateOccMonth') renderEstatePlatform();
   });
   document.addEventListener('input', (e)=>{
     const id = e?.target?.id;
@@ -4760,7 +5013,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   });
   syncEstateApartmentStateFields();
   syncEstateRoomStateFields();
-  if($('#ecPayDate')) $('#ecPayDate').value = today();
+  applyEstateDailyDefaults();
   if($('#emcMonth')){
     const d = new Date();
     $('#emcMonth').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
