@@ -59,7 +59,8 @@ def main() -> int:
 
     RELEASE_DIR.mkdir(parents=True, exist_ok=True)
     target_installer = RELEASE_DIR / TARGET_INSTALLER_NAME
-    shutil.copy2(installer, target_installer)
+    if installer.resolve() != target_installer.resolve():
+        shutil.copy2(installer, target_installer)
     digest = sha256_of(target_installer)
 
     manifest = {
