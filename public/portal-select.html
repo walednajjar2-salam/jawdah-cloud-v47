@@ -50,7 +50,7 @@
     }
     .choices{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:repeat(3,minmax(0,1fr));
       gap:20px;
       margin-top:14px;
     }
@@ -84,6 +84,12 @@
       background:radial-gradient(circle at 35% 30%, #ffffff 0%, #e8f1ff 55%, #d9e8ff 100%);
       color:#1f4ea5;
       font-size:72px;
+      font-weight:700;
+    }
+    .circle.accounting{
+      background:radial-gradient(circle at 35% 30%, #ffffff 0%, #f0f7ff 55%, #dcecff 100%);
+      color:#1f4ea5;
+      font-size:64px;
       font-weight:700;
     }
     .card h3{
@@ -142,6 +148,13 @@
         <p>إدارة الغرف، الحجوزات، التحصيل، وتقارير الإشغال.</p>
         <button class="btn" type="button" onclick="enterPortal('hospitality')">دخول الضيافة</button>
       </article>
+
+      <article class="card">
+        <div class="circle accounting" aria-label="المحاسبة">💼</div>
+        <h3>منصة المحاسبة</h3>
+        <p>القيود، التحصيل، الذمم، التسويات، وإقفال الفترات.</p>
+        <button class="btn" type="button" onclick="enterPortal('accounting')">دخول المحاسبة</button>
+      </article>
     </section>
 
     <div class="foot">Launch Quality LLC</div>
@@ -169,7 +182,7 @@
     async function enterPortal(choice) {
       const ok = await ensureSession();
       if (!ok) return;
-      const c = (choice === "hospitality") ? "hospitality" : "realestate";
+      const c = (choice === "hospitality") ? "hospitality" : ((choice === "accounting") ? "accounting" : "realestate");
       localStorage.setItem("jawdah_portal_choice", c);
       const token = localStorage.getItem("jawdah_cloud_token") || "";
       location.replace("/app.html?v=portal-choice-" + c + "-" + Date.now() + "&token=" + encodeURIComponent(token));

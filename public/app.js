@@ -39,6 +39,7 @@ const PROPERTY_STATUSES = ['شاغرة', 'محجوزة', 'مستأجرة', 'تح
 const NAV_SAAS_ITEMS = [
   ['dashboard','لوحة التحكم','🏠'],
   ['estate-platform','منصة العقارات','🏢'],
+  ['accounting-platform','منصة المحاسبة','💼'],
   ['daily-ops','العمليات اليومية','🗂️'],
   ['hospitality','الضيافة','🏨'],
   ['properties','المشاريع','🏢'],
@@ -59,7 +60,7 @@ const NAV_SAAS_ITEMS = [
   ['settings','الإعدادات','⚙️']
 ];
 const SECTION_TITLES = {
-  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'الضيافة',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
+  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','accounting-platform':'منصة المحاسبة','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'الضيافة',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
   revenues:'الإيرادات',invoices:'المدفوعات','admin-expenses':'المصروفات',maintenance:'الصيانة',
   reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي',production:'المتابعة',timeline:'الجدول الزمني',
   backup:'المستندات',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
@@ -829,6 +830,7 @@ function showSection(id){
   if(resolved==='owner-live' && typeof renderOwnerLiveHub==='function') renderOwnerLiveHub();
   if(resolved==='hospitality' && typeof renderHospitalityPortal==='function') renderHospitalityPortal();
   if(resolved==='estate-platform' && typeof renderEstatePlatform==='function') renderEstatePlatform();
+  if(resolved==='accounting-platform' && typeof renderAccountingPlatform==='function') renderAccountingPlatform();
   if(resolved==='dashboard') renderDashboard();
   populateSelects();
   if(resolved==='reports' && typeof renderReports === 'function') renderReports();
@@ -3074,15 +3076,17 @@ function closePortalSwitch(){
   $('#portalSwitchOverlay')?.classList.add('hidden');
 }
 function choosePortal(portal){
-  const choice = portal==='hospitality' ? 'hospitality' : 'realestate';
+  const choice = portal==='hospitality' ? 'hospitality' : (portal==='accounting' ? 'accounting' : 'realestate');
   localStorage.setItem('jawdah_portal_choice', choice);
   closePortalSwitch();
   if(choice==='hospitality') showSection('hospitality');
+  else if(choice==='accounting') showSection('accounting-platform');
   else showSection('estate-platform');
 }
 function applySavedPortalChoice(){
   const choice = localStorage.getItem('jawdah_portal_choice') || 'realestate';
   if(choice==='hospitality') showSection('hospitality');
+  else if(choice==='accounting') showSection('accounting-platform');
   else showSection('estate-platform');
 }
 function canManageDailyOps(){
@@ -3672,6 +3676,72 @@ window.printHospitalityFolio = printHospitalityFolio;
 })();
 
 (function(){
+  window.renderAccountingPlatform = function(){
+    const hostKpi = $('#accPlatformKpis');
+    const inv = Jawdah.data.invoices || [];
+    const acc = Jawdah.data.accounts || [];
+    const banks = Jawdah.data.bank_transactions || [];
+    const periods = Jawdah.data.financial_periods || [];
+    const billed = inv.reduce((s,x)=>s+Number(x.amount||0),0);
+    const paid = inv.reduce((s,x)=>s+Number(x.paid_amount||0),0);
+    const overdue = inv.reduce((s,x)=>{
+      const rem = Math.max(0, Number(x.amount||0)-Number(x.paid_amount||0));
+      return s + ((rem>0 && String(x.due_date||'') < today()) ? rem : 0);
+    },0);
+    const income = acc.filter(x=>x.type==='income').reduce((s,x)=>s+Number(x.amount||0),0);
+    const expense = acc.filter(x=>x.type==='expense').reduce((s,x)=>s+Number(x.amount||0),0);
+    const net = income-expense;
+    if(hostKpi){
+      hostKpi.innerHTML = `
+        <div class="kpi"><span>إجمالي مفوتر</span><strong>${money(billed)}</strong></div>
+        <div class="kpi"><span>إجمالي محصل</span><strong>${money(paid)}</strong></div>
+        <div class="kpi"><span>متأخرات</span><strong>${money(overdue)}</strong></div>
+        <div class="kpi"><span>صافي</span><strong>${money(net)}</strong></div>
+      `;
+    }
+    const quick = $('#accPlatformQuick');
+    if(quick){
+      quick.innerHTML = [
+        ['الحسابات','accounts','💰'],
+        ['المدفوعات','invoices','💳'],
+        ['كشف البنك','bank','🏦'],
+        ['المشتريات','purchases','🧾'],
+        ['الرواتب','payroll','👔'],
+        ['القوائم المالية','statements','📘'],
+        ['تسوية البنك','bank-reconciliation','⚖️'],
+        ['الفترات المالية','financial-periods','📅']
+      ].map(x=>`<button class="ghost" type="button" onclick="showSection('${x[1]}')">${x[2]} ${x[0]}</button>`).join('');
+    }
+    const alerts = $('#accPlatformAlerts');
+    if(alerts){
+      const openPeriods = periods.filter(p=>String(p.status||'').toLowerCase()==='open').length;
+      alerts.innerHTML = `
+        <div class="statement-row"><span>فواتير متأخرة</span><b class="${overdue>0?'low-stock':'linked-ok'}">${money(overdue)}</b></div>
+        <div class="statement-row"><span>فترات مفتوحة</span><b>${fmt(openPeriods)}</b></div>
+        <div class="statement-row"><span>حركة البنك</span><b>${fmt(banks.length)}</b></div>
+      `;
+    }
+    const invHost = $('#accPlatformInvoices');
+    if(invHost){
+      const rows = [...inv].sort((a,b)=>String(b.issue_date||'').localeCompare(String(a.issue_date||''))).slice(0,8);
+      invHost.innerHTML = rows.length ? tableHtml(
+        [['الفاتورة','invoice_no'],['العميل','client_id',(v)=>htmlEscape(byId('clients',v).name||'')],['الاستحقاق','due_date'],['المبلغ','amount',(v)=>money(v)],['المدفوع','paid_amount',(v)=>money(v)],['الحالة','status',(v)=>statusBadge(v)]],
+        rows
+      ) : '<p class="mini">لا توجد فواتير بعد</p>';
+    }
+    const bankHost = $('#accPlatformBankPeriods');
+    if(bankHost){
+      const open = periods.filter(p=>String(p.status||'').toLowerCase()==='open');
+      const closed = periods.filter(p=>String(p.status||'').toLowerCase()==='closed');
+      bankHost.innerHTML = `
+        <div class="statement-row"><span>فترات مفتوحة</span><b>${fmt(open.length)}</b></div>
+        <div class="statement-row"><span>فترات مغلقة</span><b>${fmt(closed.length)}</b></div>
+        <div class="statement-row"><span>قيود بنك</span><b>${fmt(banks.length)}</b></div>
+      `;
+    }
+    ensureEnglishDigits(document.getElementById('sec-accounting-platform'));
+  };
+
   const ESTATE_ICON_SET = [
     { id:'property', title:'العقار', subtitle:'الأصل الرئيسي', photo:'https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=400&q=80' },
     { id:'building', title:'البناية', subtitle:'مبنى سكني/تشغيلي', photo:'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80' },
@@ -4537,7 +4607,7 @@ window.printHospitalityFolio = printHospitalityFolio;
 
 (function(){
   const financeItems=[['purchases','فواتير المشتريات','🧾'],['revenues','الإيرادات','💎'],['statements','قائمة الدخل والميزانية','📘'],['payroll','الرواتب','👔'],['admin-expenses','مصاريف إدارية وعمومية','🏢'],['inventory','المخزن','📦'],['bank','كشف البنك','🏦'],['chart-accounts','دليل الحسابات','📒'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']];
-  const baseSections=[['dashboard','لوحة التحكم','🏛️'],['estate-platform','منصة العقارات','🏢'],['properties','العقارات','🏠'],['clients','العملاء','👥'],['contracts','العقود والتجديد','📑'],['invoices','الفواتير','🧾'],['accounts','الحسابات','💰'],...financeItems,['maintenance','الصيانة','🔧'],['reports','التقارير','📊'],['users','المستخدمين','🛡️'],['backup','التخزين والنسخ','💾'],['qa','اختبار التشغيل','✅']];
+  const baseSections=[['dashboard','لوحة التحكم','🏛️'],['estate-platform','منصة العقارات','🏢'],['accounting-platform','منصة المحاسبة','💼'],['properties','العقارات','🏠'],['clients','العملاء','👥'],['contracts','العقود والتجديد','📑'],['invoices','الفواتير','🧾'],['accounts','الحسابات','💰'],...financeItems,['maintenance','الصيانة','🔧'],['reports','التقارير','📊'],['users','المستخدمين','🛡️'],['backup','التخزين والنسخ','💾'],['qa','اختبار التشغيل','✅']];
   const prevBuildNav=buildNav;
   buildNav=function(){ prevBuildNav && prevBuildNav(); };
   const oldPopulate=populateSelects;

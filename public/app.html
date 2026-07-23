@@ -300,7 +300,7 @@
   <div id="portalSwitchOverlay" class="portal-switch-overlay hidden">
     <div class="portal-switch-card">
       <h3>اختر مسار العمل</h3>
-      <p class="mini">منصة موحّدة بمسارين: العقارات والضيافة.</p>
+      <p class="mini">منصة موحّدة بثلاثة مسارات: العقارات، الضيافة، والمحاسبة.</p>
       <div class="portal-switch-grid">
         <button type="button" class="portal-tile" onclick="choosePortal('realestate')">
           <span class="portal-icon">🏢</span>
@@ -311,6 +311,11 @@
           <span class="portal-icon">🏨</span>
           <b>الضيافة</b>
           <small>تشغيل الضيافة (قيد التطوير)</small>
+        </button>
+        <button type="button" class="portal-tile" onclick="choosePortal('accounting')">
+          <span class="portal-icon">💼</span>
+          <b>المحاسبة</b>
+          <small>منصة مالية مستقلة للمشروع</small>
         </button>
       </div>
       <div class="toolbar" style="justify-content:center;margin-top:12px">
@@ -359,7 +364,7 @@
           <div class="search search-pro"><input id="globalSearch" placeholder="🔎 بحث في المشاريع والعملاء والعقود..."></div>
           <div class="app-header-actions">
             <button id="fieldModeBtn" class="tb-icon field-mode-btn" type="button" title="وضع الميدان · Field mode">🧰</button>
-            <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة">🧭</button>
+            <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة والمحاسبة">🧭</button>
             <select id="themeSelect" class="theme-select" title="مظهر المنصة">
               <option value="luxury-light">Luxury Light</option>
             </select>
@@ -740,6 +745,28 @@
         <div class="card"><h3>سجل تسويات العقود</h3><div id="estateContractSettlementsTable"></div></div>
         <div class="card"><h3>سجل الإقفالات الشهرية</h3><div id="estateMonthClosesTable"></div></div>
         <div class="card"><h3>سجل حالات الشقق والغرف</h3><div id="estateStatusHistoryTable"></div></div>
+      </section>
+
+      <section id="sec-accounting-platform" class="section">
+        <div class="card accounting-hero">
+          <h3>منصة المحاسبة</h3>
+          <p class="mini">منصة محاسبية مستقلة: التحصيل، الذمم، البنوك، الفترات، التسويات، والتقارير المالية.</p>
+          <div id="accPlatformKpis" class="grid kpis"></div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>لوحة تشغيل المحاسبة</h3>
+            <div id="accPlatformQuick" class="toolbar" style="flex-wrap:wrap"></div>
+          </div>
+          <div class="card">
+            <h3>تنبيهات مالية</h3>
+            <div id="accPlatformAlerts"></div>
+          </div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>آخر فواتير التحصيل</h3><div id="accPlatformInvoices"></div></div>
+          <div class="card"><h3>ملخص البنك والفترات</h3><div id="accPlatformBankPeriods"></div></div>
+        </div>
       </section>
 
       <section id="sec-owner-staff" class="section"><div id="ownerStaffBox"></div></section>

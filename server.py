@@ -8979,14 +8979,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
 
 UI_SECTIONS_ALL = [
-    "dashboard", "estate-platform", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
+    "dashboard", "estate-platform", "accounting-platform", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
     "admin-expenses", "maintenance", "reports", "messages", "walid", "enterprise",
     "production", "timeline", "backup", "settings", "accounts", "purchases", "payroll",
     "inventory", "bank", "chart-accounts", "statements", "bank-reconciliation",
     "financial-periods", "approvals", "users", "qa",
 ]
 UI_WRITE_SECTIONS_ALL = [
-    "estate-platform", "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
+    "estate-platform", "accounting-platform", "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
     "accounts", "purchases", "payroll", "revenues", "admin-expenses", "bank",
     "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
     "users", "approvals", "backup",
@@ -9001,7 +9001,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     "admin": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
     "accountant": {
         "sections": [
-            "dashboard", "estate-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "revenues",
+            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "revenues",
             "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
             "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
             "reports", "backup", "messages", "timeline", "walid", "approvals",
@@ -9013,19 +9013,19 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     },
     "operations": {
         "sections": [
-            "dashboard", "estate-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
+            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
             "maintenance", "inventory", "reports", "messages", "timeline", "backup",
             "walid", "approvals", "production",
         ],
         "kpis": ["properties", "rented", "vacant", "occupancy", "maintenance", "expiring", "health"],
     },
     "maintenance": {
-        "sections": ["dashboard", "estate-platform", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
+        "sections": ["dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
         "kpis": ["maintenance", "properties", "vacant", "inventory_value", "health"],
     },
     "viewer": {
         "sections": [
-            "dashboard", "estate-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
+            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
             "maintenance", "messages", "timeline", "backup",
         ],
         "kpis": ["properties", "occupancy", "health", "overdue", "net"],
@@ -9035,14 +9035,14 @@ UI_WRITE_BY_ROLE: Dict[str, List[str]] = {
     "owner": list(UI_WRITE_SECTIONS_ALL),
     "admin": list(UI_WRITE_SECTIONS_ALL),
     "accountant": [
-        "invoices", "hospitality", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
+        "accounting-platform", "invoices", "hospitality", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
         "bank", "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
         "approvals", "backup",
     ],
     "operations": [
-        "estate-platform", "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
+        "estate-platform", "accounting-platform", "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
     ],
-    "maintenance": ["estate-platform", "maintenance", "inventory"],
+    "maintenance": ["estate-platform", "accounting-platform", "maintenance", "inventory"],
     "viewer": [],
 }
 
