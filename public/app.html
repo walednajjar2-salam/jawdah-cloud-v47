@@ -47,6 +47,11 @@
   </div>
   <script>
     (function(){
+      try{
+        var params = new URLSearchParams(location.search || '');
+        var qToken = params.get('token');
+        if(qToken) localStorage.setItem('jawdah_cloud_token', qToken);
+      }catch(_){}
       var token=localStorage.getItem('jawdah_cloud_token');
       var login=document.getElementById('loginScreen');
       var app=document.getElementById('app');
@@ -691,7 +696,7 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=saas56" defer></script>
+  <script src="app.js?v=saas57" defer></script>
   <script src="enterprise-vision.js?v=ev10" defer></script>
   <script src="historic-upgrade.js?v=historic14" defer></script>
   <script src="lq-hub-dashboard.js?v=hub1" defer></script>

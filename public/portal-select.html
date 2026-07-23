@@ -148,16 +148,34 @@
   </main>
 
   <script>
-    (function () {
+    async function ensureSession() {
       const token = localStorage.getItem("jawdah_cloud_token");
-      if (!token) location.replace("/Launch_Quality_LLC.html?v=need-login");
-    })();
+      if (!token) {
+        location.replace("/Launch_Quality_LLC.html?v=need-login");
+        return false;
+      }
+      try {
+        const res = await fetch("/api/me", { headers: { Authorization: "Bearer " + token } });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error("invalid session");
+        return true;
+      } catch (_) {
+        localStorage.removeItem("jawdah_cloud_token");
+        location.replace("/Launch_Quality_LLC.html?v=session-expired");
+        return false;
+      }
+    }
 
-    function enterPortal(choice) {
+    async function enterPortal(choice) {
+      const ok = await ensureSession();
+      if (!ok) return;
       const c = (choice === "hospitality") ? "hospitality" : "realestate";
       localStorage.setItem("jawdah_portal_choice", c);
-      location.replace("/app.html?v=portal-choice-" + c + "-" + Date.now());
+      const token = localStorage.getItem("jawdah_cloud_token") || "";
+      location.replace("/app.html?v=portal-choice-" + c + "-" + Date.now() + "&token=" + encodeURIComponent(token));
     }
+
+    ensureSession();
   </script>
 </body>
 </html>
