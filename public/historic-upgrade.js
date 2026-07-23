@@ -1106,12 +1106,9 @@
   function tuneFloatingAiDock() {
     const dock = q("#visionAiDock");
     if (!dock) return;
-    const isMobile = window.matchMedia("(max-width: 900px)").matches;
-    document.body.classList.toggle("lq-mobile-ai-dock", isMobile);
-    if (isMobile && !dock.dataset.lqMobilePrimed) {
-      dock.classList.add("collapsed");
-      dock.dataset.lqMobilePrimed = "1";
-    }
+    dock.classList.add("hidden");
+    dock.setAttribute("hidden", "");
+    dock.style.display = "none";
   }
 
   function showHistoricSection(id) {

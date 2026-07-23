@@ -456,22 +456,11 @@ const FAB_QUICK_COMMANDS = [
 ];
 function syncFabDock(){
   const dock=$('#saasFabDock'); if(!dock) return;
-  const loggedIn=$('#app') && !$('#app').classList.contains('hidden') && Jawdah.user;
-  dock.classList.toggle('hidden', !loggedIn);
-  const menu=$('#saasFabMenu'); if(!menu || !loggedIn) return;
-  menu.innerHTML=FAB_QUICK_COMMANDS.filter(cmd=>{
-    if(cmd.finance && !canSeeFinanceSection(cmd.section)) return false;
-    return canAccessSection(cmd.section);
-  }).map(cmd=>`<button type="button" class="saas-fab-item" data-fab-section="${htmlEscape(cmd.section)}" data-fab-action="${htmlEscape(cmd.action||'')}"><span class="saas-fab-item-ico">${cmd.icon}</span><span>${htmlEscape(cmd.label)}</span></button>`).join('');
-  if(!menu.dataset.bound){
-    menu.dataset.bound='1';
-    menu.addEventListener('click',e=>{
-      const b=e.target.closest('[data-fab-section]'); if(!b) return;
-      dashCommandClick(b.dataset.fabSection,b.dataset.fabAction||'');
-      $('#saasFabDock')?.classList.remove('open');
-      $('#saasFabToggle')?.setAttribute('aria-expanded','false');
-    });
-  }
+  // Floating assistant / elevator FAB permanently disabled
+  dock.classList.add('hidden');
+  dock.setAttribute('hidden','');
+  dock.style.display='none';
+  return;
 }
 function initFabDock(){
   const dock=$('#saasFabDock'), toggle=$('#saasFabToggle'), top=$('#saasScrollTop');

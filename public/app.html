@@ -40,7 +40,7 @@
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref9">
-  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec9">
+  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec10">
   <link rel="stylesheet" href="lq-login-locked.css?v=locked9">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
@@ -64,7 +64,14 @@
       display:none!important;height:0!important;min-height:0!important;overflow:hidden!important;
     }
 
-    /* FORCE NO TOP VOID — v9 */
+    
+    /* Owner: permanently remove personal assistant + elevator FAB + top void */
+    #visionAiDock,.vision-ai-dock,#saasFabDock,.saas-fab-dock,#saasScrollTop,.saas-scroll-top{
+      display:none!important;visibility:hidden!important;pointer-events:none!important;
+      opacity:0!important;height:0!important;width:0!important;overflow:hidden!important;
+    }
+
+/* FORCE NO TOP VOID — v9 */
     body.saas-luxury,body.app-ready{margin:0!important;padding:0!important}
     body.saas-luxury #loginScreen,body.app-ready #loginScreen,#loginScreen.hidden,#loginScreen[hidden]{
       display:none!important;height:0!important;min-height:0!important;max-height:0!important;
@@ -337,22 +344,7 @@
   </main>
 
   <canvas id="neuralDash" class="ev-neural-canvas hidden" aria-hidden="true"></canvas>
-
-  <aside id="visionAiDock" class="vision-ai-dock hidden" aria-label="Walid AI Assistant">
-    <div class="vision-ai-head">
-      <div class="ev-ai-orb" aria-hidden="true"></div>
-      <h4>WALEED · المساعد الشخصي</h4>
-      <span dir="ltr">Live</span>
-    </div>
-    <div id="visionAiBody" class="vision-ai-body">
-      <div class="vision-ai-msg pred">مرحباً — أنا WALEED، مساعدك الشخصي في Launch Quality.</div>
-    </div>
-    <div id="walidDockPrompts" class="lq-walid-prompts" style="padding:8px 12px"></div>
-    <div class="vision-ai-compose">
-      <input id="visionAiInput" type="text" placeholder="اسأل WALEED · تحدث معي…" dir="auto">
-      <button type="button" id="visionAiSend" class="gold-btn">✦</button>
-    </div>
-  </aside>
+  <!-- visionAiDock removed by owner request -->
 
   <div id="portalSwitchOverlay" class="portal-switch-overlay hidden">
     <div class="portal-switch-card">
@@ -1207,11 +1199,7 @@
   <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
 
   <div id="kpiInsightPanel" class="kpi-insight-panel" aria-hidden="true"></div>
-
-  <div id="saasFabDock" class="saas-fab-dock hidden" aria-label="إجراءات سريعة عائمة">
-    <button type="button" id="saasScrollTop" class="saas-scroll-top" title="الأعلى" aria-label="العودة للأعلى">↑</button>
-    <div id="saasFabMenu" class="saas-fab-menu"></div>
-    <button type="button" id="saasFabToggle" class="saas-fab-main" aria-expanded="false" title="إجراءات سريعة">⚡</button>
+  <!-- saasFabDock / scroll elevator removed by owner request -->
   </div>
 
   <script src="lq-print-templates.js?v=lq2" defer></script>
@@ -1226,9 +1214,9 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal9" defer></script>
-  <script src="enterprise-vision.js?v=ev10" defer></script>
-  <script src="historic-upgrade.js?v=historic19" defer></script>
+  <script src="app.js?v=portal10" defer></script>
+  <script src="enterprise-vision.js?v=ev11" defer></script>
+  <script src="historic-upgrade.js?v=historic20" defer></script>
   <script src="lq-hub-dashboard.js?v=hub9" defer></script>
   <script src="lq-card-views.js?v=cards2" defer></script>
   <script src="lq-login-remember.js?v=lr1" defer></script>
@@ -1236,14 +1224,11 @@
   <script src="lq-workspace-quadrant.js?v=ws3" defer></script>
   <script src="lq-property-photos.js?v=photo1" defer></script>
   <script src="lq-flow-animate.js?v=flow2" defer></script>
-  <script src="lq-waleed-persona.js?v=wp2" defer></script>
-  <script src="lq-role-ui.js?v=role1" defer></script>
+    <script src="lq-role-ui.js?v=role1" defer></script>
   <script src="lq-owner-staff.js?v=own1" defer></script>
-  <script src="lq-waleed-voice.js?v=voice1" defer></script>
-  <script src="lq-ui-unify.js?v=ui2" defer></script>
+    <script src="lq-ui-unify.js?v=ui2" defer></script>
   <script src="lq-layout-v2.js?v=lay9" defer></script>
-  <script src="lq-walid-drag.js?v=wd1" defer></script>
-  <script src="pwa-install.js?v=pwa9" defer></script>
+    <script src="pwa-install.js?v=pwa9" defer></script>
   <script>
     (function(){
       var boot=document.getElementById('lqBootMsg');

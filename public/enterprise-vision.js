@@ -346,7 +346,12 @@
       dashCanvas.classList.toggle('hidden',!loggedIn);
       if(loggedIn&&!dashCanvas._evInit) { initNeuralCanvas('neuralDash',{nodes:36,linkDist:100}); dashCanvas._evInit=true; }
     }
-    if(aiDock) aiDock.classList.toggle('hidden',!loggedIn);
+    if(aiDock){
+      // Personal assistant dock permanently disabled by owner request
+      aiDock.classList.add('hidden');
+      aiDock.setAttribute('hidden','');
+      aiDock.style.display='none';
+    }
     if(!loggedIn && loginCanvas && !loginCanvas._evInit){
       initNeuralCanvas('neuralCanvas');
       loginCanvas._evInit=true;
