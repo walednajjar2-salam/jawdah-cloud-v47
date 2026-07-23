@@ -135,6 +135,58 @@ body.login-ultra.saas-login #loginScreen .login-auth--float {
 .estate-state-fields textarea{
   grid-column:1/-1;
 }
+.estate-photo-gallery{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(180px,1fr));
+  gap:12px;
+}
+.estate-photo-card{
+  background:#fff;
+  border:1px solid #d8e4f6;
+  border-radius:12px;
+  overflow:hidden;
+}
+.estate-photo-shot{
+  width:100%;
+  border:0;
+  padding:0;
+  margin:0;
+  background:#eef3fb;
+  display:block;
+  cursor:pointer;
+}
+.estate-photo-shot img{
+  width:100%;
+  height:130px;
+  object-fit:cover;
+  display:block;
+}
+.estate-photo-meta{
+  padding:8px 10px 10px;
+}
+.estate-photo-meta b{
+  display:block;
+  color:#1f4ea5;
+  margin-bottom:4px;
+}
+.estate-photo-meta small{
+  color:#60758f;
+}
+.estate-photo-btn{
+  border:0;
+  background:transparent;
+  padding:0;
+  cursor:pointer;
+}
+.estate-table-thumb{
+  width:68px;
+  height:50px;
+  border-radius:8px;
+  border:1px solid #c9daf3;
+  object-fit:cover;
+  display:block;
+  background:#edf3ff;
+}
 
 /* Windows/Desktop-first estate layout polish */
 @media (min-width: 1100px){
@@ -181,6 +233,9 @@ body.login-ultra.saas-login #loginScreen .login-auth--float {
     max-height: 460px;
     overflow: auto;
   }
+  #sec-estate-platform .estate-photo-gallery{
+    grid-template-columns:repeat(6,minmax(160px,1fr));
+  }
   #sec-estate-platform table{
     table-layout: fixed;
     width: 100%;
@@ -213,5 +268,6 @@ body.login-ultra.saas-login #loginScreen .login-auth--float {
 
 @media (max-width:960px){
   .estate-icon-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}
+  .estate-photo-gallery{grid-template-columns:repeat(2,minmax(150px,1fr))}
   .estate-state-fields{grid-template-columns:1fr}
 }

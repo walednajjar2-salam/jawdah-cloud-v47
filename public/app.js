@@ -3823,6 +3823,29 @@ window.printHospitalityFolio = printHospitalityFolio;
   ];
   const estateRows = (k)=>Array.isArray(Jawdah.data?.[k]) ? Jawdah.data[k] : [];
   const ESTATE_DEFAULT_MAP_LOCATION = 'حي التراث، نزوى، محافظة الداخلية، سلطنة عمان';
+  const ESTATE_DEFAULT_PHOTOS = {
+    property: 'https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&q=80',
+    building: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80',
+    apartment: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=900&q=80',
+    room: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80',
+  };
+  const estateImageUrl = (row, kind='property')=>{
+    const direct = String(row?.image || '').trim();
+    if(direct) return direct;
+    const attachments = String(row?.attachments || '').trim();
+    if(attachments && (attachments.startsWith('http://') || attachments.startsWith('https://') || attachments.startsWith('/uploads/'))){
+      return attachments;
+    }
+    return ESTATE_DEFAULT_PHOTOS[kind] || ESTATE_DEFAULT_PHOTOS.property;
+  };
+  const estateThumbHtml = (row, kind='property', alt='estate-photo')=>{
+    let url = estateImageUrl(row, kind);
+    if(url.startsWith('/uploads/') && Jawdah.token){
+      const sep = url.includes('?') ? '&' : '?';
+      url = `${url}${sep}token=${encodeURIComponent(Jawdah.token)}`;
+    }
+    return `<button type="button" class="estate-photo-btn" onclick="openEstatePhotoPreview('${encodeURIComponent(url)}','${encodeURIComponent(alt)}')"><img class="estate-table-thumb" src="${htmlEscape(url)}" alt="${htmlEscape(alt)}"></button>`;
+  };
   const estateGoogleMapEmbed = (locationText)=>{
     const q = String(locationText || ESTATE_DEFAULT_MAP_LOCATION).trim() || ESTATE_DEFAULT_MAP_LOCATION;
     return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
@@ -3903,6 +3926,37 @@ window.printHospitalityFolio = printHospitalityFolio;
       toastErr('تعذر نسخ الرابط');
     }
   };
+  window.openEstatePhotoPreview = function(url, alt='estate-photo'){
+    let clean = String(url||'').trim();
+    let cleanAlt = String(alt||'estate-photo');
+    try{ clean = decodeURIComponent(clean); }catch(_e){}
+    try{ cleanAlt = decodeURIComponent(cleanAlt); }catch(_e){}
+    if(!clean) return;
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if(!w) return;
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${htmlEscape(cleanAlt)}</title><style>body{margin:0;background:#0f172a;display:grid;place-items:center;min-height:100vh}img{max-width:96vw;max-height:94vh;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.45)}</style></head><body><img src="${htmlEscape(clean)}" alt="${htmlEscape(cleanAlt)}"></body></html>`);
+    w.document.close();
+  };
+  function renderEstatePhotoGallery(){
+    const host = $('#estatePhotoGallery');
+    if(!host) return;
+    const cards = [];
+    estateRows('estate_properties').slice(0,4).forEach(r=>cards.push({kind:'property',label:`عقار: ${r.name||r.id}`,sub:r.location||'نزوى',row:r}));
+    estateRows('estate_buildings').slice(0,4).forEach(r=>cards.push({kind:'building',label:`بناية: ${r.name||r.id}`,sub:pickName(estateRows('estate_properties'), r.property_id)||'—',row:r}));
+    estateRows('estate_apartments').slice(0,6).forEach(r=>cards.push({kind:'apartment',label:`شقة: ${r.name||r.id}`,sub:pickName(estateRows('estate_buildings'), r.building_id)||'—',row:r}));
+    estateRows('estate_rooms').slice(0,6).forEach(r=>cards.push({kind:'room',label:`غرفة: ${r.name||r.id}`,sub:pickName(estateRows('estate_apartments'), r.apartment_id)||'—',row:r}));
+    const normalized = cards.slice(0,12).map(c=>({
+      kind: c.kind,
+      label: c.label,
+      sub: c.sub,
+      photo: estateImageUrl(c.row || {}, c.kind),
+    }));
+    if(!normalized.length){
+      host.innerHTML = '<p class="mini">لا توجد بيانات صور بعد.</p>';
+      return;
+    }
+    host.innerHTML = normalized.map(c=>`<article class="estate-photo-card"><button type="button" class="estate-photo-shot" onclick="openEstatePhotoPreview('${encodeURIComponent(c.photo)}','${encodeURIComponent(c.label)}')"><img src="${htmlEscape(c.photo)}" alt="${htmlEscape(c.label)}"></button><div class="estate-photo-meta"><b>${htmlEscape(c.label)}</b><small>${htmlEscape(c.sub||'')}</small></div></article>`).join('');
+  }
   const clientName = (id)=>htmlEscape(byId('clients',id).name||'');
   const pickName = (arr,id)=>htmlEscape((arr.find(x=>x.id===id)||{}).name||'');
   const roomStatusLabel = (s)=>{
@@ -4059,19 +4113,20 @@ window.printHospitalityFolio = printHospitalityFolio;
 
     const propTable = $('#estatePropertiesTable');
     if(propTable) propTable.innerHTML = tableHtml(
-      [['الاسم','name'],['الحالة','status',(v)=>statusBadge(estateActiveStatusLabel(v))],['الموقع','location'],['عدد البنايات','building_count'],['عدد الشقق','apartment_count'],['عدد الغرف','room_count'],['سعر الإيجار الأساسي','base_rent_price',(v)=>money(v)],['رسوم الخدمة','service_charge',(v)=>money(v)],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)],['ملحقات','attachments'],['ملاحظات','notes']],
+      [['الصورة','id',(_,r)=>estateThumbHtml(r,'property',`عقار ${r.name||r.id}`)],['الاسم','name'],['الحالة','status',(v)=>statusBadge(estateActiveStatusLabel(v))],['الموقع','location'],['عدد البنايات','building_count'],['عدد الشقق','apartment_count'],['عدد الغرف','room_count'],['سعر الإيجار الأساسي','base_rent_price',(v)=>money(v)],['رسوم الخدمة','service_charge',(v)=>money(v)],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)],['ملحقات','attachments'],['ملاحظات','notes']],
       props,
       r=>`<button class="ghost" onclick="editRecord('estate_properties','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_properties','${r.id}')">حذف</button>`
     );
     const bTable = $('#estateBuildingsTable');
     if(bTable) bTable.innerHTML = tableHtml(
-      [['العقار','property_id',(v)=>pickName(props,v)],['البناية','name'],['الحالة','status',(v)=>statusBadge(estateActiveStatusLabel(v))],['الموقع','location'],['عدد الشقق','apartment_count'],['عدد الغرف','room_count'],['سعر الإيجار الأساسي','base_rent_price',(v)=>money(v)],['رسوم الخدمة','service_charge',(v)=>money(v)],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      [['الصورة','id',(_,r)=>estateThumbHtml(r,'building',`بناية ${r.name||r.id}`)],['العقار','property_id',(v)=>pickName(props,v)],['البناية','name'],['الحالة','status',(v)=>statusBadge(estateActiveStatusLabel(v))],['الموقع','location'],['عدد الشقق','apartment_count'],['عدد الغرف','room_count'],['سعر الإيجار الأساسي','base_rent_price',(v)=>money(v)],['رسوم الخدمة','service_charge',(v)=>money(v)],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
       blds,
       r=>`<button class="ghost" onclick="editRecord('estate_buildings','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_buildings','${r.id}')">حذف</button>`
     );
     const aTable = $('#estateApartmentsTable');
     if(aTable) aTable.innerHTML = tableHtml(
       [
+        ['الصورة','id',(_,r)=>estateThumbHtml(r,'apartment',`شقة ${r.name||r.id}`)],
         ['العقار','property_id',(v)=>pickName(props,v)],
         ['البناية','building_id',(v)=>pickName(blds,v)],
         ['الشقة','name'],
@@ -4106,7 +4161,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     );
     const rTable = $('#estateRoomsTable');
     if(rTable) rTable.innerHTML = tableHtml(
-      [['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','name'],['النوع','room_type'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['سعر الغرفة','rent_price',(v)=>money(v)],['تأمين الحجز','booking_deposit',(v)=>money(v)],['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],['فترة الحجز','id',(_,r)=>String(r.status||'').toLowerCase()==='reserved' ? `${htmlEscape(r.reservation_start_date||'—')} → ${htmlEscape(r.reservation_end_date||'—')}` : '—'],['تفاصيل الحجز/الصيانة','id',(_,r)=>{const st=String(r.status||'').toLowerCase(); if(st==='reserved') return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`; if(st==='maintenance') return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`; return '—';}],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      [['الصورة','id',(_,r)=>estateThumbHtml(r,'room',`غرفة ${r.name||r.id}`)],['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','name'],['النوع','room_type'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['سعر الغرفة','rent_price',(v)=>money(v)],['تأمين الحجز','booking_deposit',(v)=>money(v)],['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],['فترة الحجز','id',(_,r)=>String(r.status||'').toLowerCase()==='reserved' ? `${htmlEscape(r.reservation_start_date||'—')} → ${htmlEscape(r.reservation_end_date||'—')}` : '—'],['تفاصيل الحجز/الصيانة','id',(_,r)=>{const st=String(r.status||'').toLowerCase(); if(st==='reserved') return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`; if(st==='maintenance') return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`; return '—';}],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
       rooms,
       r=>{
         const st = String(r.status||'').toLowerCase();
@@ -4164,6 +4219,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   }
   window.renderEstatePlatform = function(){
     renderEstateIcons();
+    renderEstatePhotoGallery();
     fillEstateSelects();
     const props = estateRows('estate_properties');
     const blds = estateRows('estate_buildings');
