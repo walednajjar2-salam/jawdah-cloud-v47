@@ -213,7 +213,7 @@
       localStorage.setItem("jawdah_portal_choice", c);
       if (token) localStorage.setItem("jawdah_cloud_token", token);
       // Always carry portal + token in the URL so app.html never falls back to login
-      let url = "/app.html?fresh=20260723v11&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
+      let url = "/app.html?fresh=20260723v12&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
       if (token) url += "&token=" + encodeURIComponent(token);
       location.replace(url);
     }

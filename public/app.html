@@ -453,7 +453,7 @@
           <div class="app-header-actions">
             <button id="portalSwitchBtn" class="tb-icon" type="button" title="التبديل بين العقارات والضيافة والمحاسبة">🧭</button>
             <button class="tb-icon tb-bell" type="button" title="التنبيهات" onclick="showSection('messages')"><span class="bell-glyph">🔔</span><span id="bellDot" class="bell-dot hidden"></span></button>
-            <button class="add-new-btn saas-quick-btn lq-write-only" type="button" onclick="showSection('properties')">+ جديد</button>
+            <button class="add-new-btn saas-quick-btn lq-write-only" type="button" onclick="quickAddNew()">+ جديد</button>
             <div class="userbox userbox-pro">
               <div id="avatar" class="avatar avatar-pro">ق</div>
               <div>
@@ -586,7 +586,7 @@
             <button type="button" class="estate-dock-btn" data-estate-panel="tables" onclick="showEstatePanel('tables')"><span>📋</span><b>جداول</b></button>
             <button type="button" class="estate-dock-btn" data-estate-panel="booking" onclick="showEstatePanel('booking')"><span>📌</span><b>حجز وعقود</b></button>
             <button type="button" class="estate-dock-btn" data-estate-panel="finance" onclick="showEstatePanel('finance')"><span>💰</span><b>تحصيل وإقفال</b></button>
-            <button type="button" class="estate-dock-btn" data-estate-panel="hospitality" onclick="showSection('hospitality')"><span>🏨</span><b>الضيافة</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>الضيافة</b></button>
           </nav>
 
           <div class="estate-panels">
@@ -1253,8 +1253,8 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal13" defer></script>
-  <script src="lq-edition-terrifying.js?v=td1" defer></script>
+  <script src="app.js?v=portal14" defer></script>
+  <script src="lq-edition-terrifying.js?v=td2" defer></script>
   <script src="enterprise-vision.js?v=ev11" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>
   <script src="lq-hub-dashboard.js?v=hub11" defer></script>

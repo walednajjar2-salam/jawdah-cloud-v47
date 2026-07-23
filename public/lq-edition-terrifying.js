@@ -210,6 +210,7 @@
           edition_label: EDITION.labelAr,
           ui_version: EDITION.uiVersion,
           terrifying: effectivenessReport(),
+          command_chain: typeof window.LQ_COMMAND_CHAIN_READY === "function" ? window.LQ_COMMAND_CHAIN_READY() : null,
         });
       };
     });

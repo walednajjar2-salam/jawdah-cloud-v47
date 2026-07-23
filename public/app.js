@@ -75,6 +75,7 @@ function canSeeApprovals(){ return Jawdah.user && ['admin','owner','accountant',
 function canDecideApprovals(){ return Jawdah.user && ['admin','owner','accountant'].includes(Jawdah.user.role); }
 function canActivateContracts(){ return Jawdah.user && ['admin','owner'].includes(Jawdah.user.role); }
 function canSeeInventory(){ return Jawdah.user && ['admin','owner','accountant','operations','maintenance'].includes(Jawdah.user.role); }
+function canSeeFinance(){ return Jawdah.user && ['admin','owner','accountant'].includes(Jawdah.user.role); }
 function canSeeFinanceSection(id){
   if(id==='inventory') return canSeeInventory();
   return canSeeFinance();
@@ -1037,7 +1038,7 @@ function buildNav(){
   });
   if(canSeeFinance() || canSeeInventory()){
     addGroup('Finance · المالية');
-    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘']].forEach(([id,label,icon])=>{
+    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{
       if(!canSeeFinanceSection(id)) return;
       const b=document.createElement('button'); b.dataset.section=id; b.className='nav-finance-extra';
       b.innerHTML=`<span class="nav-icon">${icon}</span><span class="nav-text"><span class="nav-ar">${label}</span></span>`;
@@ -1066,7 +1067,7 @@ function renderDashSideMenu(){
     items.push({id,label,icon});
   });
   if(canSeeFinance() || canSeeInventory()){
-    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
+    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
   }
   if(canManageUsersSection()) items.push({id:'users',label:'المستخدمين',icon:'🛡️'});
   if(isPrimaryOwnerUser()) items.push({id:'owner-live',label:'لوحة المالك الحية',icon:'🛰️'});
@@ -1089,6 +1090,7 @@ function showSection(id){
     return;
   }
   const resolved=resolveSection(id);
+  syncPortalChoiceFromSection(resolved);
   const needsSkeleton=!['dashboard','owner-staff','owner-live','tasks','messages','walid','enterprise','timeline','hospitality'].includes(resolved);
   if(needsSkeleton){ const sk=$('#sec-'+resolved); if(sk && !sk.dataset.rendered) renderSectionSkeleton(id); }
   Jawdah.activeSection=id;
@@ -1132,8 +1134,10 @@ function showSection(id){
     if(typeof window.renderContractsAdvanced==='function') window.renderContractsAdvanced();
   }
   if(resolved==='statements' && typeof loadFinancialStatements === 'function') loadFinancialStatements();
+  if(resolved==='production' && typeof loadProductionStatus === 'function') loadProductionStatus();
   if(typeof renderFinanceSuite==='function' && ['revenues','admin-expenses','accounts','purchases','payroll','inventory','bank','chart-accounts','statements','bank-reconciliation','financial-periods'].includes(resolved)) renderFinanceSuite();
   if(resolved==='approvals' && window.LQ_APPROVALS){ const g=$('#approvalsGuide'); if(g) g.innerHTML=LQ_APPROVALS.explainHtml(); LQ_APPROVALS.renderTable(); }
+  if(resolved==='qa' && typeof renderQA==='function') renderQA();
   if(innerWidth<1100) $('#sidebar').classList.remove('open');
   window.scrollTo({top:0,behavior:'smooth'});
   setTimeout(scheduleDrawCharts,50); ensureEnglishDigits();
@@ -3682,6 +3686,26 @@ function choosePortal(portal){
   else if(choice==='accounting') showSection('accounting-platform');
   else showSection('estate-platform');
 }
+function syncPortalChoiceFromSection(sectionId){
+  const id=String(sectionId||'');
+  if(id==='hospitality') localStorage.setItem('jawdah_portal_choice','hospitality');
+  else if(id==='accounting-platform' || id==='accounts') localStorage.setItem('jawdah_portal_choice','accounting');
+  else if(id==='estate-platform' || id==='properties') localStorage.setItem('jawdah_portal_choice','realestate');
+}
+function quickAddNew(){
+  const portal=localStorage.getItem('jawdah_portal_choice')||'realestate';
+  if(portal==='hospitality'){
+    showSection('hospitality');
+    setTimeout(()=>{ try{ $('#hbGuest')?.focus(); }catch(_){ } }, 80);
+    return;
+  }
+  if(portal==='accounting'){
+    showSection(canSeeFinance()?'accounts':'accounting-platform');
+    return;
+  }
+  showSection('properties');
+}
+window.quickAddNew = quickAddNew;
 function applySavedPortalChoice(){
   const choice = localStorage.getItem('jawdah_portal_choice');
   if(!choice){
@@ -4237,6 +4261,53 @@ window.LAUNCH_QUALITY_CHECK=()=>({
   tables:Object.fromEntries(Object.entries(Jawdah.data).map(([k,v])=>[k,v.length])),
   dashboard:Jawdah.dashboard
 });
+function commandChainReady(){
+  const localOk={
+    showSection: typeof showSection==='function',
+    choosePortal: typeof choosePortal==='function',
+    quickAddNew: typeof quickAddNew==='function',
+    dashCommandClick: typeof dashCommandClick==='function',
+    buildNav: typeof buildNav==='function',
+    canSeeFinance: typeof canSeeFinance==='function',
+    canSeeInventory: typeof canSeeInventory==='function',
+    canAccessSection: typeof canAccessSection==='function',
+    applySavedPortalChoice: typeof applySavedPortalChoice==='function',
+    showEstatePanel: typeof window.showEstatePanel==='function',
+    ensureForceEstateDock: typeof window.ensureForceEstateDock==='function',
+  };
+  const sectionIds=[
+    'dashboard','estate-platform','accounting-platform','hospitality','properties','clients',
+    'contracts','invoices','accounts','maintenance','reports','backup','users','production','qa',
+    'revenues','admin-expenses','purchases','payroll','inventory','bank','chart-accounts',
+    'statements','bank-reconciliation','financial-periods','approvals','daily-ops','tasks','messages'
+  ];
+  const missingSections=sectionIds.filter(id=>!document.getElementById('sec-'+id));
+  const headerOk={
+    settings: !!document.getElementById('headerSettingsBtn'),
+    portal: !!document.getElementById('portalSwitchBtn'),
+    clock: !!document.getElementById('clock'),
+    logout: !!document.getElementById('logoutBtn'),
+    search: !!document.getElementById('globalSearch'),
+    edition: !!document.getElementById('lqEditionBadge'),
+  };
+  const fnScore=Object.values(localOk).filter(Boolean).length;
+  const hdrScore=Object.values(headerOk).filter(Boolean).length;
+  const secScore=sectionIds.length-missingSections.length;
+  const total=Object.keys(localOk).length+Object.keys(headerOk).length+sectionIds.length;
+  const got=fnScore+hdrScore+secScore;
+  const score=Math.round((got/total)*100);
+  return {
+    ok: score>=95 && missingSections.length===0 && Object.values(localOk).every(Boolean),
+    score,
+    status: score>=95?'ready':(score>=80?'almost':'broken'),
+    functions: localOk,
+    header: headerOk,
+    missingSections,
+    portal: localStorage.getItem('jawdah_portal_choice')||null,
+    edition: APP_BASE_EDITION,
+  };
+}
+window.LQ_COMMAND_CHAIN_READY = commandChainReady;
 window.addEventListener('load',()=>{
   applyTerrifyingBase();
   syncLoginOwnerBranding();
@@ -4245,6 +4316,13 @@ window.addEventListener('load',()=>{
   checkSession();
   renderBiometricHub();
   setInterval(()=>ensureEnglishDigits(),3000);
+  setTimeout(()=>{
+    try{
+      const report=commandChainReady();
+      window.__LQ_COMMAND_CHAIN__=report;
+      if(report && !report.ok) console.warn('[LQ] command chain', report);
+    }catch(e){}
+  },1500);
 });
 window.addEventListener('error',()=>true);
 window.addEventListener('unhandledrejection',e=>{ e.preventDefault(); });
@@ -4730,7 +4808,7 @@ window.printHospitalityFolio = printHospitalityFolio;
         ['finance','💰','تحصيل وإقفال'],
       ];
       host.innerHTML = items.map(([id,icon,label])=>`<button type="button" data-estate-panel="${id}" onclick="showEstatePanel('${id}')"><span>${icon}</span><b>${label}</b></button>`).join('')
-        + `<button type="button" data-estate-panel="hospitality" onclick="showSection('hospitality')"><span>🏨</span><b>الضيافة</b></button>`;
+        + `<button type="button" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>الضيافة</b></button>`;
       const header = shell.querySelector('.app-header');
       if(header && header.nextSibling) header.parentNode.insertBefore(host, header.nextSibling);
       else shell.insertBefore(host, shell.firstChild);
