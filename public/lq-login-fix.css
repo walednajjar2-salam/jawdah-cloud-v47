@@ -151,7 +151,19 @@ body.login-ultra #loginScreen .login-auth--float{
   width:100% !important;
   background:transparent !important;
   border:0 !important;
+  box-shadow:none !important;
   transform:none !important;
+  overflow:visible !important;
+}
+/* Never duplicate the portal photo inside the form card — it is background only */
+body.login-ultra #loginScreen .login-glass-stage::before,
+body.login-ultra #loginScreen .login-glass-stage::after{
+  content:none !important;
+  display:none !important;
+  background:none !important;
+  min-height:0 !important;
+  width:0 !important;
+  height:0 !important;
 }
 
 /* Transparent form card */

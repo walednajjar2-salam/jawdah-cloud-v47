@@ -267,22 +267,18 @@ body.login-ultra.saas-login #loginScreen .login-stage.login-stage--center{
   width:min(1180px,95vw);
 }
 body.login-ultra.saas-login #loginScreen .login-glass-stage{
-  display:grid;
-  grid-template-columns:minmax(260px,40%) minmax(360px,60%);
-  align-items:stretch;
+  display:block;
   border-radius:26px;
-  overflow:hidden;
-  border:1px solid #dbe5f2;
-  box-shadow:0 24px 48px rgba(39,66,112,.13);
-  background:#fff;
+  overflow:visible;
+  border:0;
+  box-shadow:none;
+  background:transparent;
 }
 body.login-ultra.saas-login #loginScreen .login-glass-stage::before{
-  content:"";
-  display:block;
-  min-height:620px;
-  background:
-    linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.22)),
-    url("assets/login-portal-bg.png") center center/cover no-repeat;
+  content:none !important;
+  display:none !important;
+  background:none !important;
+  min-height:0 !important;
 }
 body.login-ultra.saas-login #loginScreen .login-glass-stage-shine{
   display:none !important;
