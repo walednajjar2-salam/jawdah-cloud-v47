@@ -119,6 +119,7 @@ def _load_public_asset(name: str, fallback: str) -> str:
         pass
     return fallback
 
+FALLBACK_APP_HTML = _load_public_asset("app.html", FALLBACK_INDEX_HTML)
 FALLBACK_INDEX_HTML = _load_public_asset("index.html", FALLBACK_INDEX_HTML)
 FALLBACK_CSS = _load_public_asset("app.css", FALLBACK_CSS)
 FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
@@ -3109,10 +3110,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return
         # Safe fallback for serving the main interface.
         if path == "/app.html":
-            raw = FALLBACK_INDEX_HTML.encode("utf-8")
+            raw = FALLBACK_APP_HTML.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
             self.end_headers()
             self.wfile.write(raw)
             return
