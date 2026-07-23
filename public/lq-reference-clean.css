@@ -379,7 +379,10 @@ body.app-ready:not([data-theme]) #timelinePageBox #timelineAuditFeed .table-wrap
     grid-template-columns:1fr;
   }
   body.login-ultra.saas-login #loginScreen .login-glass-stage::before{
-    min-height:220px;
+    content:none !important;
+    display:none !important;
+    min-height:0 !important;
+    background:none !important;
   }
 }
 
