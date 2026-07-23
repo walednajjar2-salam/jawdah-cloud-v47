@@ -28,9 +28,13 @@ def request(method: str, path: str, body: dict | None = None, token: str | None 
         headers["Authorization"] = f"Bearer {token}"
     payload = None if body is None else json.dumps(body, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(url, data=payload, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        raw = resp.read().decode("utf-8")
-    return json.loads(raw) if raw else {}
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            raw = resp.read().decode("utf-8")
+        return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as exc:
+        text = exc.read().decode("utf-8")
+        raise RuntimeError(f"HTTP {exc.code} {path}: {text}") from exc
 
 
 def request_expect_error(
@@ -140,42 +144,70 @@ def main() -> int:
         )
         bld_id = b1["item"]["id"]
         check("إنشاء بناية مرتبطة", bool(bld_id), bld_id)
+        prop_rows = request("GET", "/estate_properties", token=token).get("items", [])
+        bld_rows = request("GET", "/estate_buildings", token=token).get("items", [])
+        prop_exists = any(x.get("id") == prop_id for x in prop_rows)
+        bld_exists = any(x.get("id") == bld_id for x in bld_rows)
+        check("تأكيد حفظ العقار بعد الإنشاء", prop_exists, f"rows={len(prop_rows)}")
+        check("تأكيد حفظ البناية بعد الإنشاء", bld_exists, f"rows={len(bld_rows)}")
 
-        a1 = request(
-            "POST",
-            "/estate_apartments",
-            {
-                "property_id": prop_id,
-                "building_id": bld_id,
-                "name": "A-101",
-                "status": "reserved",
-                "room_count": 2,
-                "rent_price": 250,
-                "booking_deposit": 50,
-                "prepaid_amount": 20,
-                "reservation_start_date": today_s,
-                "reservation_end_date": end_s,
-                "booked_client_name": "عميل QA",
-                "booked_client_phone": "90000001",
-                "booked_client_id": client_id,
-                "booked_by_employee": "موظف QA",
-            },
-            token=token,
-        )
-        apt_id = a1["item"]["id"]
-        check("إنشاء شقة بحالة محجوزة", bool(apt_id), apt_id)
+        apt_id = ""
+        reserved_created = False
+        try:
+            a1 = request(
+                "POST",
+                "/estate_apartments",
+                {
+                    "property_id": prop_id,
+                    "building_id": bld_id,
+                    "name": "A-101",
+                    "status": "reserved",
+                    "room_count": 2,
+                    "rent_price": 250,
+                    "booking_deposit": 50,
+                    "prepaid_amount": 20,
+                    "reservation_start_date": today_s,
+                    "reservation_end_date": end_s,
+                    "booked_client_name": "عميل QA",
+                    "booked_client_phone": "90000001",
+                    "booked_client_id": client_id,
+                    "booked_by_employee": "موظف QA",
+                },
+                token=token,
+            )
+            apt_id = a1["item"]["id"]
+            reserved_created = True
+            check("إنشاء شقة بحالة محجوزة", bool(apt_id), apt_id)
+        except Exception as exc:
+            check("إنشاء شقة بحالة محجوزة", False, str(exc))
+            apt_id = "APT-QA-FALLBACK"
+            with sqlite3.connect(server.DB_PATH) as db:
+                db.execute(
+                    """
+                    INSERT INTO estate_apartments
+                    (id,property_id,building_id,name,status,room_count,rent_price,tenant_client_id,tenant_phone,last_update)
+                    VALUES(?,?,?,?,?,?,?,?,?,date('now'))
+                    """,
+                    (apt_id, prop_id, bld_id, "A-101", "occupied", 2, 250, client_id, "90000001"),
+                )
+                db.commit()
+            check("إنشاء شقة بديلة لاستكمال السيناريو", True, apt_id)
 
-        inv_list = request("GET", "/estate_reservation_invoices", token=token).get("items", [])
-        open_res = [x for x in inv_list if x.get("entity_id") == apt_id and str(x.get("status", "")).lower() == "open"]
-        check("إنشاء فاتورة حجز تلقائية", len(open_res) >= 1, f"open={len(open_res)}")
+        if reserved_created:
+            inv_list = request("GET", "/estate_reservation_invoices", token=token).get("items", [])
+            open_res = [x for x in inv_list if x.get("entity_id") == apt_id and str(x.get("status", "")).lower() == "open"]
+            check("إنشاء فاتورة حجز تلقائية", len(open_res) >= 1, f"open={len(open_res)}")
 
-        conv = request(
-            "POST",
-            "/estate_convert_reservation",
-            {"entity_type": "apartment", "entity_id": apt_id, "tenant_client_id": client_id, "note": "QA convert"},
-            token=token,
-        )
-        check("تحويل محجوز → مؤجرة", conv.get("status") == "occupied", f"status={conv.get('status')}")
+            conv = request(
+                "POST",
+                "/estate_convert_reservation",
+                {"entity_type": "apartment", "entity_id": apt_id, "tenant_client_id": client_id, "note": "QA convert"},
+                token=token,
+            )
+            check("تحويل محجوز → مؤجرة", conv.get("status") == "occupied", f"status={conv.get('status')}")
+        else:
+            check("إنشاء فاتورة حجز تلقائية", False, "تخطيت بسبب فشل إنشاء شقة reserved عبر API")
+            check("تحويل محجوز → مؤجرة", False, "تخطيت بسبب فشل إنشاء شقة reserved عبر API")
 
         contract = request(
             "POST",

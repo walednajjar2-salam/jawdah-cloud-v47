@@ -2690,7 +2690,8 @@ def ensure_estate_reservation_invoice(
             "category": "Estate Reservation",
             "description": f"Reservation {row['invoice_no']} - {entity_type} {entity_id}",
             "client_id": client_id,
-            "property_id": row.get("property_id"),
+            # accounts.property_id references legacy properties table, not estate_properties
+            "property_id": None,
             "invoice_id": None,
             "amount": total,
         },
@@ -4947,7 +4948,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
         )
         contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (row["contract_id"],)).fetchone()
         client_id = contract["client_id"] if contract else None
-        property_id = contract["property_id"] if contract else None
+        estate_property_ref = contract["property_id"] if contract else None
         insert(
             db,
             "accounts",
@@ -4956,9 +4957,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "entry_date": payment_date,
                 "type": "income",
                 "category": "Estate Contract Collection",
-                "description": f"Collection {row['invoice_no']}",
+                "description": f"Collection {row['invoice_no']} (estate:{estate_property_ref or '-'})",
                 "client_id": client_id,
-                "property_id": property_id,
+                # accounts.property_id references legacy properties table, not estate_properties
+                "property_id": None,
                 "invoice_id": None,
                 "amount": amount,
             },
