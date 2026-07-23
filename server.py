@@ -3640,7 +3640,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(raw)))
-            if safe.endswith(".html"):
+            if full.suffix.lower() in {".exe", ".msi", ".zip", ".apk"}:
+                self.send_header("Content-Disposition", f'attachment; filename="{full.name}"')
+                self.send_header("Cache-Control", "no-cache, must-revalidate")
+            elif safe.endswith(".html"):
                 self.send_header("Cache-Control", "no-cache, must-revalidate")
             elif safe.endswith((".css", ".js")):
                 self.send_header("Cache-Control", "public, max-age=300, must-revalidate")
