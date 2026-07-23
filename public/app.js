@@ -68,7 +68,7 @@ const SECTION_TITLES = {
   'chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية',statements:'القوائم المالية',
   approvals:'مركز الاعتمادات'
 };
-function resolveSection(id){ return id==='settings' ? (isPrimaryOwnerUser() ? 'users' : 'backup') : id; }
+function resolveSection(id){ return id==='settings' ? (canManageUsersSection() ? 'users' : 'backup') : id; }
 function canSeeApprovals(){ return Jawdah.user && ['admin','owner','accountant','operations'].includes(Jawdah.user.role); }
 function canDecideApprovals(){ return Jawdah.user && ['admin','owner','accountant'].includes(Jawdah.user.role); }
 function canActivateContracts(){ return Jawdah.user && ['admin','owner'].includes(Jawdah.user.role); }
@@ -83,6 +83,7 @@ const DISPLAY_OWNER_NAME = 'القائد يعقوب بن فاضل الخصيبي
 const DISPLAY_OWNER_ROLE = 'المالك العام';
 const OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
 const PRIMARY_OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
+const EXECUTIVE_MANAGER_USERNAMES = new Set(['ahmed.najjar','ahmed']);
 const DAILY_OPS_MANAGER_USERNAMES = new Set(['razan','yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
 const DAILY_OPS_ICON_BY_USERNAME = {
   'owner': '👑',
@@ -219,6 +220,10 @@ function isPrimaryOwnerUser(){
   const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
   return PRIMARY_OWNER_USERNAMES.has(uname);
 }
+function canManageUsersSection(){
+  const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
+  return isPrimaryOwnerUser() || EXECUTIVE_MANAGER_USERNAMES.has(uname);
+}
 function uiAllowedSection(id){
   if(id==='hospitality' || id==='owner-live') return true;
   const s=Jawdah.uiPermissions?.sections;
@@ -230,7 +235,7 @@ function canAccessSection(id){
   if(!uiAllowedSection(id)) return false;
   if(id==='inventory' && !canSeeInventory()) return false;
   if(FINANCE_SECTIONS.has(id) && id!=='inventory' && !canSeeFinance()) return false;
-  if(id==='users' && !isPrimaryOwnerUser()) return false;
+  if(id==='users' && !canManageUsersSection()) return false;
   if(id==='owner-staff' && !isPrimaryOwnerUser()) return false;
   if(id==='owner-live' && !isPrimaryOwnerUser()) return false;
   if(id==='approvals' && !canSeeApprovals()) return false;
@@ -730,11 +735,13 @@ function employeeGreeting(name){
 function buildNav(){
   const nav=$('#nav'); if(!nav) return; nav.innerHTML='';
   const addGroup=(t)=>{const g=document.createElement('div'); g.className='nav-group-label'; g.textContent=t; nav.appendChild(g);};
-  if(isPrimaryOwnerUser()){
+  if(canManageUsersSection()){
     addGroup('Owner · المالك');
-    const ob=document.createElement('button'); ob.dataset.section='owner-staff';
-    ob.innerHTML='<span class="nav-icon">👑</span><span class="nav-text"><span class="nav-ar">متابعة الموظفين</span></span>';
-    ob.onclick=()=>showSection('owner-staff'); nav.appendChild(ob);
+    if(isPrimaryOwnerUser()){
+      const ob=document.createElement('button'); ob.dataset.section='owner-staff';
+      ob.innerHTML='<span class="nav-icon">👑</span><span class="nav-text"><span class="nav-ar">متابعة الموظفين</span></span>';
+      ob.onclick=()=>showSection('owner-staff'); nav.appendChild(ob);
+    }
     if(isPrimaryOwnerUser()){
       const lb=document.createElement('button'); lb.dataset.section='owner-live';
       lb.innerHTML='<span class="nav-icon">🛰️</span><span class="nav-text"><span class="nav-ar">لوحة المالك الحية</span></span>';
@@ -765,7 +772,7 @@ function buildNav(){
     b.innerHTML='<span class="nav-icon">✅</span><span class="nav-text"><span class="nav-ar">مركز الاعتمادات</span></span>';
     b.onclick=()=>showSection('approvals'); nav.appendChild(b);
   }
-  if(isPrimaryOwnerUser()){
+  if(canManageUsersSection()){
     addGroup('Intelligence · الإدارة');
     const b=document.createElement('button'); b.dataset.section='users';
     b.innerHTML=`<span class="nav-icon">🛡️</span><span class="nav-text"><span class="nav-ar">المستخدمين</span></span>`;
@@ -783,7 +790,7 @@ function renderDashSideMenu(){
   if(canSeeFinance() || canSeeInventory()){
     [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
   }
-  if(isPrimaryOwnerUser()) items.push({id:'users',label:'المستخدمين',icon:'🛡️'});
+  if(canManageUsersSection()) items.push({id:'users',label:'المستخدمين',icon:'🛡️'});
   if(isPrimaryOwnerUser()) items.push({id:'owner-live',label:'لوحة المالك الحية',icon:'🛰️'});
   const active=Jawdah.activeSection||'dashboard';
   host.innerHTML=items.map(x=>`<button type="button" class="saas-dash-menu-btn${active===x.id?' active':''}" onclick="showSection('${x.id}')"><span class="saas-dash-menu-ico">${x.icon}</span><span>${htmlEscape(x.label)}</span></button>`).join('');
@@ -1563,7 +1570,7 @@ function renderMaintenance(){
   $('#maintenanceGrid').innerHTML=rows.map(m=>`<div class="card"><h3>${m.title}</h3><p>${propertyLabel(byId('properties',m.property_id))||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord('maintenance','${m.id}')">متابعة</button> <button class="danger" onclick="delRecord('maintenance','${m.id}')">حذف</button></div>`).join('')||'<div class="card">لا توجد طلبات صيانة</div>';
 }
 function renderUsers(){
-  if(!Jawdah.data.users && !isPrimaryOwnerUser()){ $('#usersTable').innerHTML='<div class="card">هذا القسم لوليد ويعقوب فقط</div>'; return; }
+  if(!Jawdah.data.users && !canManageUsersSection()){ $('#usersTable').innerHTML='<div class="card">هذا القسم مخصص لحسابات الإدارة المخولة</div>'; return; }
   if(!Jawdah.data.users){ $('#usersTable').innerHTML='<div class="card mini">جاري تحميل المستخدمين...</div>'; return; }
   $('#usersTable').innerHTML=tableHtml(
     [['المستخدم','username'],['الاسم','name'],['البريد','email'],['الدور','role',(v)=>roleName(v)],['نشط','active',(v)=>v?'<span class="badge paid">نعم</span>':'<span class="badge overdue">لا</span>'],['تغيير كلمة المرور','must_change_password',(v)=>v?'<span class="badge pending">مطلوب</span>':'<span class="badge paid">لا</span>'],['آخر دخول','last_login']],
@@ -2359,9 +2366,9 @@ async function createMaintenance(){ await saveNew('maintenance',{property_id:val
 async function createUser(){
   const username = String(val('uUsername')||'').trim().toLowerCase();
   const role = String(val('uRole')||'viewer').trim().toLowerCase();
-  const fullAccessUsers = new Set(['waleed','yaqoub','waleed.najjar','yaqoub.khasibi']);
+  const fullAccessUsers = new Set(['waleed','yaqoub','ahmed','waleed.najjar','yaqoub.khasibi','ahmed.najjar']);
   if(['owner','admin'].includes(role) && !fullAccessUsers.has(username)){
-    toastNotice('الصلاحية الكاملة (Owner/Admin) متاحة فقط لوليد أو يعقوب');
+    toastNotice('الصلاحية الكاملة (Owner/Admin) متاحة فقط لوليد أو يعقوب أو أحمد');
     return;
   }
   await saveNew('users',{
@@ -2385,8 +2392,10 @@ async function applyUserPermissionTemplate(){
   const plan = {
     'waleed': {role:'owner', active:true},
     'yaqoub': {role:'owner', active:true},
+    'ahmed': {role:'admin', active:true},
     'waleed.najjar': {role:'owner', active:true},
     'yaqoub.khasibi': {role:'owner', active:true},
+    'ahmed.najjar': {role:'admin', active:true},
     'razan': {role:'accountant', active:true},
     'amjad': {role:'operations', active:true},
     'ali': {role:'maintenance', active:true},
