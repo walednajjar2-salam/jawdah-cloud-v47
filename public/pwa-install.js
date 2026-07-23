@@ -45,9 +45,17 @@
     }
   }
 
+  // Disable stale PWA caching for web dashboard reliability.
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {});
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        return Promise.all((regs || []).map(function (reg) { return reg.unregister(); }));
+      }).catch(function () {});
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+          return Promise.all((keys || []).map(function (k) { return caches.delete(k); }));
+        }).catch(function () {});
+      }
     });
   }
 
