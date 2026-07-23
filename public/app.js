@@ -81,7 +81,7 @@ function canSeeFinanceSection(id){
 }
 const FINANCE_SECTIONS = new Set(['revenues','admin-expenses','accounts','purchases','payroll','inventory','bank','chart-accounts','statements','bank-reconciliation','financial-periods']);
 const APP_UI_VERSION = '2026.2';
-const DISPLAY_OWNER_NAME = 'القائد يعقوب بن فاضل الخصيبي';
+const DISPLAY_OWNER_NAME = 'القائد يعقوب فاضل الخصيبي';
 const DISPLAY_OWNER_ROLE = 'المالك العام';
 const OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
 const PRIMARY_OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
@@ -99,9 +99,9 @@ const DAILY_OPS_ICON_BY_USERNAME = {
   'accountant': '💼',
 };
 const OWNER_NAME_BY_USERNAME = {
-  'owner': 'القائد يعقوب بن فاضل الخصيبي',
-  'yaqoub.khasibi': 'القائد يعقوب بن فاضل الخصيبي',
-  'yaqoub': 'القائد يعقوب بن فاضل الخصيبي',
+  'owner': 'القائد يعقوب فاضل الخصيبي',
+  'yaqoub.khasibi': 'القائد يعقوب فاضل الخصيبي',
+  'yaqoub': 'القائد يعقوب فاضل الخصيبي',
   'waleed.najjar': 'وليد نجار',
 };
 function shouldForceClassicMode(user){
@@ -677,6 +677,12 @@ function applyUserHeader(){
   if($('#userName')) $('#userName').textContent=name;
   if($('#userRole')) $('#userRole').textContent=role;
   if($('#avatar')) $('#avatar').textContent=initial;
+  const greet=$('#headerGreeting');
+  if(greet) greet.textContent=dashGreeting();
+  const leader=$('#headerLeaderName');
+  if(leader) leader.textContent=name || DISPLAY_OWNER_NAME;
+  const org=$('#headerOrgName');
+  if(org && !org.textContent.trim()) org.textContent='مشاريع جودة الانطلاقة';
 }
 function toast(msg, err=false){ if(err) toastNotice(msg); else toastOk(msg); }
 function ensureEnglishDigits(root=document.body){
@@ -3477,7 +3483,25 @@ function prepCanvas(c){
 }
 function drawDonut(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=22; g.lineCap='round'; g.strokeStyle='rgba(148,163,184,.14)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#9fd4d0'); gr.addColorStop(.5,'#6aab9e'); gr.addColorStop(1,'#4a8580'); g.strokeStyle=gr; g.shadowBlur=0; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.fillStyle='#e2e8f0'; g.font='700 28px Segoe UI'; g.textAlign='center'; g.fillText(fmt(p)+'%',x,y+6); g.font='13px Segoe UI'; g.fillStyle='rgba(148,163,184,.85)'; g.fillText('Occupancy',x,y+28); }
 function drawBar(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,'#9fd4d0'); grd.addColorStop(1,'#4a8580'); g.fillStyle=grd; g.shadowBlur=0; g.fillRect(x,h-25-bh,bw,bh);}); }
-function initClock(){ setInterval(()=>{ const d=new Date(); $('#clock').textContent=d.toLocaleTimeString('en-US',{hour12:false}); },1000); }
+function syncHeaderClock(){
+  const el=$('#clock');
+  if(!el) return;
+  el.textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
+}
+function syncHeaderGreeting(){
+  const greet=$('#headerGreeting');
+  if(greet) greet.textContent=dashGreeting();
+}
+function initClock(){
+  syncHeaderClock();
+  syncHeaderGreeting();
+  setInterval(()=>{
+    syncHeaderClock();
+    const m=new Date().getMinutes();
+    const s=new Date().getSeconds();
+    if(s===0 && (m===0 || m===30)) syncHeaderGreeting();
+  },1000);
+}
 function initLoginCinema(){
   const screen=$('#loginScreen');
   if(!screen||window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
