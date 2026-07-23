@@ -160,9 +160,11 @@ TABLES = {
     "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
     "estate_properties": ["id", "name", "status", "location", "building_count", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_buildings": ["id", "property_id", "name", "status", "location", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_apartments": ["id", "property_id", "building_id", "name", "status", "room_count", "rent_price", "booking_deposit", "prepaid_amount", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "rent_price", "booking_deposit", "prepaid_amount", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_apartments": ["id", "property_id", "building_id", "name", "status", "room_count", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
+    "estate_status_history": ["id", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "old_status", "new_status", "changed_by", "changed_at", "note"],
+    "estate_reservation_invoices": ["id", "invoice_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "client_name", "issued_by", "issue_date", "due_date", "rent_price", "deposit_amount", "prepaid_amount", "total_amount", "status", "note"],
     "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
@@ -1169,6 +1171,8 @@ def init_db() -> None:
                 rent_price REAL NOT NULL DEFAULT 0,
                 booking_deposit REAL NOT NULL DEFAULT 0,
                 prepaid_amount REAL NOT NULL DEFAULT 0,
+                reservation_start_date TEXT,
+                reservation_end_date TEXT,
                 booked_client_name TEXT,
                 booked_client_phone TEXT,
                 booked_client_id TEXT,
@@ -1196,6 +1200,8 @@ def init_db() -> None:
                 rent_price REAL NOT NULL DEFAULT 0,
                 booking_deposit REAL NOT NULL DEFAULT 0,
                 prepaid_amount REAL NOT NULL DEFAULT 0,
+                reservation_start_date TEXT,
+                reservation_end_date TEXT,
                 booked_client_name TEXT,
                 booked_client_phone TEXT,
                 booked_client_id TEXT,
@@ -1240,6 +1246,41 @@ def init_db() -> None:
                 FOREIGN KEY(building_id) REFERENCES estate_buildings(id) ON DELETE SET NULL,
                 FOREIGN KEY(apartment_id) REFERENCES estate_apartments(id) ON DELETE SET NULL,
                 FOREIGN KEY(room_id) REFERENCES estate_rooms(id) ON DELETE SET NULL
+            );
+            CREATE TABLE IF NOT EXISTS estate_status_history (
+                id TEXT PRIMARY KEY,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                property_id TEXT,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                old_status TEXT,
+                new_status TEXT NOT NULL,
+                changed_by TEXT,
+                changed_at TEXT NOT NULL,
+                note TEXT
+            );
+            CREATE TABLE IF NOT EXISTS estate_reservation_invoices (
+                id TEXT PRIMARY KEY,
+                invoice_no TEXT UNIQUE NOT NULL,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                property_id TEXT,
+                building_id TEXT,
+                apartment_id TEXT,
+                room_id TEXT,
+                client_id TEXT,
+                client_name TEXT,
+                issued_by TEXT,
+                issue_date TEXT NOT NULL,
+                due_date TEXT,
+                rent_price REAL NOT NULL DEFAULT 0,
+                deposit_amount REAL NOT NULL DEFAULT 0,
+                prepaid_amount REAL NOT NULL DEFAULT 0,
+                total_amount REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'Open',
+                note TEXT
             );
             CREATE TABLE IF NOT EXISTS audit_log (
                 id TEXT PRIMARY KEY,
@@ -1466,6 +1507,8 @@ def init_db() -> None:
             ("rent_price", "REAL NOT NULL DEFAULT 0"),
             ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
             ("prepaid_amount", "REAL NOT NULL DEFAULT 0"),
+            ("reservation_start_date", "TEXT"),
+            ("reservation_end_date", "TEXT"),
             ("booked_client_name", "TEXT"),
             ("booked_client_phone", "TEXT"),
             ("booked_client_id", "TEXT"),
@@ -1478,6 +1521,8 @@ def init_db() -> None:
             ("rent_price", "REAL NOT NULL DEFAULT 0"),
             ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
             ("prepaid_amount", "REAL NOT NULL DEFAULT 0"),
+            ("reservation_start_date", "TEXT"),
+            ("reservation_end_date", "TEXT"),
             ("booked_client_name", "TEXT"),
             ("booked_client_phone", "TEXT"),
             ("booked_client_id", "TEXT"),
@@ -2324,6 +2369,113 @@ def next_invoice_no(db: sqlite3.Connection) -> tuple[str, int, int]:
     ).fetchone()[0]
     seq = int(row or 0) + 1
     return f"{prefix}{seq:04d}", year, seq
+
+
+def next_estate_reservation_invoice_no(db: sqlite3.Connection) -> str:
+    year = date.today().year
+    prefix = f"RSV-{year}-"
+    row = db.execute(
+        "SELECT MAX(CAST(substr(invoice_no, -4) AS INTEGER)) FROM estate_reservation_invoices WHERE invoice_no LIKE ?",
+        (prefix + "%",),
+    ).fetchone()[0]
+    seq = int(row or 0) + 1
+    return f"{prefix}{seq:04d}"
+
+
+def log_estate_status_history(
+    db: sqlite3.Connection,
+    entity_type: str,
+    entity_id: str,
+    payload: Dict[str, Any],
+    old_status: str,
+    new_status: str,
+    actor_name: str,
+    note: str = "",
+) -> None:
+    insert(
+        db,
+        "estate_status_history",
+        {
+            "id": uid("ESH"),
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "property_id": payload.get("property_id"),
+            "building_id": payload.get("building_id"),
+            "apartment_id": payload.get("apartment_id") if entity_type == "room" else payload.get("id"),
+            "room_id": payload.get("id") if entity_type == "room" else None,
+            "old_status": old_status or None,
+            "new_status": new_status,
+            "changed_by": actor_name,
+            "changed_at": now_iso(),
+            "note": note,
+        },
+    )
+
+
+def ensure_estate_reservation_invoice(
+    db: sqlite3.Connection,
+    entity_type: str,
+    entity_id: str,
+    payload: Dict[str, Any],
+    actor_name: str,
+) -> None:
+    open_row = db.execute(
+        "SELECT id FROM estate_reservation_invoices WHERE entity_type=? AND entity_id=? AND lower(status)='open' ORDER BY rowid DESC LIMIT 1",
+        (entity_type, entity_id),
+    ).fetchone()
+    if open_row:
+        return
+    deposit = round(float(payload.get("booking_deposit") or 0), 3)
+    prepaid = round(float(payload.get("prepaid_amount") or 0), 3)
+    rent = round(float(payload.get("rent_price") or 0), 3)
+    total = round(max(0.0, deposit + prepaid), 3)
+    if total <= 0:
+        return
+    issue_date = today()
+    due_date = str(payload.get("reservation_start_date") or issue_date)
+    client_id = str(payload.get("booked_client_id") or "").strip() or None
+    client_name = str(payload.get("booked_client_name") or "").strip() or ""
+    if client_id and not client_name:
+        c = db.execute("SELECT name FROM clients WHERE id=?", (client_id,)).fetchone()
+        if c:
+            client_name = str(c["name"] or "")
+    row = {
+        "id": uid("RSV"),
+        "invoice_no": next_estate_reservation_invoice_no(db),
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "property_id": payload.get("property_id"),
+        "building_id": payload.get("building_id"),
+        "apartment_id": payload.get("apartment_id") if entity_type == "room" else entity_id,
+        "room_id": entity_id if entity_type == "room" else None,
+        "client_id": client_id,
+        "client_name": client_name or "Reservation Client",
+        "issued_by": actor_name,
+        "issue_date": issue_date,
+        "due_date": due_date,
+        "rent_price": rent,
+        "deposit_amount": deposit,
+        "prepaid_amount": prepaid,
+        "total_amount": total,
+        "status": "Open",
+        "note": f"Auto reservation invoice for {entity_type} {entity_id}",
+    }
+    insert(db, "estate_reservation_invoices", row)
+    insert(
+        db,
+        "accounts",
+        {
+            "id": uid("ACC"),
+            "entry_date": issue_date,
+            "type": "income",
+            "category": "Estate Reservation",
+            "description": f"Reservation {row['invoice_no']} - {entity_type} {entity_id}",
+            "client_id": client_id,
+            "property_id": row.get("property_id"),
+            "invoice_id": None,
+            "amount": total,
+        },
+    )
 
 
 def invoice_tax_breakdown(subtotal: float, vat_rate: float | None = None) -> Dict[str, float]:
@@ -4416,6 +4568,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": False, "error": "سجل التدقيق للقراءة فقط"}, 403)
         row_id = item_id or data.get("id") or uid(table[:3].upper())
         data["id"] = row_id
+        actor_name = str(user.get("name") or user.get("username") or "System")
+        estate_prev_status = ""
+        estate_new_status = ""
+        estate_entity_type = ""
+        estate_reserved_transition = False
         if table == "clients":
             if not str(data.get("name") or "").strip():
                 return self.send_json({"ok": False, "error": "اسم العميل مطلوب"}, 400)
@@ -4531,6 +4688,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": False, "error": err}, 400)
             data.update(prepared)
         if table == "estate_properties":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_properties WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
             if not str(data.get("name") or "").strip():
                 return self.send_json({"ok": False, "error": "اسم العقار مطلوب"}, 400)
             status_map = {"active": "active", "نشط": "active", "inactive": "inactive", "غير نشط": "inactive", "suspended": "suspended", "موقوف": "suspended", "موقوفة": "suspended"}
@@ -4546,6 +4709,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if data["base_rent_price"] < 0 or data["service_charge"] < 0:
                 return self.send_json({"ok": False, "error": "الأسعار ورسوم الخدمة يجب أن تكون موجبة أو صفر"}, 400)
         if table == "estate_buildings":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_buildings WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
             prop_id = str(data.get("property_id") or "").strip()
             if not prop_id or not exists(db, "estate_properties", prop_id):
                 return self.send_json({"ok": False, "error": "اختر العقار الصحيح للبناية"}, 400)
@@ -4564,6 +4733,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if data["base_rent_price"] < 0 or data["service_charge"] < 0:
                 return self.send_json({"ok": False, "error": "الأسعار ورسوم الخدمة غير صحيحة"}, 400)
         if table == "estate_apartments":
+            estate_entity_type = "apartment"
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_apartments WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    estate_prev_status = str(current["status"] or "")
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
             prop_id = str(data.get("property_id") or "").strip()
             bld_id = str(data.get("building_id") or "").strip()
             if not prop_id or not exists(db, "estate_properties", prop_id):
@@ -4613,6 +4790,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return self.send_json({"ok": False, "error": "في حالة الحجز يجب إدخال تأمين الحجز"}, 400)
                 if data["prepaid_amount"] < 0:
                     return self.send_json({"ok": False, "error": "المدفوع مقدمًا غير صحيح"}, 400)
+                start_date = str(data.get("reservation_start_date") or "").strip()
+                end_date = str(data.get("reservation_end_date") or "").strip()
+                if not start_date or not end_date:
+                    return self.send_json({"ok": False, "error": "الحجز يتطلب تاريخ بداية ونهاية"}, 400)
+                try:
+                    sdt = datetime.fromisoformat(start_date).date()
+                    edt = datetime.fromisoformat(end_date).date()
+                except Exception:
+                    return self.send_json({"ok": False, "error": "تواريخ الحجز غير صحيحة"}, 400)
+                if edt < sdt:
+                    return self.send_json({"ok": False, "error": "تاريخ نهاية الحجز يجب أن يكون بعد البداية"}, 400)
                 booked_name = str(data.get("booked_client_name") or "").strip()
                 booked_phone = str(data.get("booked_client_phone") or "").strip()
                 booked_employee = str(data.get("booked_by_employee") or "").strip()
@@ -4621,6 +4809,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 booked_client_id = str(data.get("booked_client_id") or "").strip()
                 if booked_client_id and not exists(db, "clients", booked_client_id):
                     return self.send_json({"ok": False, "error": "معرف العميل المحجوز له غير موجود"}, 400)
+                estate_reserved_transition = method == "POST" or estate_prev_status.lower() != "reserved"
             if status_norm == "maintenance":
                 if not str(data.get("maintenance_notes") or "").strip():
                     return self.send_json({"ok": False, "error": "حالة الصيانة تتطلب وصف أعمال الصيانة"}, 400)
@@ -4629,9 +4818,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 data["booked_client_phone"] = str(data.get("booked_client_phone") or "").strip() or None
                 data["booked_client_id"] = str(data.get("booked_client_id") or "").strip() or None
                 data["booked_by_employee"] = str(data.get("booked_by_employee") or "").strip() or None
+                data["reservation_start_date"] = None
+                data["reservation_end_date"] = None
             if status_norm != "maintenance":
                 data["maintenance_notes"] = str(data.get("maintenance_notes") or "").strip() or None
+            estate_new_status = status_norm
         if table == "estate_rooms":
+            estate_entity_type = "room"
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_rooms WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    estate_prev_status = str(current["status"] or "")
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
             prop_id = str(data.get("property_id") or "").strip()
             bld_id = str(data.get("building_id") or "").strip()
             apt_id = str(data.get("apartment_id") or "").strip()
@@ -4673,11 +4873,23 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 booked_name = str(data.get("booked_client_name") or "").strip()
                 booked_phone = str(data.get("booked_client_phone") or "").strip()
                 booked_employee = str(data.get("booked_by_employee") or "").strip()
+                start_date = str(data.get("reservation_start_date") or "").strip()
+                end_date = str(data.get("reservation_end_date") or "").strip()
+                if not start_date or not end_date:
+                    return self.send_json({"ok": False, "error": "حجز الغرفة يتطلب تاريخ بداية ونهاية"}, 400)
+                try:
+                    sdt = datetime.fromisoformat(start_date).date()
+                    edt = datetime.fromisoformat(end_date).date()
+                except Exception:
+                    return self.send_json({"ok": False, "error": "تواريخ حجز الغرفة غير صحيحة"}, 400)
+                if edt < sdt:
+                    return self.send_json({"ok": False, "error": "نهاية الحجز يجب أن تكون بعد بدايته"}, 400)
                 if data["booking_deposit"] <= 0 or not booked_name or not booked_phone or not booked_employee:
                     return self.send_json({"ok": False, "error": "الغرفة المحجوزة تتطلب التأمين + بيانات العميل + الموظف الحاجز"}, 400)
                 booked_client_id = str(data.get("booked_client_id") or "").strip()
                 if booked_client_id and not exists(db, "clients", booked_client_id):
                     return self.send_json({"ok": False, "error": "معرف العميل المحجوز له غير موجود"}, 400)
+                estate_reserved_transition = method == "POST" or estate_prev_status.lower() != "reserved"
             if status_norm == "maintenance":
                 if not str(data.get("maintenance_notes") or "").strip():
                     return self.send_json({"ok": False, "error": "حالة صيانة الغرفة تتطلب تفاصيل الصيانة"}, 400)
@@ -4686,9 +4898,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 data["booked_client_phone"] = None
                 data["booked_client_id"] = None
                 data["booked_by_employee"] = None
+                data["reservation_start_date"] = None
+                data["reservation_end_date"] = None
             if status_norm != "maintenance":
                 data["maintenance_notes"] = None
+            estate_new_status = status_norm
         if table == "estate_maintenance":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_maintenance WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
             if not str(data.get("title") or "").strip():
                 return self.send_json({"ok": False, "error": "عنوان طلب الصيانة مطلوب"}, 400)
             status_raw = str(data.get("status") or "Open").strip().lower()
@@ -4983,6 +5204,28 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if method == "POST":
             insert(db, table, clean)
             audit(db, user, "create", table, row_id, "Created record")
+            if table in ("estate_apartments", "estate_rooms"):
+                if not estate_new_status:
+                    estate_new_status = str(clean.get("status") or "")
+                log_estate_status_history(
+                    db,
+                    estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
+                    row_id,
+                    clean,
+                    "",
+                    estate_new_status,
+                    actor_name,
+                    "Initial status on create",
+                )
+                if estate_new_status == "reserved":
+                    ensure_estate_reservation_invoice(
+                        db,
+                        estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
+                        row_id,
+                        clean,
+                        actor_name,
+                    )
+                    audit(db, user, "auto_invoice", "estate_reservation_invoices", row_id, f"Auto reservation invoice created for {table}")
             if table == "contracts":
                 sync_property_status_for_contract(db, clean.get("property_id") or "", clean.get("status") or "Draft")
             if table == "contracts" and user.get("role") == "operations":
@@ -5018,6 +5261,35 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if changed:
                     audit_details = " | ".join(changed[:12])
             audit(db, user, "update", table, item_id, audit_details)
+            if table in ("estate_apartments", "estate_rooms"):
+                current_status = str(clean.get("status") or "")
+                if not current_status:
+                    current_status = estate_new_status
+                if current_status and (current_status != estate_prev_status):
+                    log_estate_status_history(
+                        db,
+                        estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
+                        str(item_id),
+                        clean,
+                        estate_prev_status,
+                        current_status,
+                        actor_name,
+                        "Status changed by update",
+                    )
+                if current_status != "reserved" and estate_prev_status.lower() == "reserved":
+                    db.execute(
+                        "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed after status moved to ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
+                        (current_status, estate_entity_type or ("apartment" if table == "estate_apartments" else "room"), str(item_id)),
+                    )
+                if current_status == "reserved" and estate_reserved_transition:
+                    ensure_estate_reservation_invoice(
+                        db,
+                        estate_entity_type or ("apartment" if table == "estate_apartments" else "room"),
+                        str(item_id),
+                        clean,
+                        actor_name,
+                    )
+                    audit(db, user, "auto_invoice", "estate_reservation_invoices", str(item_id), f"Auto reservation invoice created for {table}")
             if table == "hospitality_bookings" and timeline_change_details:
                 audit(
                     db,

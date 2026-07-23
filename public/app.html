@@ -563,6 +563,8 @@
               <div id="eaReservedFields" class="estate-state-fields hidden">
                 <input id="eaBookingDeposit" type="number" min="0" step="0.001" placeholder="تأمين الحجز OMR">
                 <input id="eaPrepaidAmount" type="number" min="0" step="0.001" placeholder="المدفوع مقدمًا OMR">
+                <input id="eaReservationStart" type="date" placeholder="بداية الحجز">
+                <input id="eaReservationEnd" type="date" placeholder="نهاية الحجز">
                 <input id="eaBookedClientName" placeholder="اسم العميل المحجوز له">
                 <input id="eaBookedClientPhone" placeholder="هاتف العميل">
                 <input id="eaBookedClientId" placeholder="رقم الهوية/المرجع">
@@ -595,6 +597,8 @@
               <div id="erReservedFields" class="estate-state-fields hidden">
                 <input id="erBookingDeposit" type="number" min="0" step="0.001" placeholder="تأمين حجز الغرفة OMR">
                 <input id="erPrepaidAmount" type="number" min="0" step="0.001" placeholder="مدفوع مقدمًا OMR">
+                <input id="erReservationStart" type="date" placeholder="بداية الحجز">
+                <input id="erReservationEnd" type="date" placeholder="نهاية الحجز">
                 <input id="erBookedClientName" placeholder="اسم العميل المحجوز له">
                 <input id="erBookedClientPhone" placeholder="هاتف العميل">
                 <input id="erBookedClientId" placeholder="رقم هوية/مرجع العميل">
@@ -652,6 +656,11 @@
           <div class="card"><h3>جدول الغرف</h3><div id="estateRoomsTable"></div></div>
         </div>
         <div class="card"><h3>جدول الصيانة</h3><div id="estateMaintenanceTable"></div></div>
+        <div class="layout">
+          <div class="card"><h3>تنبيهات الحجز</h3><div id="estateReservationAlerts"></div></div>
+          <div class="card"><h3>فواتير الحجز التلقائية</h3><div id="estateReservationInvoicesTable"></div></div>
+        </div>
+        <div class="card"><h3>سجل حالات الشقق والغرف</h3><div id="estateStatusHistoryTable"></div></div>
       </section>
 
       <section id="sec-owner-staff" class="section"><div id="ownerStaffBox"></div></section>

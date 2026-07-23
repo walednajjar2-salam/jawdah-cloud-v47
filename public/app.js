@@ -3777,6 +3777,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     });
     estateRows('estate_rooms').forEach(x=>events.push({date:x.last_update||'', title:`غرفة: ${x.name||x.id}`, subtitle:`الشقة: ${pickName(estateRows('estate_apartments'), x.apartment_id)}`, meta:`الحالة: ${roomStatusLabel(x.status)} · سعر ${money(x.rent_price||0)}`, tone:x.status==='maintenance'?'warn':'ok', icon:'🛏️'}));
     estateRows('estate_maintenance').forEach(x=>events.push({date:x.maintenance_date||'', title:`صيانة: ${x.title||x.id}`, subtitle:`المسؤول: ${x.responsible_name||'—'} · فريق: ${x.assigned_team||'—'}`, meta:`رقم فاتورة: ${x.invoice_no||'—'} · مورد: ${x.vendor_name||'—'} · تكلفة: ${money(x.total_cost||0)}`, tone:String(x.status||'').toLowerCase().includes('closed')?'ok':'warn', icon:'🔧'}));
+    estateRows('estate_reservation_invoices').forEach(x=>events.push({date:x.issue_date||'', title:`فاتورة حجز: ${x.invoice_no||x.id}`, subtitle:`${x.entity_type==='room'?'غرفة':'شقة'} · ${x.client_name||'—'}`, meta:`إجمالي ${money(x.total_amount||0)} · استحقاق ${x.due_date||'—'}`, tone:'info', icon:'🧾'}));
     return events.filter(e=>isInside(e.date)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).slice(0,80);
   }
   function renderEstateTables(){
@@ -3785,6 +3786,8 @@ window.printHospitalityFolio = printHospitalityFolio;
     const apts = estateRows('estate_apartments');
     const rooms = estateRows('estate_rooms');
     const maint = estateRows('estate_maintenance');
+    const hist = estateRows('estate_status_history');
+    const rInv = estateRows('estate_reservation_invoices');
     const tenantCell = (id, phone)=> id ? `${clientName(id)}<br><small>${htmlEscape(phone||'')}</small>` : '—';
 
     const propTable = $('#estatePropertiesTable');
@@ -3810,6 +3813,7 @@ window.printHospitalityFolio = printHospitalityFolio;
         ['سعر الإيجار','rent_price',(v)=>money(v)],
         ['تأمين الحجز','booking_deposit',(v)=>money(v)],
         ['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],
+        ['فترة الحجز','id',(_,r)=>String(r.status||'').toLowerCase()==='reserved' ? `${htmlEscape(r.reservation_start_date||'—')} → ${htmlEscape(r.reservation_end_date||'—')}` : '—'],
         ['بيانات الحجز','id',(_,r)=>{
           if(String(r.status||'').toLowerCase()!=='reserved') return '—';
           return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`;
@@ -3826,7 +3830,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     );
     const rTable = $('#estateRoomsTable');
     if(rTable) rTable.innerHTML = tableHtml(
-      [['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','name'],['النوع','room_type'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['سعر الغرفة','rent_price',(v)=>money(v)],['تأمين الحجز','booking_deposit',(v)=>money(v)],['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],['تفاصيل الحجز/الصيانة','id',(_,r)=>{const st=String(r.status||'').toLowerCase(); if(st==='reserved') return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`; if(st==='maintenance') return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`; return '—';}],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      [['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','name'],['النوع','room_type'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['سعر الغرفة','rent_price',(v)=>money(v)],['تأمين الحجز','booking_deposit',(v)=>money(v)],['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],['فترة الحجز','id',(_,r)=>String(r.status||'').toLowerCase()==='reserved' ? `${htmlEscape(r.reservation_start_date||'—')} → ${htmlEscape(r.reservation_end_date||'—')}` : '—'],['تفاصيل الحجز/الصيانة','id',(_,r)=>{const st=String(r.status||'').toLowerCase(); if(st==='reserved') return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`; if(st==='maintenance') return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`; return '—';}],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
       rooms,
       r=>`<button class="ghost" onclick="editRecord('estate_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_rooms','${r.id}')">حذف</button>`
     );
@@ -3835,6 +3839,16 @@ window.printHospitalityFolio = printHospitalityFolio;
       [['التاريخ','maintenance_date'],['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','room_id',(v)=>pickName(rooms,v)],['العنوان','title'],['المسؤول','responsible_name'],['الفريق','assigned_team'],['المورد','vendor_name'],['القطع','parts_details'],['رقم الفاتورة','invoice_no'],['تاريخ الفاتورة','invoice_date'],['تكلفة القطع','parts_cost',(v)=>money(v)],['تكلفة العمالة','labor_cost',(v)=>money(v)],['الإجمالي','total_cost',(v)=>money(v)],['اعتماد','approved_by'],['إغلاق','closed_at'],['الحالة','status',(v)=>statusBadge(v)]],
       maint,
       r=>`<button class="ghost" onclick="editRecord('estate_maintenance','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_maintenance','${r.id}')">حذف</button>`
+    );
+    const invTable = $('#estateReservationInvoicesTable');
+    if(invTable) invTable.innerHTML = tableHtml(
+      [['رقم الفاتورة','invoice_no'],['النوع','entity_type',(v)=>v==='room'?'غرفة':'شقة'],['المعرف','entity_id'],['العميل','client_name'],['تاريخ الإصدار','issue_date'],['الاستحقاق','due_date'],['الإيجار','rent_price',(v)=>money(v)],['التأمين','deposit_amount',(v)=>money(v)],['المقدم','prepaid_amount',(v)=>money(v)],['الإجمالي','total_amount',(v)=>money(v)],['الحالة','status',(v)=>statusBadge(v)]],
+      rInv
+    );
+    const hTable = $('#estateStatusHistoryTable');
+    if(hTable) hTable.innerHTML = tableHtml(
+      [['التاريخ','changed_at'],['الكيان','entity_type',(v)=>v==='room'?'غرفة':'شقة'],['المعرف','entity_id'],['من حالة','old_status',(v)=>v||'—'],['إلى حالة','new_status'],['بواسطة','changed_by'],['ملاحظة','note']],
+      hist
     );
   }
   window.renderEstatePlatform = function(){
@@ -3845,6 +3859,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const apts = estateRows('estate_apartments');
     const rooms = estateRows('estate_rooms');
     const maint = estateRows('estate_maintenance');
+    const rInv = estateRows('estate_reservation_invoices');
     const reservedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='reserved').length;
     const occupiedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
     const occupied = rooms.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
@@ -3860,6 +3875,7 @@ window.printHospitalityFolio = printHospitalityFolio;
         <div class="kpi"><span>الغرف</span><strong>${fmt(rooms.length)}</strong></div>
         <div class="kpi"><span>غرف مؤجرة</span><strong>${fmt(occupied)}</strong></div>
         <div class="kpi"><span>صيانة مفتوحة</span><strong>${fmt(openMaint)}</strong></div>
+        <div class="kpi"><span>فواتير حجز</span><strong>${fmt(rInv.length)}</strong></div>
       `;
     }
     const timeline = $('#estateTimelineBox');
@@ -3868,6 +3884,23 @@ window.printHospitalityFolio = printHospitalityFolio;
       timeline.innerHTML = events.map(e=>`<article class="prop-tl-item ${e.tone}"><div class="prop-tl-date"><b>${htmlEscape(e.date||'')}</b><span>${e.icon}</span></div><div class="prop-tl-body"><h4>${htmlEscape(e.title||'')}</h4><p>${htmlEscape(e.subtitle||'')}</p><div class="status-line"><span class="badge">${htmlEscape(e.meta||'')}</span></div></div></article>`).join('') || '<div class="card"><p class="mini">لا توجد أحداث ضمن الفترة المحددة.</p></div>';
     }
     renderEstateTables();
+    const alertsBox = $('#estateReservationAlerts');
+    if(alertsBox){
+      const todayStr = today ? today() : new Date().toISOString().slice(0,10);
+      const in3 = new Date();
+      in3.setDate(in3.getDate()+3);
+      const in3Str = in3.toISOString().slice(0,10);
+      const rows = []
+        .concat(apts.map(x=>({kind:'شقة',name:x.name,status:x.status,end:x.reservation_end_date,client:x.booked_client_name||''})))
+        .concat(rooms.map(x=>({kind:'غرفة',name:x.name,status:x.status,end:x.reservation_end_date,client:x.booked_client_name||''})))
+        .filter(x=>String(x.status||'').toLowerCase()==='reserved' && x.end);
+      const soon = rows.filter(x=>x.end>=todayStr && x.end<=in3Str);
+      const overdue = rows.filter(x=>x.end<todayStr);
+      const lines = [];
+      overdue.forEach(x=>lines.push(`<div class="statement-row"><span>${htmlEscape(x.kind)} ${htmlEscape(x.name)} · ${htmlEscape(x.client||'—')}</span><b class="badge overdue">متأخر التحويل منذ ${htmlEscape(x.end)}</b></div>`));
+      soon.forEach(x=>lines.push(`<div class="statement-row"><span>${htmlEscape(x.kind)} ${htmlEscape(x.name)} · ${htmlEscape(x.client||'—')}</span><b class="badge pending">ينتهي قريبًا ${htmlEscape(x.end)}</b></div>`));
+      alertsBox.innerHTML = lines.join('') || '<p class="badge paid">لا توجد تنبيهات حجز حالياً</p>';
+    }
     ensureEnglishDigits(document.getElementById('sec-estate-platform'));
   };
   function nowDay(){ return today ? today() : new Date().toISOString().slice(0,10); }
@@ -3937,6 +3970,8 @@ window.printHospitalityFolio = printHospitalityFolio;
       rent_price: num('eaRentPrice'),
       booking_deposit: num('eaBookingDeposit'),
       prepaid_amount: num('eaPrepaidAmount'),
+      reservation_start_date: val('eaReservationStart'),
+      reservation_end_date: val('eaReservationEnd'),
       booked_client_name: bookedClientName,
       booked_client_phone: bookedClientPhone,
       booked_client_id: bookedClientId,
@@ -3969,6 +4004,8 @@ window.printHospitalityFolio = printHospitalityFolio;
       rent_price: num('erRentPrice'),
       booking_deposit: num('erBookingDeposit'),
       prepaid_amount: num('erPrepaidAmount'),
+      reservation_start_date: val('erReservationStart'),
+      reservation_end_date: val('erReservationEnd'),
       booked_client_name: bookedClientName,
       booked_client_phone: bookedClientPhone,
       booked_client_id: bookedClientId,
