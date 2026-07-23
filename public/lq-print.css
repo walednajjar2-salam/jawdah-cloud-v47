@@ -18,9 +18,28 @@
   direction: ltr;
   color: #111827;
   background: #fff;
+  position: relative;
+}
+
+.lq-doc-watermark {
+  position: absolute;
+  inset: 28% 0 auto 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.lq-doc-watermark img {
+  width: 340px;
+  max-width: 70%;
+  opacity: 0.05;
+  filter: grayscale(1);
 }
 
 .lq-doc-head {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 18px;
@@ -102,6 +121,8 @@
 }
 
 .lq-doc-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
@@ -131,6 +152,8 @@
 }
 
 .lq-doc-table {
+  position: relative;
+  z-index: 1;
   width: 100%;
   border-collapse: collapse;
   margin: 14px 0;
@@ -158,6 +181,8 @@
 }
 
 .lq-doc-summary {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 16px;
@@ -227,6 +252,8 @@
 }
 
 .lq-doc-sign {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
@@ -249,6 +276,8 @@
 }
 
 .lq-doc-footer {
+  position: relative;
+  z-index: 1;
   margin-top: 18px;
   padding-top: 12px;
   border-top: 1px solid #e5e7eb;

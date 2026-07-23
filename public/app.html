@@ -926,11 +926,25 @@
 
       <section id="sec-contracts" class="section">
         <div id="renewalQueueBox"></div>
+        <div class="card lq-doc-brand-strip">
+          <img src="assets/brand-logo-gold.png?v=12" alt="Launch Quality logo">
+          <div>
+            <b>نماذج العقود الرسمية — Launch Quality</b>
+            <p class="mini">صيغة عقد احترافية مع الشروط القانونية، الطباعة، PDF، وتنزيل نسخة HTML.</p>
+          </div>
+        </div>
         <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><select id="contractPaymentCycle"><option value="monthly">شهري</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option><option value="once">مرة واحدة</option></select><div id="contractPropertyWarning" class="lq-inline-warning hidden"></div><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة المؤجرة"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="30"><input id="contractAttachments" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" aria-label="مرفقات العقد"><textarea id="contractLegalTerms" placeholder="الشروط القانونية وحماية الشركة"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('contracts')">تصدير CSV</button><button class="ghost" onclick="exportFilteredContractsCsv()">تصدير نتائج الفلتر</button></div><div id="contractsTable"></div></div>
       </section>
 
       <section id="sec-invoices" class="section">
+        <div class="card lq-doc-brand-strip">
+          <img src="assets/brand-logo-gold.png?v=12" alt="Launch Quality logo">
+          <div>
+            <b>الفواتير الضريبية الرسمية — Launch Quality</b>
+            <p class="mini">تصميم فاخر للطباعة والـ PDF مع شعار الشركة وخيارات تنزيل متعددة.</p>
+          </div>
+        </div>
         <div class="card">
           <h3>إنشاء فاتورة من عقد</h3>
           <p class="mini">اختيار العقد يملأ المبلغ والوصف والاستحقاق المقترح تلقائيًا.</p>
@@ -1095,7 +1109,8 @@
   </main>
 
   <div id="paymentModal" class="modal"><div class="modal-box"><h2>تحصيل فاتورة</h2><p id="payInfo"></p><input id="payInvoiceId" type="hidden"><div class="form"><input id="payAmount" placeholder="المبلغ"><select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id="payNote" placeholder="ملاحظة"><label class="mini">صورة التحويل/الوصل<input id="payProofFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><img id="payProofPreview" class="hidden lq-prop-upload-preview" alt="معاينة الوصل"></div><button class="gold-btn" onclick="submitPayment()">تأكيد التحصيل</button> <button class="ghost" onclick="closeModal('paymentModal')">إغلاق</button></div></div>
-  <div id="invoiceModal" class="modal"><div class="modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="printInvoiceDocument()">طباعة A4</button><button class="gold-btn" onclick="downloadInvoicePdf()">حفظ PDF</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
+  <div id="invoiceModal" class="modal"><div class="modal-box"><div id="invoicePreview"></div><div class="toolbar"><button class="gold-btn" onclick="printInvoiceDocument()">طباعة A4</button><button class="gold-btn" onclick="downloadInvoicePdf()">حفظ PDF</button><button class="ghost" onclick="downloadInvoice()">تنزيل HTML</button><button class="ghost" onclick="openInvoiceInNewWindow()">فتح بنافذة مستقلة</button><button class="ghost" onclick="copyInvoiceSummary()">نسخ ملخص الفاتورة</button><button class="ghost" onclick="closeModal('invoiceModal')">إغلاق</button></div></div></div>
+  <div id="contractModal" class="modal"><div class="modal-box"><div id="contractPreview"></div><div class="toolbar"><button class="gold-btn" onclick="printContractDocument()">طباعة A4</button><button class="gold-btn" onclick="downloadContractPdf()">حفظ PDF</button><button class="ghost" onclick="downloadContractHtml()">تنزيل HTML</button><button class="ghost" onclick="copyContractTerms()">نسخ الشروط</button><button class="ghost" onclick="openContractInNewWindow()">فتح بنافذة مستقلة</button><button class="ghost" onclick="closeModal('contractModal')">إغلاق</button></div></div></div>
   <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
 
   <div id="kpiInsightPanel" class="kpi-insight-panel" aria-hidden="true"></div>

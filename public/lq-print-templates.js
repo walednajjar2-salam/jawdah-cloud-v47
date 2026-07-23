@@ -164,7 +164,7 @@
   }
 
   function wrapDoc(inner) {
-    return `<div class="lq-doc invoice-paper lq-print-paper">${inner}</div>`;
+    return `<div class="lq-doc invoice-paper lq-print-paper"><div class="lq-doc-watermark"><img src="${LOGO}" alt="${esc(COMPANY.en)}"></div>${inner}</div>`;
   }
 
   function invoiceTax(invoice) {
@@ -262,6 +262,91 @@
         ${footerBlock()}`
     );
   }
+  function parseTerms(termsRaw) {
+    const raw = String(termsRaw || "").trim();
+    if (!raw) return [];
+    return raw
+      .split(/\n+/)
+      .map((x) => x.replace(/^\s*[-•\d\.\)\(]+\s*/, "").trim())
+      .filter(Boolean);
+  }
+  function parseAttachments(contract) {
+    const raw = contract?.attachments;
+    if (!raw) return [];
+    try {
+      const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!Array.isArray(arr)) return [];
+      return arr.filter((x) => x && typeof x === "object");
+    } catch (_e) {
+      return [];
+    }
+  }
+  function buildLeaseContractHtml(contract) {
+    const c = contract || {};
+    const client = byId("clients", c.client_id);
+    const property = byId("properties", c.property_id);
+    const dep = depositStatus(c);
+    const terms = parseTerms(c.legal_terms || "");
+    const attachments = parseAttachments(c);
+    const start = String(c.start_date || "");
+    const end = String(c.end_date || "");
+    const startDt = start ? new Date(`${start}T00:00:00`) : null;
+    const endDt = end ? new Date(`${end}T00:00:00`) : null;
+    const days = startDt && endDt ? Math.max(0, Math.floor((endDt - startDt) / 86400000) + 1) : 0;
+    const months = days ? Math.max(1, Math.round(days / 30)) : 0;
+    const unit = c.unit_details || (typeof window.propertyUnitLine === "function" ? window.propertyUnitLine(property) : "");
+    const meta = `<table>
+      <tr><td>Contract No.</td><td>${esc(c.contract_no || c.id || "—")}</td></tr>
+      <tr><td>Type</td><td>${esc(c.contract_type || "Lease")}</td></tr>
+      <tr><td>Start</td><td>${esc(start || "—")}</td></tr>
+      <tr><td>End</td><td>${esc(end || "—")}</td></tr>
+      <tr><td>Status</td><td>${esc(c.status || "Draft")}</td></tr>
+      <tr><td>Signatory</td><td>${esc(c.company_signatory || COMPANY.en)}</td></tr>
+    </table>`;
+    const head = companyHeaderBlock("LEASE CONTRACT", "عقد إيجار", meta);
+    const termsHtml = terms.length
+      ? `<ol>${terms.map((t) => `<li>${esc(t)}</li>`).join("")}</ol>`
+      : `<p class="terms">${esc(c.legal_terms || "لا توجد شروط إضافية.")}</p>`;
+    const attachHtml = attachments.length
+      ? `<ul>${attachments.map((a) => `<li>${esc(a.name || "Attachment")} · ${esc(a.type || "file")} · ${esc(a.uploaded_at || "")}</li>`).join("")}</ul>`
+      : "<p>لا توجد مرفقات.</p>";
+    return wrapDoc(
+      head +
+        `<div class="lq-doc-grid">
+          ${clientBlock(client, c)}
+          ${contractBlock(c, property)}
+        </div>
+        <table class="lq-doc-table">
+          <thead><tr><th>تفاصيل العقد</th><th>القيمة</th></tr></thead>
+          <tbody>
+            <tr><td>الوحدة المؤجرة</td><td class="num">${esc(unit || "—")}</td></tr>
+            <tr><td>المدة</td><td class="num">${esc(months)} شهر · ${esc(days)} يوم</td></tr>
+            <tr><td>الإيجار</td><td class="num">${money(c.rent_amount)}</td></tr>
+            <tr><td>دورية الدفع</td><td class="num">${esc(c.payment_cycle || "monthly")}</td></tr>
+            <tr><td>غرامة التأخير</td><td class="num">${money(c.late_fee || 0)}</td></tr>
+            <tr><td>مهلة السداد</td><td class="num">${esc(c.grace_days || 0)} يوم</td></tr>
+            <tr><td>التأمين المطلوب / المستلم</td><td class="num">${money(dep.required)} / ${money(dep.paid)}</td></tr>
+          </tbody>
+        </table>
+        <div class="lq-doc-summary">
+          <div class="lq-doc-notes">
+            <strong>الشروط القانونية · Legal Terms</strong>
+            ${termsHtml}
+            <div style="margin-top:10px"><strong>ملاحظات:</strong> ${esc(c.notes || "—")}</div>
+          </div>
+          <div class="lq-doc-box">
+            <h3>المرفقات · Attachments</h3>
+            ${attachHtml}
+          </div>
+        </div>
+        <div class="lq-doc-sign">
+          <div><strong>توقيع المستأجر</strong></div>
+          <div><strong>توقيع الشركة</strong>${esc(c.company_signatory || COMPANY.en)}</div>
+          <div><strong>الختم الرسمي</strong></div>
+        </div>
+        ${footerBlock()}`
+    );
+  }
 
   function assetBase() {
     const p = window.location.pathname || "/";
@@ -302,6 +387,7 @@
     LOGO,
     buildTaxInvoiceHtml,
     buildReceiptHtml,
+    buildLeaseContractHtml,
     printInvoiceDocument,
     downloadInvoicePdf,
     depositStatus,

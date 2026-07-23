@@ -2793,26 +2793,65 @@ function printHtmlPreview(){
 }
 function downloadHtmlPreview(){ downloadFile(window.__lqPreviewFile || 'launch-quality-preview.html', window.__lqPreviewHtml || '', 'text/html'); }
 async function contractDocument(contractId){
-  let w = null;
   try{
-    w = window.open('', '_blank');
-    if(w){
-      w.document.write('<!doctype html><meta charset="utf-8"><title>Loading contract</title><body style="font-family:Arial;padding:24px">Loading contract preview...</body>');
-      w.document.close();
+    const c = byId('contracts', contractId);
+    if(!c?.id) return toastNotice('العقد غير موجود');
+    let html = '';
+    if(window.LQ_PRINT?.buildLeaseContractHtml){
+      html = window.LQ_PRINT.buildLeaseContractHtml(c);
+    }else{
+      const res = await api('contract_template',{method:'POST',body:JSON.stringify({contract_id:contractId})});
+      html = res.html || '';
     }
-    const res=await api('contract_template',{method:'POST',body:JSON.stringify({contract_id:contractId})});
-    if(w && !w.closed){
-      w.document.open();
-      w.document.write(res.html);
-      w.document.close();
-      w.focus();
-      return;
-    }
-    showHtmlPreview('معاينة العقد', res.html, `contract-${contractId}.html`);
-  }catch(e){
-    try{ if(w && !w.closed) w.close(); }catch(_){}
-    toastErr(e);
+    Jawdah.contractForPrint = c;
+    Jawdah.contractHtmlForPrint = html;
+    const host = $('#contractPreview');
+    if(host) host.innerHTML = html;
+    openModal('contractModal');
+  }catch(e){ toastErr(e); }
+}
+function printContractDocument(){
+  const body = $('#contractPreview')?.innerHTML || '';
+  if(!body.trim()) return toastNotice('لا يوجد عقد للمعاينة');
+  const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
+  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><title>Print Contract</title><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const w = window.open('', '_blank', 'noopener,noreferrer');
+  if(!w){
+    showHtmlPreview('طباعة العقد', html, `contract-${Jawdah.contractForPrint?.contract_no||Jawdah.contractForPrint?.id||'file'}.html`);
+    return;
   }
+  w.document.write(html);
+  w.document.close();
+  w.onload=()=>{ w.focus(); w.print(); };
+}
+function downloadContractPdf(){ printContractDocument(); }
+function downloadContractHtml(){
+  const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
+  const body = $('#contractPreview')?.innerHTML || Jawdah.contractHtmlForPrint || '';
+  if(!body.trim()) return toastNotice('لا يوجد عقد للتنزيل');
+  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const no = Jawdah.contractForPrint?.contract_no || Jawdah.contractForPrint?.id || 'contract';
+  downloadFile(`contract-${no}.html`, html, 'text/html');
+}
+async function copyContractTerms(){
+  const terms = String(Jawdah.contractForPrint?.legal_terms || '').trim();
+  if(!terms) return toastNotice('لا توجد شروط عقد لنسخها');
+  try{
+    await navigator.clipboard.writeText(terms);
+    toast('تم نسخ شروط العقد');
+  }catch(_){
+    toastNotice('تعذر النسخ التلقائي — يمكن النسخ يدويًا');
+  }
+}
+function openContractInNewWindow(){
+  const body = $('#contractPreview')?.innerHTML || Jawdah.contractHtmlForPrint || '';
+  if(!body.trim()) return toastNotice('لا يوجد عقد للعرض');
+  const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
+  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const w = window.open('', '_blank', 'noopener,noreferrer');
+  if(!w) return toastNotice('تعذر فتح نافذة جديدة');
+  w.document.write(html);
+  w.document.close();
 }
 
 function openPayment(id){ const inv=byId('invoices',id); const remaining=Number(inv.amount)-Number(inv.paid_amount); $('#payInvoiceId').value=id; $('#payAmount').value=remaining.toFixed(2); $('#payInfo').textContent=`${inv.invoice_no} - المتبقي ${money(remaining)}`; if($('#payProofFile')) $('#payProofFile').value=''; if($('#payProofPreview')){ $('#payProofPreview').classList.add('hidden'); $('#payProofPreview').removeAttribute('src'); } openModal('paymentModal'); }
@@ -2852,6 +2891,39 @@ function downloadInvoice(){
   const body=$('#invoicePreview').innerHTML;
   const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
   downloadFile(`invoice-${Jawdah.invoiceForPrint?.invoice_no||'file'}.html`,html,'text/html');
+}
+function openInvoiceInNewWindow(){
+  const body = $('#invoicePreview')?.innerHTML || '';
+  if(!body.trim()) return toastNotice('لا توجد فاتورة للعرض');
+  const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
+  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const w = window.open('', '_blank', 'noopener,noreferrer');
+  if(!w) return toastNotice('تعذر فتح نافذة جديدة');
+  w.document.write(html);
+  w.document.close();
+}
+async function copyInvoiceSummary(){
+  const inv = Jawdah.invoiceForPrint;
+  if(!inv) return toastNotice('لا توجد فاتورة حالياً');
+  const client = byId('clients', inv.client_id);
+  const prop = byId('properties', inv.property_id);
+  const remain = Math.max(0, Number(inv.amount||0)-Number(inv.paid_amount||0));
+  const text = [
+    `Invoice: ${inv.invoice_no||inv.id}`,
+    `Client: ${client.name||'-'}`,
+    `Property: ${propertyLabel(prop)||'-'}`,
+    `Issue: ${inv.issue_date||'-'}`,
+    `Due: ${inv.due_date||'-'}`,
+    `Total: ${money(inv.amount||0)}`,
+    `Paid: ${money(inv.paid_amount||0)}`,
+    `Remaining: ${money(remain)}`,
+  ].join('\n');
+  try{
+    await navigator.clipboard.writeText(text);
+    toast('تم نسخ ملخص الفاتورة');
+  }catch(_){
+    toastNotice('تعذر النسخ التلقائي — يمكن النسخ يدويًا');
+  }
 }
 async function voidInvoice(id){
   const inv=byId('invoices',id);
