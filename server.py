@@ -168,6 +168,8 @@ WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
 
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
+MODULE_FIX_PREVIEW_TTL_SECONDS = max(300, int(os.environ.get("LQ_MODULE_FIX_PREVIEW_TTL", "1800") or "1800"))
+MODULE_FIX_PREVIEWS: Dict[str, Dict[str, Any]] = {}
 BIOMETRIC_CHALLENGE_TTL_SECONDS = 180
 BIOMETRIC_CHALLENGES: Dict[str, Dict[str, Any]] = {}
 BIOMETRIC_FLOW_STATES: Dict[str, Dict[str, Any]] = {}
@@ -237,6 +239,17 @@ def cleanup_biometric_challenges() -> None:
     expired_states = [key for key, item in BIOMETRIC_FLOW_STATES.items() if now_ts > float(item.get("expires", 0))]
     for key in expired_states:
         BIOMETRIC_FLOW_STATES.pop(key, None)
+
+
+def cleanup_module_fix_previews() -> None:
+    now_ts = time.time()
+    expired = [key for key, item in MODULE_FIX_PREVIEWS.items() if now_ts > float(item.get("expires_ts", 0))]
+    for key in expired:
+        MODULE_FIX_PREVIEWS.pop(key, None)
+
+
+def module_fix_preview_key(username: str, preview_id: str) -> str:
+    return f"{str(username or '').strip().lower()}::{str(preview_id or '').strip()}"
 
 
 def create_biometric_challenge(user_id: str, action: str) -> Dict[str, str]:
@@ -6187,6 +6200,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         override_dry_run: Optional[bool] = None,
         override_modules: Optional[List[str]] = None,
         override_max_rows: Optional[int] = None,
+        require_preview_guard: bool = True,
+        override_preview_id: Optional[str] = None,
+        override_confirm_text: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         payload = self.read_json() if self.command == "POST" else {}
         dry_run = bool((payload or {}).get("dry_run", True)) if override_dry_run is None else bool(override_dry_run)
@@ -6204,6 +6220,44 @@ class JawdahHandler(BaseHTTPRequestHandler):
         except Exception:
             max_rows = 200
         max_rows = max(10, min(1000, max_rows))
+
+        cleanup_module_fix_previews()
+        username = str(user.get("username") or user.get("name") or "").strip().lower()
+        preview_id = str(override_preview_id if override_preview_id is not None else (payload or {}).get("preview_id", "")).strip()
+        confirm_text = str(override_confirm_text if override_confirm_text is not None else (payload or {}).get("confirm_text", "")).strip().upper()
+        if not dry_run and require_preview_guard:
+            if confirm_text != "APPLY":
+                err = {
+                    "ok": False,
+                    "error": "Second approval required",
+                    "detail": "Send confirm_text='APPLY' and a valid preview_id from dry-run.",
+                }
+                if return_payload_only:
+                    return err
+                return self.send_json(err, 400)
+            if not preview_id:
+                err = {"ok": False, "error": "Missing preview_id", "detail": "Run dry-run first to get preview_id."}
+                if return_payload_only:
+                    return err
+                return self.send_json(err, 400)
+            pkey = module_fix_preview_key(username, preview_id)
+            preview_info = MODULE_FIX_PREVIEWS.get(pkey) or {}
+            preview_scope = set(str(x).strip().lower() for x in (preview_info.get("modules") or []))
+            if not preview_info:
+                err = {"ok": False, "error": "Invalid preview_id", "detail": "Preview token not found or expired."}
+                if return_payload_only:
+                    return err
+                return self.send_json(err, 400)
+            if preview_scope != set(selected_modules) or int(preview_info.get("max_rows") or 0) != int(max_rows):
+                err = {
+                    "ok": False,
+                    "error": "Preview scope mismatch",
+                    "detail": "Scope/max_rows changed after preview. Re-run dry-run first.",
+                }
+                if return_payload_only:
+                    return err
+                return self.send_json(err, 400)
+
         actions: List[Dict[str, Any]] = []
 
         def add_action(name: str, candidates: int, applied: int, notes: str = "") -> None:
@@ -6509,6 +6563,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 f"Module integrity auto-fix applied={applied_total} candidates={candidate_total}",
             )
             db.commit()
+            if require_preview_guard and preview_id:
+                MODULE_FIX_PREVIEWS.pop(module_fix_preview_key(username, preview_id), None)
 
         result = {
             "ok": True,
@@ -6528,6 +6584,25 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "Broken references (e.g. contract points to missing property/client) are reported in integrity scan and require manual business decision.",
             ],
         }
+        if dry_run:
+            preview_id_new = uid("PRV")
+            expires_ts = time.time() + MODULE_FIX_PREVIEW_TTL_SECONDS
+            MODULE_FIX_PREVIEWS[module_fix_preview_key(username, preview_id_new)] = {
+                "username": username,
+                "modules": sorted(selected_modules),
+                "max_rows": max_rows,
+                "created_at": now_iso(),
+                "expires_ts": expires_ts,
+                "expires_at": datetime.fromtimestamp(expires_ts).replace(microsecond=0).isoformat(sep=" "),
+                "candidate_total": candidate_total,
+            }
+            result["preview"] = {
+                "id": preview_id_new,
+                "expires_in_seconds": MODULE_FIX_PREVIEW_TTL_SECONDS,
+                "expires_at": MODULE_FIX_PREVIEWS[module_fix_preview_key(username, preview_id_new)]["expires_at"],
+            }
+        elif preview_id:
+            result["preview_validated"] = preview_id
         if return_payload_only:
             return result
         self.send_json(result)
@@ -6535,6 +6610,16 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_module_integrity_autorun(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json() if self.command == "POST" else {}
+        confirm_text = str((data or {}).get("confirm_text", "")).strip().upper() if isinstance(data, dict) else ""
+        if confirm_text != "APPLY":
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "Second approval required",
+                    "detail": "Send confirm_text='APPLY' to execute autorun.",
+                },
+                400,
+            )
         modules = [str(x).strip().lower() for x in (data.get("modules") or [])] if isinstance(data, dict) else []
         max_rows_raw = (data.get("max_rows") if isinstance(data, dict) else None)
         try:
@@ -6542,6 +6627,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
         except Exception:
             max_rows = None
         before = self.api_module_integrity(db, return_payload_only=True) or {}
+        preview_result = self.api_module_integrity_fix(
+            db,
+            user,
+            return_payload_only=True,
+            override_dry_run=True,
+            override_modules=modules or None,
+            override_max_rows=max_rows,
+            require_preview_guard=False,
+        ) or {}
+        if not bool(preview_result.get("ok", False)):
+            return self.send_json(preview_result, 400)
+        preview_id = str(((preview_result or {}).get("preview") or {}).get("id") or "").strip()
+        if not preview_id:
+            return self.send_json({"ok": False, "error": "Preview generation failed"}, 500)
         fix_result = self.api_module_integrity_fix(
             db,
             user,
@@ -6549,7 +6648,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
             override_dry_run=False,
             override_modules=modules or None,
             override_max_rows=max_rows,
+            require_preview_guard=True,
+            override_preview_id=preview_id,
+            override_confirm_text="APPLY",
         ) or {}
+        if not bool(fix_result.get("ok", False)):
+            return self.send_json(fix_result, 400)
         after = self.api_module_integrity(db, return_payload_only=True) or {}
         before_score = float(before.get("score") or 0)
         after_score = float(after.get("score") or 0)
@@ -6557,6 +6661,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             {
                 "ok": True,
                 "before": before,
+                "preview": preview_result,
                 "fix": fix_result,
                 "after": after,
                 "delta": {

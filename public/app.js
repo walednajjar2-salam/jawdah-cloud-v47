@@ -3960,6 +3960,13 @@ window.printHospitalityFolio = printHospitalityFolio;
 
 
 (function(){
+  let moduleFixPreviewState = null;
+  const moduleFixScopeSnapshot = ()=> {
+    const scopeRaw = String($('#moduleFixScope')?.value || 'all');
+    const modules = scopeRaw === 'all' ? [] : scopeRaw.split(',').map(s=>s.trim()).filter(Boolean);
+    const maxRows = Number($('#moduleFixMaxRows')?.value || 200);
+    return { modules, maxRows, scopeRaw };
+  };
   const oldShow = showSection;
   showSection=function(id){
     oldShow(id);
@@ -4057,27 +4064,55 @@ window.printHospitalityFolio = printHospitalityFolio;
     const host=$('#moduleIntegrityBox');
     if(!host) return;
     const preview = !!dryRun;
+    const snap = moduleFixScopeSnapshot();
+    const modules = snap.modules;
+    const maxRows = snap.maxRows;
     if(!preview){
       const ok = confirm('تنفيذ الإصلاح الوظيفي الآمن الآن؟ سيتم تسجيل كل العمليات في السجل.');
       if(!ok) return;
+      if(!moduleFixPreviewState || !moduleFixPreviewState.previewId){
+        return toastErr('نفّذ المعاينة أولاً للحصول على preview_id');
+      }
+      const savedSig = JSON.stringify({modules: moduleFixPreviewState.modules||[], maxRows: moduleFixPreviewState.maxRows||200});
+      const currentSig = JSON.stringify({modules, maxRows});
+      if(savedSig !== currentSig){
+        return toastErr('تم تغيير نطاق الإصلاح بعد المعاينة. أعد المعاينة أولاً.');
+      }
+      const confirmText = prompt('للتنفيذ النهائي اكتب APPLY');
+      if(String(confirmText || '').trim().toUpperCase() !== 'APPLY') return toastErr('تم إلغاء التنفيذ');
+      moduleFixPreviewState.confirmText = 'APPLY';
     }
-    const scopeRaw = String($('#moduleFixScope')?.value || 'all');
-    const modules = scopeRaw === 'all' ? [] : scopeRaw.split(',').map(s=>s.trim()).filter(Boolean);
-    const maxRows = Number($('#moduleFixMaxRows')?.value || 200);
     host.insertAdjacentHTML('afterbegin','<p class="mini">جاري تشغيل '+(preview?'معاينة':'تنفيذ')+' الإصلاح...</p>');
     try{
+      const requestBody = { dry_run: preview, modules, max_rows: maxRows };
+      if(!preview){
+        requestBody.preview_id = moduleFixPreviewState.previewId;
+        requestBody.confirm_text = moduleFixPreviewState.confirmText || 'APPLY';
+      }
       const res = await api('module_integrity_fix',{
         method:'POST',
-        body: JSON.stringify({ dry_run: preview, modules, max_rows: maxRows }),
+        body: JSON.stringify(requestBody),
       });
       const s = res.summary || {};
       const scope = res.scope || {};
       const rows = Array.isArray(res.actions) ? res.actions : [];
+      if(preview){
+        const p = res.preview || {};
+        moduleFixPreviewState = {
+          previewId: p.id || '',
+          expiresAt: p.expires_at || '',
+          modules,
+          maxRows,
+        };
+      } else {
+        moduleFixPreviewState = null;
+      }
       const msg = `
         <div class="card inner-card" style="margin-top:12px">
           <h3>${preview?'نتيجة المعاينة':'نتيجة التنفيذ'} — الإصلاح الآمن</h3>
           <p class="mini">المرشّح: ${fmt(s.candidates||0)} · المنفذ: ${fmt(s.applied||0)} · الوضع: ${htmlEscape(String(s.mode||''))}</p>
           <p class="mini">النطاق: ${htmlEscape(String((scope.modules||[]).join(', ')||'all'))} · max_rows: ${fmt(scope.max_rows||maxRows)}</p>
+          ${preview && moduleFixPreviewState?.previewId ? `<p class="mini">preview_id: ${htmlEscape(moduleFixPreviewState.previewId)} · expires: ${htmlEscape(moduleFixPreviewState.expiresAt||'')}</p>` : ''}
           ${rows.length ? tableHtml(
             [
               ['الإجراء','name',(v)=>htmlEscape(String(v||''))],
@@ -4106,14 +4141,16 @@ window.printHospitalityFolio = printHospitalityFolio;
     if(!host) return;
     const ok = confirm('تنفيذ الإصلاح الآمن ثم إعادة الفحص تلقائيًا الآن؟');
     if(!ok) return;
-    const scopeRaw = String($('#moduleFixScope')?.value || 'all');
-    const modules = scopeRaw === 'all' ? [] : scopeRaw.split(',').map(s=>s.trim()).filter(Boolean);
-    const maxRows = Number($('#moduleFixMaxRows')?.value || 200);
+    const confirmText = prompt('للتنفيذ النهائي اكتب APPLY');
+    if(String(confirmText || '').trim().toUpperCase() !== 'APPLY') return toastErr('تم إلغاء التنفيذ');
+    const snap = moduleFixScopeSnapshot();
+    const modules = snap.modules;
+    const maxRows = snap.maxRows;
     host.insertAdjacentHTML('afterbegin','<p class="mini">جاري تنفيذ الإصلاح وإعادة الفحص...</p>');
     try{
       const res = await api('module_integrity_autorun',{
         method:'POST',
-        body: JSON.stringify({ confirm: true, modules, max_rows: maxRows }),
+        body: JSON.stringify({ confirm: true, confirm_text:'APPLY', modules, max_rows: maxRows }),
       });
       const before = res.before || {};
       const after = res.after || {};
