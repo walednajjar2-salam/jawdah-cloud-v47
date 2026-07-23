@@ -1080,7 +1080,14 @@
       </section>
 
       <section id="sec-qa" class="section">
-        <div class="card"><h3>اختبار التشغيل</h3><button class="gold-btn" onclick="runQA()">تشغيل الاختبار الآن</button><div id="qaBox" style="margin-top:15px"></div></div>
+        <div class="card">
+          <h3>اختبار التشغيل</h3>
+          <div class="toolbar">
+            <button class="gold-btn" onclick="runQA()">تشغيل الاختبار العام</button>
+            <button class="ghost" onclick="runEstateQaScenario()">تشغيل QA العقار خطوة بخطوة</button>
+          </div>
+          <div id="qaBox" style="margin-top:15px"></div>
+        </div>
       </section>
       </div>
       </div>

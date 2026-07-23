@@ -1840,7 +1840,7 @@ async function runAutoBackup(){
   }catch(e){ toastErr(e); }
 }
 function renderQA(){
-  $('#qaBox').innerHTML='<p>اضغط تشغيل الاختبار لفحص الترابط والتخزين والفواتير والحسابات.</p>';
+  $('#qaBox').innerHTML='<p>يمكنك تشغيل الاختبار العام أو QA العقار خطوة بخطوة. سيتم تشغيل نغمة نجاح/فشل لكل حالة تلقائيًا.</p>';
 }
 function populateSelects(){
   fillSelect('#pBranch', Jawdah.data.branches||[], true, 'id', 'name');
@@ -2944,6 +2944,113 @@ async function runQA(){
   $('#qaBox').innerHTML=html;
 }
 window.runQA = runQA;
+function playQaTone(ok){
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    if(!window.__lqQaAudioCtx) window.__lqQaAudioCtx = new Ctx();
+    const ctx = window.__lqQaAudioCtx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = ok ? 'sine' : 'sawtooth';
+    const now = ctx.currentTime;
+    if(ok){
+      osc.frequency.setValueAtTime(740, now);
+      osc.frequency.linearRampToValueAtTime(988, now + 0.12);
+    }else{
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.linearRampToValueAtTime(180, now + 0.22);
+    }
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(ok ? 0.06 : 0.09, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + (ok ? 0.18 : 0.28));
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + (ok ? 0.2 : 0.3));
+  }catch(_e){}
+}
+function qaRowHtml(idx, item){
+  const badge = item.ok ? 'paid' : 'overdue';
+  return `<div class="statement-row"><span>${fmt(idx+1)}. ${htmlEscape(item.name)}</span><b class="badge ${badge}">${item.ok?'PASS ✅':'FAIL ❌'}</b></div>${item.detail?`<div class="mini" style="margin:6px 0 10px">${htmlEscape(item.detail)}</div>`:''}`;
+}
+async function runEstateQaScenario(){
+  const box = $('#qaBox');
+  if(!box) return;
+  const rows = [];
+  const pushCase = (name, ok, detail='')=>{
+    const item = { name, ok: !!ok, detail };
+    rows.push(item);
+    playQaTone(!!ok);
+    box.innerHTML = `
+      <div class="card lq-ops-guide">
+        <h3>🏢 QA العقار — خطوة بخطوة</h3>
+        <p class="mini">تشغيل فحص عملي لكل نقطة مع نغمة نجاح/فشل لكل حالة.</p>
+      </div>
+      ${rows.map((r,i)=>qaRowHtml(i,r)).join('')}
+      <p class="mini">جاري التنفيذ...</p>
+    `;
+  };
+  try{
+    const estateTables = ['estate_properties','estate_buildings','estate_apartments','estate_rooms','estate_accessories','estate_maintenance','estate_contracts','estate_contract_invoices','estate_reservation_invoices','estate_status_history','estate_month_closes'];
+    const missing = estateTables.filter(t=>!Array.isArray(Jawdah.data?.[t]));
+    pushCase('توفر جداول العقار في البيانات المحملة', missing.length===0, missing.length?`مفقود: ${missing.join(', ')}`:'جميع الجداول متاحة');
+
+    const props = Jawdah.data?.estate_properties || [];
+    const blds = Jawdah.data?.estate_buildings || [];
+    const apts = Jawdah.data?.estate_apartments || [];
+    const rooms = Jawdah.data?.estate_rooms || [];
+    const bldOk = blds.every(b=>props.some(p=>p.id===b.property_id));
+    pushCase('سلامة الربط: بناية ← عقار', bldOk, bldOk ? `عدد البنايات ${fmt(blds.length)}` : 'هناك بناية بلا عقار صحيح');
+    const aptOk = apts.every(a=>props.some(p=>p.id===a.property_id) && blds.some(b=>b.id===a.building_id));
+    pushCase('سلامة الربط: شقة ← بناية/عقار', aptOk, aptOk ? `عدد الشقق ${fmt(apts.length)}` : 'هناك شقة بربط غير صحيح');
+    const roomOk = rooms.every(r=>props.some(p=>p.id===r.property_id) && blds.some(b=>b.id===r.building_id) && apts.some(a=>a.id===r.apartment_id));
+    pushCase('سلامة الربط: غرفة ← شقة/بناية/عقار', roomOk, roomOk ? `عدد الغرف ${fmt(rooms.length)}` : 'هناك غرفة بربط غير صحيح');
+
+    const mapReady = !!$('#estateRealMapFrame') && !!$('#estateMapCoords');
+    pushCase('الخريطة الحية + الإحداثيات ظاهرة', mapReady, mapReady ? 'iframe + coords جاهزة' : 'عناصر الخريطة غير مكتملة');
+    const galleryReady = !!$('#estatePhotoGallery') && /estate-photo/.test(String($('#estatePhotoGallery').innerHTML||''));
+    pushCase('معرض الصور العقاري مفعل', galleryReady, galleryReady ? 'يوجد محتوى صور/بطاقات' : 'المعرض خالٍ أو غير مفعل');
+    const alertsReady = !!$('#estateExecAlertsBox') && String($('#estateExecAlertsBox').innerHTML||'').trim().length>0;
+    pushCase('لوحة التنبيهات التنفيذية العقارية', alertsReady, alertsReady ? 'تعمل وتعرض بيانات' : 'لا تعرض بيانات حالياً');
+
+    const traceReady = !!$('#estateUnitTraceBox') && String($('#estateUnitTraceBox').innerHTML||'').trim().length>0;
+    pushCase('سجل تتبع الوحدة الموحد', traceReady, traceReady ? 'التايم لاين الموحد ظاهر' : 'السجل غير معروض');
+    const occReady = !!$('#estateOccupancyReportBox') && String($('#estateOccupancyReportBox').innerHTML||'').trim().length>0;
+    pushCase('تقرير الإشغال الشهري والمقارنة', occReady, occReady ? 'التقرير ظاهر مع المقارنة' : 'التقرير غير ظاهر');
+
+    const permButtonsOk = (!!$('#estateCloseContractBtn') && !!$('#estateCloseMonthBtn'));
+    pushCase('ضبط أزرار الإجراءات الحساسة بالصلاحيات', permButtonsOk, permButtonsOk ? `إغلاق عقد:${$('#estateCloseContractBtn').disabled?'مقفل':'مفتوح'} · إقفال شهر:${$('#estateCloseMonthBtn').disabled?'مقفل':'مفتوح'}` : 'أزرار الإجراءات غير موجودة');
+
+    try{
+      const ops = await api('estate_operations_check');
+      const score = Number(ops.score||0);
+      const failed = (ops.checks||[]).filter(c=>!c.ok);
+      pushCase('فحص سلامة العمليات العقارية (API)', failed.length===0 && score>=80, `النتيجة ${fmt(score)}% · العناصر غير السليمة ${fmt(failed.length)}`);
+    }catch(e){
+      pushCase('فحص سلامة العمليات العقارية (API)', false, friendlyMsg(e));
+    }
+
+    const passCount = rows.filter(x=>x.ok).length;
+    const finalOk = passCount === rows.length;
+    playQaTone(finalOk);
+    box.innerHTML = `
+      <div class="card lq-ops-guide">
+        <h3>🏁 تقرير QA العقار</h3>
+        <p class="mini">نجح ${fmt(passCount)} من ${fmt(rows.length)} حالة</p>
+      </div>
+      ${rows.map((r,i)=>qaRowHtml(i,r)).join('')}
+      <div class="status-line" style="margin-top:10px">
+        <span class="badge ${finalOk?'paid':'overdue'}">${finalOk?'جاهز للإنتاج ✅':'يحتاج معالجة قبل الإطلاق ⚠️'}</span>
+      </div>
+    `;
+    toast(finalOk ? 'اكتمل QA العقار بنجاح' : 'اكتمل QA العقار مع ملاحظات');
+  }catch(e){
+    playQaTone(false);
+    box.innerHTML = `<p class="badge overdue">فشل تشغيل QA العقار: ${htmlEscape(friendlyMsg(e))}</p>`;
+    toastErr(e);
+  }
+}
+window.runEstateQaScenario = runEstateQaScenario;
 function drawCharts(){
   try{
   const series=chartSeries();
