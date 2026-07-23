@@ -499,3 +499,25 @@ body.saas-luxury #sec-dashboard:not(.active) *{
   max-height:0 !important;
   overflow:hidden !important;
 }
+
+/* Dashboard: never hide functions behind hub/workspace cache */
+body.lq-hub-mode .lq-cockpit-wrap,
+body.lq-hub-mode:not(.lq-hub-expanded) .lq-cockpit-wrap,
+body.lq-workspace-mode .lq-cockpit-wrap,
+body.lq-workspace-mode .lq-hub-board,
+.lq-cockpit-v30 .lq-dash-legacy{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  height:auto !important;
+  max-height:none !important;
+  overflow:visible !important;
+}
+.lq-cockpit-v30 .saas-kpi-grid,
+.lq-cockpit-v30 .dash-mega-cockpit,
+.lq-cockpit-v30 .saas-command-grid,
+.lq-cockpit-v30 .saas-quick-grid,
+.lq-cockpit-v30 .saas-analytics-grid,
+.lq-cockpit-v30 .saas-split-grid{
+  display:grid !important;
+}

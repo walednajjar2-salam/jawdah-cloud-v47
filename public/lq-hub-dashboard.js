@@ -3,9 +3,9 @@
   const $ = (s) => document.querySelector(s);
 
   function initBody() {
-    document.body.classList.add("lq-hub-mode", "lq-card-mode", "lq-cinematic-bi");
-    const expanded = localStorage.getItem("lq_hub_expanded") === "1";
-    document.body.classList.toggle("lq-hub-expanded", expanded);
+    document.body.classList.add("lq-hub-mode", "lq-card-mode", "lq-cinematic-bi", "lq-hub-expanded");
+    // Always show full dashboard functions (ignore stale localStorage cache)
+    localStorage.setItem("lq_hub_expanded", "1");
   }
 
   function hubTiles(k) {
@@ -57,14 +57,6 @@
         label: "التقارير",
         value: () => "BI",
         sub: "تنفيذي + مالي",
-        tone: "violet",
-      },
-      {
-        id: "walid",
-        icon: "✦",
-        label: "WALEED AI",
-        value: () => "Live",
-        sub: "مساعد ذكي",
         tone: "violet",
       },
       {

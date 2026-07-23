@@ -1154,7 +1154,7 @@ body.saas-luxury .saas-timeline>.mini{
   padding:0 0 24px!important;
   isolation:isolate
 }
-.lq-cockpit-v30 .lq-dash-legacy{display:none!important}
+.lq-cockpit-v30 .lq-dash-legacy{display:block!important}
 .lq-cockpit-grid{
   display:grid;
   grid-template-columns:repeat(12,minmax(0,1fr));

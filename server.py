@@ -3685,9 +3685,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 disposition = f'attachment; filename="{full.name}"'
                 cache = "no-cache, must-revalidate"
             elif safe.endswith(".html"):
-                cache = "no-cache, must-revalidate"
+                cache = "no-store, no-cache, must-revalidate, max-age=0"
             elif safe.endswith((".css", ".js")):
-                cache = "public, max-age=300, must-revalidate"
+                # Prevent stale dashboard shells from hiding functions
+                cache = "no-store, no-cache, must-revalidate, max-age=0"
             elif full.suffix in {".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico"}:
                 if "brand-logo" in safe or "login-logo" in safe:
                     cache = "no-cache, must-revalidate"

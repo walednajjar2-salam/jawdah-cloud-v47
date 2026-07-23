@@ -35,12 +35,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css?v=portal9">
-  <link rel="stylesheet" href="lq-shell.css?v=shell29">
+  <link rel="stylesheet" href="lq-shell.css?v=shell30">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref9">
-  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec10">
+  <link rel="stylesheet" href="lq-emergency-clean.css?v=ec11">
   <link rel="stylesheet" href="lq-login-locked.css?v=locked9">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme">
@@ -71,7 +71,23 @@
       opacity:0!important;height:0!important;width:0!important;overflow:hidden!important;
     }
 
-/* FORCE NO TOP VOID — v9 */
+
+    /* Dashboard functions must always show (no hub/workspace hide cache) */
+    body.lq-hub-mode .lq-cockpit-wrap,
+    body.lq-hub-mode:not(.lq-hub-expanded) .lq-cockpit-wrap,
+    body.lq-hub-expanded .lq-cockpit-wrap,
+    body.lq-workspace-mode .lq-cockpit-wrap,
+    body.lq-workspace-mode .lq-hub-board,
+    .lq-cockpit-v30 .lq-dash-legacy,
+    #dashCommandGrid,#dashQuickActions,#saasKpiRow,#dashMegaCockpit{
+      display:block!important; visibility:visible!important; opacity:1!important;
+    }
+    .lq-cockpit-v30 .saas-kpi-grid.lq-dash-legacy,
+    .lq-cockpit-v30 .dash-mega-cockpit,
+    .lq-cockpit-v30 .saas-command-grid,
+    .lq-cockpit-v30 .saas-quick-grid{display:grid!important}
+
+    /* FORCE NO TOP VOID — v9 */
     body.saas-luxury,body.app-ready{margin:0!important;padding:0!important}
     body.saas-luxury #loginScreen,body.app-ready #loginScreen,#loginScreen.hidden,#loginScreen[hidden]{
       display:none!important;height:0!important;min-height:0!important;max-height:0!important;
@@ -1214,14 +1230,14 @@
   <script src="lq-enterprise.js?v=ent1" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal10" defer></script>
+  <script src="app.js?v=portal11" defer></script>
   <script src="enterprise-vision.js?v=ev11" defer></script>
-  <script src="historic-upgrade.js?v=historic20" defer></script>
-  <script src="lq-hub-dashboard.js?v=hub9" defer></script>
+  <script src="historic-upgrade.js?v=historic21" defer></script>
+  <script src="lq-hub-dashboard.js?v=hub11" defer></script>
   <script src="lq-card-views.js?v=cards2" defer></script>
   <script src="lq-login-remember.js?v=lr1" defer></script>
   <script src="lq-global-loader.js?v=gl1" defer></script>
-  <script src="lq-workspace-quadrant.js?v=ws3" defer></script>
+  <script src="lq-workspace-quadrant.js?v=ws11" defer></script>
   <script src="lq-property-photos.js?v=photo1" defer></script>
   <script src="lq-flow-animate.js?v=flow2" defer></script>
     <script src="lq-role-ui.js?v=role1" defer></script>

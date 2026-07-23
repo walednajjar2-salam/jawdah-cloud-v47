@@ -30,7 +30,11 @@
           await Promise.all((keys||[]).map(k=>caches.delete(k)));
         }
       }catch(e){}
-      try{ localStorage.removeItem('jawdah_portal_choice'); }catch(e){}
+      try{
+        localStorage.removeItem('jawdah_portal_choice');
+        localStorage.setItem('lq_hub_expanded','1');
+        localStorage.removeItem('lq_workspace_collapsed');
+      }catch(e){}
       const url = '/app.html?fresh=20260723v9&t=' + Date.now();
       document.getElementById('go').onclick = function(){ location.replace(url); };
       setTimeout(function(){ location.replace(url); }, 600);

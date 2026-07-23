@@ -91,7 +91,8 @@ body.lq-cinematic-bi .gold-btn {
 }
 
 body.lq-hub-mode:not(.lq-hub-expanded) .lq-cockpit-wrap {
-  display: none !important;
+  /* Was hiding all dashboard functions — keep them visible */
+  display: block !important;
 }
 
 body.lq-hub-expanded .lq-cockpit-wrap {
