@@ -164,6 +164,7 @@ TABLES = {
     "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
     "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "notes"],
+    "estate_contract_invoices": ["id", "invoice_no", "contract_id", "due_date", "amount", "paid_amount", "status", "issued_at", "note"],
     "estate_status_history": ["id", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "old_status", "new_status", "changed_by", "changed_at", "note"],
     "estate_reservation_invoices": ["id", "invoice_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "client_name", "issued_by", "issue_date", "due_date", "rent_price", "deposit_amount", "prepaid_amount", "total_amount", "status", "note"],
     "users": ["id", "username", "name", "role", "active", "email", "created_at", "last_login"],
@@ -1267,6 +1268,18 @@ def init_db() -> None:
                 created_at TEXT NOT NULL,
                 notes TEXT
             );
+            CREATE TABLE IF NOT EXISTS estate_contract_invoices (
+                id TEXT PRIMARY KEY,
+                invoice_no TEXT UNIQUE NOT NULL,
+                contract_id TEXT NOT NULL,
+                due_date TEXT NOT NULL,
+                amount REAL NOT NULL DEFAULT 0,
+                paid_amount REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'Pending',
+                issued_at TEXT NOT NULL,
+                note TEXT,
+                FOREIGN KEY(contract_id) REFERENCES estate_contracts(id) ON DELETE CASCADE
+            );
             CREATE TABLE IF NOT EXISTS estate_status_history (
                 id TEXT PRIMARY KEY,
                 entity_type TEXT NOT NULL,
@@ -1560,6 +1573,14 @@ def init_db() -> None:
             ("closed_at", "TEXT"),
         ]:
             ensure_column(db, "estate_maintenance", col, definition)
+        for col, definition in [
+            ("payment_cycle", "TEXT NOT NULL DEFAULT 'monthly'"),
+            ("status", "TEXT NOT NULL DEFAULT 'Active'"),
+            ("created_by", "TEXT"),
+            ("created_at", "TEXT"),
+            ("notes", "TEXT"),
+        ]:
+            ensure_column(db, "estate_contracts", col, definition)
         for col, definition in [
             ("credential_data", "TEXT"),
             ("public_key", "TEXT"),
@@ -2411,6 +2432,84 @@ def next_estate_contract_no(db: sqlite3.Connection) -> str:
     ).fetchone()[0]
     seq = int(row or 0) + 1
     return f"{prefix}{seq:04d}"
+
+
+def next_estate_contract_invoice_no(db: sqlite3.Connection) -> str:
+    year = date.today().year
+    prefix = f"ECI-{year}-"
+    row = db.execute(
+        "SELECT MAX(CAST(substr(invoice_no, -4) AS INTEGER)) FROM estate_contract_invoices WHERE invoice_no LIKE ?",
+        (prefix + "%",),
+    ).fetchone()[0]
+    seq = int(row or 0) + 1
+    return f"{prefix}{seq:04d}"
+
+
+def estate_contract_schedule_due_dates(start_date: str, end_date: str, payment_cycle: str) -> List[str]:
+    s = datetime.fromisoformat(str(start_date)).date()
+    e = datetime.fromisoformat(str(end_date)).date()
+    if e < s:
+        raise ValueError("Invalid contract date range")
+    cycle = str(payment_cycle or "monthly").strip().lower()
+    if cycle == "once":
+        return [s.isoformat()]
+    step = 1 if cycle == "monthly" else (3 if cycle == "quarterly" else 12)
+    dates: List[str] = []
+    cur = s
+    while cur <= e:
+        dates.append(cur.isoformat())
+        nxt = add_months(cur, step)
+        if nxt == cur:
+            break
+        cur = nxt
+    if not dates:
+        dates.append(s.isoformat())
+    return dates
+
+
+def generate_estate_contract_invoices(
+    db: sqlite3.Connection,
+    contract_row: Dict[str, Any],
+    actor_name: str,
+    replace_open: bool = False,
+) -> Dict[str, Any]:
+    contract_id = str(contract_row.get("id") or "")
+    if not contract_id:
+        raise ValueError("Contract id missing")
+    if replace_open:
+        db.execute("DELETE FROM estate_contract_invoices WHERE contract_id=? AND lower(status)='pending'", (contract_id,))
+    due_dates = estate_contract_schedule_due_dates(
+        str(contract_row.get("start_date") or ""),
+        str(contract_row.get("end_date") or ""),
+        str(contract_row.get("payment_cycle") or "monthly"),
+    )
+    amount = round(float(contract_row.get("rent_amount") or 0), 3)
+    if amount <= 0:
+        raise ValueError("Rent amount must be positive")
+    created = 0
+    skipped = 0
+    for due in due_dates:
+        exists_row = db.execute(
+            "SELECT id FROM estate_contract_invoices WHERE contract_id=? AND due_date=? LIMIT 1",
+            (contract_id, due),
+        ).fetchone()
+        if exists_row:
+            skipped += 1
+            continue
+        row = {
+            "id": uid("ECI"),
+            "invoice_no": next_estate_contract_invoice_no(db),
+            "contract_id": contract_id,
+            "due_date": due,
+            "amount": amount,
+            "paid_amount": 0,
+            "status": "Pending",
+            "issued_at": today(),
+            "note": f"Auto schedule by {actor_name}",
+        }
+        insert(db, "estate_contract_invoices", row)
+        created += 1
+    return {"created": created, "skipped": skipped, "count": len(due_dates)}
 
 
 def log_estate_status_history(
@@ -3816,6 +3915,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_convert_to_contract" and method == "POST":
                     user = self.require_user(db, "estate_apartments")
                     return None if not user else self.api_estate_convert_to_contract(db, user)
+                if parts[0] == "estate_contract_generate_schedule" and method == "POST":
+                    user = self.require_user(db, "estate_apartments")
+                    return None if not user else self.api_estate_contract_generate_schedule(db, user)
+                if parts[0] == "estate_contract_pay_invoice" and method == "POST":
+                    user = self.require_user(db, "estate_apartments")
+                    return None if not user else self.api_estate_contract_pay_invoice(db, user)
                 if parts[0] == "estate_operations_check" and method == "GET":
                     user = self.require_user(db, "estate_apartments:read")
                     return None if not user else self.api_estate_operations_check(db, user)
@@ -4647,6 +4752,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "notes": str(data.get("notes") or "Generated from reservation flow"),
         }
         insert(db, "estate_contracts", contract_row)
+        schedule_result = generate_estate_contract_invoices(
+            db,
+            contract_row,
+            str(user.get("name") or user.get("username") or "System"),
+            replace_open=False,
+        )
         db.execute(
             f"""
             UPDATE {table}
@@ -4677,7 +4788,75 @@ class JawdahHandler(BaseHTTPRequestHandler):
         )
         audit(db, user, "create_contract", "estate_contracts", contract_row["id"], f"Estate contract {contract_row['contract_no']} for {entity_type} {entity_id}")
         db.commit()
-        self.send_json({"ok": True, "contract": contract_row, "entity_id": entity_id, "entity_type": entity_type})
+        self.send_json({"ok": True, "contract": contract_row, "entity_id": entity_id, "entity_type": entity_type, "schedule": schedule_result})
+
+    def api_estate_contract_generate_schedule(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
+        if not contract:
+            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+        if str(contract["status"] or "").strip().lower() != "active":
+            return self.send_json({"ok": False, "error": "يمكن جدولة دفعات العقود النشطة فقط"}, 400)
+        replace_open = bool(data.get("replace_open"))
+        try:
+            result = generate_estate_contract_invoices(
+                db,
+                dict(contract),
+                str(user.get("name") or user.get("username") or "System"),
+                replace_open=replace_open,
+            )
+        except ValueError as exc:
+            return self.send_json({"ok": False, "error": str(exc)}, 400)
+        audit(db, user, "generate_schedule", "estate_contracts", contract_id, f"created={result.get('created')} skipped={result.get('skipped')} replace_open={replace_open}")
+        db.commit()
+        self.send_json({"ok": True, "contract_id": contract_id, "result": result})
+
+    def api_estate_contract_pay_invoice(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        invoice_id = str(data.get("invoice_id") or "").strip()
+        amount = round(float(data.get("amount") or 0), 3)
+        if not invoice_id:
+            return self.send_json({"ok": False, "error": "invoice_id مطلوب"}, 400)
+        if amount <= 0:
+            return self.send_json({"ok": False, "error": "مبلغ التحصيل يجب أن يكون أكبر من صفر"}, 400)
+        row = db.execute("SELECT * FROM estate_contract_invoices WHERE id=?", (invoice_id,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "فاتورة العقد غير موجودة"}, 404)
+        remaining = round(float(row["amount"] or 0) - float(row["paid_amount"] or 0), 3)
+        if remaining <= 0:
+            return self.send_json({"ok": False, "error": "الفاتورة مسددة بالكامل"}, 400)
+        if amount - remaining > 0.001:
+            return self.send_json({"ok": False, "error": f"المبلغ يتجاوز المتبقي {fmt_omr(remaining)}"}, 400)
+        new_paid = round(float(row["paid_amount"] or 0) + amount, 3)
+        new_status = "Paid" if new_paid >= float(row["amount"] or 0) - 0.001 else "Partial"
+        db.execute(
+            "UPDATE estate_contract_invoices SET paid_amount=?, status=? WHERE id=?",
+            (new_paid, new_status, invoice_id),
+        )
+        contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (row["contract_id"],)).fetchone()
+        client_id = contract["client_id"] if contract else None
+        property_id = contract["property_id"] if contract else None
+        insert(
+            db,
+            "accounts",
+            {
+                "id": uid("ACC"),
+                "entry_date": today(),
+                "type": "income",
+                "category": "Estate Contract Collection",
+                "description": f"Collection {row['invoice_no']}",
+                "client_id": client_id,
+                "property_id": property_id,
+                "invoice_id": None,
+                "amount": amount,
+            },
+        )
+        audit(db, user, "pay", "estate_contract_invoices", invoice_id, f"Collected {amount} for {row['invoice_no']}")
+        db.commit()
+        self.send_json({"ok": True, "invoice_id": invoice_id, "paid_amount": new_paid, "status": new_status})
 
     def api_estate_operations_check(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         checks: List[Dict[str, Any]] = []
@@ -4690,6 +4869,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "estate_status_history",
             "estate_reservation_invoices",
             "estate_contracts",
+            "estate_contract_invoices",
         ]
         for t in required_tables:
             exists_row = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1", (t,)).fetchone()
@@ -4713,10 +4893,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
         active_contracts = db.execute("SELECT COUNT(*) FROM estate_contracts WHERE lower(status)='active'").fetchone()[0]
         reserved_total = db.execute("SELECT COUNT(*) FROM estate_apartments WHERE lower(status)='reserved'").fetchone()[0] + db.execute("SELECT COUNT(*) FROM estate_rooms WHERE lower(status)='reserved'").fetchone()[0]
         status_history_count = db.execute("SELECT COUNT(*) FROM estate_status_history").fetchone()[0]
+        overdue_contract_invoices = db.execute(
+            "SELECT COUNT(*) FROM estate_contract_invoices WHERE lower(status)!='paid' AND date(due_date) < date(?)",
+            (today(),),
+        ).fetchone()[0]
+        due_soon_contract_invoices = db.execute(
+            "SELECT COUNT(*) FROM estate_contract_invoices WHERE lower(status)!='paid' AND date(due_date) >= date(?) AND date(due_date) <= date(?, '+7 day')",
+            (today(), today()),
+        ).fetchone()[0]
         checks.append({"name": "status_history_exists", "ok": int(status_history_count or 0) > 0, "value": int(status_history_count or 0)})
+        checks.append({"name": "overdue_contract_invoices", "ok": int(overdue_contract_invoices or 0) == 0, "value": int(overdue_contract_invoices or 0)})
         score = 100 - (15 if int(dangling_reserved or 0) > 0 else 0)
         if status_history_count == 0:
             score -= 10
+        if int(overdue_contract_invoices or 0) > 0:
+            score -= min(20, int(overdue_contract_invoices or 0) * 2)
         if any(not c["ok"] for c in checks if c["name"].startswith("table:")):
             score -= 30
         score = max(0, min(100, score))
@@ -4730,6 +4921,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "active_contracts": int(active_contracts or 0),
                     "status_history_rows": int(status_history_count or 0),
                     "dangling_reserved_without_invoice": int(dangling_reserved or 0),
+                    "overdue_contract_invoices": int(overdue_contract_invoices or 0),
+                    "due_soon_contract_invoices": int(due_soon_contract_invoices or 0),
                 },
             }
         )
@@ -5188,6 +5381,54 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 data["maintenance_date"] = today()
             if data["status"] == "Closed" and not str(data.get("closed_at") or "").strip():
                 data["closed_at"] = now_iso()
+        if table == "estate_contracts":
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM estate_contracts WHERE id=?", (item_id,)).fetchone()
+                if not current:
+                    return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+                merged = dict(current)
+                merged.update(data)
+                data = merged
+                if str(current["status"] or "").strip().lower() == "active":
+                    locked = {"entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "contract_no"}
+                    changed_locked = [k for k in locked if str(current[k] or "") != str(data.get(k) or "")]
+                    if changed_locked and user.get("role") not in ("owner", "admin"):
+                        return self.send_json({"ok": False, "error": "لا يمكن تعديل بيانات العقد الأساسية بعد التفعيل إلا للمالك/الإدارة"}, 403)
+            if method == "POST":
+                required = ["entity_type", "entity_id", "client_id", "start_date", "end_date", "rent_amount"]
+                missing = [k for k in required if not str(data.get(k) or "").strip()]
+                if missing:
+                    return self.send_json({"ok": False, "error": f"بيانات العقد ناقصة: {', '.join(missing)}"}, 400)
+                data.setdefault("contract_no", next_estate_contract_no(db))
+                data.setdefault("status", "Active")
+                data.setdefault("payment_cycle", "monthly")
+                data.setdefault("created_by", actor_name)
+                data.setdefault("created_at", now_iso())
+            data["rent_amount"] = round(float(data.get("rent_amount") or 0), 3)
+            if data["rent_amount"] <= 0:
+                return self.send_json({"ok": False, "error": "قيمة الإيجار يجب أن تكون أكبر من صفر"}, 400)
+            try:
+                sd = datetime.fromisoformat(str(data.get("start_date") or "")).date()
+                ed = datetime.fromisoformat(str(data.get("end_date") or "")).date()
+            except Exception:
+                return self.send_json({"ok": False, "error": "تواريخ العقد غير صحيحة"}, 400)
+            if ed < sd:
+                return self.send_json({"ok": False, "error": "تاريخ نهاية العقد يجب أن يكون بعد البداية"}, 400)
+            cycle = str(data.get("payment_cycle") or "monthly").strip().lower()
+            if cycle not in ("monthly", "quarterly", "yearly", "once"):
+                cycle = "monthly"
+            data["payment_cycle"] = cycle
+            if str(data.get("entity_type") or "").strip().lower() not in ("apartment", "room"):
+                return self.send_json({"ok": False, "error": "entity_type يجب أن يكون apartment أو room"}, 400)
+            if not exists(db, "clients", str(data.get("client_id") or "").strip()):
+                return self.send_json({"ok": False, "error": "العميل غير موجود"}, 400)
+            et = str(data.get("entity_type") or "").strip().lower()
+            eid = str(data.get("entity_id") or "").strip()
+            src_table = "estate_apartments" if et == "apartment" else "estate_rooms"
+            if not exists(db, src_table, eid):
+                return self.send_json({"ok": False, "error": "العنصر المرتبط بالعقد غير موجود"}, 400)
+        if table == "estate_contract_invoices":
+            return self.send_json({"ok": False, "error": "فواتير العقود تُدار عبر محرك الجدولة والتحصيل فقط"}, 403)
         if table == "invoices":
             return self.send_json({"ok": False, "error": "الفاتورة تُنشأ من العقد — من قائمة العقود اضغط «فاتورة» أو اعتمد العقد لتوليد الجدول"}, 400)
         if table == "payments":
@@ -5479,6 +5720,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         actor_name,
                     )
                     audit(db, user, "auto_invoice", "estate_reservation_invoices", row_id, f"Auto reservation invoice created for {table}")
+            if table == "estate_contracts":
+                schedule_result = generate_estate_contract_invoices(
+                    db,
+                    clean,
+                    actor_name,
+                    replace_open=False,
+                )
+                audit(
+                    db,
+                    user,
+                    "generate_schedule",
+                    "estate_contracts",
+                    row_id,
+                    f"Auto schedule created={schedule_result.get('created')} skipped={schedule_result.get('skipped')}",
+                )
             if table == "contracts":
                 sync_property_status_for_contract(db, clean.get("property_id") or "", clean.get("status") or "Draft")
             if table == "contracts" and user.get("role") == "operations":

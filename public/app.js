@@ -3757,6 +3757,19 @@ window.printHospitalityFolio = printHospitalityFolio;
     if(ecEntity){
       ecEntity.innerHTML = '<option value="">— اختر —</option>'+contractSrc.map(x=>`<option value="${htmlEscape(x.id)}">${htmlEscape(x.name||x.id)} · ${htmlEscape(ecType==='room'?roomStatusLabel(x.status):apartmentStatusLabel(x.status))}</option>`).join('');
     }
+    const contracts = estateRows('estate_contracts');
+    const scheduleSel = $('#ecScheduleContract');
+    if(scheduleSel){
+      scheduleSel.innerHTML = '<option value="">— اختر عقدًا —</option>'+contracts.map(c=>`<option value="${htmlEscape(c.id)}">${htmlEscape(c.contract_no||c.id)} · ${htmlEscape(c.entity_type||'')}</option>`).join('');
+    }
+    const invs = estateRows('estate_contract_invoices').filter(x=>String(x.status||'').toLowerCase()!=='paid');
+    const paySel = $('#ecPayInvoice');
+    if(paySel){
+      paySel.innerHTML = '<option value="">— اختر فاتورة —</option>'+invs.map(i=>{
+        const rem = Math.max(0, Number(i.amount||0)-Number(i.paid_amount||0));
+        return `<option value="${htmlEscape(i.id)}">${htmlEscape(i.invoice_no||i.id)} · متبقي ${money(rem)} · ${htmlEscape(i.due_date||'')}</option>`;
+      }).join('');
+    }
   }
   function renderEstateIcons(){
     const host = $('#estateIconGrid');
@@ -3800,6 +3813,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const rooms = estateRows('estate_rooms');
     const maint = estateRows('estate_maintenance');
     const contracts = estateRows('estate_contracts');
+    const cInv = estateRows('estate_contract_invoices');
     const hist = estateRows('estate_status_history');
     const rInv = estateRows('estate_reservation_invoices');
     const tenantCell = (id, phone)=> id ? `${clientName(id)}<br><small>${htmlEscape(phone||'')}</small>` : '—';
@@ -3887,6 +3901,11 @@ window.printHospitalityFolio = printHospitalityFolio;
       [['رقم العقد','contract_no'],['النوع','entity_type',(v)=>v==='room'?'غرفة':'شقة'],['المعرف','entity_id'],['العميل','client_id',(v)=>clientName(v)],['البداية','start_date'],['النهاية','end_date'],['الإيجار','rent_amount',(v)=>money(v)],['الدورية','payment_cycle'],['الحالة','status',(v)=>statusBadge(v)],['أنشئ بواسطة','created_by']],
       contracts
     );
+    const ciTable = $('#estateContractInvoicesTable');
+    if(ciTable) ciTable.innerHTML = tableHtml(
+      [['رقم الفاتورة','invoice_no'],['العقد','contract_id',(v)=>htmlEscape((contracts.find(c=>c.id===v)||{}).contract_no||v)],['الاستحقاق','due_date'],['المبلغ','amount',(v)=>money(v)],['المدفوع','paid_amount',(v)=>money(v)],['المتبقي','id',(_,r)=>money(Math.max(0,Number(r.amount||0)-Number(r.paid_amount||0)))],['الحالة','status',(v)=>statusBadge(v)],['الإصدار','issued_at']],
+      cInv
+    );
   }
   window.renderEstatePlatform = function(){
     renderEstateIcons();
@@ -3898,6 +3917,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     const maint = estateRows('estate_maintenance');
     const rInv = estateRows('estate_reservation_invoices');
     const contracts = estateRows('estate_contracts');
+    const cInv = estateRows('estate_contract_invoices');
     const reservedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='reserved').length;
     const occupiedApts = apts.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
     const occupied = rooms.filter(x=>String(x.status||'').toLowerCase()==='occupied').length;
@@ -3915,6 +3935,7 @@ window.printHospitalityFolio = printHospitalityFolio;
         <div class="kpi"><span>صيانة مفتوحة</span><strong>${fmt(openMaint)}</strong></div>
         <div class="kpi"><span>فواتير حجز</span><strong>${fmt(rInv.length)}</strong></div>
         <div class="kpi"><span>عقود نشطة</span><strong>${fmt(contracts.filter(x=>String(x.status||'').toLowerCase()==='active').length)}</strong></div>
+        <div class="kpi"><span>فواتير عقود</span><strong>${fmt(cInv.length)}</strong></div>
       `;
     }
     const timeline = $('#estateTimelineBox');
@@ -3939,6 +3960,18 @@ window.printHospitalityFolio = printHospitalityFolio;
       overdue.forEach(x=>lines.push(`<div class="statement-row"><span>${htmlEscape(x.kind)} ${htmlEscape(x.name)} · ${htmlEscape(x.client||'—')}</span><b class="badge overdue">متأخر التحويل منذ ${htmlEscape(x.end)}</b></div>`));
       soon.forEach(x=>lines.push(`<div class="statement-row"><span>${htmlEscape(x.kind)} ${htmlEscape(x.name)} · ${htmlEscape(x.client||'—')}</span><b class="badge pending">ينتهي قريبًا ${htmlEscape(x.end)}</b></div>`));
       alertsBox.innerHTML = lines.join('') || '<p class="badge paid">لا توجد تنبيهات حجز حالياً</p>';
+    }
+    const cAlert = $('#estateContractInvoiceAlerts');
+    if(cAlert){
+      const todayStr = today ? today() : new Date().toISOString().slice(0,10);
+      const in7 = new Date(); in7.setDate(in7.getDate()+7); const in7Str = in7.toISOString().slice(0,10);
+      const pending = cInv.filter(x=>String(x.status||'').toLowerCase()!=='paid');
+      const overdue = pending.filter(x=>String(x.due_date||'') < todayStr);
+      const dueSoon = pending.filter(x=>String(x.due_date||'') >= todayStr && String(x.due_date||'') <= in7Str);
+      const lines = [];
+      overdue.forEach(x=>lines.push(`<div class="statement-row"><span>${htmlEscape(x.invoice_no||x.id)}</span><b class="badge overdue">متأخرة · ${htmlEscape(x.due_date||'')}</b></div>`));
+      dueSoon.forEach(x=>lines.push(`<div class="statement-row"><span>${htmlEscape(x.invoice_no||x.id)}</span><b class="badge pending">تستحق قريبًا · ${htmlEscape(x.due_date||'')}</b></div>`));
+      cAlert.innerHTML = lines.join('') || '<p class="badge paid">لا توجد تنبيهات استحقاق حالياً</p>';
     }
     ensureEnglishDigits(document.getElementById('sec-estate-platform'));
     if(typeof loadEstateOperationsCheck==='function') loadEstateOperationsCheck(true);
@@ -4139,6 +4172,34 @@ window.printHospitalityFolio = printHospitalityFolio;
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }
   };
+  window.generateEstateContractSchedule = async function(replaceOpen){
+    try{
+      const contractId = String($('#ecScheduleContract')?.value || '').trim();
+      if(!contractId) return toastErr('اختر العقد أولاً');
+      await api('estate_contract_generate_schedule',{
+        method:'POST',
+        body:JSON.stringify({ contract_id: contractId, replace_open: !!replaceOpen })
+      });
+      toast(replaceOpen ? 'تمت إعادة جدولة الدفعات المفتوحة' : 'تم توليد جدول الدفعات');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  };
+  window.payEstateContractInvoice = async function(){
+    try{
+      const invoiceId = String($('#ecPayInvoice')?.value || '').trim();
+      const amount = Number($('#ecPayAmount')?.value || 0);
+      if(!invoiceId) return toastErr('اختر فاتورة التحصيل');
+      if(!(amount>0)) return toastErr('أدخل مبلغ تحصيل صحيح');
+      await api('estate_contract_pay_invoice',{
+        method:'POST',
+        body:JSON.stringify({ invoice_id: invoiceId, amount })
+      });
+      toast('تم تسجيل التحصيل بنجاح');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  };
   let __estateOpsCheckLoading = false;
   window.loadEstateOperationsCheck = async function(silent){
     if(__estateOpsCheckLoading) return;
@@ -4156,6 +4217,8 @@ window.printHospitalityFolio = printHospitalityFolio;
           <div class="kpi"><span>محجوز</span><strong>${fmt(m.reserved_total||0)}</strong></div>
           <div class="kpi"><span>عقود نشطة</span><strong>${fmt(m.active_contracts||0)}</strong></div>
           <div class="kpi"><span>سجل الحالات</span><strong>${fmt(m.status_history_rows||0)}</strong></div>
+          <div class="kpi"><span>فواتير متأخرة</span><strong>${fmt(m.overdue_contract_invoices||0)}</strong></div>
+          <div class="kpi"><span>تستحق خلال 7 أيام</span><strong>${fmt(m.due_soon_contract_invoices||0)}</strong></div>
         </div>
         ${checks.map(c=>`<div class="statement-row"><span>${htmlEscape(c.name||'check')}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'OK':'Needs fix'} · ${fmt(c.value||0)}</b></div>`).join('')}
       `;

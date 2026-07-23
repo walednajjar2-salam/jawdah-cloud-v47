@@ -675,6 +675,11 @@
               <textarea id="ecNotes" placeholder="ملاحظات العقد"></textarea>
             </div>
             <button class="gold-btn" type="button" onclick="createEstateContractFromFlow()">إنشاء عقد نشط الآن</button>
+            <div class="toolbar" style="margin-top:10px">
+              <select id="ecScheduleContract"></select>
+              <button class="ghost" type="button" onclick="generateEstateContractSchedule(false)">توليد الجدولة</button>
+              <button class="ghost" type="button" onclick="generateEstateContractSchedule(true)">إعادة جدولة المفتوح</button>
+            </div>
           </div>
           <div class="card">
             <h3>تأكيد العمليات التشغيلية</h3>
@@ -685,6 +690,21 @@
           </div>
         </div>
         <div class="card"><h3>عقود الإيجار النشطة</h3><div id="estateContractsTable"></div></div>
+        <div class="layout">
+          <div class="card">
+            <h3>تنبيهات استحقاق دفعات العقود</h3>
+            <div id="estateContractInvoiceAlerts"></div>
+          </div>
+          <div class="card">
+            <h3>تحصيل دفعة عقد</h3>
+            <div class="form">
+              <select id="ecPayInvoice"></select>
+              <input id="ecPayAmount" type="number" min="0" step="0.001" placeholder="مبلغ التحصيل OMR">
+            </div>
+            <button class="gold-btn" type="button" onclick="payEstateContractInvoice()">تحصيل الآن</button>
+          </div>
+        </div>
+        <div class="card"><h3>فواتير عقود الإيجار</h3><div id="estateContractInvoicesTable"></div></div>
         <div class="card"><h3>سجل حالات الشقق والغرف</h3><div id="estateStatusHistoryTable"></div></div>
       </section>
 
