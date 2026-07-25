@@ -1,4 +1,4 @@
-/* التطوير المرعب — base edition visual + effectiveness layer
+/* التطوير المؤسسي — base edition visual + effectiveness layer
    Loaded after emergency-clean. Keeps daylight luxury; does not restyle locked login. */
 
 :root {
@@ -85,7 +85,7 @@ body.lq-edition-terrifying.app-ready .brand-copy-pro h1 {
   color: var(--lq-td-ink) !important;
 }
 body.lq-edition-terrifying.app-ready .brand-copy-pro small::after {
-  content: " · التطوير المرعب";
+  content: " · التطوير المؤسسي";
   color: var(--lq-td-gold);
   font-weight: 700;
 }

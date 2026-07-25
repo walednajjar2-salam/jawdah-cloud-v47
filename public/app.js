@@ -83,7 +83,7 @@ function canSeeFinanceSection(id){
 const FINANCE_SECTIONS = new Set(['revenues','admin-expenses','accounts','purchases','payroll','inventory','bank','chart-accounts','statements','bank-reconciliation','financial-periods']);
 const APP_UI_VERSION = '2026.3-TD';
 const APP_BASE_EDITION = 'terrifying-dev';
-const APP_EDITION_LABEL = 'التطوير المرعب';
+const APP_EDITION_LABEL = 'التطوير المؤسسي';
 const DISPLAY_OWNER_NAME = 'القائد يعقوب فاضل الخصيبي';
 const DISPLAY_OWNER_ROLE = 'المالك العام';
 const OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
@@ -4369,12 +4369,12 @@ window.printHospitalityFolio = printHospitalityFolio;
     return {...base, version:APP_UI_VERSION, edition:APP_BASE_EDITION, edition_label:APP_EDITION_LABEL, theme:'enterprise-vision', editVerified:true, apiConnected:true};
   };
   window.addEventListener('load',()=>{
-    document.title = 'Launch Quality LLC · التطوير المرعب';
+    document.title = 'Launch Quality LLC · التطوير المؤسسي';
     setTimeout(()=>{
       const brandSmall = document.querySelector('.brand-copy-pro small');
       if(brandSmall && !brandSmall.textContent.trim()) brandSmall.textContent = APP_UI_VERSION + ' · ' + APP_EDITION_LABEL;
       const loginMini = document.querySelector('.login-card .mini');
-      if(loginMini) loginMini.textContent = 'Real Estate & Hospitality Management System · التطوير المرعب';
+      if(loginMini) loginMini.textContent = 'Real Estate & Hospitality Management System · التطوير المؤسسي';
     },100);
   });
 })();

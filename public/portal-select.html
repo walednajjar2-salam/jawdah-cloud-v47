@@ -144,7 +144,7 @@
     <header class="head">
       <h1>اختر منصة العمل</h1>
       <p>بعد تسجيل الدخول، اختر مسار الدخول المناسب.</p>
-      <div class="edition-pill">قاعدة النظام: التطوير المرعب<small dir="ltr">Launch Quality · v50 · Terrifying Dev</small></div>
+      <div class="edition-pill">قاعدة النظام: التطوير المؤسسي<small dir="ltr">Launch Quality · v50 · Institutional Dev</small></div>
     </header>
 
     <section class="choices">
@@ -172,7 +172,7 @@
       </article>
     </section>
 
-    <div class="foot">Launch Quality LLC · التطوير المرعب</div>
+    <div class="foot">Launch Quality LLC · التطوير المؤسسي</div>
   </main>
 
   <script>
@@ -213,7 +213,7 @@
       localStorage.setItem("jawdah_portal_choice", c);
       if (token) localStorage.setItem("jawdah_cloud_token", token);
       // Always carry portal + token in the URL so app.html never falls back to login
-      let url = "/app.html?fresh=20260725v13&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
+      let url = "/app.html?fresh=20260725v14&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
       if (token) url += "&token=" + encodeURIComponent(token);
       location.replace(url);
     }

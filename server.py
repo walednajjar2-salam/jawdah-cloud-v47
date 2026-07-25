@@ -84,9 +84,9 @@ LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SE
 APP_VERSION = "Launch-Quality-LLC-v50-terrifying-dev"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
-# Product base edition — التطوير المرعب is the default foundation for UI + health.
+# Product base edition — التطوير المؤسسي is the default foundation for UI + health.
 APP_BASE_EDITION = os.environ.get("LQ_BASE_EDITION", "terrifying-dev").strip().lower() or "terrifying-dev"
-APP_EDITION_LABEL = os.environ.get("LQ_EDITION_LABEL", "التطوير المرعب").strip() or "التطوير المرعب"
+APP_EDITION_LABEL = os.environ.get("LQ_EDITION_LABEL", "التطوير المؤسسي").strip() or "التطوير المؤسسي"
 BACKUP_DIR = Path(os.environ.get("JAWDAH_BACKUP_DIR", str(DATA_DIR / "backups"))).resolve()
 AUTO_BACKUP_ENABLED = os.environ.get("JAWDAH_AUTO_BACKUP", "1").strip().lower() not in ("0", "false", "no", "off")
 BACKUP_INTERVAL_HOURS = max(1, int(os.environ.get("JAWDAH_BACKUP_INTERVAL_HOURS", "24") or "24"))
@@ -3730,7 +3730,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "edition": APP_EDITION,
                         "base_edition": APP_BASE_EDITION,
                         "edition_label": APP_EDITION_LABEL,
-                        "base_name_ar": "التطوير المرعب",
+                        "base_name_ar": "التطوير المؤسسي",
                         "database": str(DB_PATH),
                         "database_engine": "sqlite",
                         "postgres_url_configured": bool(LQ_DATABASE_URL),

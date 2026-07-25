@@ -1,5 +1,5 @@
 /*!
- * التطوير المرعب — Launch Quality ERP base edition runtime
+ * التطوير المؤسسي — Launch Quality ERP base edition runtime
  * Default foundation layer: identity, effectiveness heal, health probe.
  */
 (function () {
@@ -7,8 +7,8 @@
 
   var EDITION = {
     code: "terrifying-dev",
-    labelAr: "التطوير المرعب",
-    labelEn: "Terrifying Development",
+    labelAr: "التطوير المؤسسي",
+    labelEn: "Institutional Development",
     uiVersion: "2026.3-TD",
     storageKey: "lq_ui_edition",
   };
