@@ -18,6 +18,7 @@ This report documents bootstrap usernames and initial passwords configured in co
 |---|---|---|
 | `waleed` | `admin` | `111111` |
 | `yaqoub` | `owner` | `owner2015` |
+| `owner` | `owner` | `001970` |
 | `razan` | `accountant` | `222222` |
 | `amjad` | `operations` | `333333` |
 | `ali` | `maintenance` | `444444` |
