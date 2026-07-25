@@ -1,10 +1,8 @@
 """S3-compatible object storage for uploads (contracts, photos, proofs).
 
-Phase 1:
-- Dual-write: local disk remains source of truth for serving when present
-- Remote mirror via AWS S3 / Cloudflare R2 / MinIO (S3 API)
-- Fetch-from-remote when local file is missing
-- SQLite continues to store /uploads/... URLs unchanged
+Supports AWS S3, Cloudflare R2, MinIO, and Railway Buckets.
+When Railway injects BUCKET + ACCESS_KEY_ID + SECRET_ACCESS_KEY, storage
+auto-enables (no extra LQ_OBJECT_STORAGE_ENABLED required).
 """
 from __future__ import annotations
 
@@ -19,40 +17,72 @@ _LAST_ERROR: Optional[str] = None
 _LOCK = threading.Lock()
 
 
+def _env(*names: str, default: str = "") -> str:
+    for name in names:
+        val = (os.environ.get(name) or "").strip()
+        if val:
+            return val
+    return default
+
+
 def _env_truthy(name: str, default: str = "0") -> bool:
     return (os.environ.get(name) or default).strip().lower() in ("1", "true", "yes", "on")
 
 
 def _cfg() -> Dict[str, Any]:
-    enabled_flag = _env_truthy("LQ_OBJECT_STORAGE_ENABLED", "0")
-    bucket = (os.environ.get("LQ_OBJECT_STORAGE_BUCKET") or os.environ.get("AWS_S3_BUCKET") or "").strip()
-    access = (
-        os.environ.get("LQ_OBJECT_STORAGE_ACCESS_KEY_ID")
-        or os.environ.get("AWS_ACCESS_KEY_ID")
-        or ""
-    ).strip()
-    secret = (
-        os.environ.get("LQ_OBJECT_STORAGE_SECRET_ACCESS_KEY")
-        or os.environ.get("AWS_SECRET_ACCESS_KEY")
-        or ""
-    ).strip()
-    region = (
-        os.environ.get("LQ_OBJECT_STORAGE_REGION")
-        or os.environ.get("AWS_DEFAULT_REGION")
-        or os.environ.get("AWS_REGION")
-        or "auto"
-    ).strip() or "auto"
-    endpoint = (
-        os.environ.get("LQ_OBJECT_STORAGE_ENDPOINT_URL")
-        or os.environ.get("AWS_ENDPOINT_URL")
-        or ""
-    ).strip()
-    prefix = (os.environ.get("LQ_OBJECT_STORAGE_PREFIX") or "").strip().strip("/")
-    public_base = (os.environ.get("LQ_OBJECT_STORAGE_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+    # Explicit LQ_* / AWS_* first, then Railway Bucket injected names.
+    bucket = _env("LQ_OBJECT_STORAGE_BUCKET", "AWS_S3_BUCKET", "BUCKET")
+    access = _env(
+        "LQ_OBJECT_STORAGE_ACCESS_KEY_ID",
+        "AWS_ACCESS_KEY_ID",
+        "ACCESS_KEY_ID",
+    )
+    secret = _env(
+        "LQ_OBJECT_STORAGE_SECRET_ACCESS_KEY",
+        "AWS_SECRET_ACCESS_KEY",
+        "SECRET_ACCESS_KEY",
+    )
+    region = _env(
+        "LQ_OBJECT_STORAGE_REGION",
+        "AWS_DEFAULT_REGION",
+        "AWS_REGION",
+        "REGION",
+        default="auto",
+    ) or "auto"
+    endpoint = _env(
+        "LQ_OBJECT_STORAGE_ENDPOINT_URL",
+        "AWS_ENDPOINT_URL",
+        "ENDPOINT",
+    )
+    # Railway Buckets default endpoint when bucket vars are present.
+    railway_injected = bool(
+        (os.environ.get("BUCKET") or "").strip()
+        and (os.environ.get("ACCESS_KEY_ID") or "").strip()
+        and (os.environ.get("SECRET_ACCESS_KEY") or "").strip()
+    )
+    if not endpoint and railway_injected:
+        endpoint = "https://storage.railway.app"
+    prefix = _env("LQ_OBJECT_STORAGE_PREFIX").strip().strip("/")
+    public_base = _env("LQ_OBJECT_STORAGE_PUBLIC_BASE_URL").rstrip("/")
     local_fallback = _env_truthy("LQ_OBJECT_STORAGE_LOCAL_FALLBACK", "1")
     configured = bool(bucket and access and secret)
-    # Opt-in only: requires LQ_OBJECT_STORAGE_ENABLED=1 plus bucket + keys
-    enabled = bool(enabled_flag and configured)
+    explicit = (os.environ.get("LQ_OBJECT_STORAGE_ENABLED") or "").strip().lower()
+    if explicit in ("0", "false", "no", "off"):
+        enabled = False
+    elif explicit in ("1", "true", "yes", "on"):
+        enabled = configured
+    else:
+        # Auto-enable when credentials are present (Railway Bucket link).
+        enabled = configured
+    # Railway prefers virtual-hosted; older custom endpoints may need path style.
+    addressing = _env("LQ_OBJECT_STORAGE_ADDRESSING", default="")
+    if not addressing:
+        if endpoint.rstrip("/").endswith("storage.railway.app"):
+            addressing = "virtual"
+        elif endpoint:
+            addressing = "path"
+        else:
+            addressing = "auto"
     return {
         "enabled": enabled,
         "configured": configured,
@@ -64,6 +94,11 @@ def _cfg() -> Dict[str, Any]:
         "local_fallback": local_fallback,
         "access_configured": bool(access),
         "secret_configured": bool(secret),
+        "access_key": access,
+        "secret_key": secret,
+        "addressing_style": addressing,
+        "railway_injected": railway_injected,
+        "provider": "railway-bucket" if railway_injected or endpoint.rstrip("/").endswith("storage.railway.app") else "s3-compatible",
     }
 
 
@@ -80,7 +115,7 @@ def object_storage_config() -> Dict[str, Any]:
     return {
         "enabled": cfg["enabled"],
         "configured": cfg["configured"],
-        "provider": "s3-compatible",
+        "provider": cfg["provider"],
         "bucket_configured": bool(cfg["bucket"]),
         "endpoint_configured": bool(cfg["endpoint_url"]),
         "region": cfg["region"],
@@ -88,6 +123,12 @@ def object_storage_config() -> Dict[str, Any]:
         "public_base_configured": bool(cfg["public_base_url"]),
         "local_fallback": cfg["local_fallback"],
         "driver_installed": boto3_available(),
+        "railway_injected": cfg["railway_injected"],
+        "setup_hint": (
+            None
+            if cfg["configured"]
+            else "Railway → Create → Bucket → Variables → Variable References (AWS SDK preset)"
+        ),
     }
 
 
@@ -113,20 +154,13 @@ def _client():
     cfg = _cfg()
     if not cfg["configured"]:
         raise RuntimeError("Object storage is not configured")
+    style = cfg["addressing_style"] or "auto"
     kwargs: Dict[str, Any] = {
         "service_name": "s3",
         "region_name": cfg["region"] or "auto",
-        "aws_access_key_id": (
-            os.environ.get("LQ_OBJECT_STORAGE_ACCESS_KEY_ID")
-            or os.environ.get("AWS_ACCESS_KEY_ID")
-            or ""
-        ).strip(),
-        "aws_secret_access_key": (
-            os.environ.get("LQ_OBJECT_STORAGE_SECRET_ACCESS_KEY")
-            or os.environ.get("AWS_SECRET_ACCESS_KEY")
-            or ""
-        ).strip(),
-        "config": Config(signature_version="s3v4", s3={"addressing_style": "path" if cfg["endpoint_url"] else "auto"}),
+        "aws_access_key_id": cfg["access_key"],
+        "aws_secret_access_key": cfg["secret_key"],
+        "config": Config(signature_version="s3v4", s3={"addressing_style": style}),
     }
     if cfg["endpoint_url"]:
         kwargs["endpoint_url"] = cfg["endpoint_url"]
@@ -137,7 +171,6 @@ def key_from_upload_url(url: str) -> Optional[str]:
     s = str(url or "").strip().lstrip("/")
     if not s.startswith("uploads/"):
         return None
-    # normalize
     s = s.replace("\\", "/")
     while "//" in s:
         s = s.replace("//", "/")
@@ -158,23 +191,25 @@ def probe_object_storage() -> Dict[str, Any]:
         "latency_ms": None,
         "error": None,
         "bucket": status.get("bucket_configured"),
+        "provider": status.get("provider"),
+        "setup_hint": status.get("setup_hint"),
     }
     if not status["configured"]:
-        out["error"] = "Set LQ_OBJECT_STORAGE_BUCKET + ACCESS/SECRET keys and LQ_OBJECT_STORAGE_ENABLED=1"
+        out["error"] = "Railway Bucket not linked — Create Bucket and add Variable References"
         return out
     if not status["driver_installed"]:
         out["error"] = "boto3 not installed"
         return out
     if not status["enabled"]:
-        out["error"] = "Object storage configured but disabled — set LQ_OBJECT_STORAGE_ENABLED=1"
+        out["error"] = "Object storage configured but disabled (LQ_OBJECT_STORAGE_ENABLED=0)"
         return out
     try:
         client, cfg = _client()
-        # HeadBucket is the lightest connectivity check
         client.head_bucket(Bucket=cfg["bucket"])
         out["ok"] = True
         out["bucket_name"] = cfg["bucket"]
         out["endpoint_url"] = cfg["endpoint_url"] or None
+        _set_error(None)
     except Exception as exc:
         out["error"] = str(exc)
         _set_error(str(exc))
@@ -315,9 +350,44 @@ def fetch_upload_url(url: str) -> Tuple[Optional[bytes], Optional[str]]:
     return data, meta.get("content_type")
 
 
+def put_backup_files(json_path, sqlite_path, meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Upload automatic backup artifacts into the bucket under backups/."""
+    from pathlib import Path
+
+    status = object_storage_status()
+    out: Dict[str, Any] = {"ok": False, "skipped": False, "uploaded": []}
+    if not status["ready"]:
+        out["skipped"] = True
+        out["ok"] = True
+        out["reason"] = "object storage not ready"
+        return out
+    stamp = str((meta or {}).get("timestamp") or time.strftime("%Y%m%d-%H%M%S"))
+    prefix = (_cfg().get("prefix") or "").strip("/")
+    base = f"{prefix}/backups/{stamp}" if prefix else f"backups/{stamp}"
+    try:
+        jp = Path(json_path)
+        sp = Path(sqlite_path)
+        if jp.exists():
+            r = put_bytes(f"{base}/{jp.name}", jp.read_bytes(), "application/json")
+            out["uploaded"].append({"key": f"{base}/{jp.name}", "ok": r.get("ok"), "error": r.get("error")})
+        if sp.exists():
+            r = put_bytes(f"{base}/{sp.name}", sp.read_bytes(), "application/octet-stream")
+            out["uploaded"].append({"key": f"{base}/{sp.name}", "ok": r.get("ok"), "error": r.get("error")})
+        out["ok"] = all(x.get("ok") for x in out["uploaded"]) if out["uploaded"] else False
+        if not out["uploaded"]:
+            out["error"] = "backup files missing"
+        out["prefix"] = base
+    except Exception as exc:
+        out["error"] = str(exc)
+        out["ok"] = False
+        _set_error(str(exc))
+    return out
+
+
 def sync_local_tree(upload_dir, *, limit: int = 5000) -> Dict[str, Any]:
     """Upload local files under upload_dir that map to uploads/ keys."""
     from pathlib import Path
+    import mimetypes
 
     root = Path(upload_dir).resolve()
     result: Dict[str, Any] = {
@@ -345,8 +415,6 @@ def sync_local_tree(upload_dir, *, limit: int = 5000) -> Dict[str, Any]:
         url = f"/uploads/{rel}"
         try:
             data = path.read_bytes()
-            import mimetypes
-
             ctype = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
             put = mirror_upload_url(url, data, ctype)
             if put.get("ok") and not put.get("skipped"):

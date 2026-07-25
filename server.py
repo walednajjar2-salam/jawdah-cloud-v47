@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -83,7 +83,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v53-owner-creds-b"
+APP_VERSION = "Launch-Quality-LLC-v53-durable-storage"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -8604,7 +8604,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
         add("الفروع", branches > 0, branches, "راجع قسم التوسع")
         add("نسخ احتياطي", AUTO_BACKUP_ENABLED, LAST_AUTO_BACKUP_AT or "—", "المستندات → نسخ احتياطي")
         add("فحص الاستعادة", verify.get("ok"), f"{verify.get('score')}%", "backup/verify")
-        add("Off-site", offsite.get("enabled"), offsite.get("last_push") or "غير مفعّل", "LQ_OFFSITE_BACKUP_URL")
+        add(
+            "Off-site",
+            offsite.get("enabled"),
+            offsite.get("last_push") or offsite.get("mode") or "بانتظار Railway Bucket",
+            offsite.get("setup_hint") or "Railway Create → Bucket + Variable References",
+        )
         add("متأخرات", overdue <= 0, f"{fmt_omr(float(overdue or 0))}", "راجع الفواتير")
         add("سجل العمليات", audit_total > 0, audit_total, "audit_log")
         add("عمليات اليوم", audit_today > 0, audit_today, "تحقق من إدخال العمليات اليومي")

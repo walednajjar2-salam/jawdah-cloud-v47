@@ -42,23 +42,32 @@
     const lastWrite = os.last_write
       ? (os.last_write.ok ? "آخر كتابة ناجحة" : "آخر كتابة فشلت") + " · " + (os.last_write.at || "")
       : "لا كتابة بعد";
+    const off = (status && status.offsite) || {};
+    const hint =
+      os.setup_hint ||
+      off.setup_hint ||
+      "Railway → Create → Bucket → افتح خدمة النظام → Variables → Variable References → AWS SDK";
+    const defaultOut = ready
+      ? "التخزين جاهز. اضغط فحص التخزين ثم مزامنة الملفات الحالية."
+      : "لتفعيل الحماية السحابية الآن:\n1) Railway → Create → Bucket\n2) اختر الخدمة web → Variables\n3) Variable References / AWS SDK preset\n4) Redeploy\nبعدها يشتغل التخزين + النسخ الخارجي تلقائياً.";
     return `
       <div class="card" style="margin-top:12px" id="objectStorageCard">
-        <h4>التخزين السحابي — العقود والصور</h4>
-        <p class="mini">يحفظ الملفات محلياً ويمرّرها إلى S3/R2/MinIO. الروابط في النظام تبقى <code>/uploads/...</code>.</p>
+        <h4>التخزين السحابي + النسخ الخارجي</h4>
+        <p class="mini">الملفات تُحفظ محلياً وتُنسخ لـ Railway Bucket. النسخ الاحتياطي يُرفع للسحابة تلقائياً.</p>
         <div class="status-line" style="margin:8px 0;flex-wrap:wrap;gap:6px">
-          <span class="badge">الحالة: ${esc(state)}</span>
-          <span class="badge">محلي احتياطي: ${os.local_fallback === false ? "لا" : "نعم"}</span>
-          <span class="badge">Bucket: ${os.bucket_configured ? "مُعرّف" : "—"}</span>
-          <span class="badge">Endpoint: ${os.endpoint_configured ? "مخصص" : "AWS"}</span>
+          <span class="badge">التخزين: ${esc(state)}</span>
+          <span class="badge">Off-site: ${off.enabled ? "مفعّل" : "بانتظار Bucket"}</span>
+          <span class="badge">الوضع: ${esc(off.mode || "none")}</span>
+          <span class="badge">Provider: ${esc(os.provider || "—")}</span>
           <span class="badge">${esc(lastWrite)}</span>
         </div>
+        <p class="mini"><b>خطوة واحدة متبقية إن لم يكن جاهزاً:</b> ${esc(hint)}</p>
         <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin:10px 0">
           <button type="button" class="ghost" onclick="LQ_ENTERPRISE.storageProbe()">فحص التخزين</button>
           <button type="button" class="gold-btn" onclick="LQ_ENTERPRISE.storageSync()">مزامنة الملفات الحالية</button>
           <button type="button" class="ghost" onclick="showSection('backup')">صفحة التخزين</button>
         </div>
-        <pre id="objectStorageOut" class="mini" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:0;background:rgba(0,0,0,.04);padding:10px;border-radius:8px">فعّل LQ_OBJECT_STORAGE_ENABLED=1 مع Bucket والمفاتيح على Railway.</pre>
+        <pre id="objectStorageOut" class="mini" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:0;background:rgba(0,0,0,.04);padding:10px;border-radius:8px">${esc(defaultOut)}</pre>
       </div>`;
   }
 
