@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -83,7 +83,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v53-owner-creds"
+APP_VERSION = "Launch-Quality-LLC-v53-owner-creds-b"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -4319,9 +4319,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def api_login(self, db: sqlite3.Connection) -> None:
         data = self.read_json()
-        username = str(data.get("username", "")).strip()
+        username = str(data.get("username", "")).strip().lower()
         password = str(data.get("password", ""))
-        row = db.execute("SELECT * FROM users WHERE username=? AND active=1", (username,)).fetchone()
+        row = db.execute("SELECT * FROM users WHERE lower(username)=? AND active=1", (username,)).fetchone()
         if not row or not verify_password(password, row["password_hash"]):
             return self.send_json({"ok": False, "error": "Invalid username or password"}, 401)
         self.issue_session(db, row, via="password", remember=bool(data.get("remember_device")))
