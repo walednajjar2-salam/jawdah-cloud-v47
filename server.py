@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -34,6 +34,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from lq_expand.offsite import offsite_config, push_offsite_backup
 from lq_expand import object_storage as lq_object_storage
+import lq_payroll_import
 import lq_postgres
 from lq_expand.openapi import build_openapi_spec
 from lq_expand.security import (
@@ -83,7 +84,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v54-role-boards"
+APP_VERSION = "Launch-Quality-LLC-v55-payroll-import"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -153,7 +154,8 @@ TABLES = {
     "accounts": ["id", "entry_date", "type", "category", "description", "client_id", "property_id", "invoice_id", "amount"],
     "purchase_invoices": ["id", "purchase_no", "supplier", "invoice_date", "due_date", "category", "description", "amount", "paid_amount", "status", "property_id", "account_id"],
     "revenues": ["id", "revenue_no", "revenue_date", "source", "category", "description", "amount", "client_id", "property_id", "account_id"],
-    "salaries": ["id", "employee_name", "salary_month", "basic_salary", "allowances", "deductions", "net_salary", "status", "payment_date", "account_id"],
+    "salaries": ["id", "employee_no", "employee_name", "salary_month", "project_name", "basic_salary", "allowances", "deductions", "net_salary", "status", "payment_date", "account_id", "import_batch_id"],
+    "payroll_import_batches": ["id", "import_type", "file_name", "project_name", "salary_month", "status", "row_count", "summary_json", "created_by", "created_at"],
     "admin_expenses": ["id", "expense_date", "category", "description", "amount", "supplier", "property_id", "account_id"],
     "inventory_items": ["id", "sku", "name", "category", "unit", "quantity", "min_quantity", "unit_cost", "location", "property_id", "notes"],
     "inventory_transactions": ["id", "item_id", "tx_date", "tx_type", "quantity", "unit_cost", "reference", "notes"],
@@ -780,6 +782,10 @@ def reset_operational_data(db: sqlite3.Connection, *, clear_uploads: bool = True
         "accounts",
         "purchase_invoices",
         "revenues",
+        "attendance_adjustments",
+        "attendance_days",
+        "attendance_punches",
+        "payroll_import_batches",
         "salaries",
         "admin_expenses",
         "maintenance",
@@ -1098,6 +1104,62 @@ def init_db() -> None:
                 payment_date TEXT,
                 account_id TEXT,
                 FOREIGN KEY(account_id) REFERENCES accounts(id)
+            );
+            CREATE TABLE IF NOT EXISTS payroll_import_batches (
+                id TEXT PRIMARY KEY,
+                import_type TEXT NOT NULL,
+                file_name TEXT,
+                project_name TEXT,
+                salary_month TEXT,
+                status TEXT NOT NULL DEFAULT 'committed',
+                row_count INTEGER NOT NULL DEFAULT 0,
+                summary_json TEXT,
+                created_by TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS attendance_punches (
+                id TEXT PRIMARY KEY,
+                batch_id TEXT,
+                record_no TEXT,
+                machine_no INTEGER,
+                employee_no TEXT NOT NULL,
+                employee_name TEXT,
+                mode INTEGER,
+                io_mode INTEGER,
+                punch_datetime TEXT NOT NULL,
+                punch_date TEXT NOT NULL,
+                punch_time TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'aglog',
+                FOREIGN KEY(batch_id) REFERENCES payroll_import_batches(id)
+            );
+            CREATE TABLE IF NOT EXISTS attendance_days (
+                id TEXT PRIMARY KEY,
+                batch_id TEXT,
+                employee_no TEXT NOT NULL,
+                employee_name TEXT,
+                work_date TEXT NOT NULL,
+                day_name TEXT,
+                shift_type TEXT,
+                attendance_status TEXT,
+                action_type TEXT,
+                scheduled_time TEXT,
+                actual_time TEXT,
+                remarks TEXT,
+                is_extra_punch INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(batch_id) REFERENCES payroll_import_batches(id)
+            );
+            CREATE TABLE IF NOT EXISTS attendance_adjustments (
+                id TEXT PRIMARY KEY,
+                batch_id TEXT,
+                employee_no TEXT NOT NULL,
+                employee_name TEXT,
+                work_date TEXT NOT NULL,
+                adjustment_type TEXT,
+                value_before TEXT,
+                value_after TEXT,
+                adjusted_at TEXT,
+                created_at TEXT,
+                FOREIGN KEY(batch_id) REFERENCES payroll_import_batches(id)
             );
             CREATE TABLE IF NOT EXISTS admin_expenses (
                 id TEXT PRIMARY KEY,
@@ -1785,6 +1847,12 @@ def init_db() -> None:
             ("last_verified", "TEXT"),
         ]:
             ensure_column(db, "biometric_credentials", col, definition)
+        for col, definition in [
+            ("employee_no", "TEXT"),
+            ("project_name", "TEXT"),
+            ("import_batch_id", "TEXT"),
+        ]:
+            ensure_column(db, "salaries", col, definition)
         migrate_property_statuses(db)
         seed_branches_from_buildings(db)
         ensure_workflow_policies_defaults(db)
@@ -4117,6 +4185,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "role_board" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_role_board(db, user)
+                if parts[0] == "payroll" and len(parts) >= 3 and parts[1] == "import" and parts[2] == "preview" and method == "POST":
+                    user = self.require_user(db, "salaries")
+                    return None if not user else self.api_payroll_import_preview(db, user)
+                if parts[0] == "payroll" and len(parts) >= 3 and parts[1] == "import" and parts[2] == "commit" and method == "POST":
+                    user = self.require_user(db, "salaries")
+                    return None if not user else self.api_payroll_import_commit(db, user)
+                if parts[0] == "payroll" and len(parts) >= 2 and parts[1] == "import_batches" and method == "GET":
+                    user = self.require_user(db, "salaries:read")
+                    return None if not user else self.api_payroll_import_batches(db, user, query)
+                if parts[0] == "payroll" and len(parts) >= 2 and parts[1] == "attendance_summary" and method == "GET":
+                    user = self.require_user(db, "salaries:read")
+                    return None if not user else self.api_payroll_attendance_summary(db, user, query)
                 if parts[0] == "alert_dismiss" and method == "POST":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_alert_dismiss(db, user)
@@ -7726,6 +7806,123 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_role_board(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         board = build_role_board(db, user)
         self.send_json({"ok": True, "board": board})
+
+    def api_payroll_import_preview(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        import_type = str(data.get("import_type") or "").strip().lower()
+        content = str(data.get("content") or data.get("text") or "")
+        file_name = str(data.get("file_name") or "").strip()
+        salary_month = str(data.get("salary_month") or "").strip()
+        project_name = str(data.get("project_name") or "").strip()
+        if data.get("base64") and not content:
+            try:
+                content = base64.b64decode(str(data.get("base64"))).decode("utf-8", errors="replace")
+            except Exception:
+                return self.send_json({"ok": False, "error": "تعذر قراءة الملف"}, 400)
+        try:
+            payload = lq_payroll_import.build_preview(
+                import_type,
+                content,
+                file_name=file_name,
+                salary_month=salary_month,
+                project_name=project_name,
+            )
+            preview_id = lq_payroll_import.store_preview(str(user.get("username") or ""), payload)
+            public = {
+                "preview_id": preview_id,
+                "import_type": import_type,
+                "file_name": file_name,
+                "salary_month": payload.get("salary_month"),
+                "project_name": project_name,
+                "summary": payload.get("summary") or {},
+                "sample_rows": (payload.get("rows") or [])[:25],
+                "row_count": len(payload.get("rows") or []),
+                "expires_in_seconds": lq_payroll_import.PREVIEW_TTL_SECONDS,
+            }
+            audit(db, user, "payroll_import_preview", "payroll_import", preview_id, f"{import_type} rows={public['row_count']}")
+            db.commit()
+            self.send_json({"ok": True, "preview": public})
+        except ValueError as exc:
+            self.send_json({"ok": False, "error": str(exc)}, 400)
+
+    def api_payroll_import_commit(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        preview_id = str(data.get("preview_id") or "").strip()
+        if not preview_id:
+            return self.send_json({"ok": False, "error": "preview_id مطلوب"}, 400)
+        try:
+            preview = lq_payroll_import.pop_preview(str(user.get("username") or ""), preview_id)
+            result = lq_payroll_import.commit_preview(
+                db,
+                user,
+                preview,
+                insert_fn=insert,
+                uid_fn=uid,
+                today_fn=today,
+            )
+            audit(
+                db,
+                user,
+                "payroll_import_commit",
+                "payroll_import_batches",
+                result["batch_id"],
+                f"{result['import_type']} rows={result['committed_rows']}",
+            )
+            db.commit()
+            self.send_json({"ok": True, "result": result})
+        except ValueError as exc:
+            self.send_json({"ok": False, "error": str(exc)}, 400)
+
+    def api_payroll_import_batches(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        limit = min(100, max(1, int((params.get("limit") or ["30"])[0] or 30)))
+        rows = rows_to_dicts(
+            db.execute(
+                "SELECT * FROM payroll_import_batches ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        )
+        for row in rows:
+            try:
+                row["summary"] = json.loads(row.pop("summary_json") or "{}")
+            except json.JSONDecodeError:
+                row["summary"] = {}
+        self.send_json({"ok": True, "batches": rows})
+
+    def api_payroll_attendance_summary(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        month = str((params.get("month") or [""])[0] or "").strip()
+        employee_no = lq_payroll_import.normalize_employee_no(str((params.get("employee_no") or [""])[0] or ""))
+        punch_count = db.execute("SELECT COUNT(*) FROM attendance_punches").fetchone()[0]
+        day_count = db.execute("SELECT COUNT(*) FROM attendance_days").fetchone()[0]
+        adj_count = db.execute("SELECT COUNT(*) FROM attendance_adjustments").fetchone()[0]
+        batch_count = db.execute("SELECT COUNT(*) FROM payroll_import_batches").fetchone()[0]
+        recent_batches = rows_to_dicts(
+            db.execute(
+                "SELECT id, import_type, file_name, project_name, salary_month, row_count, created_by, created_at FROM payroll_import_batches ORDER BY created_at DESC LIMIT 8"
+            ).fetchall()
+        )
+        punches_sql = "SELECT employee_no, employee_name, punch_date, COUNT(*) AS punch_count FROM attendance_punches"
+        punches_args: List[Any] = []
+        if month:
+            punches_sql += " WHERE punch_date LIKE ?"
+            punches_args.append(f"{month}%")
+        if employee_no:
+            punches_sql += " AND employee_no=?" if month else " WHERE employee_no=?"
+            punches_args.append(employee_no)
+        punches_sql += " GROUP BY employee_no, employee_name, punch_date ORDER BY punch_date DESC LIMIT 50"
+        daily = rows_to_dicts(db.execute(punches_sql, punches_args).fetchall())
+        self.send_json({
+            "ok": True,
+            "summary": {
+                "punch_count": int(punch_count or 0),
+                "attendance_day_rows": int(day_count or 0),
+                "adjustment_count": int(adj_count or 0),
+                "batch_count": int(batch_count or 0),
+            },
+            "recent_batches": recent_batches,
+            "daily_punches": daily,
+        })
 
     def api_alert_dismiss(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()

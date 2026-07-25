@@ -1184,7 +1184,8 @@
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('revenues')">تصدير CSV</button><button class="ghost" onclick="exportFilteredRevenuesCsv()">تصدير نتائج الفلتر</button></div><div id="revenuesTable"></div></div>
       </section>
       <section id="sec-payroll" class="section">
-        <div class="card"><h3>الرواتب</h3><div class="form"><input id="salEmployee" placeholder="اسم الموظف"><input id="salMonth" type="month"><input id="salBasic" placeholder="الراتب الأساسي"><input id="salAllow" placeholder="بدلات"><input id="salDeduct" placeholder="استقطاعات"><input id="salDate" type="date"><select id="salStatus"><option>Pending</option><option>Paid</option></select></div><button class="gold-btn" onclick="createSalary()">حفظ الراتب</button></div>
+        <div id="lqPayrollImportHost"></div>
+        <div class="card"><h3>الرواتب — إدخال يدوي</h3><div class="form"><input id="salEmployee" placeholder="اسم الموظف"><input id="salMonth" type="month"><input id="salBasic" placeholder="الراتب الأساسي"><input id="salAllow" placeholder="بدلات"><input id="salDeduct" placeholder="استقطاعات"><input id="salDate" type="date"><select id="salStatus"><option>Pending</option><option>Paid</option></select></div><button class="gold-btn" onclick="createSalary()">حفظ الراتب</button></div>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('salaries')">تصدير CSV</button><button class="ghost" onclick="exportFilteredPayrollCsv()">تصدير نتائج الفلتر</button></div><div id="salariesTable"></div></div>
       </section>
       <section id="sec-admin-expenses" class="section">
@@ -1302,6 +1303,7 @@
   <script src="lq-security.js?v=sec1" defer></script>
   <script src="lq-alert-center.js?v=ac2-role" defer></script>
   <script src="lq-role-board.js?v=rb1" defer></script>
+  <script src="lq-payroll-import.js?v=pi1" defer></script>
   <script src="lq-walid-intel.js?v=wi2" defer></script>
   <script src="lq-enterprise.js?v=ent4-durable" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
