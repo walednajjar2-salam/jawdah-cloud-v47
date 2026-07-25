@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -83,7 +83,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v53-data-reset"
+APP_VERSION = "Launch-Quality-LLC-v53-data-reset-b"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -749,28 +749,79 @@ def clear_upload_files() -> Dict[str, int]:
 def reset_operational_data(db: sqlite3.Connection, *, clear_uploads: bool = True) -> Dict[str, Any]:
     """Zero business data so the team can re-enter clean records. Keeps users."""
     cleared: Dict[str, int] = {}
-    # Clear TABLES entries first (child-ish names later in dict are fine; FK off by default)
-    for table in list(TABLES.keys()):
-        if table in OPERATIONAL_KEEP_TABLES:
-            continue
-        try:
-            before = int(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] or 0)
-            db.execute(f"DELETE FROM {table}")
-            cleared[table] = before
-        except sqlite3.Error:
-            cleared[table] = -1
-    for table in OPERATIONAL_EXTRA_CLEAR_TABLES:
-        try:
-            before = int(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] or 0)
-            db.execute(f"DELETE FROM {table}")
-            cleared[table] = before
-        except sqlite3.Error:
-            pass
+    errors: List[str] = []
+    # Child-first order so FK constraints do not block the wipe.
+    delete_order = [
+        "estate_reservation_invoices",
+        "estate_contract_settlements",
+        "estate_contract_invoices",
+        "estate_contracts",
+        "estate_status_history",
+        "estate_month_closes",
+        "estate_maintenance",
+        "estate_accessories",
+        "estate_rooms",
+        "estate_apartments",
+        "estate_buildings",
+        "estate_properties",
+        "hospitality_folios",
+        "hospitality_bookings",
+        "hospitality_season_rates",
+        "hospitality_rooms",
+        "inventory_transactions",
+        "inventory_items",
+        "bank_reconciliations",
+        "bank_transactions",
+        "approvals",
+        "accounting_budgets",
+        "financial_periods",
+        "payments",
+        "invoices",
+        "accounts",
+        "purchase_invoices",
+        "revenues",
+        "salaries",
+        "admin_expenses",
+        "maintenance",
+        "contracts",
+        "clients",
+        "properties",
+        "branches",
+        "audit_log",
+        "module_fix_runs",
+        "daily_operations",
+        "work_journal",
+        "ai_usage_log",
+        "alert_notifications",
+        "alert_dismissals",
+        "sessions",
+    ]
+    seen = set(delete_order)
+    for table in list(TABLES.keys()) + OPERATIONAL_EXTRA_CLEAR_TABLES:
+        if table not in seen and table not in OPERATIONAL_KEEP_TABLES:
+            delete_order.append(table)
+    # Disable FK during wipe so residual cycles cannot block a clean slate.
+    db.execute("PRAGMA foreign_keys = OFF")
+    try:
+        for table in delete_order:
+            if table in OPERATIONAL_KEEP_TABLES:
+                continue
+            try:
+                before = int(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] or 0)
+                db.execute(f"DELETE FROM {table}")
+                cleared[table] = before
+            except sqlite3.Error as exc:
+                cleared[table] = -1
+                errors.append(f"{table}: {exc}")
+    finally:
+        db.execute("PRAGMA foreign_keys = ON")
     seed_chart_accounts(db)
     users_kept = int(db.execute("SELECT COUNT(*) FROM users").fetchone()[0] or 0)
     upload_stats = clear_upload_files() if clear_uploads else {"removed_files": 0, "skipped": True}
     return {
+        "ok": len(errors) == 0,
         "cleared": cleared,
+        "errors": errors,
         "users_kept": users_kept,
         "uploads": upload_stats,
         "kept": sorted(OPERATIONAL_KEEP_TABLES),
