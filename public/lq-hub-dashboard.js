@@ -45,6 +45,14 @@
         alert: Number(k.overdue || 0) > 0,
       },
       {
+        id: "receivables",
+        icon: "💸",
+        label: "التحصيل الذكي",
+        value: () => money(k.overdue || 0),
+        sub: "أعمار وتذكير",
+        alert: Number(k.overdue || 0) > 0,
+      },
+      {
         id: "maintenance",
         icon: "🔧",
         label: "الصيانة",

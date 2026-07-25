@@ -50,6 +50,7 @@ const NAV_SAAS_ITEMS = [
   ['contracts','العقود','📄'],
   ['revenues','الإيرادات','💰'],
   ['invoices','المدفوعات','💳'],
+  ['receivables','التحصيل الذكي','💸'],
   ['admin-expenses','المصروفات','📊'],
   ['maintenance','الصيانة','🔧'],
   ['reports','التقارير','📈'],
@@ -63,7 +64,7 @@ const NAV_SAAS_ITEMS = [
 ];
 const SECTION_TITLES = {
   dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','accounting-platform':'منصة المحاسبة','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'الضيافة',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
-  revenues:'الإيرادات',invoices:'المدفوعات','admin-expenses':'المصروفات',maintenance:'الصيانة',
+  revenues:'الإيرادات',invoices:'المدفوعات',receivables:'التحصيل الذكي','admin-expenses':'المصروفات',maintenance:'الصيانة',
   reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي',production:'المتابعة',timeline:'الجدول الزمني',
   backup:'المستندات',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
   purchases:'فواتير المشتريات',payroll:'الرواتب',inventory:'المخزن',bank:'كشف البنك',
@@ -134,6 +135,7 @@ const DASH_ALL_COMMANDS = [
   {label:'العملاء', section:'clients', icon:'👥'},
   {label:'العقود', section:'contracts', icon:'📄'},
   {label:'المدفوعات', section:'invoices', icon:'💳'},
+  {label:'التحصيل الذكي', section:'receivables', icon:'💸'},
   {label:'الصيانة', section:'maintenance', icon:'🔧'},
   {label:'التقارير', section:'reports', icon:'📈'},
   {label:'الرسائل', section:'messages', icon:'📨'},
@@ -1143,6 +1145,7 @@ function showSection(id){
   if(resolved==='properties' && typeof renderProperties==='function') renderProperties();
   if(resolved==='clients' && typeof renderClients==='function') renderClients();
   if(resolved==='invoices' && typeof renderInvoices==='function') renderInvoices();
+  if(resolved==='receivables' && typeof renderReceivablesSmart==='function') renderReceivablesSmart();
   if(resolved==='maintenance' && typeof renderMaintenance==='function') renderMaintenance();
   if(resolved==='users' && typeof renderUsers==='function') renderUsers();
   if(resolved==='backup' && typeof renderBackup==='function') renderBackup();
@@ -1903,6 +1906,90 @@ function renderInvoices(){
     return `<button class="gold-btn" onclick="openPayment('${r.id}')">تحصيل</button> <button class="ghost" onclick="printInvoice('${r.id}')">طباعة</button> <button class="ghost" onclick="showInvoiceAudit('${r.id}')">سجل</button> ${voidBtn}`;
   });
 }
+async function renderReceivablesSmart(){
+  const hostSummary=$('#recvSummary');
+  const hostBuckets=$('#recvAgingBuckets');
+  const hostTable=$('#recvTable');
+  const hostChannels=$('#recvChannels');
+  if(!hostTable) return;
+  const bucket=($('#recvBucketFilter')?.value||'').trim();
+  try{
+    if(hostSummary) hostSummary.innerHTML='<span class="badge">جاري تحميل التحصيل الذكي…</span>';
+    const qs=bucket?(`?bucket=${encodeURIComponent(bucket)}`):'';
+    const [agingRes, remRes]=await Promise.all([
+      api('receivables/aging'+qs),
+      api('receivables/reminders'+qs).catch(()=>({channels:{}}))
+    ]);
+    const r=agingRes.receivables||{};
+    const buckets=r.buckets||{};
+    const order=r.bucket_order||['current','1-30','31-60','61-90','90+'];
+    if(hostSummary){
+      hostSummary.innerHTML=[
+        `<span class="badge">مفتوح ${money(r.total_open||0)}</span>`,
+        `<span class="badge ${Number(r.total_overdue||0)>0?'overdue':'paid'}">متأخر ${money(r.total_overdue||0)}</span>`,
+        `<span class="badge">فواتير ${fmt(r.item_count||0)}</span>`,
+        `<span class="badge">متأخرة ${fmt(r.overdue_count||0)}</span>`,
+        `<span class="badge">تحصيل ${fmt(r.collection_rate||0)}%</span>`,
+        `<span class="mini">حتى ${htmlEscape(r.as_of||'')}</span>`
+      ].join('');
+    }
+    if(hostBuckets){
+      hostBuckets.innerHTML=order.map(key=>{
+        const b=buckets[key]||{};
+        const danger=key==='90+'||key==='61-90';
+        return `<button type="button" class="kpi" style="cursor:pointer;text-align:right" onclick="document.getElementById('recvBucketFilter').value='${key}';renderReceivablesSmart()">
+          <span>${htmlEscape(b.label||key)}</span>
+          <strong class="${danger?'':' '}">${money(b.amount||0)}</strong>
+          <small class="mini">${fmt(b.count||0)} فاتورة</small>
+        </button>`;
+      }).join('');
+    }
+    const ch=remRes.channels||{};
+    if(hostChannels){
+      hostChannels.innerHTML=`قنوات التذكير: Email ${ch.email?'✅':'⛔ (LQ_SMTP_HOST)'} · WhatsApp ${ch.whatsapp?'✅':'⛔ (LQ_WHATSAPP_ENABLED)'} · SMS ${ch.sms?'✅':'⛔ (LQ_SMS_ENABLED)'} · السجل دائماً متاح`;
+    }
+    const items=r.items||[];
+    Jawdah._recvItems=items;
+    hostTable.innerHTML=tableHtml(
+      [
+        ['الفاتورة','invoice_no'],
+        ['العميل','client_name'],
+        ['الهاتف','client_phone'],
+        ['الاستحقاق','due_date'],
+        ['التأخير','days_late',(v)=>Number(v)>0?`<span class="badge overdue">${fmt(v)} يوم</span>`:'<span class="badge paid">حالي</span>'],
+        ['العمر','bucket'],
+        ['المتبقي','remaining',(v)=>money(v)],
+        ['الحالة','status',(v)=>statusBadge(v)]
+      ],
+      items,
+      row=>`<button class="gold-btn" type="button" onclick="openPayment('${htmlEscape(row.invoice_id)}')">تحصيل</button> <button class="ghost" type="button" onclick="showSection('invoices')">الفواتير</button>`
+    );
+    if(!items.length) hostTable.innerHTML='<p class="mini">لا توجد ذمم مفتوحة في هذا الفلتر.</p>';
+  }catch(e){
+    if(hostSummary) hostSummary.innerHTML=`<span class="badge overdue">${htmlEscape(friendlyMsg(e,'تعذر تحميل التحصيل الذكي'))}</span>`;
+    hostTable.innerHTML='<p class="mini">تعذر تحميل قائمة التحصيل.</p>';
+  }
+}
+async function sendReceivableReminders(channel){
+  try{
+    const bucket=($('#recvBucketFilter')?.value||'').trim();
+    const items=(Jawdah._recvItems||[]).filter(x=>Number(x.days_late||0)>0);
+    if(!items.length) return toastErr('لا توجد فواتير متأخرة لإرسال تذكير');
+    if(!confirm(`إرسال تذكير (${channel}) لـ ${items.length} فاتورة متأخرة؟`)) return;
+    const res=await api('receivables/reminders',{
+      method:'POST',
+      body:JSON.stringify({
+        channel: channel||'log',
+        bucket: bucket==='current'?'overdue':bucket,
+        invoice_ids: items.map(x=>x.invoice_id)
+      })
+    });
+    toastOk(`تم: مرسل ${fmt(res.sent||0)} · بالانتظار ${fmt(res.queued||0)} · فشل ${fmt(res.failed||0)} · عملاء ${fmt(res.clients||0)}`);
+    renderReceivablesSmart();
+  }catch(e){ toastErr(e,'تعذر إرسال التذكيرات'); }
+}
+window.renderReceivablesSmart=renderReceivablesSmart;
+window.sendReceivableReminders=sendReceivableReminders;
 function renderAccounts(){
   const rows=filterRows('accounts',['description','category','type']);
   $('#accountsTable').innerHTML=tableHtml([['التاريخ','entry_date'],['النوع','type',(v)=>statusBadge(v)],['التصنيف','category'],['الوصف','description'],['العميل','client_id',(v)=>v?(byId('clients',v).name||v):''],['الوحدة','property_id',(v)=>v?propertyLabel(byId('properties',v)):'' ],['الفاتورة','invoice_id',(v)=>v?(byId('invoices',v).invoice_no||v):''],['المبلغ','amount',(v)=>money(v)]],rows,r=>`<button class="ghost" onclick="editRecord('accounts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('accounts','${r.id}')">حذف</button>`);
@@ -4294,7 +4381,7 @@ function commandChainReady(){
   };
   const sectionIds=[
     'dashboard','estate-platform','accounting-platform','hospitality','properties','clients',
-    'contracts','invoices','accounts','maintenance','reports','backup','users','production','qa',
+    'contracts','invoices','receivables','accounts','maintenance','reports','backup','users','production','qa',
     'revenues','admin-expenses','purchases','payroll','inventory','bank','chart-accounts',
     'statements','bank-reconciliation','financial-periods','approvals','daily-ops','tasks','messages'
   ];

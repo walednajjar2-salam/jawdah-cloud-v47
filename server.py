@@ -81,7 +81,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v50-terrifying-dev"
+APP_VERSION = "Launch-Quality-LLC-v51-smart-receivables"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -3868,6 +3868,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "accountant_reports" and method == "GET":
                     user = self.require_user(db, "reports:read")
                     return None if not user else self.api_accountant_reports(db, query)
+                if parts[0] == "receivables" and len(parts) >= 2 and parts[1] == "aging" and method == "GET":
+                    user = self.require_user(db, "invoices:read")
+                    return None if not user else self.api_receivables_aging(db, user, query)
+                if parts[0] == "receivables" and len(parts) >= 2 and parts[1] == "reminders" and method == "GET":
+                    user = self.require_user(db, "invoices:read")
+                    return None if not user else self.api_receivables_reminders(db, user, query)
+                if parts[0] == "receivables" and len(parts) >= 2 and parts[1] == "reminders" and method == "POST":
+                    user = self.require_user(db, "invoices")
+                    return None if not user else self.api_receivables_send_reminders(db, user)
                 if parts[0] == "accounting_platform_overview" and method == "GET":
                     user = self.require_user(db, "accounts:read")
                     return None if not user else self.api_accounting_platform_overview(db, query)
@@ -7316,6 +7325,136 @@ class JawdahHandler(BaseHTTPRequestHandler):
         db.commit()
         self.send_json({"ok": True, "maintenance_id": maint_id, "title": title, "property_name": prop["name"]})
 
+    def api_receivables_aging(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        bucket = str((params.get("bucket") or [""])[0] or "").strip()
+        payload = build_receivables_aging(db, bucket_filter=bucket or None)
+        self.send_json({"ok": True, "receivables": payload})
+
+    def api_receivables_reminders(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        bucket = str((params.get("bucket") or [""])[0] or "").strip()
+        payload = build_receivables_aging(db, bucket_filter=bucket or None)
+        candidates = [x for x in payload.get("items") or [] if float(x.get("remaining") or 0) > 0 and int(x.get("days_late") or 0) > 0]
+        self.send_json({
+            "ok": True,
+            "candidates": candidates,
+            "count": len(candidates),
+            "channels": {
+                "email": bool(os.environ.get("LQ_SMTP_HOST")),
+                "sms": bool(os.environ.get("LQ_SMS_ENABLED")),
+                "whatsapp": bool(os.environ.get("LQ_WHATSAPP_ENABLED")),
+            },
+        })
+
+    def api_receivables_send_reminders(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        channel = str(data.get("channel") or "email").strip().lower()
+        invoice_ids = data.get("invoice_ids") or []
+        if isinstance(invoice_ids, str):
+            invoice_ids = [x.strip() for x in invoice_ids.split(",") if x.strip()]
+        invoice_ids = [str(x) for x in invoice_ids if str(x).strip()]
+        bucket = str(data.get("bucket") or "").strip()
+        aging = build_receivables_aging(db, bucket_filter=bucket or None)
+        items = [x for x in aging.get("items") or [] if int(x.get("days_late") or 0) > 0]
+        if invoice_ids:
+            wanted = set(invoice_ids)
+            items = [x for x in items if str(x.get("invoice_id")) in wanted]
+        if not items:
+            return self.send_json({"ok": False, "error": "لا توجد فواتير متأخرة للتذكير"}, 400)
+        if channel not in ("email", "sms", "whatsapp", "log"):
+            return self.send_json({"ok": False, "error": "Unsupported channel"}, 400)
+
+        sent = 0
+        failed = 0
+        queued = 0
+        logs: List[Dict[str, Any]] = []
+        # Group by client for cleaner reminders
+        by_client: Dict[str, List[Dict[str, Any]]] = {}
+        for it in items:
+            cid = str(it.get("client_id") or "unknown")
+            by_client.setdefault(cid, []).append(it)
+
+        for cid, group in by_client.items():
+            first = group[0]
+            client_name = str(first.get("client_name") or "عميل")
+            email = str(first.get("client_email") or "").strip()
+            phone = str(first.get("client_phone") or "").strip()
+            total_rem = round(sum(float(x.get("remaining") or 0) for x in group), 3)
+            lines = [
+                f"Launch Quality LLC — تذكير تحصيل",
+                f"العميل: {client_name}",
+                f"إجمالي المتأخر: {total_rem} OMR",
+                "",
+            ]
+            for x in group[:20]:
+                lines.append(
+                    f"- {x.get('invoice_no')} | استحقاق {x.get('due_date')} | متبقي {x.get('remaining')} OMR | تأخير {x.get('days_late')} يوم ({x.get('bucket')})"
+                )
+            body = "\n".join(lines)
+            subject = f"تذكير تحصيل · {client_name} · {total_rem} OMR"
+            status = "queued"
+            detail = ""
+            recipient = email or phone or SUPPORT_EMAIL
+            if channel == "email":
+                if not email:
+                    status = "failed"
+                    detail = "لا يوجد بريد للعميل"
+                    failed += 1
+                else:
+                    ok, detail = send_alert_email(email, subject, body)
+                    status = "sent" if ok else "failed"
+                    recipient = email
+                    if ok:
+                        sent += 1
+                    else:
+                        failed += 1
+            elif channel in ("sms", "whatsapp"):
+                if not phone:
+                    status = "failed"
+                    detail = "لا يوجد هاتف للعميل"
+                    failed += 1
+                else:
+                    status = "queued"
+                    detail = f"{channel.upper()} queued — فعّل LQ_{channel.upper()}_ENABLED للإرسال الفعلي"
+                    recipient = phone
+                    queued += 1
+            else:  # log only
+                status = "logged"
+                detail = "Saved reminder log only"
+                queued += 1
+
+            log_id = uid("RR")
+            insert(
+                db,
+                "alert_notifications",
+                {
+                    "id": log_id,
+                    "created_at": now_iso(),
+                    "channel": f"receivables:{channel}",
+                    "recipient": recipient,
+                    "subject": subject,
+                    "message": body[:4000],
+                    "status": status,
+                    "alert_count": len(group),
+                    "sent_by": user.get("name") or user.get("username"),
+                },
+            )
+            logs.append({"id": log_id, "client_id": cid, "status": status, "detail": detail, "recipient": recipient})
+
+        audit(db, user, "receivables_remind", "invoices", "", f"{channel}: sent={sent} queued={queued} failed={failed}")
+        db.commit()
+        self.send_json({
+            "ok": True,
+            "channel": channel,
+            "sent": sent,
+            "queued": queued,
+            "failed": failed,
+            "clients": len(by_client),
+            "invoices": len(items),
+            "logs": logs[:50],
+        })
+
     def api_alert_center(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         payload = build_alert_center(db, user_id=user.get("id"))
         self.send_json({"ok": True, "center": payload})
@@ -9513,6 +9652,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
 UI_SECTIONS_ALL = [
     "dashboard", "estate-platform", "accounting-platform", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
+    "receivables",
     "admin-expenses", "maintenance", "reports", "messages", "walid", "enterprise",
     "production", "timeline", "backup", "settings", "accounts", "purchases", "payroll",
     "inventory", "bank", "chart-accounts", "statements", "bank-reconciliation",
@@ -9534,7 +9674,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     "admin": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
     "accountant": {
         "sections": [
-            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "revenues",
+            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "receivables", "revenues",
             "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
             "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
             "reports", "backup", "messages", "timeline", "walid", "approvals",
@@ -9546,7 +9686,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     },
     "operations": {
         "sections": [
-            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
+            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices", "receivables",
             "maintenance", "inventory", "reports", "messages", "timeline", "backup",
             "walid", "approvals", "production",
         ],
@@ -10886,6 +11026,109 @@ def build_alert_center(db: sqlite3.Connection, user_id: Optional[str] = None) ->
     }
 
 
+def build_receivables_aging(db: sqlite3.Connection, bucket_filter: Optional[str] = None) -> Dict[str, Any]:
+    """Smart receivables: aging buckets + open invoice items for reminders."""
+    today_d = date.today()
+    today_s = today_d.isoformat()
+    buckets = {
+        "current": {"key": "current", "label": "حالي (غير مستحق)", "amount": 0.0, "count": 0},
+        "1-30": {"key": "1-30", "label": "1–30 يوم", "amount": 0.0, "count": 0},
+        "31-60": {"key": "31-60", "label": "31–60 يوم", "amount": 0.0, "count": 0},
+        "61-90": {"key": "61-90", "label": "61–90 يوم", "amount": 0.0, "count": 0},
+        "90+": {"key": "90+", "label": "أكثر من 90 يوم", "amount": 0.0, "count": 0},
+    }
+    clients = {str(c["id"]): c for c in rows_to_dicts(db.execute("SELECT id, name, phone, email FROM clients").fetchall())}
+    invoices = rows_to_dicts(
+        db.execute(
+            """
+            SELECT id, invoice_no, client_id, property_id, contract_id, due_date, amount, paid_amount, status, COALESCE(is_void,0) AS is_void
+            FROM invoices
+            WHERE COALESCE(is_void,0)=0
+              AND lower(COALESCE(status,'')) NOT IN ('paid','void','cancelled')
+            """
+        ).fetchall()
+    )
+    props = {str(p["id"]): p for p in rows_to_dicts(db.execute("SELECT id, name FROM properties").fetchall())}
+    items: List[Dict[str, Any]] = []
+    total_open = 0.0
+    total_overdue = 0.0
+
+    def bucket_for(days_late: int) -> str:
+        if days_late <= 0:
+            return "current"
+        if days_late <= 30:
+            return "1-30"
+        if days_late <= 60:
+            return "31-60"
+        if days_late <= 90:
+            return "61-90"
+        return "90+"
+
+    for inv in invoices:
+        amount = float(inv.get("amount") or 0)
+        paid = float(inv.get("paid_amount") or 0)
+        rem = round(max(0.0, amount - paid), 3)
+        if rem <= 0.001:
+            continue
+        due_s = str(inv.get("due_date") or "").strip()
+        try:
+            due_d = datetime.fromisoformat(due_s[:10]).date() if due_s else today_d
+        except Exception:
+            due_d = today_d
+        days_late = (today_d - due_d).days
+        bkey = bucket_for(days_late)
+        if bucket_filter and bucket_filter not in (bkey, "overdue"):
+            continue
+        if bucket_filter == "overdue" and days_late <= 0:
+            continue
+        client = clients.get(str(inv.get("client_id") or ""), {})
+        prop = props.get(str(inv.get("property_id") or ""), {})
+        row = {
+            "invoice_id": inv.get("id"),
+            "invoice_no": inv.get("invoice_no"),
+            "client_id": inv.get("client_id"),
+            "client_name": client.get("name") or inv.get("client_id") or "—",
+            "client_phone": client.get("phone") or "",
+            "client_email": client.get("email") or "",
+            "property_id": inv.get("property_id"),
+            "property_name": prop.get("name") or "",
+            "contract_id": inv.get("contract_id"),
+            "due_date": due_s,
+            "amount": round(amount, 3),
+            "paid_amount": round(paid, 3),
+            "remaining": rem,
+            "status": inv.get("status"),
+            "days_late": days_late,
+            "bucket": bkey,
+            "priority": "critical" if days_late > 90 else ("high" if days_late > 60 else ("medium" if days_late > 30 else ("low" if days_late > 0 else "current"))),
+        }
+        items.append(row)
+        buckets[bkey]["amount"] = round(float(buckets[bkey]["amount"]) + rem, 3)
+        buckets[bkey]["count"] = int(buckets[bkey]["count"]) + 1
+        total_open += rem
+        if days_late > 0:
+            total_overdue += rem
+
+    items.sort(key=lambda x: (-int(x.get("days_late") or 0), -float(x.get("remaining") or 0)))
+    collection_rate = 0.0
+    billed = sum(float(i.get("amount") or 0) for i in invoices) or 0.0
+    paid_sum = sum(float(i.get("paid_amount") or 0) for i in invoices) or 0.0
+    if billed > 0:
+        collection_rate = round((paid_sum / billed) * 100, 1)
+
+    return {
+        "as_of": today_s,
+        "buckets": buckets,
+        "bucket_order": ["current", "1-30", "31-60", "61-90", "90+"],
+        "total_open": round(total_open, 3),
+        "total_overdue": round(total_overdue, 3),
+        "collection_rate": collection_rate,
+        "items": items,
+        "item_count": len(items),
+        "overdue_count": sum(1 for x in items if int(x.get("days_late") or 0) > 0),
+    }
+
+
 def send_alert_email(to: str, subject: str, body: str) -> Tuple[bool, str]:
     host = os.environ.get("LQ_SMTP_HOST", "").strip()
     if not host:
@@ -11132,7 +11375,13 @@ def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
     expense = sum(float(a["amount"] or 0) for a in accounts if a["type"] == "expense")
     billed = sum(float(i["amount"] or 0) for i in invoices)
     paid = sum(float(i["paid_amount"] or 0) for i in invoices)
-    overdue = sum(max(0, float(i["amount"] or 0) - float(i["paid_amount"] or 0)) for i in invoices if i["status"] != "Paid" and i["due_date"] < today())
+    overdue = sum(
+        max(0, float(i["amount"] or 0) - float(i["paid_amount"] or 0))
+        for i in invoices
+        if str(i.get("status") or "") != "Paid"
+        and not int(i.get("is_void") or 0)
+        and str(i.get("due_date") or "") < today()
+    )
     occupancy = round((rented / prop_total * 100), 1) if prop_total else 0
     months = []
     for m in range(5, -1, -1):
