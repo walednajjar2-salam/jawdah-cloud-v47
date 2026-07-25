@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -83,7 +83,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v53-durable-storage"
+APP_VERSION = "Launch-Quality-LLC-v54-role-boards"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -4114,6 +4114,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "alert_center" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_alert_center(db, user)
+                if parts[0] == "role_board" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_role_board(db, user)
                 if parts[0] == "alert_dismiss" and method == "POST":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_alert_dismiss(db, user)
@@ -7717,8 +7720,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
         })
 
     def api_alert_center(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
-        payload = build_alert_center(db, user_id=user.get("id"))
+        payload = build_alert_center(db, user_id=user.get("id"), role=str(user.get("role") or "viewer"))
         self.send_json({"ok": True, "center": payload})
+
+    def api_role_board(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        board = build_role_board(db, user)
+        self.send_json({"ok": True, "board": board})
 
     def api_alert_dismiss(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -7742,14 +7749,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
             )
         audit(db, user, "dismiss_alert", "alert_dismissals", alert_key, "Dismissed alert")
         db.commit()
-        center = build_alert_center(db, user_id=user.get("id"))
+        center = build_alert_center(
+            db, user_id=user.get("id"), role=str(user.get("role") or "viewer")
+        )
         self.send_json({"ok": True, "center": center})
 
     def api_alert_notify(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
         channel = str(data.get("channel") or "email").strip().lower()
         recipient = str(data.get("recipient") or SUPPORT_EMAIL).strip()
-        center = build_alert_center(db, user_id=user.get("id"))
+        center = build_alert_center(
+            db, user_id=user.get("id"), role=str(user.get("role") or "viewer")
+        )
         alerts = center.get("alerts") or []
         high = [a for a in alerts if a.get("level") in ("Critical", "High")]
         subject = f"Launch Quality — تنبيهات ({len(high)} عاجلة)"
@@ -9934,6 +9945,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "overdue": float(k.get("overdue") or 0),
                         "expiring": float(k.get("expiring") or 0),
                         "health": float(k.get("health") or 0),
+                        "alert_center_total": float(k.get("alert_center_total") or 0),
+                        "alert_center_high": float(k.get("alert_center_high") or 0),
+                        "pending_approvals": float(k.get("pending_approvals") or 0),
                     }
                     deltas = {}
                     if prev:
@@ -11092,7 +11106,112 @@ def get_dismissed_alert_keys(db: sqlite3.Connection, user_id: str) -> set:
     return {str(r["alert_key"]) for r in rows}
 
 
-def build_alert_center(db: sqlite3.Connection, user_id: Optional[str] = None) -> Dict[str, Any]:
+ROLE_ALERT_CATEGORIES: Dict[str, set] = {
+    "owner": {"contracts", "finance", "governance", "inventory", "operations"},
+    "admin": {"contracts", "finance", "governance", "inventory", "operations"},
+    "accountant": {"finance", "governance", "contracts"},
+    "operations": {"contracts", "operations", "inventory", "governance"},
+    "maintenance": {"operations", "inventory"},
+    "viewer": {"contracts", "operations", "finance"},
+}
+
+ROLE_BOARD_META: Dict[str, Dict[str, Any]] = {
+    "owner": {
+        "title_ar": "لوحة المالك",
+        "subtitle_ar": "ملخص تنفيذي وتنبيهات تحتاج قراراً اليوم",
+        "quick_actions": [
+            {"section": "approvals", "label": "مركز الاعتمادات"},
+            {"section": "receivables", "label": "التحصيل الذكي"},
+            {"section": "messages", "label": "التنبيهات"},
+            {"section": "reports", "label": "التقارير"},
+        ],
+    },
+    "admin": {
+        "title_ar": "لوحة الإدارة",
+        "subtitle_ar": "تشغيل كامل + متابعة المخاطر",
+        "quick_actions": [
+            {"section": "dashboard", "label": "لوحة التحكم"},
+            {"section": "approvals", "label": "الاعتمادات"},
+            {"section": "users", "label": "المستخدمون"},
+            {"section": "messages", "label": "التنبيهات"},
+        ],
+    },
+    "accountant": {
+        "title_ar": "لوحة المحاسب",
+        "subtitle_ar": "تحصيل، اعتمادات، بنك، ومتأخرات",
+        "quick_actions": [
+            {"section": "receivables", "label": "التحصيل الذكي"},
+            {"section": "invoices", "label": "الفواتير"},
+            {"section": "approvals", "label": "الاعتمادات"},
+            {"section": "bank-reconciliation", "label": "تسوية البنك"},
+        ],
+    },
+    "operations": {
+        "title_ar": "لوحة العمليات",
+        "subtitle_ar": "عقود، إشغال، وصيانة يومية",
+        "quick_actions": [
+            {"section": "contracts", "label": "العقود"},
+            {"section": "properties", "label": "العقارات"},
+            {"section": "maintenance", "label": "الصيانة"},
+            {"section": "daily-ops", "label": "العمليات اليومية"},
+        ],
+    },
+    "maintenance": {
+        "title_ar": "لوحة الصيانة",
+        "subtitle_ar": "طلبات عاجلة ومخزون منخفض",
+        "quick_actions": [
+            {"section": "maintenance", "label": "طلبات الصيانة"},
+            {"section": "inventory", "label": "المخزن"},
+            {"section": "properties", "label": "العقارات"},
+            {"section": "messages", "label": "التنبيهات"},
+        ],
+    },
+    "viewer": {
+        "title_ar": "لوحة المتابعة",
+        "subtitle_ar": "عرض مؤشرات وتنبيهات للقراءة فقط",
+        "quick_actions": [
+            {"section": "dashboard", "label": "لوحة التحكم"},
+            {"section": "reports", "label": "التقارير"},
+            {"section": "messages", "label": "التنبيهات"},
+        ],
+    },
+}
+
+KPI_LABELS_AR: Dict[str, str] = {
+    "properties": "العقارات",
+    "rented": "مستأجرة",
+    "vacant": "شاغرة",
+    "income": "الإيرادات",
+    "expense": "المصروفات",
+    "net": "الصافي",
+    "health": "صحة النظام",
+    "occupancy": "الإشغال %",
+    "overdue": "المتأخرات",
+    "maintenance": "صيانة مفتوحة",
+    "expiring": "عقود قاربت الانتهاء",
+    "expired": "عقود منتهية",
+    "paid": "المحصّل",
+    "billed": "المفوتر",
+    "bank_balance": "رصيد البنك",
+    "payroll": "الرواتب",
+    "inventory_value": "قيمة المخزون",
+    "purchases_due": "مشتريات مستحقة",
+    "pending_approvals": "اعتمادات معلّقة",
+    "alert_center_total": "تنبيهات",
+    "alert_center_high": "تنبيهات عاجلة",
+}
+
+
+def filter_alerts_for_role(alerts: List[Dict[str, Any]], role: str) -> List[Dict[str, Any]]:
+    allowed = ROLE_ALERT_CATEGORIES.get(str(role or "viewer").lower(), ROLE_ALERT_CATEGORIES["viewer"])
+    return [a for a in alerts if str(a.get("category") or "") in allowed]
+
+
+def build_alert_center(
+    db: sqlite3.Connection,
+    user_id: Optional[str] = None,
+    role: Optional[str] = None,
+) -> Dict[str, Any]:
     today_d = date.today()
     dismissed = get_dismissed_alert_keys(db, user_id) if user_id else set()
     clients = {r["id"]: r["name"] for r in db.execute("SELECT id, name FROM clients").fetchall()}
@@ -11312,6 +11431,9 @@ def build_alert_center(db: sqlite3.Connection, user_id: Optional[str] = None) ->
 
     level_order = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3, "Good": 4}
     alerts.sort(key=lambda a: (level_order.get(a.get("level", "Low"), 9), a.get("days_left") or 9999))
+    role_key = str(role or "viewer").lower()
+    if role is not None:
+        alerts = filter_alerts_for_role(alerts, role_key)
 
     summary = {
         "total": len(alerts),
@@ -11319,17 +11441,76 @@ def build_alert_center(db: sqlite3.Connection, user_id: Optional[str] = None) ->
         "high": sum(1 for a in alerts if a.get("level") == "High"),
         "contracts": sum(1 for a in alerts if a.get("category") == "contracts"),
         "finance": sum(1 for a in alerts if a.get("category") == "finance"),
+        "operations": sum(1 for a in alerts if a.get("category") == "operations"),
+        "inventory": sum(1 for a in alerts if a.get("category") == "inventory"),
+        "governance": sum(1 for a in alerts if a.get("category") == "governance"),
         "dismissed": len(dismissed),
+        "role": role_key if role is not None else None,
     }
+    top = alerts[:3]
     return {
         "generated_at": now_iso(),
+        "role": role_key if role is not None else None,
         "summary": summary,
+        "top_priorities": top,
         "alerts": alerts,
         "channels": {
             "in_app": True,
             "email": bool(os.environ.get("LQ_SMTP_HOST")),
             "sms": bool(os.environ.get("LQ_SMS_ENABLED")),
         },
+    }
+
+
+def build_role_board(db: sqlite3.Connection, user: Dict[str, Any]) -> Dict[str, Any]:
+    role = str((user or {}).get("role") or "viewer").lower()
+    meta = ROLE_BOARD_META.get(role, ROLE_BOARD_META["viewer"])
+    dash = build_dashboard(db)
+    kpis_all = dash.get("kpis") or {}
+    allowed_keys = list(ui_permissions_for_role(role).get("kpis") or [])
+    # Always surface pending approvals / alert counts for decision roles
+    for extra in ("pending_approvals", "alert_center_total", "alert_center_high", "expiring", "expired"):
+        if extra not in allowed_keys and role in ("owner", "admin", "accountant", "operations"):
+            allowed_keys.append(extra)
+    money_keys = {
+        "income", "expense", "net", "overdue", "paid", "billed", "bank_balance",
+        "payroll", "inventory_value", "purchases_due",
+    }
+    cards: List[Dict[str, Any]] = []
+    for key in allowed_keys:
+        if key not in kpis_all:
+            continue
+        val = kpis_all.get(key)
+        if key in money_keys:
+            display = fmt_omr(float(val or 0))
+        elif key in ("occupancy", "health"):
+            display = f"{float(val or 0):.0f}%"
+        else:
+            display = str(int(float(val or 0))) if isinstance(val, (int, float)) or str(val).replace(".", "", 1).isdigit() else str(val)
+        cards.append({
+            "key": key,
+            "label": KPI_LABELS_AR.get(key, key),
+            "value": val,
+            "display": display,
+        })
+        if len(cards) >= 8:
+            break
+    center = build_alert_center(db, user_id=(user or {}).get("id"), role=role)
+    alerts = center.get("alerts") or []
+    top = center.get("top_priorities") or alerts[:3]
+    return {
+        "role": role,
+        "username": (user or {}).get("username"),
+        "name": (user or {}).get("name"),
+        "title_ar": meta.get("title_ar"),
+        "subtitle_ar": meta.get("subtitle_ar"),
+        "kpis": cards,
+        "alerts": alerts[:12],
+        "top_priorities": top,
+        "summary": center.get("summary") or {},
+        "quick_actions": meta.get("quick_actions") or [],
+        "decisions": (dash.get("decisions") or [])[:4],
+        "generated_at": now_iso(),
     }
 
 

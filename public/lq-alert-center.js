@@ -13,16 +13,16 @@
     return `<span class="badge ${cls}">${level || "Alert"}</span>`;
   }
 
-  function explainHtml() {
+  function explainHtml(role) {
     return `
       <div class="card lq-alerts-guide">
-        <h3>🔔 مركز التنبيهات — المرحلة 7</h3>
-        <p class="mini">كل ما يحتاج متابعة في مكان واحد: عقود، فواتير، تأمينات، اعتمادات، بنك، مخزون، صيانة.</p>
+        <h3>🔔 مركز التنبيهات — حسب دورك</h3>
+        <p class="mini">تنبيهات استباقية مفلترة لدورك${role ? " (" + role + ")" : ""}: عقود، فواتير، اعتمادات، بنك، مخزون، صيانة.</p>
         <ul class="check-list">
+          <li><strong>أولويات اليوم</strong> — أهم 3 تنبيهات تحتاج إجراء</li>
           <li><strong>30 / 60 / 90 يوم</strong> — عقود قريبة الانتهاء</li>
           <li><strong>متأخرات</strong> — فواتير لم تُحصّل</li>
-          <li><strong>تأمين</strong> — عقود بدون تأمين مستلم</li>
-          <li><strong>بريد</strong> — إرسال ملخص للمدير (إن وُجد SMTP)</li>
+          <li><strong>بريد</strong> — إرسال ملخص (إن وُجد SMTP)</li>
         </ul>
       </div>`;
   }
@@ -30,12 +30,27 @@
   function renderSummary(summary) {
     if (!summary) return "";
     return `<div class="status-line" style="margin:12px 0">
-      <span class="badge overdue">عاجل: ${summary.high || 0}</span>
+      <span class="badge overdue">عاجل: ${(summary.high || 0) + (summary.critical || 0)}</span>
       <span class="badge">حرج: ${summary.critical || 0}</span>
       <span class="badge">إجمالي: ${summary.total || 0}</span>
       <span class="badge">عقود: ${summary.contracts || 0}</span>
       <span class="badge">مالية: ${summary.finance || 0}</span>
+      <span class="badge">تشغيل: ${summary.operations || 0}</span>
     </div>`;
+  }
+
+  function renderTop(top) {
+    if (!top || !top.length) return "";
+    return `<div class="card" style="margin:10px 0"><h4>أولويات اليوم</h4><div class="saas-task-list">${top
+      .map(
+        (a) =>
+          `<div class="saas-task-item"><div>${levelBadge(a.level)} <b>${a.title || ""}</b><p>${a.text || ""}</p></div>${
+            a.action_section
+              ? `<button type="button" class="ghost" onclick="LQ_ALERT_CENTER.go('${a.action_section}','${a.entity_id || ""}')">${a.action_label || "فتح"}</button>`
+              : ""
+          }</div>`
+      )
+      .join("")}</div></div>`;
   }
 
   function renderAlerts(alerts) {
@@ -64,8 +79,9 @@
         ? `<button type="button" class="gold-btn" onclick="LQ_ALERT_CENTER.sendEmail()">إرسال ملخص بريد</button>`
         : `<span class="mini">البريد: فعّل LQ_SMTP_HOST على السيرفر للإرسال التلقائي</span>`;
     host.innerHTML =
-      explainHtml() +
+      explainHtml(data && data.role) +
       renderSummary(summary) +
+      renderTop((data && data.top_priorities) || []) +
       `<div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <button type="button" class="ghost" onclick="LQ_ALERT_CENTER.refresh()">تحديث</button>
         ${emailBtn}
