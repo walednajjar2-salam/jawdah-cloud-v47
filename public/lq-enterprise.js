@@ -19,8 +19,50 @@
           <li><strong>التدقيق</strong> — كل إجراء مسجّل مع المستخدم والوقت</li>
           <li><strong>API</strong> — <a href="/docs.html" target="_blank" rel="noopener">Swagger UI</a> · <code>/api/openapi.json</code></li>
           <li><strong>Off-site</strong> — فعّل <code>LQ_OFFSITE_BACKUP_URL</code> على Railway</li>
-          <li><strong>PostgreSQL</strong> — مخطط مستقبلي (<code>LQ_DATABASE_URL</code>) — SQLite فعّال الآن</li>
+          <li><strong>PostgreSQL</strong> — المرحلة 1: فحص ونسخ ظلّي للتحقق — SQLite يبقى الأساسي</li>
         </ul>
+      </div>`;
+  }
+
+  function pgPanel(status) {
+    const db = (status && status.database) || {};
+    const plat = db.platform || {};
+    const pg = plat.postgres || {};
+    const probe = pg.probe || {};
+    const verify = pg.shadow_verify || null;
+    const sqlite = plat.sqlite || {};
+    const probeLabel = !db.postgres_url_configured
+      ? "غير مُعرّف"
+      : probe.ok
+        ? "متصل"
+        : db.postgres_driver
+          ? "فشل الاتصال"
+          : "بدون برنامج التشغيل";
+    const verifyLabel = !verify
+      ? "—"
+      : verify.ok
+        ? `مطابق (${verify.matches || 0})`
+        : `غير مطابق (${(verify.mismatches || []).length} جداول)`;
+    return `
+      <div class="card" style="margin-top:12px" id="pgPathCard">
+        <h4>مسار PostgreSQL — المرحلة 1 (ظلّي)</h4>
+        <p class="mini">SQLite يبقى المحرك الأساسي. هذا المسار يفحص الاتصال وينسخ نسخة ظلّية للتحقق فقط.</p>
+        <div class="status-line" style="margin:8px 0;flex-wrap:wrap;gap:6px">
+          <span class="badge">الأساسي: ${esc(plat.primary_engine || db.engine || "sqlite")}</span>
+          <span class="badge">جداول SQLite: ${sqlite.tables || 0}</span>
+          <span class="badge">صفوف ≈ ${sqlite.approx_rows || 0}</span>
+          <span class="badge">Postgres URL: ${db.postgres_url_configured ? "مُعرّف" : "غير مُعرّف"}</span>
+          <span class="badge">psycopg: ${db.postgres_driver ? "مثبّت" : "غير مثبّت"}</span>
+          <span class="badge">الفحص: ${esc(probeLabel)}</span>
+          <span class="badge">التحقق: ${esc(verifyLabel)}</span>
+        </div>
+        <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin:10px 0">
+          <button type="button" class="ghost" onclick="LQ_ENTERPRISE.pgProbe()">فحص الاتصال</button>
+          <button type="button" class="ghost" onclick="LQ_ENTERPRISE.pgPreview()">معاينة النسخ</button>
+          <button type="button" class="gold-btn" onclick="LQ_ENTERPRISE.pgShadow()">نسخ ظلّي</button>
+          <button type="button" class="ghost" onclick="LQ_ENTERPRISE.pgVerify()">تحقق العدّ</button>
+        </div>
+        <pre id="pgPathOut" class="mini" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:0;background:rgba(0,0,0,.04);padding:10px;border-radius:8px">اضغط فحص الاتصال للبدء. يتطلب LQ_DATABASE_URL على Railway.</pre>
       </div>`;
   }
 
@@ -91,9 +133,116 @@
       </div>` +
       `<div class="card" style="margin-top:12px"><h4>التكامل والنسخ الخارجي</h4>
         <p class="mini">Off-site: ${off.last_push || "لم يُرسل بعد"} · ${off.last_status && off.last_status.ok ? "آخر دفع ناجح" : esc(off.last_status && off.last_status.error || "—")}</p>
-        <p class="mini">PostgreSQL: ${db.postgres_url_configured ? "مُعرّف (قريباً)" : "SQLite نشط"}</p>
-      </div>`;
+        <p class="mini">PostgreSQL: ${db.postgres_url_configured ? "مُعرّف — استخدم لوحة المسار أدناه" : "SQLite نشط (لم يُضبط LQ_DATABASE_URL)"}</p>
+      </div>` +
+      pgPanel(status);
     if (typeof ensureEnglishDigits === "function") ensureEnglishDigits(host);
+  }
+
+  function pgOut(text) {
+    const el = document.getElementById("pgPathOut");
+    if (el) el.textContent = text;
+  }
+
+  async function pgProbe() {
+    try {
+      pgOut("جاري فحص PostgreSQL…");
+      const res = await api("database/postgres_probe");
+      const p = (res && res.probe) || {};
+      pgOut(
+        [
+          p.ok ? "✓ الاتصال ناجح" : "✗ فشل الاتصال",
+          "latency_ms: " + (p.latency_ms ?? "—"),
+          "database: " + (p.database || "—"),
+          "user: " + (p.user || "—"),
+          "version: " + (p.server_version || "—"),
+          p.error ? "error: " + p.error : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+      if (typeof toast === "function") toast(p.ok ? "PostgreSQL متصل" : "فشل فحص PostgreSQL");
+    } catch (e) {
+      pgOut(String((e && e.message) || e));
+      if (typeof toastErr === "function") toastErr(e);
+    }
+  }
+
+  async function pgPreview() {
+    try {
+      pgOut("جاري معاينة النسخ الظلّي…");
+      const res = await api("database/migrate_preview", { method: "POST", body: "{}" });
+      const r = (res && res.result) || {};
+      pgOut(
+        [
+          r.ok ? "✓ المعاينة جاهزة (بدون كتابة)" : "✗ فشلت المعاينة",
+          "جداول: " + (r.copied_tables ?? 0),
+          "صفوف متوقعة: " + (r.copied_rows ?? 0),
+          "المحرك الأساسي: " + (r.primary_engine || "sqlite"),
+          (r.errors || []).length ? "أخطاء:\n" + (r.errors || []).join("\n") : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+      if (typeof toast === "function") toast("تمت معاينة النسخ");
+    } catch (e) {
+      pgOut(String((e && e.message) || e));
+      if (typeof toastErr === "function") toastErr(e);
+    }
+  }
+
+  async function pgShadow() {
+    if (!window.confirm("نسخ ظلّي إلى PostgreSQL؟\nSQLite يبقى الأساسي. سيتم استبدال جداول الظل إن وُجدت.")) return;
+    try {
+      pgOut("جاري النسخ الظلّي… قد يستغرق وقتاً");
+      const res = await api("database/migrate_shadow", {
+        method: "POST",
+        body: JSON.stringify({ confirm: "shadow" }),
+      });
+      const r = (res && res.result) || {};
+      pgOut(
+        [
+          r.ok ? "✓ اكتمل النسخ الظلّي" : "✗ اكتمل مع أخطاء",
+          "جداول منسوخة: " + (r.copied_tables ?? 0),
+          "صفوف: " + (r.copied_rows ?? 0),
+          (r.errors || []).length ? "أخطاء:\n" + (r.errors || []).slice(0, 20).join("\n") : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+      if (typeof toast === "function") toast(r.ok ? "تم النسخ الظلّي" : "نسخ مع أخطاء — راجع التفاصيل");
+      await refresh();
+    } catch (e) {
+      pgOut(String((e && e.message) || e));
+      if (typeof toastErr === "function") toastErr(e);
+    }
+  }
+
+  async function pgVerify() {
+    try {
+      pgOut("جاري التحقق من أعداد الصفوف…");
+      const res = await api("database/verify_shadow");
+      const v = (res && res.verify) || {};
+      const mism = (v.mismatches || [])
+        .slice(0, 15)
+        .map((m) => `${m.table}: sqlite=${m.sqlite} pg=${m.postgres}`)
+        .join("\n");
+      pgOut(
+        [
+          v.ok ? "✓ التعداد متطابق" : "✗ يوجد اختلاف",
+          "مطابق: " + (v.matches ?? 0) + " / " + (v.table_count ?? 0),
+          (v.missing_tables || []).length ? "جداول ناقصة: " + (v.missing_tables || []).join(", ") : "",
+          mism ? "اختلافات:\n" + mism : "",
+          v.error ? "error: " + v.error : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+      if (typeof toast === "function") toast(v.ok ? "التحقق ناجح" : "التحقق أظهر فروقاً");
+    } catch (e) {
+      pgOut(String((e && e.message) || e));
+      if (typeof toastErr === "function") toastErr(e);
+    }
   }
 
   async function loadAudit() {
@@ -148,5 +297,14 @@
     }
   }
 
-  window.LQ_ENTERPRISE = { refresh, loadAudit, saveBranch, render };
+  window.LQ_ENTERPRISE = {
+    refresh,
+    loadAudit,
+    saveBranch,
+    render,
+    pgProbe,
+    pgPreview,
+    pgShadow,
+    pgVerify,
+  };
 })();

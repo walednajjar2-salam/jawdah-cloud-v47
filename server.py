@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from lq_expand.offsite import offsite_config, push_offsite_backup
+import lq_postgres
 from lq_expand.openapi import build_openapi_spec
 from lq_expand.security import (
     resolve_bootstrap_password,
@@ -81,7 +82,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v51-smart-receivables"
+APP_VERSION = "Launch-Quality-LLC-v52-postgres-path"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -3734,7 +3735,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "database": str(DB_PATH),
                         "database_engine": "sqlite",
                         "postgres_url_configured": bool(LQ_DATABASE_URL),
-                        "postgres_note": "SQLite active — PostgreSQL via LQ_DATABASE_URL is planned for a future release",
+                        "postgres_driver": lq_postgres.psycopg_available(),
+                        "postgres_probe_ok": None,
+                        "postgres_note": "Phase 1: shadow verify via /api/database/status — SQLite remains primary",
                         "offsite": offsite_config(),
                         "auto_backup": {
                             "enabled": AUTO_BACKUP_ENABLED,
@@ -3761,6 +3764,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "enterprise_status" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_enterprise_status(db, user)
+                if parts[0] == "database" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_database_status(db, user)
+                if parts[0] == "database" and len(parts) >= 2 and parts[1] == "postgres_probe" and method == "GET":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_database_postgres_probe(db, user)
+                if parts[0] == "database" and len(parts) >= 2 and parts[1] == "migrate_preview" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_database_migrate_preview(db, user)
+                if parts[0] == "database" and len(parts) >= 2 and parts[1] == "migrate_shadow" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_database_migrate_shadow(db, user)
+                if parts[0] == "database" and len(parts) >= 2 and parts[1] == "verify_shadow" and method == "GET":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_database_verify_shadow(db, user)
                 if parts[0] == "login_preview" and method == "GET":
                     dash = build_dashboard(db)
                     k = dash.get("kpis") or {}
@@ -6657,6 +6675,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "SELECT COUNT(*) FROM audit_log WHERE created_at>=?",
             (today() + " 00:00:00",),
         ).fetchone()[0]
+        db_status = lq_postgres.build_database_platform_status(db, TABLES)
         self.send_json({
             "ok": True,
             "branches": branch_stats,
@@ -6667,6 +6686,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "engine": "sqlite",
                 "path": str(DB_PATH),
                 "postgres_url_configured": bool(LQ_DATABASE_URL),
+                "postgres_driver": lq_postgres.psycopg_available(),
+                "platform": db_status,
             },
             "api": {
                 "openapi": "/api/openapi.json",
@@ -6674,6 +6695,41 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "production": PRODUCTION_URL,
             },
         })
+
+    def api_database_status(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        status = lq_postgres.build_database_platform_status(db, TABLES)
+        self.send_json({"ok": True, "database": status})
+
+    def api_database_postgres_probe(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        probe = lq_postgres.probe_postgres()
+        self.send_json({"ok": bool(probe.get("ok")), "probe": probe})
+
+    def api_database_migrate_preview(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        result = lq_postgres.shadow_migrate_from_sqlite(db, TABLES, dry_run=True)
+        audit(db, user, "db_migrate_preview", "database", "postgres", f"tables={result.get('copied_tables')}")
+        db.commit()
+        self.send_json({"ok": bool(result.get("ok")), "result": result})
+
+    def api_database_migrate_shadow(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        confirm = str(data.get("confirm") or "").strip().lower()
+        if confirm not in ("shadow", "yes", "1", "true"):
+            return self.send_json({"ok": False, "error": "confirm=shadow required"}, 400)
+        result = lq_postgres.shadow_migrate_from_sqlite(db, TABLES, dry_run=False)
+        audit(
+            db,
+            user,
+            "db_migrate_shadow",
+            "database",
+            "postgres",
+            f"ok={result.get('ok')} rows={result.get('copied_rows')} errors={len(result.get('errors') or [])}",
+        )
+        db.commit()
+        self.send_json({"ok": bool(result.get("ok")), "result": result})
+
+    def api_database_verify_shadow(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        result = lq_postgres.verify_shadow(db, TABLES)
+        self.send_json({"ok": bool(result.get("ok")), "verify": result})
 
     def api_invoice_audit(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
         params = urllib.parse.parse_qs(query or "")

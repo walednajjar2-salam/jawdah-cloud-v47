@@ -1,2 +1,2 @@
-# Launch Quality LLC uses only the Python standard library.
-# Keep this file so cloud platforms detect a Python app.
+# Launch Quality LLC — Python dependencies
+psycopg[binary]>=3.1,<4
