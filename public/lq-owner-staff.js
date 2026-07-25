@@ -25,7 +25,9 @@
   }
 
   function canView() {
-    return Jawdah.user && ["owner", "admin"].includes(Jawdah.user.role);
+    if (typeof isPrimaryOwnerUser === "function") return isPrimaryOwnerUser();
+    const uname = String(Jawdah.user?.username || "").trim().toLowerCase();
+    return ["yaqoub", "yaqoub.khasibi", "waleed", "waleed.najjar"].includes(uname);
   }
 
   async function load() {

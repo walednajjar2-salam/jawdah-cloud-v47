@@ -1069,8 +1069,12 @@ function renderDashSideMenu(){
   if(canSeeFinance() || canSeeInventory()){
     [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
   }
+  if(canSeeApprovals()) items.push({id:'approvals',label:'مركز الاعتمادات',icon:'✅'});
   if(canManageUsersSection()) items.push({id:'users',label:'المستخدمين',icon:'🛡️'});
-  if(isPrimaryOwnerUser()) items.push({id:'owner-live',label:'لوحة المالك الحية',icon:'🛰️'});
+  if(isPrimaryOwnerUser()){
+    items.push({id:'owner-staff',label:'متابعة الموظفين',icon:'👑'});
+    items.push({id:'owner-live',label:'لوحة المالك الحية',icon:'🛰️'});
+  }
   const active=Jawdah.activeSection||'dashboard';
   host.innerHTML=items.map(x=>`<button type="button" class="saas-dash-menu-btn${active===x.id?' active':''}" onclick="showSection('${x.id}')"><span class="saas-dash-menu-ico">${x.icon}</span><span>${htmlEscape(x.label)}</span></button>`).join('');
 }
@@ -1135,7 +1139,20 @@ function showSection(id){
   }
   if(resolved==='statements' && typeof loadFinancialStatements === 'function') loadFinancialStatements();
   if(resolved==='production' && typeof loadProductionStatus === 'function') loadProductionStatus();
-  if(typeof renderFinanceSuite==='function' && ['revenues','admin-expenses','accounts','purchases','payroll','inventory','bank','chart-accounts','statements','bank-reconciliation','financial-periods'].includes(resolved)) renderFinanceSuite();
+  // Refresh core tables on navigate so every nav command shows live data
+  if(resolved==='properties' && typeof renderProperties==='function') renderProperties();
+  if(resolved==='clients' && typeof renderClients==='function') renderClients();
+  if(resolved==='invoices' && typeof renderInvoices==='function') renderInvoices();
+  if(resolved==='maintenance' && typeof renderMaintenance==='function') renderMaintenance();
+  if(resolved==='users' && typeof renderUsers==='function') renderUsers();
+  if(resolved==='backup' && typeof renderBackup==='function') renderBackup();
+  if(resolved==='accounts'){
+    // Prefer full accounting engine render; do not overwrite with finance-suite hero
+    if(typeof window.renderAccounts==='function') window.renderAccounts();
+    else if(typeof renderAccounts==='function') renderAccounts();
+  } else if(typeof renderFinanceSuite==='function' && ['revenues','admin-expenses','purchases','payroll','inventory','bank','chart-accounts','statements','bank-reconciliation','financial-periods'].includes(resolved)){
+    renderFinanceSuite();
+  }
   if(resolved==='approvals' && window.LQ_APPROVALS){ const g=$('#approvalsGuide'); if(g) g.innerHTML=LQ_APPROVALS.explainHtml(); LQ_APPROVALS.renderTable(); }
   if(resolved==='qa' && typeof renderQA==='function') renderQA();
   if(innerWidth<1100) $('#sidebar').classList.remove('open');
@@ -5854,7 +5871,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       return `${editBtn} ${closeBtn}`;
     });
   };
-  function canWriteFinance(){ return Jawdah.user && ['admin','accountant'].includes(Jawdah.user.role); }
+  function canWriteFinance(){ return Jawdah.user && ['admin','owner','accountant'].includes(Jawdah.user.role); }
   function updateRecDifference(){
     const book=num('recBookBalance'), bank=num('recBankBalance');
     const diff=book-bank;

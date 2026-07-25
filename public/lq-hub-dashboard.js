@@ -74,7 +74,7 @@
         sub: "حماية البيانات",
       },
     ];
-    if (["admin", "owner"].includes(Jawdah.user?.role)) {
+    if (typeof canManageUsersSection === "function" ? canManageUsersSection() : false) {
       tiles.push({
         id: "users",
         icon: "🛡️",
@@ -83,7 +83,10 @@
         sub: "صلاحيات ودخول",
       });
     }
-    return tiles.filter((t) => uiAllowedSection(t.id));
+    return tiles.filter((t) => {
+      if (typeof canAccessSection === "function" && !canAccessSection(t.id)) return false;
+      return uiAllowedSection(t.id);
+    });
   }
 
   function renderHubBoard(k) {
