@@ -44,7 +44,7 @@
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref9">
   <link rel="stylesheet" href="lq-emergency-clean.css?v=ec13">
   <link rel="stylesheet" href="lq-edition-terrifying.css?v=td1">
-  <link rel="stylesheet" href="lq-login-locked.css?v=locked9">
+  <link rel="stylesheet" href="lq-login-locked.css?v=locked10">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme lq-edition-terrifying" data-edition="terrifying-dev">
   <style>
@@ -114,14 +114,30 @@
 
     #lqBrandWatermark{display:none!important;opacity:0!important;visibility:hidden!important}
     #lqBrandWatermark img{display:none!important;opacity:0!important}
-    /* locked with lq-login-locked.css */
+    /* locked with lq-login-locked.css — solid card + dark text (no transparent writing) */
     body.login-ultra #loginScreen .login-glass-card,
     body.login-ultra #loginScreen .ev-auth-card{
-      background:rgba(8,14,28,.48)!important;
-      border:1px solid rgba(216,177,91,.32)!important;
-      box-shadow:0 18px 50px rgba(0,0,0,.35)!important;
-      backdrop-filter:blur(18px) saturate(1.2)!important;
-      -webkit-backdrop-filter:blur(18px) saturate(1.2)!important;
+      background:#ffffff!important;
+      border:1px solid rgba(30,40,60,.18)!important;
+      box-shadow:0 18px 50px rgba(0,0,0,.28)!important;
+      backdrop-filter:none!important;
+      -webkit-backdrop-filter:none!important;
+      color:#0a0a0a!important;
+    }
+    body.login-ultra #loginScreen .login-card-title,
+    body.login-ultra #loginScreen .login-card-sub,
+    body.login-ultra #loginScreen .login-field-label,
+    body.login-ultra #loginScreen .login-inline-tools,
+    body.login-ultra #loginScreen #loginUser,
+    body.login-ultra #loginScreen #loginPass{
+      color:#0a0a0a!important;
+      -webkit-text-fill-color:#0a0a0a!important;
+      opacity:1!important;
+    }
+    body.login-ultra #loginScreen #loginUser,
+    body.login-ultra #loginScreen #loginPass{
+      background:#ffffff!important;
+      caret-color:#0a0a0a!important;
     }
     #lqBootMsg{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:#040814;color:#fff1b8;font:600 16px Tajawal,sans-serif;text-align:center;padding:24px}
     #lqBootMsg.show{display:grid}
