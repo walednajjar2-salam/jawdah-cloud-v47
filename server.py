@@ -83,7 +83,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v53-data-reset-b"
+APP_VERSION = "Launch-Quality-LLC-v53-owner-creds"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -184,8 +184,8 @@ TABLES = {
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
-FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi", "ahmed", "ahmed.najjar"}
-PRIMARY_OWNER_USERNAMES = {"waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
+FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi", "ahmed", "ahmed.najjar"}
+PRIMARY_OWNER_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi"}
 DAILY_OPS_MANAGER_USERNAMES = {"razan", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
 
 WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
@@ -3608,6 +3608,7 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
     team = [
         ("waleed", "وليد", "admin", "111111"),
         ("yaqoub", "يعقوب", "owner", "owner2015"),
+        ("owner", "يعقوب فاضل حمد الخصيبي", "owner", "001970"),
         ("razan", "رزان", "accountant", "222222"),
         ("amjad", "امجد", "operations", "333333"),
         ("ali", "علي", "maintenance", "444444"),
@@ -3618,6 +3619,11 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
     # Keep Ahmed enabled as executive manager without rotating his password.
     db.execute(
         "UPDATE users SET role='admin', active=1 WHERE lower(username) IN ('ahmed.najjar','ahmed')"
+    )
+    # Owner account requested for production entry: Owner / 001970
+    db.execute(
+        "UPDATE users SET role='owner', active=1, name=COALESCE(NULLIF(name,''), 'يعقوب فاضل حمد الخصيبي') "
+        "WHERE lower(username)='owner'"
     )
 
 
