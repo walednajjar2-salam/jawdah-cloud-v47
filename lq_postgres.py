@@ -18,12 +18,23 @@ def database_url() -> str:
     return (os.environ.get("LQ_DATABASE_URL") or os.environ.get("DATABASE_URL") or "").strip()
 
 
+_PSYCOPG_IMPORT_ERROR: Optional[str] = None
+
+
 def psycopg_available() -> bool:
+    global _PSYCOPG_IMPORT_ERROR
     try:
         import psycopg  # noqa: F401
+        _PSYCOPG_IMPORT_ERROR = None
         return True
-    except Exception:
+    except Exception as exc:
+        _PSYCOPG_IMPORT_ERROR = str(exc)
         return False
+
+
+def psycopg_import_error() -> Optional[str]:
+    psycopg_available()
+    return _PSYCOPG_IMPORT_ERROR
 
 
 def _connect_pg(url: Optional[str] = None):
@@ -53,6 +64,7 @@ def probe_postgres(url: Optional[str] = None) -> Dict[str, Any]:
         return out
     if not out["driver_installed"]:
         out["error"] = "psycopg not installed"
+        out["import_error"] = psycopg_import_error()
         return out
     try:
         with _connect_pg(url) as conn:
