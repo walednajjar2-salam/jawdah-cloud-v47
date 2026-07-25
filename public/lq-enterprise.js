@@ -20,7 +20,45 @@
           <li><strong>API</strong> — <a href="/docs.html" target="_blank" rel="noopener">Swagger UI</a> · <code>/api/openapi.json</code></li>
           <li><strong>Off-site</strong> — فعّل <code>LQ_OFFSITE_BACKUP_URL</code> على Railway</li>
           <li><strong>PostgreSQL</strong> — المرحلة 1: فحص ونسخ ظلّي للتحقق — SQLite يبقى الأساسي</li>
+          <li><strong>التخزين السحابي</strong> — S3/R2 للعقود والصور مع نسخة محلية</li>
         </ul>
+      </div>`;
+  }
+
+  function storagePanel(status) {
+    const os = (status && status.object_storage) || {};
+    const ready = !!os.ready;
+    const enabled = !!os.enabled;
+    const configured = !!os.configured;
+    const state = !configured
+      ? "غير مُعرّف"
+      : !enabled
+        ? "معطّل"
+        : ready
+          ? "جاهز"
+          : os.driver_installed
+            ? "غير جاهز"
+            : "بدون boto3";
+    const lastWrite = os.last_write
+      ? (os.last_write.ok ? "آخر كتابة ناجحة" : "آخر كتابة فشلت") + " · " + (os.last_write.at || "")
+      : "لا كتابة بعد";
+    return `
+      <div class="card" style="margin-top:12px" id="objectStorageCard">
+        <h4>التخزين السحابي — العقود والصور</h4>
+        <p class="mini">يحفظ الملفات محلياً ويمرّرها إلى S3/R2/MinIO. الروابط في النظام تبقى <code>/uploads/...</code>.</p>
+        <div class="status-line" style="margin:8px 0;flex-wrap:wrap;gap:6px">
+          <span class="badge">الحالة: ${esc(state)}</span>
+          <span class="badge">محلي احتياطي: ${os.local_fallback === false ? "لا" : "نعم"}</span>
+          <span class="badge">Bucket: ${os.bucket_configured ? "مُعرّف" : "—"}</span>
+          <span class="badge">Endpoint: ${os.endpoint_configured ? "مخصص" : "AWS"}</span>
+          <span class="badge">${esc(lastWrite)}</span>
+        </div>
+        <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin:10px 0">
+          <button type="button" class="ghost" onclick="LQ_ENTERPRISE.storageProbe()">فحص التخزين</button>
+          <button type="button" class="gold-btn" onclick="LQ_ENTERPRISE.storageSync()">مزامنة الملفات الحالية</button>
+          <button type="button" class="ghost" onclick="showSection('backup')">صفحة التخزين</button>
+        </div>
+        <pre id="objectStorageOut" class="mini" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:0;background:rgba(0,0,0,.04);padding:10px;border-radius:8px">فعّل LQ_OBJECT_STORAGE_ENABLED=1 مع Bucket والمفاتيح على Railway.</pre>
       </div>`;
   }
 
@@ -114,6 +152,7 @@
         <span class="badge">إجمالي التدقيق: ${status.audit_total || 0}</span>
         <span class="badge">${db.engine || "sqlite"}</span>
         <span class="badge">Off-site: ${off.enabled ? "مفعّل" : "غير مفعّل"}</span>
+        <span class="badge">تخزين سحابي: ${(status.object_storage && status.object_storage.ready) ? "جاهز" : "محلي"}</span>
       </div>` +
       `<div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <button type="button" class="gold-btn" onclick="LQ_ENTERPRISE.refresh()">تحديث</button>
@@ -134,9 +173,67 @@
       `<div class="card" style="margin-top:12px"><h4>التكامل والنسخ الخارجي</h4>
         <p class="mini">Off-site: ${off.last_push || "لم يُرسل بعد"} · ${off.last_status && off.last_status.ok ? "آخر دفع ناجح" : esc(off.last_status && off.last_status.error || "—")}</p>
         <p class="mini">PostgreSQL: ${db.postgres_url_configured ? "مُعرّف — استخدم لوحة المسار أدناه" : "SQLite نشط (لم يُضبط LQ_DATABASE_URL)"}</p>
+        <p class="mini">التخزين السحابي: ${(status.object_storage && status.object_storage.ready) ? "جاهز للنسخ المزدوج" : "محلي فقط — اضبط LQ_OBJECT_STORAGE_*"}</p>
       </div>` +
+      storagePanel(status) +
       pgPanel(status);
     if (typeof ensureEnglishDigits === "function") ensureEnglishDigits(host);
+  }
+
+  function storageOut(text) {
+    const el = document.getElementById("objectStorageOut");
+    if (el) el.textContent = text;
+  }
+
+  async function storageProbe() {
+    try {
+      storageOut("جاري فحص التخزين السحابي…");
+      const res = await api("storage/object_probe");
+      const p = (res && res.probe) || {};
+      storageOut(
+        [
+          p.ok ? "✓ التخزين السحابي متصل" : "✗ فشل الفحص",
+          "latency_ms: " + (p.latency_ms ?? "—"),
+          "bucket: " + (p.bucket_name || "—"),
+          "endpoint: " + (p.endpoint_url || "AWS الافتراضي"),
+          p.error ? "error: " + p.error : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+      if (typeof toast === "function") toast(p.ok ? "التخزين السحابي متصل" : "فشل فحص التخزين");
+    } catch (e) {
+      storageOut(String((e && e.message) || e));
+      if (typeof toastErr === "function") toastErr(e);
+    }
+  }
+
+  async function storageSync() {
+    if (!window.confirm("مزامنة كل ملفات uploads المحلية إلى التخزين السحابي؟")) return;
+    try {
+      storageOut("جاري المزامنة… قد تستغرق وقتاً");
+      const res = await api("storage/sync_uploads", {
+        method: "POST",
+        body: JSON.stringify({ confirm: "sync" }),
+      });
+      const r = (res && res.result) || {};
+      storageOut(
+        [
+          r.ok ? "✓ اكتملت المزامنة" : "✗ اكتملت مع أخطاء",
+          "ممسوح: " + (r.scanned ?? 0),
+          "مرفوع: " + (r.uploaded ?? 0),
+          "متخطى: " + (r.skipped ?? 0),
+          (r.errors || []).length ? "أخطاء:\n" + (r.errors || []).slice(0, 15).join("\n") : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+      if (typeof toast === "function") toast(r.ok ? "تمت مزامنة الملفات" : "مزامنة مع أخطاء");
+      await refresh();
+    } catch (e) {
+      storageOut(String((e && e.message) || e));
+      if (typeof toastErr === "function") toastErr(e);
+    }
   }
 
   function pgOut(text) {
@@ -302,6 +399,8 @@
     loadAudit,
     saveBranch,
     render,
+    storageProbe,
+    storageSync,
     pgProbe,
     pgPreview,
     pgShadow,

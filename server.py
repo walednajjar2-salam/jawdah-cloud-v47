@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from lq_expand.offsite import offsite_config, push_offsite_backup
+from lq_expand import object_storage as lq_object_storage
 import lq_postgres
 from lq_expand.openapi import build_openapi_spec
 from lq_expand.security import (
@@ -82,7 +83,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v52-postgres-path-b"
+APP_VERSION = "Launch-Quality-LLC-v53-object-storage"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -560,6 +561,8 @@ def storage_status() -> Dict[str, Any]:
         "free_gb": free_gb,
         "warn_threshold_gb": STORAGE_WARN_GB,
         "warning": warning,
+        "upload_dir": str(UPLOAD_DIR),
+        "object_storage": lq_object_storage.object_storage_status(),
     }
 
 
@@ -3149,6 +3152,15 @@ def ensure_upload_dirs() -> None:
     CLIENT_CARD_DIR.mkdir(parents=True, exist_ok=True)
     PAYMENT_PROOF_DIR.mkdir(parents=True, exist_ok=True)
     CONTRACT_ATTACHMENT_DIR.mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "estate_images").mkdir(parents=True, exist_ok=True)
+
+
+def mirror_upload_best_effort(url: str, file_bytes: bytes, content_type: str) -> None:
+    """Mirror a just-written local upload to object storage; never raise."""
+    try:
+        lq_object_storage.mirror_upload_url(url, file_bytes, content_type or "application/octet-stream")
+    except Exception:
+        pass
 
 
 def is_stored_property_image(value: Any) -> bool:
@@ -3172,12 +3184,17 @@ def property_photo_path_from_url(url: str) -> Optional[Path]:
 
 
 def delete_property_photo_file(image_value: Any) -> None:
-    path = property_photo_path_from_url(str(image_value or ""))
+    url = str(image_value or "").strip()
+    path = property_photo_path_from_url(url)
     if path and path.exists() and path.is_file():
         try:
             path.unlink()
         except OSError:
             pass
+    try:
+        lq_object_storage.delete_upload_url(url)
+    except Exception:
+        pass
 
 
 def decode_property_photo_payload(data: Dict[str, Any]) -> Tuple[Optional[bytes], str]:
@@ -3223,7 +3240,9 @@ def save_property_photo_file(property_id: str, file_bytes: bytes, content_type: 
     filename = f"{safe_id}-{digest}{ext}"
     target = PROPERTY_PHOTO_DIR / filename
     target.write_bytes(file_bytes)
-    return f"/uploads/properties/{filename}"
+    url = f"/uploads/properties/{filename}"
+    mirror_upload_best_effort(url, file_bytes, content_type)
+    return url
 
 
 def save_named_image_upload(folder: str, prefix: str, file_bytes: bytes, content_type: str, max_bytes: int) -> str:
@@ -3240,7 +3259,9 @@ def save_named_image_upload(folder: str, prefix: str, file_bytes: bytes, content
     target_dir.mkdir(parents=True, exist_ok=True)
     target = target_dir / filename
     target.write_bytes(file_bytes)
-    return f"/uploads/{folder}/{filename}"
+    url = f"/uploads/{folder}/{filename}"
+    mirror_upload_best_effort(url, file_bytes, content_type)
+    return url
 
 
 def save_contract_attachment(contract_id: str, file_bytes: bytes, content_type: str, original_name: str) -> Dict[str, str]:
@@ -3259,10 +3280,12 @@ def save_contract_attachment(contract_id: str, file_bytes: bytes, content_type: 
     final_name = f"{contract_id}-{uid('CAT')}-{stem}{ext}"
     target = CONTRACT_ATTACHMENT_DIR / final_name
     target.write_bytes(file_bytes)
+    url = f"/uploads/contracts/{final_name}"
+    mirror_upload_best_effort(url, file_bytes, content_type or "application/octet-stream")
     return {
         "name": safe_name,
         "type": content_type or "application/octet-stream",
-        "url": f"/uploads/contracts/{final_name}",
+        "url": url,
         "uploaded_at": now_iso(),
     }
 
@@ -3297,6 +3320,10 @@ def delete_upload_file(url: str, folder: str) -> None:
             path.unlink()
         except OSError:
             pass
+    try:
+        lq_object_storage.delete_upload_url(url)
+    except Exception:
+        pass
 
 
 def decode_upload_payload(data: Dict[str, Any]) -> Tuple[bytes, str]:
@@ -3330,10 +3357,12 @@ def save_journal_attachment(entry_id: str, file_bytes: bytes, content_type: str,
         filename = f"{safe_id}-{digest}-{stem}{ext}"
     target = WORK_JOURNAL_DIR / filename
     target.write_bytes(file_bytes)
+    url = f"/uploads/work_journal/{filename}"
+    mirror_upload_best_effort(url, file_bytes, content_type or "application/octet-stream")
     return {
         "name": original_name or filename,
         "type": content_type,
-        "url": f"/uploads/work_journal/{filename}",
+        "url": url,
     }
 
 
@@ -3677,6 +3706,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 ctype = mimetypes.guess_type(str(full))[0] or "application/octet-stream"
                 _send_bytes(raw, ctype, cache="public, max-age=86400")
                 return
+            # Local miss → try object storage mirror, optionally hydrate local cache
+            if str(full).startswith(str(upload_root)):
+                remote, remote_ctype = lq_object_storage.fetch_upload_url("/" + safe)
+                if remote is not None:
+                    try:
+                        full.parent.mkdir(parents=True, exist_ok=True)
+                        full.write_bytes(remote)
+                    except OSError:
+                        pass
+                    ctype = remote_ctype or mimetypes.guess_type(safe)[0] or "application/octet-stream"
+                    _send_bytes(remote, ctype, cache="public, max-age=86400")
+                    return
         full = (PUBLIC_DIR / safe).resolve()
         public_root = PUBLIC_DIR.resolve()
         if str(full).startswith(str(public_root)) and full.exists() and not full.is_dir():
@@ -3748,6 +3789,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                             "last_backup": LAST_AUTO_BACKUP_AT or (list_automatic_backups()[0]["created_at"] if list_automatic_backups() else None),
                         },
                         "storage": storage_status(),
+                        "object_storage": lq_object_storage.object_storage_status(),
                         "backup_integrity": latest_backup_integrity(),
                     })
                 if parts[0] == "openapi.json" and method == "GET":
@@ -3780,6 +3822,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "database" and len(parts) >= 2 and parts[1] == "verify_shadow" and method == "GET":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_database_verify_shadow(db, user)
+                if parts[0] == "storage" and len(parts) >= 2 and parts[1] == "object_status" and method == "GET":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_storage_object_status(db, user)
+                if parts[0] == "storage" and len(parts) >= 2 and parts[1] == "object_probe" and method == "GET":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_storage_object_probe(db, user)
+                if parts[0] == "storage" and len(parts) >= 2 and parts[1] == "sync_uploads" and method == "POST":
+                    user = self.require_user(db, "admin")
+                    return None if not user else self.api_storage_sync_uploads(db, user)
                 if parts[0] == "login_preview" and method == "GET":
                     dash = build_dashboard(db)
                     k = dash.get("kpis") or {}
@@ -6683,6 +6734,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "audit_today": int(audit_today or 0),
             "audit_total": db.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0],
             "offsite": offsite_config(),
+            "object_storage": lq_object_storage.object_storage_status(),
             "database": {
                 "engine": "sqlite",
                 "path": str(DB_PATH),
@@ -6731,6 +6783,32 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_database_verify_shadow(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         result = lq_postgres.verify_shadow(db, TABLES)
         self.send_json({"ok": bool(result.get("ok")), "verify": result})
+
+    def api_storage_object_status(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        self.send_json({"ok": True, "object_storage": lq_object_storage.object_storage_status(), "disk": storage_status()})
+
+    def api_storage_object_probe(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        probe = lq_object_storage.probe_object_storage()
+        audit(db, user, "storage_object_probe", "storage", "object", f"ok={probe.get('ok')}")
+        db.commit()
+        self.send_json({"ok": bool(probe.get("ok")), "probe": probe})
+
+    def api_storage_sync_uploads(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        confirm = str(data.get("confirm") or "").strip().lower()
+        if confirm not in ("sync", "yes", "1", "true"):
+            return self.send_json({"ok": False, "error": "confirm=sync required"}, 400)
+        result = lq_object_storage.sync_local_tree(UPLOAD_DIR)
+        audit(
+            db,
+            user,
+            "storage_sync_uploads",
+            "storage",
+            "object",
+            f"ok={result.get('ok')} uploaded={result.get('uploaded')} scanned={result.get('scanned')}",
+        )
+        db.commit()
+        self.send_json({"ok": bool(result.get("ok")), "result": result})
 
     def api_invoice_audit(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
         params = urllib.parse.parse_qs(query or "")
@@ -8125,6 +8203,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "last_backup": LAST_AUTO_BACKUP_AT or (recent[0]["created_at"] if recent else None),
             },
             "storage": storage_status(),
+            "object_storage": lq_object_storage.object_storage_status(),
             "backup_integrity": latest_backup_integrity(),
             "offsite": offsite_config(),
             "recent": recent[:10],

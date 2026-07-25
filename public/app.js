@@ -2024,10 +2024,13 @@ function renderBackup(){
   html += lqDocCard('✉️','خطاب رسمي','Official Letterhead','/documents/lq-official-letter.docx','lq-official-letter.docx');
   html += `</div>`;
   html += `<div class="card" style="margin-top:16px"><h4>☁️ نسخ خارج Railway (Off-site)</h4><p class="mini">1) أنشئ webhook على <a href="https://webhook.site" target="_blank" rel="noopener">webhook.site</a> · 2) أضف على Railway: <code>LQ_OFFSITE_BACKUP_URL</code> · 3) اضغط «نسخ احتياطي الآن»</p></div>`;
+  html += `<div class="card" style="margin-top:12px"><h4>🗄️ التخزين السحابي للعقود والصور</h4><p class="mini">فعّل على Railway: <code>LQ_OBJECT_STORAGE_ENABLED=1</code> + Bucket + المفاتيح (S3 / Cloudflare R2 / MinIO). الملفات تُحفظ محلياً وتُنسخ للسحابة. من التوسع المؤسسي: فحص ومزامنة.</p></div>`;
   api('backup/status').then(st=>{
     if(st.auto_backup?.enabled){
       html += `<p class="mini" style="margin-top:12px">نسخ احتياطي تلقائي: كل ${fmt(st.auto_backup.interval_hours)} ساعة — آخر نسخة: ${st.auto_backup.last_backup||'لم تُنشأ بعد'} — يحتفظ بـ ${fmt(st.auto_backup.retention)} نسخة</p>`;
       html += `<p class="mini">Off-site: ${st.offsite?.enabled?'مفعّل':'فعّل LQ_OFFSITE_BACKUP_URL'} — آخر دفع: ${st.offsite?.last_push||'—'}</p>`;
+      const os=st.object_storage||st.storage?.object_storage||{};
+      html += `<p class="mini">تخزين سحابي: ${os.ready?'✅ جاهز':(os.configured?'معطّل/غير جاهز':'محلي فقط')} — آخر خطأ: ${os.last_error||'—'}</p>`;
       if(st.storage){
         html += `<p class="mini">Storage: متاح ${fmt(st.storage.free_gb)}GB من ${fmt(st.storage.total_gb)}GB ${st.storage.warning?'⚠️ منخفض':'✅'}</p>`;
       }
