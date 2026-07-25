@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -83,7 +83,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v53-full-release"
+APP_VERSION = "Launch-Quality-LLC-v53-data-reset"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -709,6 +709,72 @@ def restore_backup_tables(db: sqlite3.Connection, tables: Dict[str, Any], mode: 
                 f"ON CONFLICT(id) DO UPDATE SET {updates}",
                 values,
             )
+
+
+# Business tables wiped by reset — users / chart of accounts / login devices kept.
+OPERATIONAL_KEEP_TABLES = {
+    "users",
+    "chart_accounts",
+    "workflow_policies",
+    "biometric_credentials",
+    "staff_devices",
+}
+OPERATIONAL_EXTRA_CLEAR_TABLES = [
+    "sessions",
+    "alert_dismissals",
+    "alert_notifications",
+    "ai_usage_log",
+    "work_journal",
+    "daily_operations",
+    "module_fix_runs",
+]
+
+
+def clear_upload_files() -> Dict[str, int]:
+    """Remove uploaded business files; keep folder structure."""
+    removed = 0
+    ensure_upload_dirs()
+    if not UPLOAD_DIR.exists():
+        return {"removed_files": 0}
+    for path in UPLOAD_DIR.rglob("*"):
+        if path.is_file():
+            try:
+                path.unlink()
+                removed += 1
+            except OSError:
+                pass
+    return {"removed_files": removed}
+
+
+def reset_operational_data(db: sqlite3.Connection, *, clear_uploads: bool = True) -> Dict[str, Any]:
+    """Zero business data so the team can re-enter clean records. Keeps users."""
+    cleared: Dict[str, int] = {}
+    # Clear TABLES entries first (child-ish names later in dict are fine; FK off by default)
+    for table in list(TABLES.keys()):
+        if table in OPERATIONAL_KEEP_TABLES:
+            continue
+        try:
+            before = int(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] or 0)
+            db.execute(f"DELETE FROM {table}")
+            cleared[table] = before
+        except sqlite3.Error:
+            cleared[table] = -1
+    for table in OPERATIONAL_EXTRA_CLEAR_TABLES:
+        try:
+            before = int(db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] or 0)
+            db.execute(f"DELETE FROM {table}")
+            cleared[table] = before
+        except sqlite3.Error:
+            pass
+    seed_chart_accounts(db)
+    users_kept = int(db.execute("SELECT COUNT(*) FROM users").fetchone()[0] or 0)
+    upload_stats = clear_upload_files() if clear_uploads else {"removed_files": 0, "skipped": True}
+    return {
+        "cleared": cleared,
+        "users_kept": users_kept,
+        "uploads": upload_stats,
+        "kept": sorted(OPERATIONAL_KEEP_TABLES),
+    }
 
 
 def verify_backup_restore(db: sqlite3.Connection) -> Dict[str, Any]:
@@ -4027,6 +4093,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "restore" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_restore(db, user)
+                if parts[0] == "admin" and len(parts) >= 2 and parts[1] == "reset_operational" and method == "POST":
+                    user = self.require_user(db)
+                    return None if not user else self.api_admin_reset_operational(db, user)
                 if parts[0] == "export" and len(parts) >= 2 and parts[1] == "bundle" and method == "POST":
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_export_bundle_zip(user)
@@ -8250,6 +8319,46 @@ class JawdahHandler(BaseHTTPRequestHandler):
         audit(db, user, "restore", "database", None, f"Restore mode {mode}")
         db.commit()
         self.send_json({"ok": True})
+
+    def api_admin_reset_operational(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        """Wipe all business data; keep users and login devices. Requires confirm=RESET."""
+        data = self.read_json()
+        confirm = str(data.get("confirm") or "").strip().upper()
+        if confirm not in ("RESET", "YES", "1", "TRUE"):
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "confirm=RESET required — this deletes properties, clients, contracts, invoices, and related records",
+                },
+                400,
+            )
+        uname = str(user.get("username") or "").strip().lower()
+        role = str(user.get("role") or "").strip().lower()
+        if uname not in FULL_ACCESS_USERNAMES and role not in ("admin", "owner"):
+            return self.send_json({"ok": False, "error": "Permission denied — admin/owner only"}, 403)
+        # Safety snapshot before wipe
+        backup = run_automatic_backup(reason="pre-operational-reset")
+        result = reset_operational_data(db, clear_uploads=bool(data.get("clear_uploads", True)))
+        audit(
+            db,
+            user,
+            "reset_operational",
+            "database",
+            "wipe",
+            f"users_kept={result.get('users_kept')} uploads={result.get('uploads')}",
+        )
+        db.commit()
+        self.send_json(
+            {
+                "ok": True,
+                "message": "تم تصفير بيانات العمل — الحسابات محفوظة",
+                "users_kept": result.get("users_kept"),
+                "cleared": result.get("cleared"),
+                "uploads": result.get("uploads"),
+                "kept": result.get("kept"),
+                "backup_before": backup,
+            }
+        )
 
     def api_export_csv(self, db: sqlite3.Connection, table: str) -> None:
         if table not in TABLES:

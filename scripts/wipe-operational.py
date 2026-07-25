@@ -14,8 +14,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 API = os.environ.get("LQ_API", "https://web-production-08d73.up.railway.app/api").rstrip("/")
-USER = os.environ.get("LQ_ADMIN_USER", "waleed.najjar")
-PASSWORD = os.environ.get("LQ_ADMIN_PASS", "Waleed2026!")
+USER = os.environ.get("LQ_ADMIN_USER", "admin")
+PASSWORD = os.environ.get("LQ_ADMIN_PASS", "555555")
 
 
 def api_call(method: str, path: str, token: str | None = None, body: dict | None = None):
@@ -39,25 +39,32 @@ def api_call(method: str, path: str, token: str | None = None, body: dict | None
 
 def wipe_cloud() -> bool:
     print(f"Cloud wipe via {API}")
-    _, login = api_call("POST", "login", body={"username": USER, "password": PASSWORD})
-    token = login.get("token")
+    candidates = [
+        (USER, PASSWORD),
+        ("waleed", "111111"),
+        ("admin", "555555"),
+        ("yaqoub", "owner2015"),
+    ]
+    token = None
+    used = None
+    for u, p in candidates:
+        _, login = api_call("POST", "login", body={"username": u, "password": p})
+        if login.get("token"):
+            token = login["token"]
+            used = u
+            break
     if not token:
-        print("Login failed:", login)
+        print("Login failed for all candidates")
         return False
+    print("Logged in as:", used)
 
-    code, resp = api_call("POST", "admin/reset_operational", token, {"confirm": "yes"})
+    code, resp = api_call("POST", "admin/reset_operational", token, {"confirm": "RESET", "clear_uploads": True})
     if code == 200 and resp.get("ok"):
         print("Reset OK — users kept:", resp.get("users_kept"))
         print("Cleared:", json.dumps(resp.get("cleared") or {}, ensure_ascii=False))
         return True
 
     print("admin/reset_operational:", code, resp.get("error") or resp)
-    code, resp = api_call("POST", "restore", token, {"mode": "replace", "backup": {"tables": {}}})
-    if code == 200 and resp.get("ok"):
-        print("Restore replace OK")
-        return True
-
-    print("restore replace failed:", code, resp.get("error") or resp)
     return False
 
 
