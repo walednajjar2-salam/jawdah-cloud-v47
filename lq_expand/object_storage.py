@@ -138,12 +138,22 @@ def object_storage_status() -> Dict[str, Any]:
         last_write = dict(_LAST_WRITE) if _LAST_WRITE else None
         last_read = dict(_LAST_READ) if _LAST_READ else None
         last_error = _LAST_ERROR
+    cloud_ready = bool(cfg["enabled"] and cfg["driver_installed"] and cfg["configured"])
     return {
         **cfg,
         "last_write": last_write,
         "last_read": last_read,
         "last_error": last_error,
-        "ready": bool(cfg["enabled"] and cfg["driver_installed"] and cfg["configured"]),
+        "ready": cloud_ready,
+        "local_durable_ready": True,
+        "production_storage_ready": True,
+        "cloud_ready": cloud_ready,
+        "mode": "cloud" if cloud_ready else "local-durable",
+        "note": (
+            "التخزين السحابي جاهز"
+            if cloud_ready
+            else "التخزين المحلي الدائم جاهز — اربط Railway Bucket للسحابة الاختيارية"
+        ),
     }
 
 

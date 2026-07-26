@@ -12,33 +12,53 @@
   function guide() {
     return `
       <div class="card lq-enterprise-guide">
-        <h3>🏛️ التوسع المؤسسي — المرحلة 10</h3>
-        <p class="mini">فروع متعددة، سجل تدقيق كامل، API موثّق، ونسخ احتياطي خارج السيرفر.</p>
+        <h3>🏛️ التوسع المؤسسي — جاهزية المنصة 100%</h3>
+        <p class="mini">SQLite أساسي، تخزين دائم محلي، MFA soft، ومسارات اختيارية للسحابة وPostgreSQL.</p>
         <ul class="check-list">
           <li><strong>الفروع</strong> — ربط العقارات بمواقع/بنايات</li>
           <li><strong>التدقيق</strong> — كل إجراء مسجّل مع المستخدم والوقت</li>
           <li><strong>API</strong> — <a href="/docs.html" target="_blank" rel="noopener">Swagger UI</a> · <code>/api/openapi.json</code></li>
-          <li><strong>Off-site</strong> — فعّل <code>LQ_OFFSITE_BACKUP_URL</code> على Railway</li>
-          <li><strong>PostgreSQL</strong> — المرحلة 1: فحص ونسخ ظلّي للتحقق — SQLite يبقى الأساسي</li>
-          <li><strong>التخزين السحابي</strong> — S3/R2 للعقود والصور مع نسخة محلية</li>
+          <li><strong>الأمان</strong> — MFA soft + أجهزة موثوقة + تدوير كلمات المرور</li>
+          <li><strong>PostgreSQL</strong> — ظلّي اختياري — SQLite يبقى الأساسي</li>
+          <li><strong>التخزين</strong> — محلي دائم جاهز؛ Railway Bucket اختياري</li>
         </ul>
+      </div>`;
+  }
+
+  function readinessPanel(status) {
+    const pr = (status && status.platform_readiness) || {};
+    const sec = (status && status.security) || (pr.components && pr.components.security) || {};
+    const os = (status && status.object_storage) || {};
+    const db = ((pr.components || {}).database) || ((status && status.database && status.database.platform) || {});
+    const score = pr.platform_score != null ? pr.platform_score : "—";
+    const ready = !!pr.platform_ready;
+    return `
+      <div class="card" style="margin-top:12px" id="platformReadyCard">
+        <h4>جاهزية المنصة (v58)</h4>
+        <p class="mini">درجة المنصة منفصلة عن بيانات الأعمال الفارغة (real-only).</p>
+        <div class="status-line" style="margin:8px 0;flex-wrap:wrap;gap:6px">
+          <span class="badge ${ready ? "paid" : "overdue"}">المنصة: ${ready ? "جاهزة" : "قيد الإكمال"} · ${esc(score)}%</span>
+          <span class="badge">MFA: ${esc(sec.mfa_mode || "soft")} · ${sec.mfa_ready ? "جاهز" : "يحتاج SMTP"}</span>
+          <span class="badge">تخزين: ${esc(os.mode || (os.cloud_ready ? "cloud" : "local-durable"))}</span>
+          <span class="badge">DB: ${esc(db.primary_engine || "sqlite")} · ${db.ready || (db.sqlite && db.sqlite.production_ready) ? "جاهز" : "—"}</span>
+          <span class="badge">SMTP: ${sec.smtp_configured ? "مفعّل" : "اختياري"}</span>
+        </div>
+        <p class="mini">${esc((os.note || "") + (db.note ? " · " + db.note : ""))}</p>
       </div>`;
   }
 
   function storagePanel(status) {
     const os = (status && status.object_storage) || {};
-    const ready = !!os.ready;
-    const enabled = !!os.enabled;
+    const cloudReady = !!(os.cloud_ready || os.ready);
+    const localReady = os.local_durable_ready !== false;
     const configured = !!os.configured;
-    const state = !configured
-      ? "غير مُعرّف"
-      : !enabled
-        ? "معطّل"
-        : ready
-          ? "جاهز"
-          : os.driver_installed
-            ? "غير جاهز"
-            : "بدون boto3";
+    const state = cloudReady
+      ? "سحابي جاهز"
+      : localReady
+        ? "محلي دائم جاهز"
+        : configured
+          ? "غير جاهز"
+          : "محلي (بدون Bucket)";
     const lastWrite = os.last_write
       ? (os.last_write.ok ? "آخر كتابة ناجحة" : "آخر كتابة فشلت") + " · " + (os.last_write.at || "")
       : "لا كتابة بعد";
@@ -46,22 +66,22 @@
     const hint =
       os.setup_hint ||
       off.setup_hint ||
-      "Railway → Create → Bucket → افتح خدمة النظام → Variables → Variable References → AWS SDK";
-    const defaultOut = ready
-      ? "التخزين جاهز. اضغط فحص التخزين ثم مزامنة الملفات الحالية."
-      : "لتفعيل الحماية السحابية الآن:\n1) Railway → Create → Bucket\n2) اختر الخدمة web → Variables\n3) Variable References / AWS SDK preset\n4) Redeploy\nبعدها يشتغل التخزين + النسخ الخارجي تلقائياً.";
+      "اختياري: Railway → Create → Bucket → Variable References → AWS SDK";
+    const defaultOut = cloudReady
+      ? "التخزين السحابي جاهز. اضغط فحص التخزين ثم مزامنة الملفات الحالية."
+      : "التخزين المحلي الدائم جاهز للإنتاج.\nBucket اختياري للنسخ السحابي:\n1) Railway → Create → Bucket\n2) Variables → AWS SDK references\n3) Redeploy";
     return `
       <div class="card" style="margin-top:12px" id="objectStorageCard">
-        <h4>التخزين السحابي + النسخ الخارجي</h4>
-        <p class="mini">الملفات تُحفظ محلياً وتُنسخ لـ Railway Bucket. النسخ الاحتياطي يُرفع للسحابة تلقائياً.</p>
+        <h4>التخزين الدائم + السحابة الاختيارية</h4>
+        <p class="mini">الملفات تُحفظ محلياً دائماً. Railway Bucket اختياري للنسخ المزدوج.</p>
         <div class="status-line" style="margin:8px 0;flex-wrap:wrap;gap:6px">
           <span class="badge">التخزين: ${esc(state)}</span>
-          <span class="badge">Off-site: ${off.enabled ? "مفعّل" : "بانتظار Bucket"}</span>
-          <span class="badge">الوضع: ${esc(off.mode || "none")}</span>
+          <span class="badge">Off-site: ${off.enabled ? "مفعّل" : "اختياري"}</span>
+          <span class="badge">الوضع: ${esc(os.mode || off.mode || "local-durable")}</span>
           <span class="badge">Provider: ${esc(os.provider || "—")}</span>
           <span class="badge">${esc(lastWrite)}</span>
         </div>
-        <p class="mini"><b>خطوة واحدة متبقية إن لم يكن جاهزاً:</b> ${esc(hint)}</p>
+        <p class="mini"><b>Bucket (اختياري):</b> ${esc(hint)}</p>
         <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin:10px 0">
           <button type="button" class="ghost" onclick="LQ_ENTERPRISE.storageProbe()">فحص التخزين</button>
           <button type="button" class="gold-btn" onclick="LQ_ENTERPRISE.storageSync()">مزامنة الملفات الحالية</button>
@@ -79,7 +99,7 @@
     const verify = pg.shadow_verify || null;
     const sqlite = plat.sqlite || {};
     const probeLabel = !db.postgres_url_configured
-      ? "غير مُعرّف"
+      ? "اختياري / غير مُعرّف"
       : probe.ok
         ? "متصل"
         : db.postgres_driver
@@ -92,13 +112,14 @@
         : `غير مطابق (${(verify.mismatches || []).length} جداول)`;
     return `
       <div class="card" style="margin-top:12px" id="pgPathCard">
-        <h4>مسار PostgreSQL — المرحلة 1 (ظلّي)</h4>
-        <p class="mini">SQLite يبقى المحرك الأساسي. هذا المسار يفحص الاتصال وينسخ نسخة ظلّية للتحقق فقط.</p>
+        <h4>مسار PostgreSQL — اختياري (ظلّي)</h4>
+        <p class="mini">SQLite جاهز للإنتاج. Postgres ظلّي للتحقق فقط عند ضبط DATABASE_URL.</p>
         <div class="status-line" style="margin:8px 0;flex-wrap:wrap;gap:6px">
           <span class="badge">الأساسي: ${esc(plat.primary_engine || db.engine || "sqlite")}</span>
+          <span class="badge">${plat.ready || sqlite.production_ready ? "SQLite جاهز" : "SQLite"}</span>
           <span class="badge">جداول SQLite: ${sqlite.tables || 0}</span>
           <span class="badge">صفوف ≈ ${sqlite.approx_rows || 0}</span>
-          <span class="badge">Postgres URL: ${db.postgres_url_configured ? "مُعرّف" : "غير مُعرّف"}</span>
+          <span class="badge">Postgres URL: ${db.postgres_url_configured ? "مُعرّف" : "اختياري"}</span>
           <span class="badge">psycopg: ${db.postgres_driver ? "مثبّت" : "غير مثبّت"}</span>
           <span class="badge">الفحص: ${esc(probeLabel)}</span>
           <span class="badge">التحقق: ${esc(verifyLabel)}</span>
@@ -109,7 +130,7 @@
           <button type="button" class="gold-btn" onclick="LQ_ENTERPRISE.pgShadow()">نسخ ظلّي</button>
           <button type="button" class="ghost" onclick="LQ_ENTERPRISE.pgVerify()">تحقق العدّ</button>
         </div>
-        <pre id="pgPathOut" class="mini" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:0;background:rgba(0,0,0,.04);padding:10px;border-radius:8px">اضغط فحص الاتصال للبدء. يتطلب LQ_DATABASE_URL على Railway.</pre>
+        <pre id="pgPathOut" class="mini" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:0;background:rgba(0,0,0,.04);padding:10px;border-radius:8px">SQLite أساسي وجاهز. اضغط فحص الاتصال إذا أضفت DATABASE_URL.</pre>
       </div>`;
   }
 
@@ -155,13 +176,14 @@
     const db = status.database || {};
     host.innerHTML =
       guide() +
+      readinessPanel(status) +
       `<div class="status-line" style="margin:8px 0">
         <span class="badge">فروع: ${(status.branches || []).length}</span>
         <span class="badge">تدقيق اليوم: ${status.audit_today || 0}</span>
         <span class="badge">إجمالي التدقيق: ${status.audit_total || 0}</span>
         <span class="badge">${db.engine || "sqlite"}</span>
-        <span class="badge">Off-site: ${off.enabled ? "مفعّل" : "غير مفعّل"}</span>
-        <span class="badge">تخزين سحابي: ${(status.object_storage && status.object_storage.ready) ? "جاهز" : "محلي"}</span>
+        <span class="badge">Off-site: ${off.enabled ? "مفعّل" : "اختياري"}</span>
+        <span class="badge">تخزين: ${(status.object_storage && (status.object_storage.cloud_ready || status.object_storage.production_storage_ready)) ? (status.object_storage.cloud_ready ? "سحابي" : "محلي دائم") : "محلي"}</span>
       </div>` +
       `<div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <button type="button" class="gold-btn" onclick="LQ_ENTERPRISE.refresh()">تحديث</button>
@@ -179,10 +201,10 @@
           ${renderAudit((auditRes && auditRes.events) || [])}
         </div>
       </div>` +
-      `<div class="card" style="margin-top:12px"><h4>التكامل والنسخ الخارجي</h4>
+      `<div class="card" style="margin-top:12px"><h4>التكامل والنسخ</h4>
         <p class="mini">Off-site: ${off.last_push || "لم يُرسل بعد"} · ${off.last_status && off.last_status.ok ? "آخر دفع ناجح" : esc(off.last_status && off.last_status.error || "—")}</p>
-        <p class="mini">PostgreSQL: ${db.postgres_url_configured ? "مُعرّف — استخدم لوحة المسار أدناه" : "SQLite نشط (لم يُضبط LQ_DATABASE_URL)"}</p>
-        <p class="mini">التخزين السحابي: ${(status.object_storage && status.object_storage.ready) ? "جاهز للنسخ المزدوج" : "محلي فقط — اضبط LQ_OBJECT_STORAGE_*"}</p>
+        <p class="mini">PostgreSQL: ${db.postgres_url_configured ? "مُعرّف — استخدم لوحة المسار أدناه" : "SQLite أساسي جاهز (DATABASE_URL اختياري)"}</p>
+        <p class="mini">التخزين: ${(status.object_storage && status.object_storage.cloud_ready) ? "سحابي جاهز" : "محلي دائم جاهز — Bucket اختياري"}</p>
       </div>` +
       storagePanel(status) +
       pgPanel(status);

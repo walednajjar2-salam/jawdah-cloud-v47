@@ -41,12 +41,15 @@ from lq_expand.security import (
     device_trust_days,
     mfa_enforce_mode,
     normalize_device_fingerprint,
+    otp_login_enabled,
     password_needs_rotation,
     pending_login_ttl_seconds,
     resolve_bootstrap_password,
     resolve_user_email,
     role_requires_mfa,
+    security_platform_status,
     security_status_payload,
+    smtp_configured,
     validate_new_password,
 )
 
@@ -91,7 +94,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v57-real-only"
+APP_VERSION = "Launch-Quality-LLC-v58-platform-ready"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -202,6 +205,198 @@ WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
 PENDING_LOGINS: Dict[str, Dict[str, Any]] = {}
+
+
+def ensure_security_runtime_tables(db: sqlite3.Connection) -> None:
+    db.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS security_otp_codes (
+            username TEXT PRIMARY KEY,
+            code TEXT NOT NULL,
+            exp REAL NOT NULL,
+            purpose TEXT NOT NULL DEFAULT 'login',
+            tries INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS security_pending_logins (
+            challenge_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            username TEXT NOT NULL,
+            remember INTEGER NOT NULL DEFAULT 0,
+            device_fingerprint TEXT NOT NULL DEFAULT '',
+            device_label TEXT NOT NULL DEFAULT '',
+            user_agent TEXT NOT NULL DEFAULT '',
+            expires_ts REAL NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        """
+    )
+
+
+def store_otp_code(db: Optional[sqlite3.Connection], username: str, code: str, purpose: str = "login") -> None:
+    exp = time.time() + OTP_TTL_SECONDS
+    OTP_CODES[username] = (code, exp)
+    if db is None:
+        return
+    ensure_security_runtime_tables(db)
+    db.execute(
+        """
+        INSERT INTO security_otp_codes(username, code, exp, purpose, tries, created_at)
+        VALUES(?,?,?,?,0,?)
+        ON CONFLICT(username) DO UPDATE SET
+            code=excluded.code,
+            exp=excluded.exp,
+            purpose=excluded.purpose,
+            tries=0,
+            created_at=excluded.created_at
+        """,
+        (username, code, exp, purpose, now_iso()),
+    )
+
+
+def load_otp_code(db: Optional[sqlite3.Connection], username: str) -> Optional[Tuple[str, float]]:
+    now_ts = time.time()
+    mem = OTP_CODES.get(username)
+    if mem and now_ts <= float(mem[1]):
+        return mem
+    if mem:
+        OTP_CODES.pop(username, None)
+    if db is None:
+        return None
+    ensure_security_runtime_tables(db)
+    row = db.execute(
+        "SELECT code, exp FROM security_otp_codes WHERE username=?",
+        (username,),
+    ).fetchone()
+    if not row:
+        return None
+    if now_ts > float(row["exp"]):
+        db.execute("DELETE FROM security_otp_codes WHERE username=?", (username,))
+        return None
+    pair = (str(row["code"]), float(row["exp"]))
+    OTP_CODES[username] = pair
+    return pair
+
+
+def clear_otp_code(db: Optional[sqlite3.Connection], username: str) -> None:
+    OTP_CODES.pop(username, None)
+    if db is None:
+        return
+    ensure_security_runtime_tables(db)
+    db.execute("DELETE FROM security_otp_codes WHERE username=?", (username,))
+
+
+def store_pending_login(db: sqlite3.Connection, challenge_id: str, payload: Dict[str, Any]) -> None:
+    ensure_security_runtime_tables(db)
+    PENDING_LOGINS[challenge_id] = dict(payload)
+    db.execute(
+        """
+        INSERT INTO security_pending_logins(
+            challenge_id, user_id, username, remember, device_fingerprint,
+            device_label, user_agent, expires_ts, created_at
+        ) VALUES(?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(challenge_id) DO UPDATE SET
+            user_id=excluded.user_id,
+            username=excluded.username,
+            remember=excluded.remember,
+            device_fingerprint=excluded.device_fingerprint,
+            device_label=excluded.device_label,
+            user_agent=excluded.user_agent,
+            expires_ts=excluded.expires_ts,
+            created_at=excluded.created_at
+        """,
+        (
+            challenge_id,
+            payload.get("user_id"),
+            payload.get("username"),
+            1 if payload.get("remember") else 0,
+            payload.get("device_fingerprint") or "",
+            payload.get("device_label") or "",
+            payload.get("user_agent") or "",
+            float(payload.get("expires_ts") or 0),
+            now_iso(),
+        ),
+    )
+
+
+def load_pending_login(db: sqlite3.Connection, challenge_id: str) -> Optional[Dict[str, Any]]:
+    now_ts = time.time()
+    mem = PENDING_LOGINS.get(challenge_id)
+    if mem and now_ts <= float(mem.get("expires_ts") or 0):
+        return dict(mem)
+    if mem:
+        PENDING_LOGINS.pop(challenge_id, None)
+    ensure_security_runtime_tables(db)
+    row = db.execute(
+        "SELECT * FROM security_pending_logins WHERE challenge_id=?",
+        (challenge_id,),
+    ).fetchone()
+    if not row:
+        return None
+    if now_ts > float(row["expires_ts"]):
+        db.execute("DELETE FROM security_pending_logins WHERE challenge_id=?", (challenge_id,))
+        return None
+    payload = {
+        "user_id": row["user_id"],
+        "username": row["username"],
+        "remember": bool(row["remember"]),
+        "device_fingerprint": row["device_fingerprint"] or "",
+        "device_label": row["device_label"] or "",
+        "user_agent": row["user_agent"] or "",
+        "expires_ts": float(row["expires_ts"]),
+    }
+    PENDING_LOGINS[challenge_id] = dict(payload)
+    return payload
+
+
+def clear_pending_login(db: sqlite3.Connection, challenge_id: str) -> None:
+    PENDING_LOGINS.pop(challenge_id, None)
+    ensure_security_runtime_tables(db)
+    db.execute("DELETE FROM security_pending_logins WHERE challenge_id=?", (challenge_id,))
+
+
+def build_platform_readiness(db: sqlite3.Connection) -> Dict[str, Any]:
+    missing_email = int(
+        db.execute(
+            "SELECT COUNT(*) FROM users WHERE active=1 AND (email IS NULL OR trim(email)='')"
+        ).fetchone()[0]
+        or 0
+    )
+    security = security_platform_status(users_missing_email=missing_email)
+    storage = lq_object_storage.object_storage_status()
+    database = lq_postgres.build_database_platform_status(db, TABLES)
+    disk = storage_status()
+    components = {
+        "security": security,
+        "storage": storage,
+        "database": database,
+        "disk": {
+            "path": disk.get("path"),
+            "free_gb": disk.get("free_gb"),
+            "warning": disk.get("warning"),
+            "ready": not bool(disk.get("warning")),
+        },
+    }
+    ready_flags = [
+        bool(security.get("ready")),
+        bool(storage.get("production_storage_ready", storage.get("ready"))),
+        bool(database.get("ready", database.get("primary_ready"))),
+        bool(components["disk"]["ready"]),
+    ]
+    score = round(sum(1 for x in ready_flags if x) / len(ready_flags) * 100, 1)
+    return {
+        "ok": True,
+        "version": APP_VERSION,
+        "platform_score": score,
+        "platform_ready": all(ready_flags),
+        "components": components,
+        "notes": [
+            "SQLite هو المحرك الأساسي للإنتاج",
+            "التخزين المحلي الدائم جاهز؛ Railway Bucket اختياري",
+            "MFA soft جاهز بدون SMTP؛ Strict يحتاج LQ_SMTP_HOST",
+            "PostgreSQL ظلّي اختياري عند ضبط DATABASE_URL",
+        ],
+    }
 MODULE_FIX_PREVIEW_TTL_SECONDS = max(300, int(os.environ.get("LQ_MODULE_FIX_PREVIEW_TTL", "1800") or "1800"))
 MODULE_FIX_MIN_ATTEMPTS_FOR_ALERT = max(1, int(os.environ.get("LQ_MODULE_FIX_MIN_ATTEMPTS_ALERT", "5") or "5"))
 MODULE_FIX_MIN_SUCCESS_RATE = float(os.environ.get("LQ_MODULE_FIX_MIN_SUCCESS_RATE", "85") or "85")
@@ -1754,6 +1949,7 @@ def init_db() -> None:
             ("password_changed_at", "TEXT"),
         ]:
             ensure_column(db, "users", col, definition)
+        ensure_security_runtime_tables(db)
         ensure_column(db, "clients", "id_card_image", "TEXT")
         ensure_column(db, "payments", "payment_proof_image", "TEXT")
         ensure_column(db, "payments", "received_by", "TEXT")
@@ -3737,7 +3933,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def send_cors_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", self.cors_origin())
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-LQ-Device")
         self.send_header("Access-Control-Max-Age", "86400")
 
     def send_json(self, data: Any, status: int = 200) -> None:
@@ -4029,6 +4225,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "enterprise_status" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_enterprise_status(db, user)
+                if parts[0] == "platform_readiness" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_platform_readiness(db)
                 if parts[0] == "database" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_database_status(db, user)
@@ -4408,11 +4607,16 @@ class JawdahHandler(BaseHTTPRequestHandler):
         except Exception as exc:
             self.send_json({"ok": False, "error": "Server error", "detail": str(exc)}, 500)
 
-    def cleanup_pending_logins(self) -> None:
+    def cleanup_pending_logins(self, db: Optional[sqlite3.Connection] = None) -> None:
         now_ts = time.time()
         expired = [k for k, v in PENDING_LOGINS.items() if now_ts > float(v.get("expires_ts", 0))]
         for key in expired:
             PENDING_LOGINS.pop(key, None)
+        if db is None:
+            return
+        ensure_security_runtime_tables(db)
+        db.execute("DELETE FROM security_pending_logins WHERE expires_ts < ?", (now_ts,))
+        db.execute("DELETE FROM security_otp_codes WHERE exp < ?", (now_ts,))
 
     def is_device_trusted(self, db: sqlite3.Connection, user_id: str, fingerprint: str) -> bool:
         if not fingerprint:
@@ -4555,21 +4759,32 @@ class JawdahHandler(BaseHTTPRequestHandler):
         device_label: str,
         user_agent: str,
     ) -> Dict[str, Any]:
-        self.cleanup_pending_logins()
+        self.cleanup_pending_logins(db)
         challenge_id = uid("MFA")
         username = str(row["username"])
         code = f"{secrets.randbelow(900000) + 100000:06d}"
-        OTP_CODES[username] = (code, time.time() + OTP_TTL_SECONDS)
-        PENDING_LOGINS[challenge_id] = {
-            "user_id": row["id"],
-            "username": username,
-            "remember": remember,
-            "device_fingerprint": device_fingerprint,
-            "device_label": device_label,
-            "user_agent": user_agent,
-            "expires_ts": time.time() + pending_login_ttl_seconds(),
-        }
-        to_addr = str(row["email"] or "").strip() or SUPPORT_EMAIL
+        store_otp_code(db, username, code, purpose="mfa")
+        store_pending_login(
+            db,
+            challenge_id,
+            {
+                "user_id": row["id"],
+                "username": username,
+                "remember": remember,
+                "device_fingerprint": device_fingerprint,
+                "device_label": device_label,
+                "user_agent": user_agent,
+                "expires_ts": time.time() + pending_login_ttl_seconds(),
+            },
+        )
+        to_addr = resolve_user_email(username, str(row["email"] or "").strip())
+        if not to_addr:
+            return {
+                "challenge_id": challenge_id,
+                "sent": False,
+                "detail": "لا يوجد بريد للمستخدم — عيّن email أو LQ_EMAIL_<USER>",
+                "username": username,
+            }
         subject = "Launch Quality — رمز التحقق MFA"
         body = (
             f"رمز التحقق لحساب {username}: {code}\n"
@@ -4653,17 +4868,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
         fingerprint = normalize_device_fingerprint(data.get("device_fingerprint") or data.get("device_id"))
         device_label = str(data.get("device_label") or "").strip()[:80]
         user_agent = str(self.headers.get("User-Agent") or "")[:240]
-        stored = OTP_CODES.get(username)
+        # Passwordless OTP login is opt-in; MFA completion always allowed with challenge_id.
+        if not challenge_id and not otp_login_enabled():
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "دخول OTP بدون كلمة مرور معطّل — استخدم كلمة المرور أو فعّل LQ_OTP_LOGIN_ENABLED",
+                },
+                403,
+            )
+        stored = load_otp_code(db, username)
         if not stored or time.time() > stored[1] or stored[0] != code:
             return self.send_json({"ok": False, "error": "Invalid or expired OTP code"}, 401)
-        OTP_CODES.pop(username, None)
+        clear_otp_code(db, username)
         pending = None
         if challenge_id:
-            self.cleanup_pending_logins()
-            pending = PENDING_LOGINS.pop(challenge_id, None)
+            self.cleanup_pending_logins(db)
+            pending = load_pending_login(db, challenge_id)
             if pending and str(pending.get("username")) != username:
                 return self.send_json({"ok": False, "error": "Challenge mismatch"}, 401)
             if pending:
+                clear_pending_login(db, challenge_id)
                 remember = bool(pending.get("remember"))
                 fingerprint = pending.get("device_fingerprint") or fingerprint
                 device_label = pending.get("device_label") or device_label
@@ -7249,13 +7474,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
             (today() + " 00:00:00",),
         ).fetchone()[0]
         db_status = lq_postgres.build_database_platform_status(db, TABLES)
+        readiness = build_platform_readiness(db)
         self.send_json({
             "ok": True,
+            "version": APP_VERSION,
             "branches": branch_stats,
             "audit_today": int(audit_today or 0),
             "audit_total": db.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0],
             "offsite": offsite_config(),
             "object_storage": lq_object_storage.object_storage_status(),
+            "security": readiness["components"]["security"],
+            "platform_readiness": readiness,
             "database": {
                 "engine": "sqlite",
                 "path": str(DB_PATH),
@@ -7269,6 +7498,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "production": PRODUCTION_URL,
             },
         })
+
+    def api_platform_readiness(self, db: sqlite3.Connection) -> None:
+        self.send_json(build_platform_readiness(db))
 
     def api_database_status(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         status = lq_postgres.build_database_platform_status(db, TABLES)
@@ -8754,22 +8986,38 @@ class JawdahHandler(BaseHTTPRequestHandler):
         con_bad = db.execute("SELECT COUNT(*) FROM contracts WHERE property_id NOT IN (SELECT id FROM properties) OR client_id NOT IN (SELECT id FROM clients)").fetchone()[0]
         overdue = db.execute("SELECT COALESCE(SUM(amount-paid_amount),0) FROM invoices WHERE status!='Paid' AND due_date < ?", (today(),)).fetchone()[0]
         low_stock = db.execute("SELECT COUNT(*) FROM inventory_items WHERE quantity <= min_quantity").fetchone()[0]
-        checks = [
-            {"name": "العقارات والوحدات", "ok": props > 0, "value": props},
-            {"name": "المستأجرون", "ok": clients > 0, "value": clients},
-            {"name": "العقود", "ok": contracts > 0 and con_bad == 0, "value": contracts},
-            {"name": "الفواتير", "ok": invoices > 0 and inv_bad == 0, "value": invoices},
-            {"name": "الحسابات", "ok": accounts > 0, "value": accounts},
-            {"name": "دليل الحسابات", "ok": chart >= 8, "value": chart},
-            {"name": "كشف البنك", "ok": bank_rows > 0, "value": bank_rows},
-            {"name": "المستخدمون والصلاحيات", "ok": users >= 5, "value": users},
-            {"name": "سجل التدقيق", "ok": audit_rows > 0, "value": audit_rows},
+        business_checks = [
+            {"name": "العقارات والوحدات", "ok": props > 0, "value": props, "kind": "business"},
+            {"name": "المستأجرون", "ok": clients > 0, "value": clients, "kind": "business"},
+            {"name": "العقود", "ok": contracts > 0 and con_bad == 0, "value": contracts, "kind": "business"},
+            {"name": "الفواتير", "ok": invoices > 0 and inv_bad == 0, "value": invoices, "kind": "business"},
+            {"name": "الحسابات", "ok": accounts > 0, "value": accounts, "kind": "business"},
+            {"name": "دليل الحسابات", "ok": chart >= 8, "value": chart, "kind": "business"},
+            {"name": "كشف البنك", "ok": bank_rows > 0, "value": bank_rows, "kind": "business"},
         ]
-        score = round(sum(1 for c in checks if c["ok"]) / len(checks) * 100, 1)
+        platform = build_platform_readiness(db)
+        platform_checks = [
+            {"name": "المستخدمون والصلاحيات", "ok": users >= 1, "value": users, "kind": "platform"},
+            {"name": "سجل التدقيق", "ok": True, "value": audit_rows, "kind": "platform"},
+            {"name": "قاعدة البيانات (SQLite)", "ok": bool(platform["components"]["database"].get("ready")), "value": platform["components"]["database"].get("sqlite", {}).get("tables", 0), "kind": "platform"},
+            {"name": "التخزين الدائم", "ok": bool(platform["components"]["storage"].get("production_storage_ready")), "value": platform["components"]["storage"].get("mode") or "local", "kind": "platform"},
+            {"name": "الأمان / MFA", "ok": bool(platform["components"]["security"].get("ready")), "value": platform["components"]["security"].get("mfa_mode") or "soft", "kind": "platform"},
+        ]
+        checks = platform_checks + business_checks
+        business_score = round(sum(1 for c in business_checks if c["ok"]) / max(len(business_checks), 1) * 100, 1)
+        platform_score = float(platform.get("platform_score") or 0)
+        # Overall score prioritizes platform readiness; empty real-only business data does not tank the platform.
+        score = platform_score
         self.send_json({
             "ok": True,
+            "version": APP_VERSION,
             "score": score,
+            "platform_score": platform_score,
+            "business_score": business_score,
+            "platform_ready": bool(platform.get("platform_ready")),
+            "real_only": True,
             "checks": checks,
+            "platform_readiness": platform,
             "alerts": {"overdue": float(overdue or 0), "low_stock": low_stock, "broken_contract_links": con_bad, "broken_invoice_links": inv_bad},
             "workflow": {
                 "policy_count": len(workflow_policies),
@@ -10323,6 +10571,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
         })
 
     def api_otp_send(self, db: sqlite3.Connection) -> None:
+        if not otp_login_enabled():
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "دخول OTP بدون كلمة مرور معطّل — MFA يعمل تلقائياً بعد كلمة المرور للأدوار المحمية",
+                    "otp_login_enabled": False,
+                },
+                403,
+            )
         data = self.read_json()
         username = str(data.get("username", "")).strip()
         if not username:
@@ -10332,10 +10589,24 @@ class JawdahHandler(BaseHTTPRequestHandler):
             (username,),
         ).fetchone()
         if not row:
+            row = db.execute(
+                "SELECT id, username, email FROM users WHERE lower(username)=? AND active=1",
+                (username.lower(),),
+            ).fetchone()
+        if not row:
             return self.send_json({"ok": False, "error": "User not found"}, 404)
         code = f"{secrets.randbelow(900000) + 100000:06d}"
-        OTP_CODES[username] = (code, time.time() + OTP_TTL_SECONDS)
-        to_addr = str(row["email"] or "").strip() or SUPPORT_EMAIL
+        store_otp_code(db, str(row["username"]), code, purpose="login")
+        db.commit()
+        to_addr = resolve_user_email(str(row["username"]), str(row["email"] or "").strip())
+        if not to_addr:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "لا يوجد بريد للمستخدم — عيّن email أو LQ_EMAIL_<USER>",
+                },
+                400,
+            )
         subject = "Launch Quality — رمز الدخول OTP"
         body = (
             f"رمز الدخول لحساب {username}: {code}\n"
@@ -10370,9 +10641,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
         data = self.read_json()
         username = str(data.get("username", "")).strip()
         code = str(data.get("code", "")).strip()
-        stored = OTP_CODES.get(username)
-        if stored and time.time() <= stored[1] and stored[0] == code:
-            return self.send_json({"ok": True, "verified": True, "message": "OTP verified"})
+        if not otp_login_enabled():
+            return self.send_json({"ok": False, "error": "OTP login disabled", "otp_login_enabled": False}, 403)
+        with connect() as db:
+            stored = load_otp_code(db, username)
+            if stored and time.time() <= stored[1] and stored[0] == code:
+                return self.send_json({"ok": True, "verified": True, "message": "OTP verified"})
         return self.send_json({"ok": False, "error": "Invalid or expired OTP code"}, 401)
 
     def api_permissions_ui(self, user: Dict[str, Any]) -> None:

@@ -575,6 +575,11 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const api = async (path, opts={}) => {
   const headers = {'Content-Type':'application/json'};
   if(Jawdah.token) headers.Authorization = 'Bearer ' + Jawdah.token;
+  try{
+    if(window.LQ_SECURITY && typeof LQ_SECURITY.deviceFingerprint === 'function'){
+      headers['X-LQ-Device'] = LQ_SECURITY.deviceFingerprint();
+    }
+  }catch(_){}
   let url = '/api/' + path.replace(/^\//,'');
   // Always also pass token in query — some proxies drop Authorization on GET
   if(Jawdah.token){
@@ -6078,7 +6083,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       const alerts=res.alerts||{};
       const wf=res.workflow||{};
       const box=$('#productionStatusBox');
-      box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>نتيجة الجاهزية</span><strong>${fmt(res.score)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div><div class="kpi"><span>روابط غير سليمة</span><strong>${fmt((alerts.broken_contract_links||0)+(alerts.broken_invoice_links||0))}</strong></div></div><div class="card inner-card"><h3>Workflow Snapshot</h3><div class="statement-row"><span>Contract activation scope</span><b>${wf.contract_activation_owner_admin_only ? 'Owner/Admin only' : 'Policy-open'}</b></div><div class="statement-row"><span>Manual invoice approval threshold</span><b>${money(wf.manual_invoice_approval_threshold||0)}</b></div><div class="statement-row"><span>Payment approval threshold</span><b>${money(wf.payment_approval_threshold||0)}</b></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${fmt(c.value)}</b></div>`).join('')}</div>`;
+      box.innerHTML=`<div class="kpis grid"><div class="kpi"><span>جاهزية المنصة</span><strong>${fmt(res.platform_score!=null?res.platform_score:res.score)}%</strong></div><div class="kpi"><span>بيانات الأعمال</span><strong>${fmt(res.business_score||0)}%</strong></div><div class="kpi"><span>المتأخرات</span><strong>${money(alerts.overdue||0)}</strong></div><div class="kpi"><span>تنبيهات المخزون</span><strong>${fmt(alerts.low_stock||0)}</strong></div></div><div class="card inner-card"><h3>Workflow Snapshot</h3><div class="statement-row"><span>Contract activation scope</span><b>${wf.contract_activation_owner_admin_only ? 'Owner/Admin only' : 'Policy-open'}</b></div><div class="statement-row"><span>Manual invoice approval threshold</span><b>${money(wf.manual_invoice_approval_threshold||0)}</b></div><div class="statement-row"><span>Payment approval threshold</span><b>${money(wf.payment_approval_threshold||0)}</b></div></div><div class="card inner-card"><h3>فحوصات الجاهزية</h3>${(res.checks||[]).map(c=>`<div class="statement-row"><span>${c.name}${c.kind?` · ${c.kind}`:''}</span><b class="${c.ok?'linked-ok':'low-stock'}">${c.ok?'جاهز':'يحتاج مراجعة'} · ${htmlEscape(String(c.value??''))}</b></div>`).join('')}</div>`;
       ensureEnglishDigits(box);
       if(typeof window.loadWorkflowPolicies==='function') window.loadWorkflowPolicies();
       if(typeof window.loadModuleIntegrity==='function') window.loadModuleIntegrity();

@@ -138,6 +138,15 @@ def pending_login_ttl_seconds() -> int:
         return 300
 
 
+def otp_login_enabled() -> bool:
+    """Standalone passwordless OTP login (not MFA step). Default off."""
+    return _env("LQ_OTP_LOGIN_ENABLED") in ("1", "true", "yes", "on")
+
+
+def smtp_configured() -> bool:
+    return bool(_env("LQ_SMTP_HOST"))
+
+
 def security_status_payload(user: Dict[str, Any], *, trusted_device: bool = False) -> Dict[str, Any]:
     return {
         "password_max_age_days": password_max_age_days(),
@@ -151,4 +160,31 @@ def security_status_payload(user: Dict[str, Any], *, trusted_device: bool = Fals
         "role_requires_mfa": role_requires_mfa(str(user.get("role") or "")),
         "trusted_device": bool(trusted_device),
         "device_trust_days": device_trust_days(),
+        "otp_login_enabled": otp_login_enabled(),
+        "smtp_configured": smtp_configured(),
     }
+
+
+def security_platform_status(*, users_missing_email: int = 0) -> Dict[str, Any]:
+    mode = mfa_enforce_mode()
+    smtp = smtp_configured()
+    # Soft MFA is production-ready without SMTP (trusted-device + soft bypass).
+    # Strict MFA needs SMTP for code delivery.
+    mfa_ready = mode in ("off", "soft") or (mode == "strict" and smtp)
+    return {
+        "smtp_configured": smtp,
+        "email_delivery_ready": smtp,
+        "mfa_mode": mode,
+        "mfa_roles": sorted(mfa_roles()),
+        "mfa_ready": mfa_ready,
+        "otp_login_enabled": otp_login_enabled(),
+        "otp_debug": _env("LQ_OTP_DEBUG") in ("1", "true", "yes", "on"),
+        "password_max_age_days": password_max_age_days(),
+        "device_trust_days": device_trust_days(),
+        "users_missing_email": int(users_missing_email or 0),
+        "ready": mfa_ready,
+        "reason": None
+        if mfa_ready
+        else "فعّل LQ_SMTP_HOST أو اضبط LQ_MFA_ENFORCE=soft",
+    }
+

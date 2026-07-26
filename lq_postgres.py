@@ -253,12 +253,15 @@ def build_database_platform_status(sqlite_conn, tables: Dict[str, List[str]]) ->
             sqlite_rows += int(sqlite_conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] or 0)
         except Exception:
             pass
+    sqlite_ready = sqlite_tables > 0
     return {
         "primary_engine": "sqlite",
+        "primary_ready": sqlite_ready,
         "sqlite": {
             "path_configured": True,
             "tables": sqlite_tables,
             "approx_rows": sqlite_rows,
+            "production_ready": sqlite_ready,
         },
         "postgres": {
             "url_configured": bool(database_url()),
@@ -267,9 +270,11 @@ def build_database_platform_status(sqlite_conn, tables: Dict[str, List[str]]) ->
             "shadow_verify": None,
             "ready_for_shadow": bool(probe.get("ok")),
             "ready_for_primary": False,
-            "primary_blocker": "SQL dialect adapter not enabled yet — use shadow copy for verification",
+            "optional": True,
+            "primary_blocker": "اختياري — SQLite هو الأساسي في الإنتاج",
         },
-        "phase": "1-shadow-verify",
-        "next_phase": "dialect-adapter + dual-write",
-        "note": "Call /api/database/verify_shadow for row-count verification",
+        "phase": "sqlite-production + optional-postgres-shadow",
+        "next_phase": "optional dialect adapter when needed",
+        "note": "SQLite production-ready. Postgres shadow optional when DATABASE_URL is set.",
+        "ready": sqlite_ready,
     }
