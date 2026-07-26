@@ -91,7 +91,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v56.2-windows-rebuild"
+APP_VERSION = "Launch-Quality-LLC-v57-real-only"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -1879,6 +1879,9 @@ def init_db() -> None:
         ensure_workflow_policies_defaults(db)
         seed_if_empty(db)
         ensure_team_users(db)
+        purged = purge_demo_business_data(db)
+        if purged:
+            sys.stderr.write(f"[LQ Real-Only] Startup purge: {purged}\n")
         seed_chart_accounts(db)
         db.commit()
 
@@ -1902,17 +1905,19 @@ def insert(db: sqlite3.Connection, table: str, row: Dict[str, Any]) -> None:
 
 
 def seed_if_empty(db: sqlite3.Connection) -> None:
+    """Bootstrap only real accounts + chart of accounts. Never insert demo business data."""
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         defaults = [
             ("waleed", "وليد", "admin", "111111"),
             ("yaqoub", "يعقوب", "owner", "owner2015"),
+            ("owner", "يعقوب فاضل حمد الخصيبي", "owner", "001970"),
             ("razan", "رزان", "accountant", "222222"),
             ("amjad", "امجد", "operations", "333333"),
             ("ali", "علي", "maintenance", "444444"),
             ("admin", "System Admin", "admin", "555555"),
         ]
         for username, name, role, legacy_pwd in defaults:
-            pwd, must_change = legacy_pwd, False
+            pwd, _must = resolve_bootstrap_password(username, role, legacy_pwd)
             insert(
                 db,
                 "users",
@@ -1924,46 +1929,17 @@ def seed_if_empty(db: sqlite3.Connection) -> None:
                     "active": 1,
                     "password_hash": password_hash(pwd),
                     "email": resolve_user_email(username),
-                    "must_change_password": 1 if must_change else 0,
+                    "must_change_password": 1,
                     "created_at": now_iso(),
                     "last_login": None,
                 },
             )
-            if must_change and username == "admin":
-                sys.stderr.write(
-                    f"[LQ Security] Bootstrap admin created — set LQ_ADMIN_PASSWORD on production.\n"
-                )
-    if APP_EDITION != "official" and db.execute("SELECT COUNT(*) FROM properties").fetchone()[0] == 0:
-        props = [
-            {"id":"P-1001","name":"بناية A - شقة 101 - غرفة 1","building_no":"A","apartment_no":"101","room_no":"1","type":"Apartment","status":"مستأجرة","price":780,"location":"Muscat","image":"🏢","last_update":today(),"notes":"Premium building"},
-            {"id":"P-1002","name":"بناية B - شقة 12 - غرفة 2","building_no":"B","apartment_no":"12","room_no":"2","type":"Villa","status":"شاغرة","price":1250,"location":"Barka","image":"🏠","last_update":today(),"notes":"Ready for rent"},
-            {"id":"P-1003","name":"بناية C - شقة 5 - غرفة 1","building_no":"C","apartment_no":"5","room_no":"1","type":"Suite","status":"صيانة","price":650,"location":"Seeb","image":"🏨","last_update":today(),"notes":"AC maintenance"},
-            {"id":"P-1004","name":"بناية A - شقة 203 - غرفة 1","building_no":"A","apartment_no":"203","room_no":"1","type":"Apartment","status":"محجوزة","price":720,"location":"Muscat","image":"🏢","last_update":today(),"notes":"Reserved pending contract"},
-        ]
-        for p in props:
-            insert(db, "properties", p)
-        clients = [
-            {"id":"C-1001","name":"Oman Hospitality LLC","phone":"96203068","email":"ops@example.com","national_id":"CR-001","balance":0,"notes":"Corporate client"},
-            {"id":"C-1002","name":"Mohammed Al Balushi","phone":"92120205","email":"client@example.com","national_id":"ID-002","balance":0,"notes":"Individual client"},
-        ]
-        for c in clients:
-            insert(db, "clients", c)
-        contract = {"id":"CT-1001","contract_no":"LQL-RES-2026-0001","contract_type":"Residential","property_id":"P-1001","client_id":"C-1001","tenant_nationality":"Omani","tenant_id_no":"ID-001","unit_details":"Apartment 101, Jawdah Pearl Residence","start_date":today(),"end_date":(date.today()+timedelta(days=330)).isoformat(),"rent_amount":780,"deposit_amount":500,"late_fee":25,"grace_days":5,"renewal_notice_days":30,"status":"Active","payment_cycle":"monthly","legal_terms":default_legal_terms(),"company_signatory":"Launch Quality LLC","approved_at":now_iso(),"notes":"Standard residential lease"}
-        insert(db, "contracts", contract)
-        invoice = {"id":"INV-ID-1001","invoice_no":"INV-2026-0001","contract_id":"CT-1001","client_id":"C-1001","property_id":"P-1001","issue_date":today(),"due_date":(date.today()+timedelta(days=10)).isoformat(),"description":"Monthly rent","amount":780,"paid_amount":350,"status":"Partial"}
-        insert(db, "invoices", invoice)
-        insert(db, "accounts", {"id":"ACC-1001","entry_date":today(),"type":"income","category":"Rent","description":"Partial collection INV-2026-0001","client_id":"C-1001","property_id":"P-1001","invoice_id":"INV-ID-1001","amount":350})
-        insert(db, "accounts", {"id":"ACC-1002","entry_date":today(),"type":"expense","category":"Maintenance","description":"AC service","client_id":None,"property_id":"P-1003","invoice_id":None,"amount":80})
-        insert(db, "maintenance", {"id":"M-1001","property_id":"P-1003","title":"AC cooling issue","priority":"High","status":"Open","request_date":today(),"cost":80,"notes":"Technician assigned"})
-        insert(db, "purchase_invoices", {"id":"PINV-ID-1001","purchase_no":"PINV-2026-0001","supplier":"Oman Maintenance Supplies","invoice_date":today(),"due_date":(date.today()+timedelta(days=15)).isoformat(),"category":"Maintenance Materials","description":"AC filters and electrical consumables","amount":145,"paid_amount":0,"status":"Pending","property_id":"P-1003","account_id":None})
-        insert(db, "revenues", {"id":"REV-ID-1001","revenue_no":"REV-2026-0001","revenue_date":today(),"source":"Additional service","category":"Service Fee","description":"Tenant service fee","amount":45,"client_id":"C-1001","property_id":"P-1001","account_id":None})
-        insert(db, "salaries", {"id":"SAL-1001","employee_name":"Building Supervisor","salary_month":date.today().strftime('%Y-%m'),"basic_salary":350,"allowances":50,"deductions":0,"net_salary":400,"status":"Pending","payment_date":today(),"account_id":None})
-        insert(db, "admin_expenses", {"id":"GNA-1001","expense_date":today(),"category":"Office","description":"Office stationery and admin supplies","amount":35,"supplier":"Office Market","property_id":None,"account_id":None})
-        insert(db, "inventory_items", {"id":"ITEM-1001","sku":"AC-FILTER-01","name":"AC Filter","category":"Maintenance","unit":"pcs","quantity":12,"min_quantity":5,"unit_cost":4.5,"location":"Main Store","notes":"For apartment AC maintenance"})
-        insert(db, "inventory_transactions", {"id":"ITX-1001","item_id":"ITEM-1001","tx_date":today(),"tx_type":"in","quantity":12,"unit_cost":4.5,"reference":"Initial stock","notes":"Opening inventory"})
-        insert(db, "bank_transactions", {"id":"BNK-1001","bank_date":today(),"bank_name":"Main Bank","reference":"OPENING","type":"deposit","description":"Opening bank balance","amount":2500,"matched_account_id":None,"status":"Matched"})
-        insert(db, "audit_log", {"id":uid("LOG"),"created_at":now_iso(),"username":"system","action":"seed","entity":"database","entity_id":None,"details":"Initial sample data created"})
+    # Official / production: never seed fake properties, clients, invoices, salaries, etc.
     seed_chart_accounts(db)
+    purged = purge_demo_business_data(db)
+    if purged:
+        sys.stderr.write(f"[LQ Real-Only] Purged demo rows: {purged}\n")
+
 
 
 def seed_chart_accounts(db: sqlite3.Connection) -> None:
@@ -3661,20 +3637,21 @@ def ensure_user(
     password: str,
     email: str = "",
 ) -> None:
+    """Ensure a team account exists. Never overwrite an existing user's password."""
     row = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
     email_val = resolve_user_email(username, email)
-    if username in CORE_USERNAMES:
-        pwd, must_change = password, False
-    else:
-        pwd, must_change = resolve_bootstrap_password(username, role, password)
     if row:
         db.execute(
-            "UPDATE users SET name=?, role=?, active=1, password_hash=?, must_change_password=? WHERE username=?",
-            (name, role, password_hash(pwd), 1 if must_change else 0, username),
+            "UPDATE users SET name=?, role=?, active=1 WHERE username=?",
+            (name, role, username),
         )
         if email_val:
             db.execute("UPDATE users SET email=? WHERE username=?", (email_val, username))
         return
+    pwd, must_change = resolve_bootstrap_password(username, role, password)
+    # New accounts always require a real password change — no silent defaults in production.
+    if username in CORE_USERNAMES:
+        must_change = True
     insert(
         db,
         "users",
@@ -3691,6 +3668,35 @@ def ensure_user(
             "last_login": None,
         },
     )
+
+
+def purge_demo_business_data(db: sqlite3.Connection) -> Dict[str, int]:
+    """Remove known sample/demo business rows so production stays real-only."""
+    removed: Dict[str, int] = {}
+    demo_deletes = [
+        ("properties", "id IN ('P-1001','P-1002','P-1003','P-1004')"),
+        ("clients", "id IN ('C-1001','C-1002')"),
+        ("contracts", "id IN ('CT-1001') OR contract_no='LQL-RES-2026-0001'"),
+        ("invoices", "id IN ('INV-ID-1001') OR invoice_no='INV-2026-0001'"),
+        ("accounts", "id IN ('ACC-1001','ACC-1002')"),
+        ("maintenance", "id IN ('M-1001')"),
+        ("purchase_invoices", "id IN ('PINV-ID-1001') OR purchase_no='PINV-2026-0001'"),
+        ("revenues", "id IN ('REV-ID-1001') OR revenue_no='REV-2026-0001'"),
+        ("salaries", "id IN ('SAL-1001') OR employee_name='Building Supervisor'"),
+        ("admin_expenses", "id IN ('GNA-1001')"),
+        ("inventory_transactions", "id IN ('ITX-1001')"),
+        ("inventory_items", "id IN ('ITEM-1001') OR sku='AC-FILTER-01'"),
+        ("bank_transactions", "id IN ('BNK-1001') OR reference='OPENING'"),
+        ("audit_log", "action='seed' AND entity='database'"),
+    ]
+    for table, where in demo_deletes:
+        try:
+            cur = db.execute(f"DELETE FROM {table} WHERE {where}")
+            if cur.rowcount:
+                removed[table] = int(cur.rowcount)
+        except sqlite3.Error:
+            continue
+    return removed
 
 
 def ensure_team_users(db: sqlite3.Connection) -> None:

@@ -127,7 +127,7 @@
           <input type="text" id="lqPiProject" placeholder="المشروع / كشف الرواتب — مشاريع..." />
         </div>
         <p class="mini">${esc(t.hint)}</p>
-        <p class="mini">عينات جاهزة:
+        <p class="mini">قوالب CSV فارغة الهيكل (اختيارية):
           <a href="/releases/payroll/sample-payroll-sheet.csv" download>كشف رواتب</a> ·
           <a href="/releases/payroll/sample-attendance-detail.csv" download>تفاصيل حضور</a> ·
           <a href="/releases/payroll/sample-manual-adjustments.csv" download>تعديلات يدوية</a>
