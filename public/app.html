@@ -280,6 +280,10 @@
                 <button type="button" class="ghost login-help-btn" onclick="window.open('tel:+96871924089','_self')">الدعم الفني</button>
               </div>
               <button id="loginBtn" class="gold-btn login-submit" type="button">Sign In · تسجيل الدخول</button>
+              <div class="login-windows-cta" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+                <a class="ghost" href="/get-windows" style="text-decoration:none">💻 تطبيق ويندوز</a>
+                <a class="ghost" href="/lq-portable.zip" download="LaunchQuality-Portable.zip" style="text-decoration:none">⬇ تحميل ZIP</a>
+              </div>
             </div>
             <div id="authPaneFace" class="ev-auth-pane ev-auth-alt hidden" role="tabpanel">
               <div class="ev-bio-ring" aria-hidden="true"></div>
@@ -1185,7 +1189,7 @@
       </section>
       <section id="sec-payroll" class="section">
         <div id="lqPayrollImportHost"></div>
-        <div class="card"><h3>الرواتب — إدخال يدوي</h3><div class="form"><input id="salEmployee" placeholder="اسم الموظف"><input id="salMonth" type="month"><input id="salBasic" placeholder="الراتب الأساسي"><input id="salAllow" placeholder="بدلات"><input id="salDeduct" placeholder="استقطاعات"><input id="salDate" type="date"><select id="salStatus"><option>Pending</option><option>Paid</option></select></div><button class="gold-btn" onclick="createSalary()">حفظ الراتب</button></div>
+        <div class="card"><h3>الرواتب — إدخال يدوي</h3><div class="form"><input id="salEmployeeNo" placeholder="رقم الموظف"><input id="salEmployee" placeholder="اسم الموظف"><input id="salProject" placeholder="المشروع"><input id="salMonth" type="month"><input id="salBasic" placeholder="الراتب الأساسي"><input id="salAllow" placeholder="بدلات"><input id="salDeduct" placeholder="استقطاعات"><input id="salDate" type="date"><select id="salStatus"><option>Pending</option><option>Paid</option></select></div><button class="gold-btn" onclick="createSalary()">حفظ الراتب</button></div>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('salaries')">تصدير CSV</button><button class="ghost" onclick="exportFilteredPayrollCsv()">تصدير نتائج الفلتر</button></div><div id="salariesTable"></div></div>
       </section>
       <section id="sec-admin-expenses" class="section">
@@ -1300,17 +1304,17 @@
   <script src="lq-approvals.js?v=ap1" defer></script>
   <script src="lq-staff-field.js?v=sf2" defer></script>
   <script src="lq-field-app.js?v=field1" defer></script>
-  <script src="lq-security.js?v=sec1" defer></script>
+  <script src="lq-security.js?v=sec2-v56" defer></script>
   <script src="lq-alert-center.js?v=ac2-role" defer></script>
   <script src="lq-role-board.js?v=rb1" defer></script>
-  <script src="lq-payroll-import.js?v=pi1" defer></script>
+  <script src="lq-payroll-import.js?v=pi2-v56" defer></script>
   <script src="lq-walid-intel.js?v=wi2" defer></script>
   <script src="lq-enterprise.js?v=ent4-durable" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal19-durable" defer></script>
+  <script src="app.js?v=portal20-v56" defer></script>
   <script src="lq-edition-terrifying.js?v=td3" defer></script>
-  <script src="enterprise-vision.js?v=ev11" defer></script>
+  <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>
   <script src="lq-hub-dashboard.js?v=hub13" defer></script>
   <script src="lq-card-views.js?v=cards2" defer></script>

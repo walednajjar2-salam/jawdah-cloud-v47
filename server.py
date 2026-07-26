@@ -38,8 +38,15 @@ import lq_payroll_import
 import lq_postgres
 from lq_expand.openapi import build_openapi_spec
 from lq_expand.security import (
+    device_trust_days,
+    mfa_enforce_mode,
+    normalize_device_fingerprint,
+    password_needs_rotation,
+    pending_login_ttl_seconds,
     resolve_bootstrap_password,
     resolve_user_email,
+    role_requires_mfa,
+    security_status_payload,
     validate_new_password,
 )
 
@@ -84,7 +91,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v55-payroll-import"
+APP_VERSION = "Launch-Quality-LLC-v56-complete"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -194,6 +201,7 @@ WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
 
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
+PENDING_LOGINS: Dict[str, Dict[str, Any]] = {}
 MODULE_FIX_PREVIEW_TTL_SECONDS = max(300, int(os.environ.get("LQ_MODULE_FIX_PREVIEW_TTL", "1800") or "1800"))
 MODULE_FIX_MIN_ATTEMPTS_FOR_ALERT = max(1, int(os.environ.get("LQ_MODULE_FIX_MIN_ATTEMPTS_ALERT", "5") or "5"))
 MODULE_FIX_MIN_SUCCESS_RATE = float(os.environ.get("LQ_MODULE_FIX_MIN_SUCCESS_RATE", "85") or "85")
@@ -729,6 +737,7 @@ OPERATIONAL_EXTRA_CLEAR_TABLES = [
     "work_journal",
     "daily_operations",
     "module_fix_runs",
+    "trusted_devices",
 ]
 
 
@@ -965,6 +974,18 @@ def init_db() -> None:
                 user_id TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS trusted_devices (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                device_fingerprint TEXT NOT NULL,
+                device_label TEXT,
+                user_agent TEXT,
+                created_at TEXT NOT NULL,
+                last_seen_at TEXT NOT NULL,
+                trusted_until TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
             CREATE TABLE IF NOT EXISTS branches (
@@ -4043,6 +4064,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     })
                 if parts[0] == "login" and len(parts) >= 2 and parts[1] == "otp" and method == "POST":
                     return self.api_login_otp(db)
+                if parts[0] == "security" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
+                    user = self.require_user(db)
+                    return None if not user else self.api_security_status(db, user)
+                if parts[0] == "security" and len(parts) >= 2 and parts[1] == "devices" and method == "GET":
+                    user = self.require_user(db)
+                    return None if not user else self.api_trusted_devices(db, user)
+                if parts[0] == "security" and len(parts) >= 2 and parts[1] == "devices" and method == "POST":
+                    user = self.require_user(db)
+                    return None if not user else self.api_revoke_trusted_device(db, user)
                 if parts[0] == "login" and method == "POST":
                     return self.api_login(db)
                 if parts[0] == "biometric" and len(parts) >= 3 and parts[1] == "register" and parts[2] == "options" and method == "POST":
@@ -4368,17 +4398,121 @@ class JawdahHandler(BaseHTTPRequestHandler):
         except Exception as exc:
             self.send_json({"ok": False, "error": "Server error", "detail": str(exc)}, 500)
 
-    def issue_session(self, db: sqlite3.Connection, row: sqlite3.Row, via: str = "password", remember: bool = False) -> None:
+    def cleanup_pending_logins(self) -> None:
+        now_ts = time.time()
+        expired = [k for k, v in PENDING_LOGINS.items() if now_ts > float(v.get("expires_ts", 0))]
+        for key in expired:
+            PENDING_LOGINS.pop(key, None)
+
+    def is_device_trusted(self, db: sqlite3.Connection, user_id: str, fingerprint: str) -> bool:
+        if not fingerprint:
+            return False
+        row = db.execute(
+            """
+            SELECT id, trusted_until FROM trusted_devices
+            WHERE user_id=? AND device_fingerprint=? AND active=1
+            ORDER BY last_seen_at DESC LIMIT 1
+            """,
+            (user_id, fingerprint),
+        ).fetchone()
+        if not row:
+            return False
+        until = str(row["trusted_until"] or "")
+        try:
+            if datetime.fromisoformat(until) < datetime.now():
+                db.execute("UPDATE trusted_devices SET active=0 WHERE id=?", (row["id"],))
+                return False
+        except ValueError:
+            return False
+        db.execute(
+            "UPDATE trusted_devices SET last_seen_at=? WHERE id=?",
+            (now_iso(), row["id"]),
+        )
+        return True
+
+    def trust_device(
+        self,
+        db: sqlite3.Connection,
+        user_id: str,
+        fingerprint: str,
+        *,
+        label: str = "",
+        user_agent: str = "",
+    ) -> Optional[str]:
+        if not fingerprint:
+            return None
+        until = (datetime.now() + timedelta(days=device_trust_days())).isoformat(sep=" ")
+        existing = db.execute(
+            "SELECT id FROM trusted_devices WHERE user_id=? AND device_fingerprint=?",
+            (user_id, fingerprint),
+        ).fetchone()
+        if existing:
+            db.execute(
+                """
+                UPDATE trusted_devices
+                SET active=1, last_seen_at=?, trusted_until=?, device_label=COALESCE(NULLIF(?,''), device_label),
+                    user_agent=COALESCE(NULLIF(?,''), user_agent)
+                WHERE id=?
+                """,
+                (now_iso(), until, label, user_agent, existing["id"]),
+            )
+            return str(existing["id"])
+        device_id = uid("DEV")
+        insert(
+            db,
+            "trusted_devices",
+            {
+                "id": device_id,
+                "user_id": user_id,
+                "device_fingerprint": fingerprint,
+                "device_label": label or "جهاز موثوق",
+                "user_agent": user_agent[:240],
+                "created_at": now_iso(),
+                "last_seen_at": now_iso(),
+                "trusted_until": until,
+                "active": 1,
+            },
+        )
+        return device_id
+
+    def apply_password_rotation(self, db: sqlite3.Connection, row: sqlite3.Row) -> sqlite3.Row:
+        if password_needs_rotation(row["password_changed_at"] if "password_changed_at" in row.keys() else None, created_at=row["created_at"] if "created_at" in row.keys() else None):
+            if not bool(row["must_change_password"] if "must_change_password" in row.keys() else 0):
+                db.execute("UPDATE users SET must_change_password=1 WHERE id=?", (row["id"],))
+                db.commit()
+                refreshed = db.execute("SELECT * FROM users WHERE id=?", (row["id"],)).fetchone()
+                return refreshed or row
+        return row
+
+    def issue_session(
+        self,
+        db: sqlite3.Connection,
+        row: sqlite3.Row,
+        via: str = "password",
+        remember: bool = False,
+        *,
+        device_fingerprint: str = "",
+        device_label: str = "",
+        user_agent: str = "",
+    ) -> None:
+        row = self.apply_password_rotation(db, row)
         token = secrets.token_urlsafe(32)
         session_hours = 30 * 24 if remember else 12
         expires = (datetime.now() + timedelta(hours=session_hours)).isoformat()
         db.execute("INSERT INTO sessions(token,user_id,created_at,expires_at) VALUES(?,?,?,?)", (token, row["id"], now_iso(), expires))
         db.execute("UPDATE users SET last_login=? WHERE id=?", (now_iso(), row["id"]))
+        trusted = False
+        if remember and device_fingerprint:
+            self.trust_device(db, row["id"], device_fingerprint, label=device_label, user_agent=user_agent)
+            trusted = True
+        elif device_fingerprint:
+            trusted = self.is_device_trusted(db, row["id"], device_fingerprint)
         audit(db, dict(row), "login", "users", row["id"], f"User login ({via})")
         db.commit()
         user = dict(row)
         user.pop("password_hash", None)
         user["must_change_password"] = bool(user.get("must_change_password"))
+        user["security"] = security_status_payload(user, trusted_device=trusted)
         max_age = session_hours * 3600
         # Keep cookie in sync with bearer token so portal → app navigation stays authenticated
         self.send_response(200)
@@ -4394,33 +4528,201 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "user": user,
             "expires_at": expires,
             "must_change_password": user["must_change_password"],
+            "security": user["security"],
         }
         raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
 
+    def begin_mfa_challenge(
+        self,
+        db: sqlite3.Connection,
+        row: sqlite3.Row,
+        *,
+        remember: bool,
+        device_fingerprint: str,
+        device_label: str,
+        user_agent: str,
+    ) -> Dict[str, Any]:
+        self.cleanup_pending_logins()
+        challenge_id = uid("MFA")
+        username = str(row["username"])
+        code = f"{secrets.randbelow(900000) + 100000:06d}"
+        OTP_CODES[username] = (code, time.time() + OTP_TTL_SECONDS)
+        PENDING_LOGINS[challenge_id] = {
+            "user_id": row["id"],
+            "username": username,
+            "remember": remember,
+            "device_fingerprint": device_fingerprint,
+            "device_label": device_label,
+            "user_agent": user_agent,
+            "expires_ts": time.time() + pending_login_ttl_seconds(),
+        }
+        to_addr = str(row["email"] or "").strip() or SUPPORT_EMAIL
+        subject = "Launch Quality — رمز التحقق MFA"
+        body = (
+            f"رمز التحقق لحساب {username}: {code}\n"
+            f"صالح لمدة {OTP_TTL_SECONDS // 60} دقائق.\n"
+            "إذا لم تطلب هذا الرمز تجاهل الرسالة."
+        )
+        sent, detail = send_alert_email(to_addr, subject, body)
+        if not sent and os.environ.get("LQ_OTP_DEBUG") == "1":
+            sys.stderr.write(f"[LQ MFA debug] {username}: {code} ({detail})\n")
+            sent = True
+            detail = "OTP logged (debug mode)"
+        return {
+            "challenge_id": challenge_id,
+            "sent": sent,
+            "detail": detail,
+            "username": username,
+        }
+
     def api_login(self, db: sqlite3.Connection) -> None:
         data = self.read_json()
         username = str(data.get("username", "")).strip().lower()
         password = str(data.get("password", ""))
+        remember = bool(data.get("remember_device"))
+        fingerprint = normalize_device_fingerprint(data.get("device_fingerprint") or data.get("device_id"))
+        device_label = str(data.get("device_label") or "").strip()[:80]
+        user_agent = str(self.headers.get("User-Agent") or "")[:240]
         row = db.execute("SELECT * FROM users WHERE lower(username)=? AND active=1", (username,)).fetchone()
         if not row or not verify_password(password, row["password_hash"]):
             return self.send_json({"ok": False, "error": "Invalid username or password"}, 401)
-        self.issue_session(db, row, via="password", remember=bool(data.get("remember_device")))
+        trusted = self.is_device_trusted(db, row["id"], fingerprint) if fingerprint else False
+        if role_requires_mfa(str(row["role"])) and not trusted:
+            challenge = self.begin_mfa_challenge(
+                db,
+                row,
+                remember=remember,
+                device_fingerprint=fingerprint,
+                device_label=device_label,
+                user_agent=user_agent,
+            )
+            if challenge["sent"]:
+                audit(db, dict(row), "mfa_challenge", "users", row["id"], "MFA required after password")
+                db.commit()
+                return self.send_json(
+                    {
+                        "ok": True,
+                        "mfa_required": True,
+                        "challenge_id": challenge["challenge_id"],
+                        "username": challenge["username"],
+                        "message": "أدخل رمز OTP لإكمال الدخول الآمن",
+                        "expires_in": OTP_TTL_SECONDS,
+                    }
+                )
+            if mfa_enforce_mode() == "strict":
+                return self.send_json(
+                    {
+                        "ok": False,
+                        "error": "تعذر إرسال رمز MFA — فعّل البريد أو LQ_OTP_DEBUG",
+                        "detail": challenge.get("detail"),
+                    },
+                    503,
+                )
+            # soft mode: continue login when delivery fails
+            audit(db, dict(row), "mfa_bypass_soft", "users", row["id"], str(challenge.get("detail") or ""))
+            db.commit()
+        self.issue_session(
+            db,
+            row,
+            via="password",
+            remember=remember,
+            device_fingerprint=fingerprint,
+            device_label=device_label,
+            user_agent=user_agent,
+        )
 
     def api_login_otp(self, db: sqlite3.Connection) -> None:
         data = self.read_json()
         username = str(data.get("username", "")).strip()
         code = str(data.get("code", "")).strip()
+        challenge_id = str(data.get("challenge_id") or "").strip()
+        remember = bool(data.get("remember_device"))
+        fingerprint = normalize_device_fingerprint(data.get("device_fingerprint") or data.get("device_id"))
+        device_label = str(data.get("device_label") or "").strip()[:80]
+        user_agent = str(self.headers.get("User-Agent") or "")[:240]
         stored = OTP_CODES.get(username)
         if not stored or time.time() > stored[1] or stored[0] != code:
             return self.send_json({"ok": False, "error": "Invalid or expired OTP code"}, 401)
         OTP_CODES.pop(username, None)
+        pending = None
+        if challenge_id:
+            self.cleanup_pending_logins()
+            pending = PENDING_LOGINS.pop(challenge_id, None)
+            if pending and str(pending.get("username")) != username:
+                return self.send_json({"ok": False, "error": "Challenge mismatch"}, 401)
+            if pending:
+                remember = bool(pending.get("remember"))
+                fingerprint = pending.get("device_fingerprint") or fingerprint
+                device_label = pending.get("device_label") or device_label
+                user_agent = pending.get("user_agent") or user_agent
         row = db.execute("SELECT * FROM users WHERE username=? AND active=1", (username,)).fetchone()
+        if not row and username:
+            row = db.execute("SELECT * FROM users WHERE lower(username)=? AND active=1", (username.lower(),)).fetchone()
         if not row:
             return self.send_json({"ok": False, "error": "User not found"}, 404)
-        self.issue_session(db, row, via="otp", remember=bool(data.get("remember_device")))
+        # Completing MFA always trusts the current device when fingerprint present.
+        if fingerprint:
+            remember = True
+        self.issue_session(
+            db,
+            row,
+            via="otp" if not challenge_id else "mfa",
+            remember=remember,
+            device_fingerprint=fingerprint,
+            device_label=device_label or "جهاز بعد MFA",
+            user_agent=user_agent,
+        )
+
+    def api_trusted_devices(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        rows = rows_to_dicts(
+            db.execute(
+                """
+                SELECT id, device_label, user_agent, created_at, last_seen_at, trusted_until, active
+                FROM trusted_devices
+                WHERE user_id=?
+                ORDER BY last_seen_at DESC
+                LIMIT 50
+                """,
+                (user["id"],),
+            ).fetchall()
+        )
+        self.send_json(
+            {
+                "ok": True,
+                "devices": rows,
+                "security": security_status_payload(user),
+            }
+        )
+
+    def api_revoke_trusted_device(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        device_id = str(data.get("device_id") or data.get("id") or "").strip()
+        if not device_id:
+            return self.send_json({"ok": False, "error": "device_id مطلوب"}, 400)
+        row = db.execute(
+            "SELECT id FROM trusted_devices WHERE id=? AND user_id=?",
+            (device_id, user["id"]),
+        ).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "الجهاز غير موجود"}, 404)
+        db.execute("UPDATE trusted_devices SET active=0 WHERE id=?", (device_id,))
+        audit(db, user, "revoke_device", "trusted_devices", device_id, "Revoked trusted device")
+        db.commit()
+        self.send_json({"ok": True, "revoked": device_id})
+
+    def api_security_status(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        fingerprint = normalize_device_fingerprint(
+            self.headers.get("X-LQ-Device") or ""
+        )
+        trusted = self.is_device_trusted(db, user["id"], fingerprint) if fingerprint else False
+        db.commit()
+        full = db.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+        payload_user = dict(full) if full else dict(user)
+        payload_user.pop("password_hash", None)
+        self.send_json({"ok": True, "security": security_status_payload(payload_user, trusted_device=trusted)})
 
     def parse_client_data(self, client_data_b64: str) -> Dict[str, Any]:
         raw = b64url_decode(client_data_b64)

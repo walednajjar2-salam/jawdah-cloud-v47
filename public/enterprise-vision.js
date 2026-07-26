@@ -219,17 +219,22 @@
         btn.classList.add('is-loading');
       }
       if(status) status.textContent='جاري التحقق من رمز OTP...';
-      const res=await fetch('/api/login/otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,code,remember_device:true})});
+      let challenge_id='';
+      try{ const saved=JSON.parse(localStorage.getItem('lq_mfa_challenge')||'{}'); if(saved && saved.challenge_id) challenge_id=saved.challenge_id; }catch(_){}
+      const device_fingerprint=(window.LQ_SECURITY && LQ_SECURITY.deviceFingerprint)?LQ_SECURITY.deviceFingerprint():'';
+      const device_label=(window.LQ_SECURITY && LQ_SECURITY.deviceLabel)?LQ_SECURITY.deviceLabel():'Browser';
+      const res=await fetch('/api/login/otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,code,remember_device:true,challenge_id,device_fingerprint,device_label})});
       const data=await res.json();
       if(!res.ok||!data.token) throw new Error(data.error||'OTP failed');
+      localStorage.removeItem('lq_mfa_challenge');
       localStorage.setItem('jawdah_cloud_token', data.token);
       localStorage.setItem('jawdah_last_user', username);
       if(status) status.textContent='تم التحقق بنجاح';
-      if(typeof toastOk==='function') toastOk('دخول ذكي · OTP');
-      if(window.Jawdah) window.Jawdah.token=data.token;
-      if(typeof showAppShell==='function') showAppShell();
-      if(typeof loadAll==='function') await loadAll();
-      else location.href='/app.html';
+      if(typeof toastOk==='function') toastOk('دخول آمن · OTP/MFA');
+      if(window.Jawdah){ window.Jawdah.token=data.token; window.Jawdah.user=data.user; }
+      const tok=encodeURIComponent(data.token||'');
+      location.replace('/portal-select.html?from=login&t='+Date.now()+'&token='+tok);
+      return;
     }catch(e){
       if(status) status.textContent='رمز OTP غير صحيح أو منتهي';
       if(typeof toastErr==='function') toastErr(e.message||'رمز غير صحيح');

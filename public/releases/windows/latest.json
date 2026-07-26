@@ -1,15 +1,16 @@
 {
   "channel": "stable",
-  "version": "49.1.2",
+  "version": "56.0.0",
   "installer_url": "https://web-production-08d73.up.railway.app/lq-setup.exe",
   "portable_url": "https://web-production-08d73.up.railway.app/lq-portable.zip",
   "setup_page": "https://web-production-08d73.up.railway.app/get-windows",
   "app_url": "https://web-production-08d73.up.railway.app/app.html",
-  "sha256": "2455e2921edbdc5d442aa83fe96e16ace0cfb8a7ac59449957157ec973c274da",
-  "published_at": "2026-07-23T16:43:36Z",
+  "download_page": "https://web-production-08d73.up.railway.app/download.html",
+  "published_at": "2026-07-26T13:30:00Z",
   "release_notes": [
-    "Nothing is lost: production cloud app remains the source of truth.",
-    "Launcher opens a full maximized browser window.",
-    "Portable ZIP/BAT package for easy desktop shortcut."
+    "v56 complete release: MFA soft enforce, trusted devices, password rotation.",
+    "Payroll import center with employee_no/project_name export.",
+    "Windows portable ZIP + Setup.exe from production CDN paths.",
+    "Nothing is lost: cloud production remains the source of truth."
   ]
 }

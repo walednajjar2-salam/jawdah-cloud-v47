@@ -710,7 +710,16 @@ async function login(){
     }
     const username=$('#loginUser').value.trim(); const password=$('#loginPass').value;
     const remember = Boolean($('#loginRemember')?.checked);
-    const res=await api('login',{method:'POST',body:JSON.stringify({username,password,remember_device:remember})});
+    const device_fingerprint = (window.LQ_SECURITY && LQ_SECURITY.deviceFingerprint) ? LQ_SECURITY.deviceFingerprint() : '';
+    const device_label = (window.LQ_SECURITY && LQ_SECURITY.deviceLabel) ? LQ_SECURITY.deviceLabel() : 'Browser';
+    const res=await api('login',{method:'POST',body:JSON.stringify({username,password,remember_device:remember,device_fingerprint,device_label})});
+    if(res.mfa_required){
+      localStorage.setItem('lq_mfa_challenge', JSON.stringify({challenge_id:res.challenge_id,username:res.username||username}));
+      document.querySelector('.ev-auth-tab[data-auth="otp"]')?.click();
+      const otpUser=$('#otpUser'); if(otpUser) otpUser.value = res.username || username;
+      toastNotice(res.message || 'أدخل رمز OTP لإكمال الدخول');
+      return;
+    }
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
     localStorage.setItem('jawdah_last_user', username);
     localStorage.setItem('jawdah_last_remember', remember ? '1' : '0');
@@ -2206,10 +2215,10 @@ function buildFilteredCsvBundle(){
     counts[fn] = purchases.length;
     sizes[fn] = enc.encode(files[fn]).length;
   }
-  const payroll = filterRows('salaries',['employee_name','salary_month','status']);
+  const payroll = filterRows('salaries',['employee_no','employee_name','project_name','salary_month','status']);
   if(payroll.length){
     const fn = `payroll-filtered-${day}.csv`;
-    files[fn] = csvFromRows(['id','employee_name','salary_month','basic_salary','allowances','deductions','net_salary','status','payment_date'], payroll.map(r=>[r.id,r.employee_name,r.salary_month,r.basic_salary,r.allowances,r.deductions,r.net_salary,r.status,r.payment_date]));
+    files[fn] = csvFromRows(['id','employee_no','employee_name','project_name','salary_month','basic_salary','allowances','deductions','net_salary','status','payment_date'], payroll.map(r=>[r.id,r.employee_no,r.employee_name,r.project_name,r.salary_month,r.basic_salary,r.allowances,r.deductions,r.net_salary,r.status,r.payment_date]));
     counts[fn] = payroll.length;
     sizes[fn] = enc.encode(files[fn]).length;
   }
@@ -2541,14 +2550,16 @@ function exportFilteredPurchasesCsv(){
   toast('تم تصدير نتائج الفلتر');
 }
 function exportFilteredPayrollCsv(){
-  const rows = filterRows('salaries',['employee_name','salary_month','status']);
+  const rows = filterRows('salaries',['employee_no','employee_name','project_name','salary_month','status']);
   if(!rows.length){ toastNotice('لا توجد نتائج حالياً للتصدير'); return; }
-  const headers = ['id','employee_name','salary_month','basic_salary','allowances','deductions','net_salary','status','payment_date'];
+  const headers = ['id','employee_no','employee_name','project_name','salary_month','basic_salary','allowances','deductions','net_salary','status','payment_date'];
   const lines = [headers.join(',')];
   rows.forEach(r=>{
     const row = [
       r.id,
+      r.employee_no,
       r.employee_name,
+      r.project_name,
       r.salary_month,
       r.basic_salary,
       r.allowances,
@@ -5927,7 +5938,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   window.renderFinanceHero=function(){ const k=dashKpis(); const host=$('#accountingExecutive'); if(host){ host.innerHTML=`<div class="kpi"><span>فواتير مشتريات مستحقة</span><strong>${money(k.purchases_due||0)}</strong></div><div class="kpi"><span>الرواتب</span><strong>${money(k.payroll||0)}</strong></div><div class="kpi"><span>قيمة المخزون</span><strong>${money(k.inventory_value||0)}</strong></div><div class="kpi"><span>رصيد البنك</span><strong>${money(k.bank_balance||0)}</strong></div>`; }};
   window.renderPurchaseInvoices=function(){ const rows=safe(Jawdah.data.purchase_invoices); if($('#purchaseInvoicesTable')) $('#purchaseInvoicesTable').innerHTML=tableHtml([['رقم','purchase_no'],['المورد','supplier'],['التاريخ','invoice_date'],['التصنيف','category'],['الإجمالي','amount',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],rows); };
   window.renderRevenues=function(){ const rows=safe(Jawdah.data.revenues); if($('#revenuesTable')) $('#revenuesTable').innerHTML=tableHtml([['رقم','revenue_no'],['التاريخ','revenue_date'],['المصدر','source'],['التصنيف','category'],['الوصف','description'],['المبلغ','amount',v=>money(v)]],rows); };
-  window.renderSalaries=function(){ const rows=safe(Jawdah.data.salaries); if($('#salariesTable')) $('#salariesTable').innerHTML=tableHtml([['الموظف','employee_name'],['الشهر','salary_month'],['أساسي','basic_salary',v=>money(v)],['بدلات','allowances',v=>money(v)],['استقطاعات','deductions',v=>money(v)],['الصافي','net_salary',v=>money(v)],['الحالة','status',v=>badge(v)]],rows); };
+  window.renderSalaries=function(){ const rows=filterRows('salaries',['employee_no','employee_name','project_name','salary_month','status']); if($('#salariesTable')) $('#salariesTable').innerHTML=tableHtml([['رقم الموظف','employee_no'],['الموظف','employee_name'],['المشروع','project_name',v=>v||'—'],['الشهر','salary_month'],['أساسي','basic_salary',v=>money(v)],['بدلات','allowances',v=>money(v)],['استقطاعات','deductions',v=>money(v)],['الصافي','net_salary',v=>money(v)],['الحالة','status',v=>badge(v)]],rows); };
   window.renderAdminExpenses=function(){ const rows=safe(Jawdah.data.admin_expenses); if($('#adminExpensesTable')) $('#adminExpensesTable').innerHTML=tableHtml([['التاريخ','expense_date'],['التصنيف','category'],['الوصف','description'],['المورد','supplier'],['العقار','property_id',v=>byId('properties',v).name||''],['المبلغ','amount',v=>money(v)]],rows); };
   window.renderInventory=function(){
     const all=safe(Jawdah.data.inventory_items);
@@ -6020,7 +6031,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   async function postTable(table, data){ try{ await api(table,{method:'POST',body:JSON.stringify(data)}); toast('تم الحفظ'); await loadAll(); }catch(e){ toastErr(e); } }
   window.createPurchaseInvoice=()=>postTable('purchase_invoices',{supplier:val('piSupplier'),invoice_date:val('piDate')||today(),due_date:val('piDue'),category:val('piCategory')||'Purchases',description:val('piDesc'),amount:num('piAmount'),paid_amount:num('piPaid'),status:num('piPaid')>=num('piAmount')?'Paid':(num('piPaid')>0?'Partial':'Pending'),property_id:val('piProperty')||null});
   window.createRevenue=()=>postTable('revenues',{revenue_date:val('revDate')||today(),source:val('revSource')||'Other',category:val('revCategory')||'Other Revenue',description:val('revDesc'),amount:num('revAmount'),client_id:val('revClient')||null,property_id:val('revProperty')||null});
-  window.createSalary=()=>{const basic=num('salBasic'),allow=num('salAllow'),ded=num('salDeduct'); return postTable('salaries',{employee_name:val('salEmployee'),salary_month:val('salMonth')||today().slice(0,7),basic_salary:basic,allowances:allow,deductions:ded,net_salary:basic+allow-ded,status:val('salStatus'),payment_date:val('salDate')||today()});};
+  window.createSalary=()=>{const basic=num('salBasic'),allow=num('salAllow'),ded=num('salDeduct'); return postTable('salaries',{employee_no:val('salEmployeeNo'),employee_name:val('salEmployee'),project_name:val('salProject'),salary_month:val('salMonth')||today().slice(0,7),basic_salary:basic,allowances:allow,deductions:ded,net_salary:basic+allow-ded,status:val('salStatus'),payment_date:val('salDate')||today()});};
   window.createAdminExpense=()=>postTable('admin_expenses',{expense_date:val('gaDate')||today(),category:val('gaCategory')||'General & Administrative',description:val('gaDesc'),amount:num('gaAmount'),supplier:val('gaSupplier'),property_id:val('gaProperty')||null});
   window.createInventoryItem=()=>postTable('inventory_items',{sku:val('itemSku'),name:val('itemName'),category:val('itemCategory'),unit:val('itemUnit')||'pcs',quantity:num('itemQty'),min_quantity:num('itemMin'),unit_cost:num('itemCost'),location:val('itemLocation'),property_id:val('itemProperty')||null});
   window.createInventoryTransaction=()=>postTable('inventory_transactions',{item_id:val('stockItem'),tx_date:val('stockDate')||today(),tx_type:val('stockType'),quantity:num('stockQty'),unit_cost:num('stockCost'),reference:val('stockRef')});

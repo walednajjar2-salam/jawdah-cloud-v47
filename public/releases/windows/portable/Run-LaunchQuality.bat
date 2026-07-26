@@ -3,6 +3,12 @@ chcp 65001 >nul
 title Launch Quality
 set "APP_URL=https://web-production-08d73.up.railway.app/app.html"
 
+REM Prefer native launcher EXE when present
+if exist "%~dp0LaunchQuality.exe" (
+  start "" "%~dp0LaunchQuality.exe"
+  exit /b 0
+)
+
 REM Open a NORMAL full browser window (not tiny --app mode)
 if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
   start "" "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" --new-window --start-maximized "%APP_URL%"
