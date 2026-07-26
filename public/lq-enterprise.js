@@ -40,8 +40,9 @@
           <span class="badge ${ready ? "paid" : "overdue"}">المنصة: ${ready ? "جاهزة" : "قيد الإكمال"} · ${esc(score)}%</span>
           <span class="badge">MFA: ${esc(sec.mfa_mode || "soft")} · ${sec.mfa_ready ? "جاهز" : "يحتاج SMTP"}</span>
           <span class="badge">تخزين: ${esc(os.mode || (os.cloud_ready ? "cloud" : "local-durable"))}</span>
+          <span class="badge">Off-site: ${esc(((pr.components || {}).offsite || {}).mode || "local-volume")}</span>
           <span class="badge">DB: ${esc(db.primary_engine || "sqlite")} · ${db.ready || (db.sqlite && db.sqlite.production_ready) ? "جاهز" : "—"}</span>
-          <span class="badge">SMTP: ${sec.smtp_configured ? "مفعّل" : "اختياري"}</span>
+          <span class="badge">TOTP: ${sec.totp_ready ? "جاهز" : "—"} · SMTP: ${sec.smtp_configured ? "مفعّل" : "اختياري"}</span>
         </div>
         <p class="mini">${esc((os.note || "") + (db.note ? " · " + db.note : ""))}</p>
       </div>`;

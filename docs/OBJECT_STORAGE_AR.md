@@ -1,30 +1,18 @@
-# التخزين السحابي + النسخ الخارجي (v53)
+# التخزين الدائم + النسخ (v59)
 
-## ماذا يفعل؟
-- يحفظ الملفات **محلياً**
-- ينسخها تلقائياً إلى **Railway Bucket** (S3)
-- يرفع النسخ الاحتياطي (SQLite + JSON) إلى السحابة = **Off-site**
-- إن اختفى ملف محلي يُسترجع من السحابة
+## جاهز الآن بدون Bucket
+- الملفات على Volume: `/app/data/uploads`
+- مرآة النسخ الاحتياطي: `/app/data/offsite-mirror`
+- الوضع: `local-durable` + offsite `local-volume`
 
-## تفعيل الآن (دقيقة واحدة)
-1. افتح مشروع Railway
-2. **Create → Bucket**
-3. افتح خدمة النظام (`web`) → **Variables**
-4. أضف **Variable References** من الـ Bucket (preset: **AWS SDK**)
-5. **Redeploy**
+## Bucket اختياري (نسخ سحابي إضافي)
+1. Railway → Create → Bucket
+2. خدمة النظام → Variables → Variable References → AWS SDK
+3. Redeploy
 
-بعد الربط يشتغل تلقائياً — لا حاجة لكتابة مفاتيح يدوياً.
-
-المتغيرات التي يقرأها النظام:
-`BUCKET` · `ACCESS_KEY_ID` · `SECRET_ACCESS_KEY` · `ENDPOINT` · `REGION`  
-(أو `LQ_OBJECT_STORAGE_*` / `AWS_*`)
+بعد الربط يتحول الوضع إلى `cloud` / `object-storage` تلقائياً.
 
 ## أين تفحص؟
-التوسع المؤسسي → بطاقة «التخزين السحابي + النسخ الخارجي»  
-أو `/api/health` → `object_storage.ready` و `offsite.enabled`
-
-## بعد التفعيل
-1. `/fresh`
-2. **فحص التخزين**
-3. **مزامنة الملفات الحالية**
-4. **نسخ احتياطي الآن** (يرفع للسحابة)
+- `/api/platform_readiness`
+- `/api/health` → `offsite.enabled` و `object_storage.ready`
+- التوسع المؤسسي → بطاقة الجاهزية
