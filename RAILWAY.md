@@ -14,7 +14,7 @@
 | 📸 **خلفية الدخول** | https://web-production-08d73.up.railway.app/assets/login-portal-bg.png |
 | 📸 **أيقونة** | https://web-production-08d73.up.railway.app/assets/app-icon-512.png |
 
-الإصدار الحالي: **`Launch-Quality-LLC-v59-complete`**
+الإصدار الحالي: **`Launch-Quality-LLC-v60-ops-complete`**
 
 ## Health check
 
@@ -29,7 +29,7 @@ GET https://web-production-08d73.up.railway.app/api/health
   "ok": true,
   "status": "healthy",
   "service": "production",
-  "version": "Launch-Quality-LLC-v59-complete",
+  "version": "Launch-Quality-LLC-v60-ops-complete",
   "platform_ready": true,
   "database_engine": "sqlite",
   "offsite": { "enabled": true, "mode": "local-volume" }

@@ -244,10 +244,10 @@ def put_bytes(key: str, data: bytes, content_type: str = "application/octet-stre
     started = time.time()
     result: Dict[str, Any] = {"ok": False, "key": key, "bytes": len(data or b""), "skipped": False}
     status = object_storage_status()
-    if not status["ready"]:
+    if not status.get("cloud_ready"):
         result["skipped"] = True
         result["ok"] = True
-        result["reason"] = "object storage not ready"
+        result["reason"] = "cloud object storage not configured"
         return result
     try:
         client, cfg = _client()
@@ -280,9 +280,9 @@ def get_bytes(key: str) -> Tuple[Optional[bytes], Dict[str, Any]]:
     started = time.time()
     meta: Dict[str, Any] = {"ok": False, "key": key}
     status = object_storage_status()
-    if not status["ready"]:
+    if not status.get("cloud_ready"):
         meta["skipped"] = True
-        meta["reason"] = "object storage not ready"
+        meta["reason"] = "cloud object storage not configured"
         return None, meta
     try:
         client, cfg = _client()
@@ -318,7 +318,7 @@ def get_bytes(key: str) -> Tuple[Optional[bytes], Dict[str, Any]]:
 def delete_key(key: str) -> Dict[str, Any]:
     status = object_storage_status()
     result: Dict[str, Any] = {"ok": False, "key": key, "skipped": False}
-    if not status["ready"]:
+    if not status.get("cloud_ready"):
         result["skipped"] = True
         result["ok"] = True
         return result
@@ -372,10 +372,10 @@ def put_backup_files(json_path, sqlite_path, meta: Optional[Dict[str, Any]] = No
 
     status = object_storage_status()
     out: Dict[str, Any] = {"ok": False, "skipped": False, "uploaded": []}
-    if not status["ready"]:
+    if not status.get("cloud_ready"):
         out["skipped"] = True
         out["ok"] = True
-        out["reason"] = "object storage not ready"
+        out["reason"] = "cloud object storage not configured — local volume offsite active"
         return out
     stamp = str((meta or {}).get("timestamp") or time.strftime("%Y%m%d-%H%M%S"))
     prefix = (_cfg().get("prefix") or "").strip("/")
@@ -412,10 +412,13 @@ def sync_local_tree(upload_dir, *, limit: int = 5000) -> Dict[str, Any]:
         "uploaded": 0,
         "skipped": 0,
         "errors": [],
-        "ready": object_storage_status().get("ready"),
+        "ready": object_storage_status().get("cloud_ready"),
+        "cloud_ready": object_storage_status().get("cloud_ready"),
     }
     if not result["ready"]:
-        result["errors"].append("object storage not ready")
+        result["skipped"] = True
+        result["ok"] = True
+        result["errors"].append("cloud object storage not configured — local durable storage is active")
         return result
     if not root.exists():
         result["errors"].append("upload dir missing")

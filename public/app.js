@@ -3242,12 +3242,12 @@ async function runQA(){
   try{
     const ops=await api('operations_check');
     const checks=ops.checks||[];
-    html+=`<div class="kpi" style="margin-top:12px"><span>جاهزية التشغيل</span><strong>${fmt(ops.score||0)}%</strong></div>`;
-    html+=checks.map(c=>`<p class="badge ${c.ok?'paid':'overdue'}">${htmlEscape(c.name)}: ${htmlEscape(String(c.value??''))}${c.hint&&!c.ok?' · '+htmlEscape(c.hint):''}</p>`).join('');
+    html+=`<div class="kpis grid" style="margin-top:12px"><div class="kpi"><span>جاهزية المنصة</span><strong>${fmt(ops.platform_score!=null?ops.platform_score:ops.score||0)}%</strong></div><div class="kpi"><span>بيانات الأعمال</span><strong>${fmt(ops.business_score||0)}%</strong></div></div>`;
+    html+=checks.map(c=>`<p class="badge ${c.ok?'paid':'overdue'}">${htmlEscape(c.name)}${c.kind?` · ${htmlEscape(c.kind)}`:''}: ${htmlEscape(String(c.value??''))}${c.hint&&!c.ok?' · '+htmlEscape(c.hint):''}</p>`).join('');
     if(ops.offsite&&!ops.offsite.enabled){
-      html+=`<p class="mini" style="margin-top:10px">Off-site: أضف على Railway <code>LQ_OFFSITE_BACKUP_URL</code> (مثلاً webhook من webhook.site للتجربة) ثم «نسخ احتياطي الآن».</p>`;
+      html+=`<p class="mini" style="margin-top:10px">Off-site: تحقق من Volume على /app/data ثم «نسخ احتياطي الآن».</p>`;
     } else if(ops.offsite){
-      html+=`<p class="mini">Off-site: مفعّل · آخر دفع: ${ops.offsite.last_push||'—'}</p>`;
+      html+=`<p class="mini">Off-site: ${htmlEscape(ops.offsite.mode||'local-volume')} · آخر دفع: ${htmlEscape(ops.offsite.last_push||'—')}</p>`;
     }
     const v=await api('backup/verify');
     const vr=v.verification||{};
