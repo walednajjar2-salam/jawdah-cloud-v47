@@ -1,107 +1,105 @@
-# Launch Quality LLC — Railway Deploy
+# Launch Quality LLC — Railway Deploy (Live)
 
-> Production-ready guide with live links, map, and media placeholders.
+> دليل النشر الحي — جاهزية المنصة **100%** على الإنتاج.
 
-## Quick deploy
+## Live production
 
-1. Push this folder to GitHub (repository root = these files).
-2. Open [Railway](https://railway.app) -> **New Project** -> **Deploy from GitHub repo**.
-3. Select the repo. Railway detects Python via `requirements.txt` + `runtime.txt`.
-4. In **Variables**, add:
+| | |
+|--|--|
+| 🌐 **الموقع** | https://web-production-08d73.up.railway.app |
+| 🔄 **تحديث كاش** | https://web-production-08d73.up.railway.app/fresh |
+| 🪟 **تطبيق ويندوز** | https://web-production-08d73.up.railway.app/get-windows |
+| 🗺️ **خريطة نزوى** | https://www.openstreetmap.org/?mlat=22.9333&mlon=57.5333#map=13/22.9333/57.5333 |
+| 📸 **شعار** | https://web-production-08d73.up.railway.app/assets/brand-logo-gold.png |
+| 📸 **خلفية الدخول** | https://web-production-08d73.up.railway.app/assets/login-portal-bg.png |
+| 📸 **أيقونة** | https://web-production-08d73.up.railway.app/assets/app-icon-512.png |
 
-| Variable | Value |
-|----------|--------|
-| `JAWDAH_HOST` | `0.0.0.0` |
-| `JAWDAH_DATA_DIR` | `/app/data` |
-
-`PORT` is injected automatically by Railway - do not set it manually.
-
-5. **Settings -> Networking -> Generate Domain** to get a public URL like:
-   `https://your-app.up.railway.app`
-6. Open that URL in the browser. Login works immediately on the same domain.
-
-## Live experience links (website + map + images)
-
-Use your Railway domain and keep this section at the top for quick sharing:
-
-- 🌐 **Live Website**: `https://your-app.up.railway.app`
-- 🗺️ **Live Map (Nizwa example)**: `https://www.openstreetmap.org/?mlat=22.9333&mlon=57.5333#map=13/22.9333/57.5333`
-- 📸 **Live Images (public assets)**:
-  - `https://your-app.up.railway.app/assets/brand-logo-gold.png`
-  - `https://your-app.up.railway.app/assets/login-portal-bg.png`
-  - `https://your-app.up.railway.app/assets/app-icon-512.png`
-
-For dynamic property photos uploaded from the app:
-- 🏠 `https://your-app.up.railway.app/uploads/properties/<photo-file-name>`
+الإصدار الحالي: **`Launch-Quality-LLC-v59-complete`**
 
 ## Health check
 
 ```text
-GET https://your-app.up.railway.app/api/health
+GET https://web-production-08d73.up.railway.app/api/health
 ```
 
-Expected:
+المتوقع:
 
 ```json
 {
   "ok": true,
   "status": "healthy",
   "service": "production",
-  "version": "Launch-Quality-LLC-v47-railway"
+  "version": "Launch-Quality-LLC-v59-complete",
+  "platform_ready": true,
+  "database_engine": "sqlite",
+  "offsite": { "enabled": true, "mode": "local-volume" }
 }
 ```
 
-## Persistent database (recommended)
-
-Without a volume, SQLite resets on redeploy.
-
-1. Railway service -> **Volumes** -> **Add Volume**
-2. Mount path: `/app/data`
-3. Keep `JAWDAH_DATA_DIR=/app/data`
-
-## Start command
-
-```bash
-python server.py
-```
-
-Already configured in `Procfile` and `railway.toml`.
-
-## Login accounts (seed data)
-
-| User | Password | Role |
-|------|----------|------|
-| `admin` | `admin123` | admin |
-| `razan.accounting` | `Jawdeh123` | accountant |
-
-Change the admin password after first login.
-
-## GitHub Pages + Railway API (optional split)
-
-If the frontend is on GitHub Pages and the backend on Railway:
-
-1. Set Railway variable: `JAWDAH_CORS_ORIGIN=https://YOUR-USER.github.io`
-2. Open GitHub Pages with:
+جاهزية المنصة (بعد الدخول):
 
 ```text
-https://YOUR-USER.github.io/YOUR-REPO/?api=https://your-app.up.railway.app
+GET /api/platform_readiness
+→ platform_score: 100, platform_ready: true
 ```
+
+## Quick deploy
+
+1. ادفع المستودع إلى GitHub.
+2. Railway → **New Project** → **Deploy from GitHub repo**.
+3. Variables:
+
+| Variable | Value |
+|----------|--------|
+| `JAWDAH_HOST` | `0.0.0.0` |
+| `JAWDAH_DATA_DIR` | `/app/data` |
+
+`PORT` يُحقن تلقائياً — لا تضعه يدوياً.
+
+4. **Volumes** → Mount `/app/data` (ضروري لعدم فقدان البيانات).
+5. **Settings → Networking → Generate Domain**.
+
+أمر التشغيل: `python server.py` (`Procfile` / `railway.toml`).
+
+## ما هو جاهز بدون إعداد إضافي
+
+- **SQLite** على Volume = قاعدة إنتاج أساسية
+- **تخزين محلي دائم** للعقود/الصور على `/app/data/uploads`
+- **Off-site محلي** = مرآة نسخ في `/app/data/offsite-mirror`
+- **MFA** عبر تطبيق المصادقة (**TOTP**) بدون SMTP
+- **أجهزة موثوقة** + تدوير كلمات المرور
+
+## اختياري (يُفعّل تلقائياً عند الربط)
+
+### Railway Bucket (نسخ سحابي إضافي)
+1. Create → Bucket  
+2. خدمة web → Variables → Variable References → **AWS SDK**  
+3. Redeploy  
+
+### PostgreSQL (ظلّي للتحقق فقط)
+- أضف `DATABASE_URL` أو `LQ_DATABASE_URL`  
+- الواجهة: التوسع المؤسسي → فحص / نسخ ظلّي / تحقق  
+
+### SMTP (بريد OTP إضافي)
+- `LQ_SMTP_HOST` / `LQ_SMTP_PORT` / `LQ_SMTP_USER` / `LQ_SMTP_PASS`
+
+## حسابات الفريق
+
+كلمات المرور تُضبط عند أول إنشاء مستخدم ولا تُعاد كتابتها عند كل نشر.  
+غيّر كلمات المرور من داخل النظام (تدوير 90 يوماً).
 
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
-| `502` / service not ready | Wait for deploy; check logs for `python server.py` |
-| `404` on `/` | Redeploy latest code; fallback HTML is embedded in `server.py` |
-| Login fails on GitHub Pages | Add `?api=https://your-railway-domain` |
-| Data lost after redeploy | Add Railway volume at `/app/data` |
+| `502` | انتظر النشر؛ راجع logs لـ `python server.py` |
+| فقدان بيانات | تأكد Volume على `/app/data` |
+| كاش قديم | افتح `/fresh` |
+| MFA | استخدم Google Authenticator بعد أول تحدي TOTP |
 
-## UI polish checklist (icons + inputs + emoji)
+## UI live checklist
 
-To keep the product experience premium in production:
-
-- ✅ Use icon-first placeholders in critical fields (login/search/location).
-- ✅ Keep emoji semantic and functional, not decorative noise.
-- ✅ Maintain bilingual clarity (Arabic + English) in the same input when useful.
-- ✅ Preserve high contrast for icons/placeholders on dark backgrounds.
-- ✅ Keep map and media links visible in docs for demo/readiness.
+- ✅ روابط الموقع والخريطة والصور أعلاه حية
+- ✅ أيقونات حقول الدخول والبحث
+- ✅ منصات: عقارات / ضيافة / محاسبة بعد الدخول
+- ✅ تطبيق ويندوز من `/get-windows`

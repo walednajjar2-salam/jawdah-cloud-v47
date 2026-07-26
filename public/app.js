@@ -719,10 +719,22 @@ async function login(){
     const device_label = (window.LQ_SECURITY && LQ_SECURITY.deviceLabel) ? LQ_SECURITY.deviceLabel() : 'Browser';
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password,remember_device:remember,device_fingerprint,device_label})});
     if(res.mfa_required){
-      localStorage.setItem('lq_mfa_challenge', JSON.stringify({challenge_id:res.challenge_id,username:res.username||username}));
+      const mfaPayload={challenge_id:res.challenge_id,username:res.username||username,mfa_method:res.mfa_method||'email'};
+      if(res.totp_secret){ mfaPayload.totp_secret=res.totp_secret; mfaPayload.totp_uri=res.totp_uri||''; }
+      localStorage.setItem('lq_mfa_challenge', JSON.stringify(mfaPayload));
       document.querySelector('.ev-auth-tab[data-auth="otp"]')?.click();
       const otpUser=$('#otpUser'); if(otpUser) otpUser.value = res.username || username;
-      toastNotice(res.message || 'أدخل رمز OTP لإكمال الدخول');
+      const status=$('#otpStatus');
+      if(status){
+        if(res.mfa_method==='totp_enroll' && res.totp_secret){
+          status.textContent = 'سر المصادقة: '+res.totp_secret+' — أضفه في Authenticator ثم أدخل الرمز';
+        }else if(res.mfa_method==='totp'){
+          status.textContent = 'أدخل رمز تطبيق المصادقة';
+        }else{
+          status.textContent = res.message || 'أدخل رمز OTP';
+        }
+      }
+      toastNotice(res.message || 'أدخل رمز التحقق لإكمال الدخول');
       return;
     }
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);

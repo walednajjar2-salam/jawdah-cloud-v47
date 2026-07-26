@@ -145,12 +145,18 @@
       const devices = (res.devices || []).filter((d) => Number(d.active) === 1);
       const sec = res.security || {};
       box.innerHTML =
-        "<h3>🛡️ الأجهزة الموثوقة + تدوير كلمات المرور</h3>" +
+        "<h3>🛡️ الأجهزة الموثوقة + MFA</h3>" +
         `<div class="status-line" style="margin:8px 0">
           <span class="badge">تدوير كل ${esc(sec.password_max_age_days || 90)} يوم</span>
           <span class="badge">MFA: ${esc(sec.mfa_enforce || "soft")}</span>
+          <span class="badge">TOTP: ${sec.totp_enabled ? "مفعّل" : "غير مفعّل"}</span>
           <span class="badge">${sec.trusted_device ? "هذا الجهاز موثوق" : "هذا الجهاز غير موثوق بعد"}</span>
         </div>` +
+        `<div class="toolbar" style="flex-wrap:wrap;gap:8px;margin:8px 0">
+          <button type="button" class="gold-btn" onclick="LQ_SECURITY.setupTotp()">تفعيل تطبيق المصادقة</button>
+          ${sec.totp_enabled ? '<button type="button" class="ghost" onclick="LQ_SECURITY.disableTotp()">تعطيل TOTP</button>' : ""}
+        </div>` +
+        '<pre id="lqTotpSetupOut" class="mini" style="white-space:pre-wrap;margin:0 0 10px"></pre>' +
         (devices.length
           ? `<div class="table-wrap"><table><thead><tr><th>الجهاز</th><th>آخر ظهور</th><th>موثوق حتى</th><th></th></tr></thead><tbody>${devices
               .map(
@@ -190,6 +196,45 @@
     }
   }
 
+  async function setupTotp() {
+    const out = document.getElementById("lqTotpSetupOut");
+    try {
+      const res = await api("security/totp_setup", { method: "POST", body: "{}" });
+      if (out) {
+        out.textContent =
+          "السر: " +
+          (res.totp_secret || "") +
+          "\nأضفه في Google Authenticator ثم أدخل الرمز أدناه للتأكيد.";
+      }
+      const code = window.prompt("أدخل رمز تطبيق المصادقة للتأكيد:");
+      if (!code) return;
+      await api("security/totp_confirm", {
+        method: "POST",
+        body: JSON.stringify({ code: String(code).trim(), totp_secret: res.totp_secret }),
+      });
+      if (typeof toast === "function") toast("تم تفعيل MFA عبر تطبيق المصادقة");
+      renderDevicesPanel();
+    } catch (e) {
+      if (out) out.textContent = String((e && e.message) || e);
+      if (typeof toastErr === "function") toastErr(e);
+    }
+  }
+
+  async function disableTotp() {
+    const password = window.prompt("أدخل كلمة المرور لتعطيل TOTP:");
+    if (!password) return;
+    try {
+      await api("security/totp_disable", {
+        method: "POST",
+        body: JSON.stringify({ password }),
+      });
+      if (typeof toast === "function") toast("تم تعطيل TOTP");
+      renderDevicesPanel();
+    } catch (e) {
+      if (typeof toastErr === "function") toastErr(e);
+    }
+  }
+
   window.LQ_SECURITY = {
     mustChange,
     show,
@@ -199,6 +244,8 @@
     deviceLabel,
     completeMfaLogin,
     renderDevicesPanel,
+    setupTotp,
+    disableTotp,
   };
 
   if (document.readyState === "loading") {

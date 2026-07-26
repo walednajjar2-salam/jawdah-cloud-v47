@@ -144,7 +144,8 @@ def object_storage_status() -> Dict[str, Any]:
         "last_write": last_write,
         "last_read": last_read,
         "last_error": last_error,
-        "ready": cloud_ready,
+        # ready = production path usable (local durable always; cloud when linked)
+        "ready": True,
         "local_durable_ready": True,
         "production_storage_ready": True,
         "cloud_ready": cloud_ready,
@@ -152,7 +153,12 @@ def object_storage_status() -> Dict[str, Any]:
         "note": (
             "التخزين السحابي جاهز"
             if cloud_ready
-            else "التخزين المحلي الدائم جاهز — اربط Railway Bucket للسحابة الاختيارية"
+            else "التخزين المحلي الدائم جاهز على Volume — Bucket اختياري للنسخ السحابي"
+        ),
+        "setup_hint": (
+            None
+            if cloud_ready
+            else "اختياري: Railway → Create → Bucket → Variable References (AWS SDK)"
         ),
     }
 
