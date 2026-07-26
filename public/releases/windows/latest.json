@@ -1,15 +1,16 @@
 {
   "channel": "stable",
-  "version": "56.1.0",
-  "installer_url": "https://web-production-08d73.up.railway.app/lq-setup.exe",
+  "version": "56.2.0",
+  "installer_url": "https://web-production-08d73.up.railway.app/LaunchQuality.exe",
   "portable_url": "https://web-production-08d73.up.railway.app/lq-portable.zip",
-  "setup_page": "https://web-production-08d73.up.railway.app/get-windows",
+  "setup_page": "https://web-production-08d73.up.railway.app/get-windows?auto=1",
   "app_url": "https://web-production-08d73.up.railway.app/app.html",
-  "download_page": "https://web-production-08d73.up.railway.app/download.html",
-  "published_at": "2026-07-26T13:50:00Z",
+  "download_page": "https://web-production-08d73.up.railway.app/get-windows",
+  "published_at": "2026-07-26T14:10:00Z",
   "release_notes": [
-    "Desktop shortcut with emoji name: 🏛️ جودة الانطلاقة",
-    "Large Windows app icon (multi-size ICO up to 256x256) embedded in EXE",
-    "One-click Install-Desktop-Shortcut.bat for Start/Desktop presence"
+    "Full rebuild: direct LaunchQuality.exe download",
+    "Flat ZIP + 1-تثبيت-الآن.bat for desktop icon",
+    "Force-download page with auto=1",
+    "Setup.exe replaced with working launcher"
   ]
 }

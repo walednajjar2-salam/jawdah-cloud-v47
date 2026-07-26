@@ -8,50 +8,96 @@
   <style>
     :root{--bg:#07111f;--gold:#f5d76e;--cyan:#2fdcc4;--text:#f7fbff;--muted:#a8b7c8;--line:rgba(245,215,110,.35)}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Tahoma,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at 20% 10%,rgba(47,220,196,.18),transparent 35%),linear-gradient(160deg,#040914,#07111f 55%,#0a2430);color:var(--text);display:grid;place-items:center;padding:20px}
-    main{width:min(720px,100%);border:1px solid var(--line);border-radius:22px;padding:28px;background:rgba(255,255,255,.06)}
+    main{width:min(760px,100%);border:1px solid var(--line);border-radius:22px;padding:28px;background:rgba(255,255,255,.06)}
     h1{margin:0 0 8px;color:var(--gold);font-size:28px}
     p{color:var(--muted);line-height:1.8;margin:8px 0}
-    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:14px;padding:16px 18px;margin-top:14px}
-    .primary{background:linear-gradient(135deg,var(--cyan),#dffdf8);color:#042027;font-size:1.15rem}
+    .btn{display:flex;align-items:center;justify-content:center;gap:12px;text-align:center;text-decoration:none;font-weight:800;border-radius:16px;padding:18px 18px;margin-top:14px;border:0;cursor:pointer;width:100%;font-size:1.15rem}
+    .primary{background:linear-gradient(135deg,var(--cyan),#dffdf8);color:#042027}
     .secondary{background:linear-gradient(135deg,#0078D4,#005A9E);color:#fff}
     .ghost{border:1px solid var(--line);color:#e8fffb;background:rgba(0,0,0,.2)}
     .box{margin-top:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;background:rgba(0,0,0,.22)}
-    code,pre{direction:ltr;text-align:left;display:block;white-space:pre-wrap;word-break:break-all;color:#e8fffb;background:#0008;border-radius:10px;padding:10px;font-size:.85rem}
     ol{line-height:1.9;color:#dce9f3}
     .ok{color:#9dffc3;font-weight:700}
+    .icon{width:56px;height:56px;border-radius:14px;border:2px solid rgba(245,215,110,.7)}
+    .row{display:flex;gap:14px;align-items:center;margin:12px 0 4px}
+    #status{min-height:24px;color:#9dffc3;font-weight:700}
   </style>
 </head>
 <body>
   <main>
-    <h1>تحميل تطبيق ويندوز · v56.1</h1>
-    <p class="ok">أيقونة كبيرة على سطح المكتب + إيموجي 🏛️ بنفس مقاس تطبيقات ويندوز (256).</p>
+    <div class="row">
+      <img class="icon" src="/releases/windows/portable/AppIcon-192.png" alt="أيقونة التطبيق">
+      <div>
+        <h1>تحميل تطبيق ويندوز · v56.2</h1>
+        <p class="ok">أيقونة كبيرة 🏛️ على سطح المكتب — نفس مقاس تطبيقات ويندوز</p>
+      </div>
+    </div>
 
-    <a class="btn primary" href="/lq-portable.zip" download="LaunchQuality-Portable.zip">1) تحميل الحزمة السهلة ZIP</a>
-    <a class="btn secondary" href="/lq-setup.exe" download="LaunchQuality-Setup.exe">2) تحميل المثبّت EXE</a>
-    <a class="btn ghost" href="https://web-production-08d73.up.railway.app/fresh">3) فتح النظام الآن مباشرة</a>
+    <button class="btn primary" id="btnExe" type="button">⬇ تحميل التطبيق الآن (EXE)</button>
+    <button class="btn secondary" id="btnZip" type="button">⬇ تحميل الحزمة ZIP + التثبيت</button>
+    <a class="btn ghost" href="/releases/windows/install.ps1" download="install-launch-quality.ps1">تثبيت بأمر PowerShell</a>
+
+    <p id="status">اضغط التحميل — سيبدأ مباشرة.</p>
 
     <div class="box">
-      <strong>بعد تحميل ZIP — أيقونة سطح المكتب:</strong>
+      <strong>بعد التحميل:</strong>
       <ol>
-        <li>فك الضغط</li>
-        <li>اضغط مرتين على <b>تثبيت-اختصار-سطح-المكتب.bat</b></li>
-        <li>ستظهر على سطح المكتب: <b>🏛️ جودة الانطلاقة</b> بأيقونة كبيرة</li>
-        <li>أو شغّل مباشرة <b>LaunchQuality.exe</b> (الأيقونة مدمجة داخله)</li>
+        <li><b>EXE:</b> شغّله مباشرة، ثم انقل الاختصار لسطح المكتب إن لزم</li>
+        <li><b>ZIP:</b> فك الضغط → اضغط <b>1-تثبيت-الآن.bat</b></li>
+        <li>ستظهر أيقونة: <b>🏛️ جودة الانطلاقة</b></li>
       </ol>
     </div>
 
     <div class="box">
-      <strong>إذا ظهر تحذير Windows عند EXE:</strong>
+      <strong>إذا ظهر تحذير Windows:</strong>
       <ol>
-        <li>اضغط More info / مزيد من المعلومات</li>
-        <li>ثم Run anyway / تشغيل على أي حال</li>
+        <li>More info / مزيد من المعلومات</li>
+        <li>Run anyway / تشغيل على أي حال</li>
       </ol>
     </div>
 
     <div class="box">
-      <strong>تثبيت بأمر واحد (PowerShell):</strong>
-      <pre>irm https://web-production-08d73.up.railway.app/releases/windows/install.ps1 | iex</pre>
+      <strong>روابط مباشرة (انسخ إن فشل الزر):</strong>
+      <p style="direction:ltr;text-align:left;word-break:break-all;color:#e8fffb">
+        https://web-production-08d73.up.railway.app/LaunchQuality.exe<br>
+        https://web-production-08d73.up.railway.app/lq-portable.zip
+      </p>
     </div>
   </main>
+  <script>
+    async function forceDownload(url, filename) {
+      const status = document.getElementById('status');
+      status.textContent = 'جاري التحميل... ' + filename;
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        const obj = URL.createObjectURL(blob);
+        a.href = obj;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(obj), 2000);
+        status.textContent = 'بدأ التحميل: ' + filename;
+      } catch (e) {
+        status.textContent = 'تعذر التحميل عبر المتصفح — فتح الرابط المباشر...';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    }
+    document.getElementById('btnExe').onclick = () => forceDownload('/LaunchQuality.exe', 'LaunchQuality.exe');
+    document.getElementById('btnZip').onclick = () => forceDownload('/lq-portable.zip', 'LaunchQuality-Windows.zip');
+    // auto-start EXE download once to reduce friction
+    if (new URLSearchParams(location.search).get('auto') === '1') {
+      forceDownload('/LaunchQuality.exe', 'LaunchQuality.exe');
+    }
+  </script>
 </body>
 </html>

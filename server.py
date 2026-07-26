@@ -91,7 +91,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v56.1-desktop-icon"
+APP_VERSION = "Launch-Quality-LLC-v56.2-windows-rebuild"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -3852,15 +3852,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
 
     def serve_static(self, path: str, head_only: bool = False) -> None:
         # Short stable aliases so old/cached 404 bookmarks still fail less often.
+        download_name: Optional[str] = None
         if path in ("/go", "/دخول", "/start"):
             path = "/go.html"
         if path in ("/fresh", "/تحديث", "/clear-cache"):
             path = "/fresh.html"
-        if path in ("/lq-setup.exe", "/windows-setup.exe", "/LaunchQuality-Setup.exe"):
+        if path in ("/lq-setup.exe", "/windows-setup.exe", "/LaunchQuality-Setup.exe", "/LaunchQuality.exe", "/app-windows.exe", "/windows.exe"):
+            download_name = "LaunchQuality.exe"
             path = "/releases/windows/LaunchQuality-Setup.exe"
-        if path in ("/windows-setup", "/get-windows"):
+        if path in ("/windows-setup", "/get-windows", "/تحميل-ويندوز", "/download-windows"):
             path = "/get-windows.html"
-        if path in ("/lq-portable.zip", "/windows-portable.zip"):
+        if path in ("/lq-portable.zip", "/windows-portable.zip", "/LaunchQuality-Windows.zip", "/windows.zip"):
+            download_name = "LaunchQuality-Windows.zip"
             path = "/releases/windows/LaunchQuality-Portable.zip"
 
         def _send_bytes(raw: bytes, ctype: str, *, disposition: str | None = None, cache: str | None = None) -> None:
@@ -3940,7 +3943,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
             disposition = None
             cache = None
             if full.suffix.lower() in {".exe", ".msi", ".zip", ".apk", ".bat", ".ps1", ".cmd"}:
-                disposition = f'attachment; filename="{full.name}"'
+                fname = download_name or full.name
+                disposition = f'attachment; filename="{fname}"'
                 cache = "no-cache, must-revalidate"
             elif safe.endswith(".html"):
                 cache = "no-store, no-cache, must-revalidate, max-age=0"
