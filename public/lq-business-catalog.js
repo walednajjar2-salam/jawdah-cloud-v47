@@ -110,7 +110,8 @@
       .join("");
     return `
       <div class="card">
-        <h4>عروض الضيافة والمناسبات</h4>
+        <h4>عروض ضيافة المجالس الخارجية</h4>
+        <p class="mini">خدمة في مجالس خارجية — ليست غرفاً وليست مرتبطة بالعقارات.</p>
         <div class="toolbar" style="gap:8px;margin:8px 0">
           <input id="bizGuests" type="number" min="1" value="150" placeholder="عدد الضيوف" style="width:120px">
           <button type="button" class="gold-btn" onclick="LQ_BUSINESS.quoteHospitality()">عرض السعر</button>
@@ -220,6 +221,7 @@
       const p = res.package || {};
       if (out) {
         out.textContent = [
+          'مجلس خارجي — مفصول عن العقارات',
           p.name_ar,
           "ضيوف: " + guests + ` (${p.guests_min}–${p.guests_max})`,
           "طاقم: " + p.waiters + " مضيف + " + p.supervisors + " مشرف",

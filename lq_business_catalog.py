@@ -162,6 +162,7 @@ CONDOLENCE_PRICING: Dict[str, Any] = {
 }
 
 HOSPITALITY_TERMS: List[str] = [
+    "خدمة ضيافة في مجالس خارجية — ليست غرفاً وليست مرتبطة بالعقارات",
     "الأسعار تشمل المستلزمات والخدمات المذكورة",
     "الأسعار لنزوى — خارج نزوى رسوم نقل إضافية",
     "تأكيد الحجز قبل 72 ساعة على الأقل",
@@ -219,6 +220,7 @@ def quote_condolence(zone: str = "nizwa") -> Dict[str, Any]:
     return {
         "ok": True,
         "service_kind": "condolence",
+        "channel": "external_majlis",
         "zone": z,
         "zone_label": label,
         "duration_days": CONDOLENCE_PRICING["duration_days"],
@@ -228,6 +230,7 @@ def quote_condolence(zone: str = "nizwa") -> Dict[str, Any]:
         "deposit_omr": round(price * 0.30, 3),
         "notes": CONDOLENCE_PRICING["notes"],
         "currency": "OMR",
+        "note": "واجب عزاء في موقع خارجي — مفصول عن العقارات والغرف",
     }
 
 
@@ -240,6 +243,7 @@ def quote_event_package(guests: int, *, outside_nizwa: bool = False) -> Dict[str
     return {
         "ok": True,
         "service_kind": "event",
+        "channel": "external_majlis",
         "guests": int(guests or 0),
         "package": pkg,
         "price_omr": price,
@@ -248,6 +252,7 @@ def quote_event_package(guests: int, *, outside_nizwa: bool = False) -> Dict[str
         "transport_note": transport_note,
         "terms": HOSPITALITY_TERMS,
         "currency": "OMR",
+        "note": "خدمة مجلس خارجي — مفصولة عن العقارات والغرف",
     }
 
 

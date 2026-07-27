@@ -384,7 +384,7 @@
         <button type="button" class="portal-tile" onclick="choosePortal('hospitality')">
           <span class="portal-icon">🏨</span>
           <b>منصة الضيافة</b>
-          <small>باقات المناسبات · العزاء · الغرف والحجوزات</small>
+          <small>مجالس خارجية · مناسبات · عزاء (مفصولة عن العقارات)</small>
         </button>
         <button type="button" class="portal-tile" onclick="choosePortal('accounting')">
           <span class="portal-icon">💼</span>
@@ -1025,26 +1025,27 @@
       <section id="sec-timeline" class="section"><div id="timelinePageBox"></div></section>
       <section id="sec-hospitality-platform" class="section">
         <div class="card accounting-hero">
-          <h3>منصة الضيافة</h3>
-          <p class="mini">منصة تشغيل مستقلة: باقات المناسبات، واجب العزاء، الغرف، الحجوزات، التحصيل، وتقارير الإشغال.</p>
+          <h3>منصة الضيافة — المجالس الخارجية</h3>
+          <p class="mini">خدمة ضيافة في المجالس والمناسبات الخارجية فقط · مفصولة تماماً عن العقارات والغرف · عربون 30% · تأكيد قبل 72 ساعة.</p>
           <div id="hospPlatformKpis" class="grid kpis"></div>
           <div id="hospitalityQuickBox" class="status-line" style="margin-top:10px"></div>
         </div>
         <div class="card">
-          <h3>لوحة تشغيل الضيافة</h3>
+          <h3>لوحة تشغيل المجالس</h3>
           <div id="hospPlatformQuick" class="toolbar" style="flex-wrap:wrap"></div>
         </div>
-        <div class="card">
-          <h3>باقات المناسبات وواجب العزاء</h3>
-          <p class="mini">أسعار نزوى الرسمية · عربون 30% · تأكيد قبل 72 ساعة · خارج نزوى رسوم نقل إضافية.</p>
+        <div class="card" id="hospMajlisSection">
+          <h3>باقات المجالس الخارجية وواجب العزاء</h3>
+          <p class="mini">هذه الباقات تُنفَّذ في مجالس خارجية (موقع العميل) — ليست غرفاً وليست وحدات عقارية.</p>
           <div id="hospPackagesBoard" class="status-line" style="flex-wrap:wrap;gap:8px;margin:10px 0"></div>
           <div id="hospCondolenceBoard" class="status-line" style="flex-wrap:wrap;gap:8px;margin:0 0 12px"></div>
           <div class="layout">
             <div>
-              <h4>حجز مناسبة</h4>
+              <h4>حجز مناسبة في مجلس خارجي</h4>
               <div class="form">
                 <input id="hEventClient" placeholder="اسم العميل">
                 <input id="hEventPhone" placeholder="الهاتف">
+                <input id="hEventVenue" placeholder="موقع المجلس / العنوان">
                 <input id="hEventDate" type="date">
                 <input id="hEventGuests" type="number" min="1" placeholder="عدد الضيوف" value="150">
                 <label class="mini" style="display:flex;align-items:center;gap:6px"><input id="hEventOutside" type="checkbox"> خارج نزوى (نقل إضافي)</label>
@@ -1053,15 +1054,16 @@
               </div>
               <div class="toolbar" style="gap:8px;margin-top:8px">
                 <button type="button" class="ghost" onclick="quoteHospitalityEvent()">عرض السعر</button>
-                <button type="button" class="gold-btn" onclick="bookHospitalityEvent()">حفظ حجز المناسبة</button>
+                <button type="button" class="gold-btn" onclick="bookHospitalityEvent()">حفظ حجز المجلس</button>
               </div>
               <pre id="hEventQuoteOut" class="mini" style="white-space:pre-wrap;background:rgba(0,0,0,.04);padding:10px;border-radius:8px;margin-top:8px">أدخل عدد الضيوف ثم اعرض السعر.</pre>
             </div>
             <div>
-              <h4>حجز واجب عزاء (3 أيام)</h4>
+              <h4>حجز واجب عزاء (3 أيام) في الموقع</h4>
               <div class="form">
                 <input id="hCondClient" placeholder="اسم صاحب العزاء / العميل">
                 <input id="hCondPhone" placeholder="الهاتف">
+                <input id="hCondVenue" placeholder="موقع العزاء / العنوان">
                 <input id="hCondDate" type="date">
                 <select id="hCondZone">
                   <option value="nizwa">داخل نزوى — 450 ر.ع</option>
@@ -1079,25 +1081,29 @@
             </div>
           </div>
           <div style="margin-top:14px">
-            <h4>حجوزات الباقات والعزاء</h4>
+            <h4>سجل حجوزات المجالس والعزاء</h4>
             <div id="hospitalityEventsTable"></div>
           </div>
         </div>
-        <div class="card"><h3>تحليلات الضيافة</h3><div class="toolbar"><input id="hSummaryFrom" type="date"><input id="hSummaryTo" type="date"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التحليل</button><button class="gold-btn" type="button" onclick="openHospitalityReport()">تقرير الضيافة PDF</button></div><div id="hospitalitySummaryBox" class="status-line"></div><div id="hospitalityTypeBox"></div></div>
-        <div class="card"><h3>تنبيهات Check-out</h3><div id="hospitalityCheckoutAlerts" class="status-line"></div></div>
-        <div class="card"><h3>تقويم حجوزات الضيافة</h3><div class="toolbar"><input id="hCalMonth" type="month"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التقويم</button></div><div id="hospitalityCalendarBox"></div></div>
-        <div class="card"><h3>Timeline الغرف والحجوزات</h3><p class="mini">اسحب الحجز بالكامل لتحريك الفترة، أو اسحب الحافة لتعديل تاريخ الدخول/الخروج.</p><div id="hospitalityTimelineBox"></div></div>
-        <div class="card"><h3>تسعير موسمي</h3><div class="form"><select id="hSeasonProperty"></select><input id="hSeasonRoomType" placeholder="نوع الغرفة (اختياري)"><input id="hSeasonName" placeholder="اسم الموسم"><input id="hSeasonStart" type="date"><input id="hSeasonEnd" type="date"><input id="hSeasonRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><select id="hSeasonActive"><option value="1">Active</option><option value="0">Inactive</option></select><textarea id="hSeasonNotes" placeholder="ملاحظات الموسم"></textarea></div><button class="gold-btn" onclick="createHospitalitySeasonRate()">حفظ التسعير</button></div>
-        <div class="card"><h3>إضافة غرفة ضيافة</h3><div class="form"><select id="hRoomProperty"></select><input id="hRoomCode" placeholder="رمز/رقم الغرفة"><input id="hRoomType" placeholder="نوع الغرفة"><input id="hRoomCapacity" placeholder="السعة" type="number"><input id="hRoomRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><select id="hRoomStatus"><option value="available">available</option><option value="reserved">reserved</option><option value="occupied">occupied</option><option value="maintenance">maintenance</option></select><textarea id="hRoomNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createHospitalityRoom()">حفظ الغرفة</button></div>
-        <div class="card"><h3>حجز ضيافة</h3><div class="form"><select id="hBookingRoom"></select><select id="hBookingClient"></select><input id="hBookingGuest" placeholder="اسم النزيل"><input id="hBookingPhone" placeholder="هاتف النزيل"><input id="hBookingCheckin" type="date"><input id="hBookingCheckout" type="date"><input id="hBookingRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><input id="hBookingPaid" placeholder="المدفوع OMR" type="number" step="0.001"><select id="hBookingStatus"><option value="reserved">reserved</option><option value="checked_in">checked_in</option><option value="checked_out">checked_out</option><option value="cancelled">cancelled</option></select><input id="hBookingSource" placeholder="مصدر الحجز"><textarea id="hBookingNotes" placeholder="ملاحظات الحجز"></textarea></div><button class="gold-btn" onclick="createHospitalityBooking()">حفظ الحجز</button></div>
-        <div class="layout">
-          <div class="card"><h3>الغرف</h3><div id="hospitalityRoomsTable"></div></div>
-          <div class="card"><h3>الحجوزات</h3><div id="hospitalityBookingsTable"></div></div>
-        </div>
-        <div class="layout">
-          <div class="card"><h3>أسعار المواسم</h3><div id="hospitalitySeasonsTable"></div></div>
-          <div class="card"><h3>فوليو/فواتير الضيافة</h3><div id="hospitalityFoliosTable"></div></div>
-        </div>
+        <details class="card" id="hospRoomsSecondary" style="margin-top:12px">
+          <summary style="cursor:pointer;font-weight:800;font-size:1.05rem">قسم منفصل اختياري: غرف الإقامة (ليس للمجالس)</summary>
+          <p class="mini" style="margin:8px 0 12px">هذا القسم للإقامة الليلية فقط إن لزم — لا علاقة له بباقات المجالس الخارجية ولا بمنصة العقارات التشغيلية للمجالس.</p>
+          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>تحليلات غرف الإقامة</h3><div class="toolbar"><input id="hSummaryFrom" type="date"><input id="hSummaryTo" type="date"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التحليل</button><button class="gold-btn" type="button" onclick="openHospitalityReport()">تقرير الغرف PDF</button></div><div id="hospitalitySummaryBox" class="status-line"></div><div id="hospitalityTypeBox"></div></div>
+          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>تنبيهات Check-out</h3><div id="hospitalityCheckoutAlerts" class="status-line"></div></div>
+          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>تقويم حجوزات الغرف</h3><div class="toolbar"><input id="hCalMonth" type="month"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التقويم</button></div><div id="hospitalityCalendarBox"></div></div>
+          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>Timeline الغرف</h3><p class="mini">اسحب الحجز بالكامل لتحريك الفترة، أو اسحب الحافة لتعديل تاريخ الدخول/الخروج.</p><div id="hospitalityTimelineBox"></div></div>
+          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>تسعير موسمي للغرف</h3><div class="form"><select id="hSeasonProperty"></select><input id="hSeasonRoomType" placeholder="نوع الغرفة (اختياري)"><input id="hSeasonName" placeholder="اسم الموسم"><input id="hSeasonStart" type="date"><input id="hSeasonEnd" type="date"><input id="hSeasonRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><select id="hSeasonActive"><option value="1">Active</option><option value="0">Inactive</option></select><textarea id="hSeasonNotes" placeholder="ملاحظات الموسم"></textarea></div><button class="gold-btn" onclick="createHospitalitySeasonRate()">حفظ التسعير</button></div>
+          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>إضافة غرفة إقامة</h3><div class="form"><select id="hRoomProperty"></select><input id="hRoomCode" placeholder="رمز/رقم الغرفة"><input id="hRoomType" placeholder="نوع الغرفة"><input id="hRoomCapacity" placeholder="السعة" type="number"><input id="hRoomRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><select id="hRoomStatus"><option value="available">available</option><option value="reserved">reserved</option><option value="occupied">occupied</option><option value="maintenance">maintenance</option></select><textarea id="hRoomNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createHospitalityRoom()">حفظ الغرفة</button></div>
+          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>حجز غرفة إقامة</h3><div class="form"><select id="hBookingRoom"></select><select id="hBookingClient"></select><input id="hBookingGuest" placeholder="اسم النزيل"><input id="hBookingPhone" placeholder="هاتف النزيل"><input id="hBookingCheckin" type="date"><input id="hBookingCheckout" type="date"><input id="hBookingRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><input id="hBookingPaid" placeholder="المدفوع OMR" type="number" step="0.001"><select id="hBookingStatus"><option value="reserved">reserved</option><option value="checked_in">checked_in</option><option value="checked_out">checked_out</option><option value="cancelled">cancelled</option></select><input id="hBookingSource" placeholder="مصدر الحجز"><textarea id="hBookingNotes" placeholder="ملاحظات الحجز"></textarea></div><button class="gold-btn" onclick="createHospitalityBooking()">حفظ حجز الغرفة</button></div>
+          <div class="layout">
+            <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>الغرف</h3><div id="hospitalityRoomsTable"></div></div>
+            <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>حجوزات الغرف</h3><div id="hospitalityBookingsTable"></div></div>
+          </div>
+          <div class="layout">
+            <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>أسعار المواسم</h3><div id="hospitalitySeasonsTable"></div></div>
+            <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>فوليو الغرف</h3><div id="hospitalityFoliosTable"></div></div>
+          </div>
+        </details>
       </section>
 
       <section id="sec-properties" class="section">
@@ -1351,10 +1357,10 @@
   <script src="lq-payroll-import.js?v=pi3-real" defer></script>
   <script src="lq-walid-intel.js?v=wi2" defer></script>
   <script src="lq-enterprise.js?v=ent6-v59" defer></script>
-  <script src="lq-business-catalog.js?v=biz1-v63" defer></script>
+  <script src="lq-business-catalog.js?v=biz1-v64" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal24-v63" defer></script>
+  <script src="app.js?v=portal24-v64" defer></script>
   <script src="lq-edition-terrifying.js?v=td3" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>

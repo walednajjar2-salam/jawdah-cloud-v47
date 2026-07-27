@@ -64,7 +64,7 @@ const NAV_SAAS_ITEMS = [
   ['settings','الإعدادات','⚙️']
 ];
 const SECTION_TITLES = {
-  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','hospitality-platform':'منصة الضيافة','accounting-platform':'منصة المحاسبة','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'منصة الضيافة',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
+  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','hospitality-platform':'منصة الضيافة · مجالس','accounting-platform':'منصة المحاسبة','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'منصة الضيافة · مجالس',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
   revenues:'الإيرادات',invoices:'المدفوعات',receivables:'التحصيل الذكي','admin-expenses':'المصروفات',maintenance:'الصيانة',
   reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي','business-catalog':'كتالوج العمل',production:'المتابعة',timeline:'الجدول الزمني',
   backup:'المستندات',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
@@ -1783,7 +1783,7 @@ function renderDashMegaCockpit(k,data,eng){
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>👥 أفضل العملاء</h4><button type="button" class="saas-link-btn" onclick="showSection('clients')">الكل</button></div><div class="rank-list">${clientsHtml}</div></article>
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>🏢 أداء العقارات</h4><button type="button" class="saas-link-btn" onclick="showSection('properties')">الكل</button></div><div class="rank-list">${propsHtml}</div></article>
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>🔧 عمليات الصيانة</h4></div><div class="maint-ops"><div><b>${fmt(eng.openMaintCount)}</b><span>مفتوحة</span></div><div><b>${fmt(eng.closedMaintCount)}</b><span>مغلقة</span></div><div><b>${fmt(eng.slaPct)}%</b><span>SLA</span></div></div><button type="button" class="ghost" onclick="showSection('maintenance')">إدارة الصيانة</button></article>
-    <article class="bento-tile bento-span-12 saas-glass hotel-hero"><div class="bento-head"><h4>🏨 منصة الضيافة</h4><button type="button" class="saas-link-btn" onclick="showSection('hospitality-platform')">دخول المنصة</button></div><div class="status-line"><span class="badge">غرف ${fmt(hRooms.length)}</span><span class="badge">حجوزات نشطة ${fmt(activeBookings.length)}</span><span class="badge">${fmt(hOcc)}% إشغال</span></div><div class="hotel-grid">${hCards}</div></article>
+    <article class="bento-tile bento-span-12 saas-glass hotel-hero"><div class="bento-head"><h4>🏨 منصة الضيافة · مجالس خارجية</h4><button type="button" class="saas-link-btn" onclick="showSection('hospitality-platform')">دخول المنصة</button></div><div class="status-line"><span class="badge">مجالس خارجية</span><span class="badge">مفصولة عن العقارات</span><span class="badge">غرف إقامة اختيارية منفصلة</span></div><div class="hotel-grid">${hCards}</div></article>
     <article class="bento-tile bento-span-12 saas-glass"><div class="bento-head"><h4>📅 الأحداث القادمة</h4><button type="button" class="saas-link-btn" onclick="showSection('timeline')">الجدول</button></div><div class="event-list">${eventsHtml}</div></article>`;
 }
 function renderDashRecentInvoices(invoices){
@@ -2936,7 +2936,7 @@ const EDIT_CONFIG = {
   chart_accounts: {title:'تعديل حساب في الدليل', fields:[['code','رمز الحساب','text'],['name','اسم الحساب','text'],['type','نوع الحساب','select'],['parent_code','الحساب الأب','select'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
   hospitality_rooms: {title:'تعديل غرفة ضيافة', fields:[['property_id','العقار','select'],['room_code','رمز الغرفة','text'],['room_type','النوع','text'],['capacity','السعة','number'],['rate_per_night','سعر الليلة','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   hospitality_bookings: {title:'تعديل حجز ضيافة', fields:[['room_id','الغرفة','select'],['client_id','العميل','select'],['guest_name','اسم النزيل','text'],['guest_phone','الهاتف','text'],['checkin_date','الدخول','date'],['checkout_date','الخروج','date'],['rate_per_night','سعر الليلة','number'],['total_amount','الإجمالي','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['booking_source','المصدر','text'],['notes','ملاحظات','textarea']]},
-  hospitality_events: {title:'تعديل حجز باقة/عزاء', fields:[['service_kind','النوع','select'],['package_name','الباقة','text'],['client_name','العميل','text'],['phone','الهاتف','text'],['event_date','التاريخ','date'],['guests','الضيوف','number'],['location_zone','المنطقة','text'],['total_amount','الإجمالي','number'],['deposit_required','العربون المطلوب','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
+  hospitality_events: {title:'تعديل حجز مجلس/عزاء', fields:[['service_kind','النوع','select'],['package_name','الباقة','text'],['client_name','العميل','text'],['phone','الهاتف','text'],['venue_location','موقع المجلس','text'],['event_date','التاريخ','date'],['guests','الضيوف','number'],['location_zone','المنطقة','text'],['total_amount','الإجمالي','number'],['deposit_required','العربون المطلوب','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   hospitality_season_rates: {title:'تعديل تسعير موسمي', fields:[['property_id','العقار','select'],['room_type','نوع الغرفة','text'],['season_name','اسم الموسم','text'],['start_date','بداية الموسم','date'],['end_date','نهاية الموسم','date'],['nightly_rate','سعر الليلة','number'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
   financial_periods: {title:'تعديل فترة مالية', fields:[['period_name','اسم الفترة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   bank_reconciliations: {title:'تعديل تسوية بنك', fields:[['bank_name','البنك','text'],['period_name','الفترة','text'],['book_balance','رصيد الدفاتر','number'],['bank_balance','رصيد كشف البنك','number'],['difference','الفرق','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
@@ -4194,32 +4194,27 @@ async function renderHospitalityPortal(force=false){
   const kpiHost = $('#hospPlatformKpis');
   if(kpiHost){
     kpiHost.innerHTML = `
-      <div class="kpi"><span>غرف</span><strong>${fmt(rooms.length)}</strong></div>
-      <div class="kpi"><span>مشغولة</span><strong>${fmt(occupied)}</strong></div>
-      <div class="kpi"><span>حجوزات غرف نشطة</span><strong>${fmt(activeBookings)}</strong></div>
-      <div class="kpi"><span>باقات/عزاء نشطة</span><strong>${fmt(activeEvents)}</strong></div>
-      <div class="kpi"><span>إيراد الباقات</span><strong>${money(eventRevenue)}</strong></div>
-      <div class="kpi"><span>تحصيل إجمالي</span><strong>${money(paid)}</strong></div>
+      <div class="kpi"><span>حجوزات مجالس نشطة</span><strong>${fmt(activeEvents)}</strong></div>
+      <div class="kpi"><span>إجمالي حجوزات المجالس</span><strong>${fmt(events.length)}</strong></div>
+      <div class="kpi"><span>إيراد المجالس</span><strong>${money(eventRevenue)}</strong></div>
+      <div class="kpi"><span>تحصيل المجالس</span><strong>${money(paidEvents)}</strong></div>
+      <div class="kpi"><span>متبقي على المجالس</span><strong>${money(Math.max(0, eventRevenue - paidEvents))}</strong></div>
+      <div class="kpi"><span>قناة الخدمة</span><strong>مجالس خارجية</strong></div>
     `;
   }
   const quick = $('#hospPlatformQuick');
   if(quick){
     quick.innerHTML = [
-      ['باقات المناسبات','hospPackagesBoard'],
+      ['باقات المجالس','hospPackagesBoard'],
       ['واجب العزاء','hospCondolenceBoard'],
-      ['حجوزات الباقات','hospitalityEventsTable'],
-      ['تقويم الغرف','hospitalityCalendarBox'],
-      ['Timeline','hospitalityTimelineBox'],
-      ['الغرف','hospitalityRoomsTable'],
-      ['حجوزات الغرف','hospitalityBookingsTable'],
-      ['تقرير PDF','report']
-    ].map(([label, target])=>{
-      if(target==='report') return `<button class="ghost" type="button" onclick="openHospitalityReport()">📄 ${label}</button>`;
-      return `<button class="ghost" type="button" onclick="document.getElementById('${target}')?.scrollIntoView({behavior:'smooth',block:'start'})">➜ ${label}</button>`;
-    }).join('');
+      ['سجل الحجوزات','hospitalityEventsTable'],
+      ['حجز مناسبة','hEventClient'],
+      ['حجز عزاء','hCondClient']
+    ].map(([label, target])=>`<button class="ghost" type="button" onclick="document.getElementById('${target}')?.scrollIntoView({behavior:'smooth',block:'start'})">➜ ${label}</button>`).join('')
+      + `<button class="ghost" type="button" onclick="document.getElementById('hospRoomsSecondary')?.setAttribute('open','');document.getElementById('hospRoomsSecondary')?.scrollIntoView({behavior:'smooth'})">غرف إقامة (منفصل)</button>`;
   }
   if(host){
-    host.innerHTML = `<span class="badge">وحدات ضيافة: ${fmt(hRows.length)}</span><span class="badge">غرف: ${fmt(rooms.length)}</span><span class="badge">مشغولة: ${fmt(occupied)}</span><span class="badge">حجوزات غرف: ${fmt(activeBookings)}</span><span class="badge">باقات/عزاء: ${fmt(activeEvents)}</span><span class="badge">تحصيل: ${money(paid)}</span><span class="badge">إيراد غرف: ${money(roomRevenue)}</span><span class="badge">مواسم: ${fmt(seasons.length)}</span>`;
+    host.innerHTML = `<span class="badge">قناة: مجالس خارجية</span><span class="badge">مفصولة عن العقارات</span><span class="badge">حجوزات مجالس: ${fmt(activeEvents)}</span><span class="badge">تحصيل مجالس: ${money(paidEvents)}</span><span class="badge">إيراد مجالس: ${money(eventRevenue)}</span>`;
   }
 
   fillSelect('#hRoomProperty', props, true, 'id', 'name', propertyLabel);
@@ -4241,7 +4236,7 @@ async function renderHospitalityPortal(force=false){
   renderHospitalityPackagesBoard();
   const eventsTable = $('#hospitalityEventsTable');
   if(eventsTable) eventsTable.innerHTML = tableHtml(
-    [['النوع','service_kind',v=>v==='condolence'?'عزاء':'مناسبة'],['الباقة','package_name'],['العميل','client_name'],['الهاتف','phone'],['التاريخ','event_date'],['الضيوف','guests',v=>fmt(v||0)],['الإجمالي','total_amount',v=>money(v)],['عربون','deposit_required',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['المتبقي','balance_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],
+    [['النوع','service_kind',v=>v==='condolence'?'عزاء':'مجلس'],['الباقة','package_name'],['العميل','client_name'],['الهاتف','phone'],['موقع المجلس','venue_location',v=>v||'—'],['التاريخ','event_date'],['الضيوف','guests',v=>fmt(v||0)],['الإجمالي','total_amount',v=>money(v)],['عربون','deposit_required',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['المتبقي','balance_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],
     events,
     r=>`<button class="ghost" onclick="editRecord('hospitality_events','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('hospitality_events','${r.id}')">حذف</button>`
   );
@@ -4406,6 +4401,7 @@ async function quoteHospitalityEvent(){
     const p = res.package || {};
     if(out){
       out.textContent = [
+        'قناة: مجلس خارجي (مفصول عن العقارات والغرف)',
         p.name_ar || '—',
         `ضيوف: ${guests} (${p.guests_min||'?'}–${p.guests_max||'?'})`,
         `طاقم: ${p.waiters||0} مضيف + ${p.supervisors||0} مشرف`,
@@ -4413,6 +4409,7 @@ async function quoteHospitalityEvent(){
         `السعر: ${money(res.price_omr)}`,
         `عربون 30%: ${money(res.deposit_omr)}`,
         res.transport_note || '',
+        res.note || '',
       ].filter(Boolean).join('\n');
     }
     if($('#hEventPaid') && !$('#hEventPaid').value) $('#hEventPaid').value = String(res.deposit_omr||0);
@@ -4434,6 +4431,7 @@ async function bookHospitalityEvent(){
         service_kind: 'event',
         client_name: val('hEventClient'),
         phone: val('hEventPhone'),
+        venue_location: val('hEventVenue'),
         event_date: val('hEventDate') || today(),
         guests,
         outside_nizwa,
@@ -4441,8 +4439,8 @@ async function bookHospitalityEvent(){
         notes: val('hEventNotes'),
       }),
     });
-    toast('تم حفظ حجز المناسبة');
-    ['hEventClient','hEventPhone','hEventNotes','hEventPaid'].forEach(id=>{ if($('#'+id)) $('#'+id).value=''; });
+    toast('تم حفظ حجز المجلس الخارجي');
+    ['hEventClient','hEventPhone','hEventVenue','hEventNotes','hEventPaid'].forEach(id=>{ if($('#'+id)) $('#'+id).value=''; });
     if($('#hEventOutside')) $('#hEventOutside').checked = false;
     Jawdah._hospCatalog = null;
     await loadAll();
@@ -4458,11 +4456,13 @@ async function quoteHospitalityCondolence(){
     });
     if(out){
       out.textContent = [
+        'قناة: عزاء في موقع خارجي (مفصول عن العقارات والغرف)',
         `واجب عزاء — ${res.zone_label||zone}`,
         `المدة: ${res.duration_days||3} أيام`,
         `السعر: ${money(res.price_omr)}`,
         `عربون 30%: ${money(res.deposit_omr)}`,
         (res.includes||[]).join(' · '),
+        res.note || '',
       ].filter(Boolean).join('\n');
     }
     if($('#hCondPaid') && !$('#hCondPaid').value) $('#hCondPaid').value = String(res.deposit_omr||0);
@@ -4481,14 +4481,15 @@ async function bookHospitalityCondolence(){
         service_kind: 'condolence',
         client_name: val('hCondClient'),
         phone: val('hCondPhone'),
+        venue_location: val('hCondVenue'),
         event_date: val('hCondDate') || today(),
         location_zone: val('hCondZone') || 'nizwa',
         paid_amount: num('hCondPaid') || 0,
         notes: val('hCondNotes'),
       }),
     });
-    toast('تم حفظ حجز واجب العزاء');
-    ['hCondClient','hCondPhone','hCondNotes','hCondPaid'].forEach(id=>{ if($('#'+id)) $('#'+id).value=''; });
+    toast('تم حفظ حجز واجب العزاء في الموقع');
+    ['hCondClient','hCondPhone','hCondVenue','hCondNotes','hCondPaid'].forEach(id=>{ if($('#'+id)) $('#'+id).value=''; });
     await loadAll();
   }catch(e){ toastErr(e); }
 }

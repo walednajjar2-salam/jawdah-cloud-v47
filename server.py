@@ -98,7 +98,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v63-hospitality-platform"
+APP_VERSION = "Launch-Quality-LLC-v64-majlis-external"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -177,7 +177,7 @@ TABLES = {
     "hospitality_bookings": ["id", "room_id", "client_id", "guest_name", "guest_phone", "checkin_date", "checkout_date", "nights", "rate_per_night", "total_amount", "paid_amount", "balance_amount", "status", "booking_source", "property_id", "notes", "created_at"],
     "hospitality_events": [
         "id", "service_kind", "package_code", "package_name", "client_id", "client_name", "phone",
-        "event_date", "guests", "location_zone", "waiters", "supervisors", "dallahs",
+        "event_date", "guests", "location_zone", "venue_location", "waiters", "supervisors", "dallahs",
         "total_amount", "deposit_required", "paid_amount", "balance_amount", "status",
         "outside_nizwa", "notes", "created_by", "created_at",
     ],
@@ -1523,6 +1523,7 @@ def init_db() -> None:
                 event_date TEXT NOT NULL,
                 guests INTEGER NOT NULL DEFAULT 0,
                 location_zone TEXT,
+                venue_location TEXT,
                 waiters INTEGER NOT NULL DEFAULT 0,
                 supervisors INTEGER NOT NULL DEFAULT 0,
                 dallahs TEXT,
@@ -2069,6 +2070,9 @@ def init_db() -> None:
         ensure_column(db, "hospitality_bookings", "created_at", "TEXT")
         ensure_column(db, "hospitality_bookings", "guest_phone", "TEXT")
         ensure_column(db, "hospitality_bookings", "notes", "TEXT")
+        ensure_column(db, "hospitality_events", "venue_location", "TEXT")
+        ensure_column(db, "hospitality_events", "location_zone", "TEXT")
+        ensure_column(db, "hospitality_events", "service_kind", "TEXT")
         ensure_column(db, "hospitality_season_rates", "property_id", "TEXT")
         ensure_column(db, "hospitality_season_rates", "room_type", "TEXT")
         ensure_column(db, "hospitality_season_rates", "season_name", "TEXT")
@@ -7893,6 +7897,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             deposit = float(quote["deposit_omr"])
 
         status = str(data.get("status") or "reserved").strip() or "reserved"
+        venue_location = str(data.get("venue_location") or data.get("majlis_location") or "").strip()
         balance = max(0.0, total - paid)
         event_id = uid("HEV")
         row = {
@@ -7906,6 +7911,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "event_date": event_date,
             "guests": guests,
             "location_zone": location_zone,
+            "venue_location": venue_location,
             "waiters": waiters,
             "supervisors": supervisors,
             "dallahs": dallahs,
@@ -7920,7 +7926,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "created_at": now_iso(),
         }
         insert(db, "hospitality_events", row)
-        # Mirror paid amount into accounts as hospitality revenue when payment recorded.
+        # Mirror paid amount into accounts as majlis hospitality revenue when payment recorded.
         if paid > 0:
             insert(
                 db,
@@ -7929,8 +7935,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "id": uid("ACC"),
                     "entry_date": event_date or today(),
                     "type": "income",
-                    "category": "Hospitality Event",
-                    "description": f"عربون/تحصيل ضيافة · {package_name} · {client_name}",
+                    "category": "Majlis Hospitality",
+                    "description": f"عربون/تحصيل مجلس خارجي · {package_name} · {client_name}"
+                    + (f" · {venue_location}" if venue_location else ""),
                     "client_id": client_id,
                     "property_id": None,
                     "invoice_id": None,
