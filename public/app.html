@@ -533,7 +533,7 @@
         </div>
 
         <div class="saas-section lq-area-projects">
-          <div class="saas-section-head"><h3>🏢 المشاريع والخريطة</h3><button type="button" class="saas-link-btn" onclick="showSection('properties')">عرض الكل ←</button></div>
+          <div class="saas-section-head"><h3>🏢 المشاريع والخريطة</h3><button type="button" class="saas-link-btn" onclick="showSection('estate-platform')">منصة العقارات ←</button></div>
           <div class="saas-split-grid">
             <div id="saasProjectsGrid" class="saas-projects-grid"></div>
             <div class="saas-glass saas-map-panel"><div class="gis-pro"><div id="nizwaMap" class="nizwa-map"></div><div id="gisPins" class="gis-pins-layer hidden"></div><div id="mapPopup" class="map-popup hidden"></div></div></div>
@@ -593,7 +593,7 @@
             <button type="button" class="estate-dock-btn" data-estate-panel="tables" onclick="showEstatePanel('tables')"><span>📋</span><b>جداول</b></button>
             <button type="button" class="estate-dock-btn" data-estate-panel="booking" onclick="showEstatePanel('booking')"><span>📌</span><b>حجز وعقود</b></button>
             <button type="button" class="estate-dock-btn" data-estate-panel="finance" onclick="showEstatePanel('finance')"><span>💰</span><b>تحصيل وإقفال</b></button>
-            <button type="button" class="estate-dock-btn" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>منصة المجالس</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="list" onclick="showSection('properties')"><span>📋</span><b>قائمة المشاريع</b></button>
           </nav>
 
           <div class="estate-panels">
@@ -1088,6 +1088,15 @@
       </section>
 
       <section id="sec-properties" class="section">
+        <div class="card" style="margin-bottom:12px">
+          <div class="toolbar" style="justify-content:space-between;align-items:center">
+            <div>
+              <h3 style="margin:0">قائمة المشاريع / الوحدات</h3>
+              <p class="mini" style="margin:4px 0 0">جدول تفصيلي ضمن منصة العقارات — للإضافة والمتابعة استخدم المنصة.</p>
+            </div>
+            <button type="button" class="gold-btn" onclick="showSection('estate-platform')">← منصة العقارات</button>
+          </div>
+        </div>
         <div class="card"><h3>إضافة عقار / وحدة</h3><div class="form"><select id="pBranch"></select><input id="pBuilding" placeholder="رقم البناية"><input id="pApartment" placeholder="رقم الوحدة"><select id="pUnitKind"><option value="غرفة مستقلة">غرفة مستقلة</option><option value="شقة كاملة">شقة كاملة</option></select><input id="pRoom" placeholder="رقم الغرفة (للغرفة المستقلة)"><input id="pUnitRoomsCount" placeholder="عدد غرف الشقة (للشقة الكاملة)" type="number" min="1"><select id="pStatus"><option value="شاغرة">شاغرة</option><option value="محجوزة">محجوزة</option><option value="مستأجرة">مستأجرة</option><option value="تحت الصيانة">تحت الصيانة</option><option value="موقوفة">موقوفة</option></select><input id="pPrice" placeholder="السعر OMR" type="number" step="0.001"><input id="pLocation" placeholder="📍 الموقع"><input id="pLat" placeholder="🧭 Latitude (اختياري)" type="number" step="0.000001"><input id="pLng" placeholder="🧭 Longitude (اختياري)" type="number" step="0.000001"><div class="lq-prop-upload-box"><label for="pPhoto">📷 صورة العقار (اختياري)</label><input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><img id="pPhotoPreview" class="lq-prop-upload-preview hidden" alt="معاينة الصورة"><span class="mini">تُحفظ على الخادم — JPG/PNG/WebP حتى 5MB</span></div><textarea id="pNotes" placeholder="ملاحظات (اختياري)"></textarea></div><button class="gold-btn" onclick="createProperty()">حفظ العقار</button></div>
         <div class="card"><div class="toolbar"><input id="propBuildingFilter" placeholder="فلتر رقم البناية" oninput="renderProperties()"><select id="propStatusFilter" onchange="renderProperties()"></select><select id="propContractFilter" onchange="renderProperties()"><option value="">كل الوحدات</option><option value="active">عليها عقد نشط</option><option value="none">بدون عقد نشط</option></select><button class="ghost" onclick="exportCsv('properties')">تصدير CSV</button><button class="ghost" onclick="exportFilteredPropertiesCsv()">تصدير نتائج الفلتر</button></div><div id="propQuickStats" class="status-line" style="margin-bottom:10px"></div><div id="propertiesTable"></div></div>
       </section>
@@ -1341,7 +1350,7 @@
   <script src="lq-business-catalog.js?v=biz1-v64" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal24-v66" defer></script>
+  <script src="app.js?v=portal24-v67" defer></script>
   <script src="lq-edition-terrifying.js?v=td3" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>
