@@ -5954,7 +5954,7 @@ window.printHospitalityFolio = printHospitalityFolio;
 
 (function(){
   const financeItems=[['purchases','فواتير المشتريات','🧾'],['revenues','الإيرادات','💎'],['statements','قائمة الدخل والميزانية','📘'],['payroll','الرواتب','👔'],['admin-expenses','مصاريف إدارية وعمومية','🏢'],['inventory','المخزن','📦'],['bank','كشف البنك','🏦'],['chart-accounts','دليل الحسابات','📒'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']];
-  const baseSections=[['dashboard','لوحة التحكم','🏛️'],['estate-platform','منصة العقارات','🏢'],['accounting-platform','منصة المحاسبة','💼'],['properties','العقارات','🏠'],['clients','العملاء','👥'],['contracts','العقود والتجديد','📑'],['invoices','الفواتير','🧾'],['accounts','الحسابات','💰'],...financeItems,['maintenance','الصيانة','🔧'],['reports','التقارير','📊'],['users','المستخدمين','🛡️'],['backup','التخزين والنسخ','💾'],['qa','اختبار التشغيل','✅']];
+  const baseSections=[['dashboard','لوحة التحكم','🏛️'],['estate-platform','منصة العقارات','🏢'],['accounting-platform','منصة المحاسبة','💼'],['business-catalog','كتالوج العمل','📋'],['properties','العقارات','🏠'],['clients','العملاء','👥'],['contracts','العقود والتجديد','📑'],['invoices','الفواتير','🧾'],['accounts','الحسابات','💰'],...financeItems,['maintenance','الصيانة','🔧'],['reports','التقارير','📊'],['users','المستخدمين','🛡️'],['backup','التخزين والنسخ','💾'],['qa','اختبار التشغيل','✅']];
   const prevBuildNav=buildNav;
   buildNav=function(){ prevBuildNav && prevBuildNav(); };
   const oldPopulate=populateSelects;

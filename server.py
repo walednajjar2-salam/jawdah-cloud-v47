@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -11158,7 +11158,7 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
 UI_SECTIONS_ALL = [
     "dashboard", "estate-platform", "accounting-platform", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
     "receivables",
-    "admin-expenses", "maintenance", "reports", "messages", "walid", "enterprise",
+    "admin-expenses", "maintenance", "reports", "messages", "walid", "enterprise", "business-catalog",
     "production", "timeline", "backup", "settings", "accounts", "purchases", "payroll",
     "inventory", "bank", "chart-accounts", "statements", "bank-reconciliation",
     "financial-periods", "approvals", "users", "qa",
@@ -11182,7 +11182,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
             "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "receivables", "revenues",
             "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
             "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
-            "reports", "backup", "messages", "timeline", "walid", "approvals",
+            "reports", "backup", "messages", "timeline", "walid", "approvals", "business-catalog",
         ],
         "kpis": [
             "income", "expense", "net", "overdue", "paid", "billed", "bank_balance", "payroll",
@@ -11193,7 +11193,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
         "sections": [
             "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices", "receivables",
             "maintenance", "inventory", "reports", "messages", "timeline", "backup",
-            "walid", "approvals", "production",
+            "walid", "approvals", "production", "business-catalog",
         ],
         "kpis": ["properties", "rented", "vacant", "occupancy", "maintenance", "expiring", "health"],
     },
