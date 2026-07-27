@@ -98,7 +98,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v61-real-business"
+APP_VERSION = "Launch-Quality-LLC-v62-hospitality-live"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -150,10 +150,10 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read"},
-    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
-    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read"},
+    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
+    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
 }
 ROLE_PERMISSIONS["operations"].update({"estate_actions_convert", "estate_actions_contract_create"})
 ROLE_PERMISSIONS["accountant"].update({"estate_actions_contract_close", "estate_actions_month_close", "estate_actions_pricing_edit"})
@@ -175,6 +175,12 @@ TABLES = {
     "inventory_transactions": ["id", "item_id", "tx_date", "tx_type", "quantity", "unit_cost", "reference", "notes"],
     "hospitality_rooms": ["id", "property_id", "room_code", "room_type", "capacity", "rate_per_night", "status", "notes"],
     "hospitality_bookings": ["id", "room_id", "client_id", "guest_name", "guest_phone", "checkin_date", "checkout_date", "nights", "rate_per_night", "total_amount", "paid_amount", "balance_amount", "status", "booking_source", "property_id", "notes", "created_at"],
+    "hospitality_events": [
+        "id", "service_kind", "package_code", "package_name", "client_id", "client_name", "phone",
+        "event_date", "guests", "location_zone", "waiters", "supervisors", "dallahs",
+        "total_amount", "deposit_required", "paid_amount", "balance_amount", "status",
+        "outside_nizwa", "notes", "created_by", "created_at",
+    ],
     "hospitality_season_rates": ["id", "property_id", "room_type", "season_name", "start_date", "end_date", "nightly_rate", "active", "notes"],
     "hospitality_folios": ["id", "booking_id", "folio_no", "issue_date", "total_amount", "paid_amount", "balance_amount", "status", "notes"],
     "bank_transactions": ["id", "bank_date", "bank_name", "reference", "type", "description", "amount", "matched_account_id", "matched_invoice_id", "matched_payment_id", "status"],
@@ -1005,6 +1011,7 @@ def reset_operational_data(db: sqlite3.Connection, *, clear_uploads: bool = True
         "estate_buildings",
         "estate_properties",
         "hospitality_folios",
+        "hospitality_events",
         "hospitality_bookings",
         "hospitality_season_rates",
         "hospitality_rooms",
@@ -1504,6 +1511,31 @@ def init_db() -> None:
                 FOREIGN KEY(room_id) REFERENCES hospitality_rooms(id),
                 FOREIGN KEY(client_id) REFERENCES clients(id),
                 FOREIGN KEY(property_id) REFERENCES properties(id)
+            );
+            CREATE TABLE IF NOT EXISTS hospitality_events (
+                id TEXT PRIMARY KEY,
+                service_kind TEXT NOT NULL,
+                package_code TEXT,
+                package_name TEXT,
+                client_id TEXT,
+                client_name TEXT NOT NULL,
+                phone TEXT,
+                event_date TEXT NOT NULL,
+                guests INTEGER NOT NULL DEFAULT 0,
+                location_zone TEXT,
+                waiters INTEGER NOT NULL DEFAULT 0,
+                supervisors INTEGER NOT NULL DEFAULT 0,
+                dallahs TEXT,
+                total_amount REAL NOT NULL DEFAULT 0,
+                deposit_required REAL NOT NULL DEFAULT 0,
+                paid_amount REAL NOT NULL DEFAULT 0,
+                balance_amount REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'reserved',
+                outside_nizwa INTEGER NOT NULL DEFAULT 0,
+                notes TEXT,
+                created_by TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(client_id) REFERENCES clients(id)
             );
             CREATE TABLE IF NOT EXISTS hospitality_season_rates (
                 id TEXT PRIMARY KEY,
@@ -4310,6 +4342,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "business_catalog" and len(parts) >= 2 and parts[1] == "hospitality_quote" and method == "POST":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_business_hospitality_quote()
+                if parts[0] == "business_catalog" and len(parts) >= 2 and parts[1] == "condolence_quote" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_business_condolence_quote()
+                if parts[0] == "hospitality" and len(parts) >= 2 and parts[1] == "event_book" and method == "POST":
+                    user = self.require_user(db, "hospitality_events")
+                    return None if not user else self.api_hospitality_event_book(db, user)
                 if parts[0] == "documents" and len(parts) >= 2 and parts[1] == "lease_cancel" and method == "POST":
                     user = self.require_user(db, "contracts:read")
                     return None if not user else self.api_lease_cancel_template(db, user)
@@ -7311,6 +7349,26 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "UPDATE hospitality_folios SET total_amount=?, paid_amount=?, balance_amount=?, status=? WHERE id=?",
                         (round(total, 3), round(paid, 3), round(balance, 3), ("closed" if balance <= 0 else "open"), f["id"]),
                     )
+        if table == "hospitality_events":
+            if method == "POST":
+                return self.send_json(
+                    {"ok": False, "error": "استخدم /api/hospitality/event_book لحجز الباقات والعزاء"},
+                    400,
+                )
+            if method == "PUT" and item_id:
+                current = db.execute("SELECT * FROM hospitality_events WHERE id=?", (item_id,)).fetchone()
+                if current:
+                    merged = dict(current)
+                    merged.update(data)
+                    data = merged
+                total = float(data.get("total_amount") or 0)
+                paid = float(data.get("paid_amount") or 0)
+                data["balance_amount"] = round(max(0.0, total - paid), 3)
+                data["total_amount"] = round(total, 3)
+                data["paid_amount"] = round(paid, 3)
+                data["deposit_required"] = round(float(data.get("deposit_required") or 0), 3)
+                data["guests"] = int(data.get("guests") or 0)
+                data["outside_nizwa"] = int(bool(data.get("outside_nizwa")))
         if table == "hospitality_season_rates":
             season_name = str(data.get("season_name") or "").strip()
             start_date = str(data.get("start_date") or "").strip()
@@ -7783,18 +7841,105 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_business_hospitality_quote(self) -> None:
         data = self.read_json()
         guests = int(data.get("guests") or 0)
-        pkg = lq_business_catalog.pick_hospitality_package(guests)
-        if not pkg:
-            return self.send_json({"ok": False, "error": "لا عرض مناسب"}, 400)
-        self.send_json(
-            {
-                "ok": True,
-                "guests": guests,
-                "package": pkg,
-                "terms": lq_business_catalog.HOSPITALITY_TERMS,
-                "currency": "OMR",
-            }
-        )
+        outside = bool(data.get("outside_nizwa"))
+        result = lq_business_catalog.quote_event_package(guests, outside_nizwa=outside)
+        status = 200 if result.get("ok") else 400
+        self.send_json(result, status)
+
+    def api_business_condolence_quote(self) -> None:
+        data = self.read_json()
+        zone = str(data.get("zone") or "nizwa")
+        self.send_json(lq_business_catalog.quote_condolence(zone))
+
+    def api_hospitality_event_book(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        kind = str(data.get("service_kind") or "event").strip().lower()
+        client_name = str(data.get("client_name") or data.get("guest_name") or "").strip()
+        phone = str(data.get("phone") or "").strip()
+        event_date = str(data.get("event_date") or today()).strip()
+        notes = str(data.get("notes") or "").strip()
+        client_id = str(data.get("client_id") or "").strip() or None
+        paid = float(data.get("paid_amount") or 0)
+        if not client_name:
+            return self.send_json({"ok": False, "error": "اسم العميل مطلوب"}, 400)
+
+        if kind == "condolence":
+            quote = lq_business_catalog.quote_condolence(str(data.get("location_zone") or data.get("zone") or "nizwa"))
+            package_code = "condolence"
+            package_name = f"واجب عزاء — {quote['zone_label']}"
+            guests = 0
+            waiters = 8
+            supervisors = 2
+            dallahs = "حسب الخدمة"
+            location_zone = quote["zone"]
+            outside = 1 if location_zone != "nizwa" else 0
+            total = float(quote["price_omr"])
+            deposit = float(quote["deposit_omr"])
+        else:
+            guests = int(data.get("guests") or 0)
+            outside_flag = bool(data.get("outside_nizwa"))
+            quote = lq_business_catalog.quote_event_package(guests, outside_nizwa=outside_flag)
+            if not quote.get("ok"):
+                return self.send_json(quote, 400)
+            pkg = quote["package"]
+            package_code = pkg["code"]
+            package_name = pkg["name_ar"]
+            waiters = int(pkg["waiters"])
+            supervisors = int(pkg["supervisors"])
+            dallahs = str(pkg["dallahs"])
+            location_zone = "outside" if outside_flag else "nizwa"
+            outside = 1 if outside_flag else 0
+            total = float(quote["price_omr"])
+            deposit = float(quote["deposit_omr"])
+
+        status = str(data.get("status") or "reserved").strip() or "reserved"
+        balance = max(0.0, total - paid)
+        event_id = uid("HEV")
+        row = {
+            "id": event_id,
+            "service_kind": "condolence" if kind == "condolence" else "event",
+            "package_code": package_code,
+            "package_name": package_name,
+            "client_id": client_id,
+            "client_name": client_name,
+            "phone": phone,
+            "event_date": event_date,
+            "guests": guests,
+            "location_zone": location_zone,
+            "waiters": waiters,
+            "supervisors": supervisors,
+            "dallahs": dallahs,
+            "total_amount": total,
+            "deposit_required": deposit,
+            "paid_amount": paid,
+            "balance_amount": balance,
+            "status": status,
+            "outside_nizwa": outside,
+            "notes": notes,
+            "created_by": user.get("username") or user.get("name") or "",
+            "created_at": now_iso(),
+        }
+        insert(db, "hospitality_events", row)
+        # Mirror paid amount into accounts as hospitality revenue when payment recorded.
+        if paid > 0:
+            insert(
+                db,
+                "accounts",
+                {
+                    "id": uid("ACC"),
+                    "entry_date": event_date or today(),
+                    "type": "income",
+                    "category": "Hospitality Event",
+                    "description": f"عربون/تحصيل ضيافة · {package_name} · {client_name}",
+                    "client_id": client_id,
+                    "property_id": None,
+                    "invoice_id": None,
+                    "amount": paid,
+                },
+            )
+        audit(db, user, "hospitality_event_book", "hospitality_events", event_id, f"{package_name} · {total}")
+        db.commit()
+        self.send_json({"ok": True, "event": row, "quote": quote})
 
     def api_lease_cancel_template(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()

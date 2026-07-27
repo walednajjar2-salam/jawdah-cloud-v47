@@ -2916,6 +2916,8 @@ function editOptions(field, row, table=''){
   if(table === 'bank_reconciliations' && field === 'status') return ['Pending','Reconciled','Variance'].map(x=>[x,x]);
   if(table === 'hospitality_rooms' && field === 'status') return ['available','reserved','occupied','maintenance'].map(x=>[x,x]);
   if(table === 'hospitality_bookings' && field === 'status') return ['reserved','checked_in','checked_out','cancelled'].map(x=>[x,x]);
+  if(table === 'hospitality_events' && field === 'status') return ['reserved','confirmed','completed','cancelled'].map(x=>[x,x]);
+  if(table === 'hospitality_events' && field === 'service_kind') return [['event','مناسبة'],['condolence','عزاء']];
   if(table === 'hospitality_bookings' && field === 'room_id') return (Jawdah.data.hospitality_rooms||[]).map(x=>[x.id, `${x.room_code||x.id} · ${propertyLabel(byId('properties',x.property_id))}`]);
   if(table === 'hospitality_season_rates' && field === 'active') return [['1','Active'],['0','Inactive']];
   if(field === 'deposit_received') return [['1','نعم — تم الاستلام'],['0','لا — لم يُستلم']];
@@ -2931,6 +2933,7 @@ const EDIT_CONFIG = {
   chart_accounts: {title:'تعديل حساب في الدليل', fields:[['code','رمز الحساب','text'],['name','اسم الحساب','text'],['type','نوع الحساب','select'],['parent_code','الحساب الأب','select'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
   hospitality_rooms: {title:'تعديل غرفة ضيافة', fields:[['property_id','العقار','select'],['room_code','رمز الغرفة','text'],['room_type','النوع','text'],['capacity','السعة','number'],['rate_per_night','سعر الليلة','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   hospitality_bookings: {title:'تعديل حجز ضيافة', fields:[['room_id','الغرفة','select'],['client_id','العميل','select'],['guest_name','اسم النزيل','text'],['guest_phone','الهاتف','text'],['checkin_date','الدخول','date'],['checkout_date','الخروج','date'],['rate_per_night','سعر الليلة','number'],['total_amount','الإجمالي','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['booking_source','المصدر','text'],['notes','ملاحظات','textarea']]},
+  hospitality_events: {title:'تعديل حجز باقة/عزاء', fields:[['service_kind','النوع','select'],['package_name','الباقة','text'],['client_name','العميل','text'],['phone','الهاتف','text'],['event_date','التاريخ','date'],['guests','الضيوف','number'],['location_zone','المنطقة','text'],['total_amount','الإجمالي','number'],['deposit_required','العربون المطلوب','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   hospitality_season_rates: {title:'تعديل تسعير موسمي', fields:[['property_id','العقار','select'],['room_type','نوع الغرفة','text'],['season_name','اسم الموسم','text'],['start_date','بداية الموسم','date'],['end_date','نهاية الموسم','date'],['nightly_rate','سعر الليلة','number'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
   financial_periods: {title:'تعديل فترة مالية', fields:[['period_name','اسم الفترة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   bank_reconciliations: {title:'تعديل تسوية بنك', fields:[['bank_name','البنك','text'],['period_name','الفترة','text'],['book_balance','رصيد الدفاتر','number'],['bank_balance','رصيد كشف البنك','number'],['difference','الفرق','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
@@ -4172,14 +4175,16 @@ async function renderHospitalityPortal(force=false){
   const props = Jawdah.data?.properties || [];
   const rooms = Jawdah.data?.hospitality_rooms || [];
   const bookings = Jawdah.data?.hospitality_bookings || [];
+  const events = Jawdah.data?.hospitality_events || [];
   const seasons = Jawdah.data?.hospitality_season_rates || [];
   const folios = Jawdah.data?.hospitality_folios || [];
   const clients = Jawdah.data?.clients || [];
   const hRows = props.filter(r=>['hospitality','hotel','resort','short-term'].includes(String(r.type||'').toLowerCase()));
   const occupied = rooms.filter(r=>String(r.status||'').toLowerCase()==='occupied').length;
   const activeBookings = bookings.filter(b=>['reserved','checked_in'].includes(String(b.status||'').toLowerCase())).length;
-  const paid = bookings.reduce((s,b)=>s+Number(b.paid_amount||0),0);
-  host.innerHTML = `<span class="badge">وحدات ضيافة: ${fmt(hRows.length)}</span><span class="badge">غرف: ${fmt(rooms.length)}</span><span class="badge">مشغولة: ${fmt(occupied)}</span><span class="badge">حجوزات نشطة: ${fmt(activeBookings)}</span><span class="badge">تحصيل: ${money(paid)}</span><span class="badge">مواسم: ${fmt(seasons.length)}</span>`;
+  const activeEvents = events.filter(e=>['reserved','confirmed'].includes(String(e.status||'').toLowerCase())).length;
+  const paid = bookings.reduce((s,b)=>s+Number(b.paid_amount||0),0) + events.reduce((s,e)=>s+Number(e.paid_amount||0),0);
+  host.innerHTML = `<span class="badge">وحدات ضيافة: ${fmt(hRows.length)}</span><span class="badge">غرف: ${fmt(rooms.length)}</span><span class="badge">مشغولة: ${fmt(occupied)}</span><span class="badge">حجوزات غرف: ${fmt(activeBookings)}</span><span class="badge">باقات/عزاء: ${fmt(activeEvents)}</span><span class="badge">تحصيل: ${money(paid)}</span><span class="badge">مواسم: ${fmt(seasons.length)}</span>`;
 
   fillSelect('#hRoomProperty', props, true, 'id', 'name', propertyLabel);
   fillSelect('#hSeasonProperty', props, true, 'id', 'name', propertyLabel);
@@ -4188,12 +4193,22 @@ async function renderHospitalityPortal(force=false){
   if($('#hBookingRoom')) $('#hBookingRoom').innerHTML = '<option value="">اختر غرفة</option>' + roomOpts;
   if($('#hBookingCheckin') && !$('#hBookingCheckin').value) $('#hBookingCheckin').value = today();
   if($('#hBookingCheckout') && !$('#hBookingCheckout').value) $('#hBookingCheckout').value = today();
+  if($('#hEventDate') && !$('#hEventDate').value) $('#hEventDate').value = today();
+  if($('#hCondDate') && !$('#hCondDate').value) $('#hCondDate').value = today();
   if($('#hSummaryFrom') && !$('#hSummaryFrom').value) $('#hSummaryFrom').value = today().slice(0,8)+'01';
   if($('#hSummaryTo') && !$('#hSummaryTo').value) $('#hSummaryTo').value = today();
   if($('#hCalMonth') && !$('#hCalMonth').value) $('#hCalMonth').value = today().slice(0,7);
   if($('#hSeasonStart') && !$('#hSeasonStart').value) $('#hSeasonStart').value = today();
   if($('#hSeasonEnd') && !$('#hSeasonEnd').value) $('#hSeasonEnd').value = today();
   if($('#hRoomCapacity') && !$('#hRoomCapacity').value) $('#hRoomCapacity').value = '2';
+
+  renderHospitalityPackagesBoard();
+  const eventsTable = $('#hospitalityEventsTable');
+  if(eventsTable) eventsTable.innerHTML = tableHtml(
+    [['النوع','service_kind',v=>v==='condolence'?'عزاء':'مناسبة'],['الباقة','package_name'],['العميل','client_name'],['الهاتف','phone'],['التاريخ','event_date'],['الضيوف','guests',v=>fmt(v||0)],['الإجمالي','total_amount',v=>money(v)],['عربون','deposit_required',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['المتبقي','balance_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],
+    events,
+    r=>`<button class="ghost" onclick="editRecord('hospitality_events','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('hospitality_events','${r.id}')">حذف</button>`
+  );
 
   const alertsHost = $('#hospitalityCheckoutAlerts');
   if(alertsHost){
@@ -4282,6 +4297,164 @@ async function renderHospitalityPortal(force=false){
       if(typeHost) typeHost.innerHTML = '';
     }
   }
+}
+const HOSPITALITY_PACKAGE_FALLBACK = [
+  {code:'offer1', name_ar:'العرض الأول', guests_min:20, guests_max:120, waiters:5, supervisors:1, dallahs:'5', price_omr:140},
+  {code:'offer2', name_ar:'العرض الثاني', guests_min:120, guests_max:250, waiters:10, supervisors:1, dallahs:'10', price_omr:230},
+  {code:'offer3', name_ar:'العرض الثالث', guests_min:250, guests_max:400, waiters:15, supervisors:1, dallahs:'15', price_omr:310},
+  {code:'offer4', name_ar:'العرض الرابع', guests_min:400, guests_max:600, waiters:20, supervisors:2, dallahs:'20-25', price_omr:400},
+  {code:'offer5', name_ar:'العرض الخامس', guests_min:600, guests_max:800, waiters:30, supervisors:2, dallahs:'25-30', price_omr:480},
+  {code:'offer6', name_ar:'العرض السادس', guests_min:800, guests_max:1000, waiters:35, supervisors:2, dallahs:'30-35', price_omr:550},
+];
+const HOSPITALITY_CONDOLENCE_FALLBACK = [
+  {zone:'داخل نزوى', price_omr:450, key:'nizwa'},
+  {zone:'خارج نزوى (قريب)', price_omr:500, key:'near'},
+  {zone:'خارج المحافظة', price_omr:550, key:'outside'},
+];
+async function renderHospitalityPackagesBoard(){
+  const pkgHost = $('#hospPackagesBoard');
+  const condHost = $('#hospCondolenceBoard');
+  if(!pkgHost && !condHost) return;
+  let pkgs = HOSPITALITY_PACKAGE_FALLBACK;
+  let condPrices = HOSPITALITY_CONDOLENCE_FALLBACK;
+  try{
+    if(!Jawdah._hospCatalog){
+      const res = await api('business_catalog');
+      Jawdah._hospCatalog = res.catalog || {};
+    }
+    const cat = Jawdah._hospCatalog || {};
+    if(Array.isArray(cat.hospitality_packages) && cat.hospitality_packages.length) pkgs = cat.hospitality_packages;
+    if(Array.isArray(cat.condolence?.prices) && cat.condolence.prices.length){
+      condPrices = cat.condolence.prices.map((p,i)=>({
+        zone:p.zone,
+        price_omr:p.price_omr,
+        key: i===0?'nizwa':(i===1?'near':'outside'),
+      }));
+    }
+  }catch(_e){ /* keep fallback */ }
+  if(pkgHost){
+    pkgHost.innerHTML = pkgs.map(p=>`
+      <button type="button" class="ghost" style="text-align:right;min-width:160px"
+        onclick="selectHospitalityPackage(${Number(p.guests_min||20)}, ${Number(p.price_omr||0)})">
+        <b>${htmlEscape(p.name_ar||'')}</b><br>
+        <span class="mini">${fmt(p.guests_min)}–${fmt(p.guests_max)} ضيف · ${fmt(p.waiters)} مضيف · ${htmlEscape(String(p.dallahs||''))} دلال</span><br>
+        <b>${money(p.price_omr)}</b>
+      </button>`).join('');
+  }
+  if(condHost){
+    condHost.innerHTML = condPrices.map(p=>`
+      <button type="button" class="ghost" onclick="selectHospitalityCondolence('${htmlEscape(p.key||'nizwa')}')">
+        <b>عزاء · ${htmlEscape(p.zone||'')}</b><br><b>${money(p.price_omr)}</b> / 3 أيام
+      </button>`).join('');
+  }
+}
+function selectHospitalityPackage(guestsMin, price){
+  if($('#hEventGuests')) $('#hEventGuests').value = String(guestsMin||150);
+  const deposit = Math.round((Number(price||0)*0.3)*1000)/1000;
+  if($('#hEventPaid') && !$('#hEventPaid').value) $('#hEventPaid').value = String(deposit);
+  quoteHospitalityEvent();
+}
+function selectHospitalityCondolence(zone){
+  if($('#hCondZone')) $('#hCondZone').value = zone || 'nizwa';
+  quoteHospitalityCondolence();
+}
+async function quoteHospitalityEvent(){
+  const out = $('#hEventQuoteOut');
+  try{
+    const guests = num('hEventGuests') || 0;
+    const outside_nizwa = !!( $('#hEventOutside') && $('#hEventOutside').checked );
+    const res = await api('business_catalog/hospitality_quote', {
+      method:'POST',
+      body: JSON.stringify({ guests, outside_nizwa }),
+    });
+    const p = res.package || {};
+    if(out){
+      out.textContent = [
+        p.name_ar || '—',
+        `ضيوف: ${guests} (${p.guests_min||'?'}–${p.guests_max||'?'})`,
+        `طاقم: ${p.waiters||0} مضيف + ${p.supervisors||0} مشرف`,
+        `دلال: ${p.dallahs||'—'}`,
+        `السعر: ${money(res.price_omr)}`,
+        `عربون 30%: ${money(res.deposit_omr)}`,
+        res.transport_note || '',
+      ].filter(Boolean).join('\n');
+    }
+    if($('#hEventPaid') && !$('#hEventPaid').value) $('#hEventPaid').value = String(res.deposit_omr||0);
+    return res;
+  }catch(e){
+    if(out) out.textContent = String(e.message||e);
+    toastErr(e);
+  }
+}
+async function bookHospitalityEvent(){
+  try{
+    const guests = num('hEventGuests') || 0;
+    if(!val('hEventClient')){ toastErr(new Error('اسم العميل مطلوب')); return; }
+    if(guests < 1){ toastErr(new Error('أدخل عدد الضيوف')); return; }
+    const outside_nizwa = !!( $('#hEventOutside') && $('#hEventOutside').checked );
+    await api('hospitality/event_book', {
+      method:'POST',
+      body: JSON.stringify({
+        service_kind: 'event',
+        client_name: val('hEventClient'),
+        phone: val('hEventPhone'),
+        event_date: val('hEventDate') || today(),
+        guests,
+        outside_nizwa,
+        paid_amount: num('hEventPaid') || 0,
+        notes: val('hEventNotes'),
+      }),
+    });
+    toast('تم حفظ حجز المناسبة');
+    ['hEventClient','hEventPhone','hEventNotes','hEventPaid'].forEach(id=>{ if($('#'+id)) $('#'+id).value=''; });
+    if($('#hEventOutside')) $('#hEventOutside').checked = false;
+    Jawdah._hospCatalog = null;
+    await loadAll();
+  }catch(e){ toastErr(e); }
+}
+async function quoteHospitalityCondolence(){
+  const out = $('#hCondQuoteOut');
+  try{
+    const zone = val('hCondZone') || 'nizwa';
+    const res = await api('business_catalog/condolence_quote', {
+      method:'POST',
+      body: JSON.stringify({ zone }),
+    });
+    if(out){
+      out.textContent = [
+        `واجب عزاء — ${res.zone_label||zone}`,
+        `المدة: ${res.duration_days||3} أيام`,
+        `السعر: ${money(res.price_omr)}`,
+        `عربون 30%: ${money(res.deposit_omr)}`,
+        (res.includes||[]).join(' · '),
+      ].filter(Boolean).join('\n');
+    }
+    if($('#hCondPaid') && !$('#hCondPaid').value) $('#hCondPaid').value = String(res.deposit_omr||0);
+    return res;
+  }catch(e){
+    if(out) out.textContent = String(e.message||e);
+    toastErr(e);
+  }
+}
+async function bookHospitalityCondolence(){
+  try{
+    if(!val('hCondClient')){ toastErr(new Error('اسم العميل مطلوب')); return; }
+    await api('hospitality/event_book', {
+      method:'POST',
+      body: JSON.stringify({
+        service_kind: 'condolence',
+        client_name: val('hCondClient'),
+        phone: val('hCondPhone'),
+        event_date: val('hCondDate') || today(),
+        location_zone: val('hCondZone') || 'nizwa',
+        paid_amount: num('hCondPaid') || 0,
+        notes: val('hCondNotes'),
+      }),
+    });
+    toast('تم حفظ حجز واجب العزاء');
+    ['hCondClient','hCondPhone','hCondNotes','hCondPaid'].forEach(id=>{ if($('#'+id)) $('#'+id).value=''; });
+    await loadAll();
+  }catch(e){ toastErr(e); }
 }
 async function createHospitalityRoom(){
   try{
@@ -4484,6 +4657,13 @@ window.setPropertyTimelineFilters = setPropertyTimelineFilters;
 window.setOwnerTimelineFilter = setOwnerTimelineFilter;
 window.exportOwnerTimelineCsv = exportOwnerTimelineCsv;
 window.renderHospitalityPortal = renderHospitalityPortal;
+window.renderHospitalityPackagesBoard = renderHospitalityPackagesBoard;
+window.selectHospitalityPackage = selectHospitalityPackage;
+window.selectHospitalityCondolence = selectHospitalityCondolence;
+window.quoteHospitalityEvent = quoteHospitalityEvent;
+window.bookHospitalityEvent = bookHospitalityEvent;
+window.quoteHospitalityCondolence = quoteHospitalityCondolence;
+window.bookHospitalityCondolence = bookHospitalityCondolence;
 window.runSalamAgent = runSalamAgent;
 window.createHospitalityRoom = createHospitalityRoom;
 window.createHospitalityBooking = createHospitalityBooking;

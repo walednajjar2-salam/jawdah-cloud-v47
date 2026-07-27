@@ -224,7 +224,8 @@
           "ضيوف: " + guests + ` (${p.guests_min}–${p.guests_max})`,
           "طاقم: " + p.waiters + " مضيف + " + p.supervisors + " مشرف",
           "دلال ذهبية: " + p.dallahs,
-          "السعر: " + money(p.price_omr),
+          "السعر: " + money(res.price_omr),
+          "عربون 30%: " + money(res.deposit_omr),
         ].join("\n");
       }
     } catch (e) {

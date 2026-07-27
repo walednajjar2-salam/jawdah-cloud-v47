@@ -208,6 +208,49 @@ def pick_hospitality_package(guests: int) -> Optional[Dict[str, Any]]:
     return dict(HOSPITALITY_PACKAGES[-1])
 
 
+def quote_condolence(zone: str = "nizwa") -> Dict[str, Any]:
+    z = (zone or "nizwa").strip().lower()
+    mapping = {
+        "nizwa": ("داخل نزوى", 450.0),
+        "near": ("خارج نزوى (قريب)", 500.0),
+        "outside": ("خارج المحافظة", 550.0),
+    }
+    label, price = mapping.get(z, mapping["nizwa"])
+    return {
+        "ok": True,
+        "service_kind": "condolence",
+        "zone": z,
+        "zone_label": label,
+        "duration_days": CONDOLENCE_PRICING["duration_days"],
+        "shifts": CONDOLENCE_PRICING["shifts"],
+        "includes": CONDOLENCE_PRICING["includes"],
+        "price_omr": price,
+        "deposit_omr": round(price * 0.30, 3),
+        "notes": CONDOLENCE_PRICING["notes"],
+        "currency": "OMR",
+    }
+
+
+def quote_event_package(guests: int, *, outside_nizwa: bool = False) -> Dict[str, Any]:
+    pkg = pick_hospitality_package(guests)
+    if not pkg:
+        return {"ok": False, "error": "لا عرض مناسب"}
+    price = float(pkg["price_omr"])
+    transport_note = "خارج نزوى: تُضاف رسوم نقل حسب الاتفاق" if outside_nizwa else "السعر لنزوى"
+    return {
+        "ok": True,
+        "service_kind": "event",
+        "guests": int(guests or 0),
+        "package": pkg,
+        "price_omr": price,
+        "deposit_omr": round(price * 0.30, 3),
+        "outside_nizwa": bool(outside_nizwa),
+        "transport_note": transport_note,
+        "terms": HOSPITALITY_TERMS,
+        "currency": "OMR",
+    }
+
+
 def catalog_payload() -> Dict[str, Any]:
     return {
         "company": COMPANY_PROFILE,

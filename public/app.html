@@ -1026,8 +1026,57 @@
       <section id="sec-hospitality" class="section">
         <div class="card accounting-hero">
           <h3>قسم الضيافة</h3>
-          <p class="mini">تشغيل ضيافة فعلي: غرف، حجوزات، تحصيل، وربط مباشر بلوحة المالك الحية.</p>
+          <p class="mini">تشغيل ضيافة فعلي: باقات المناسبات، واجب العزاء، غرف، حجوزات، وتحصيل مباشر.</p>
           <div id="hospitalityQuickBox" class="status-line"></div>
+        </div>
+        <div class="card">
+          <h3>باقات المناسبات وواجب العزاء</h3>
+          <p class="mini">أسعار نزوى الرسمية · عربون 30% · تأكيد قبل 72 ساعة · خارج نزوى رسوم نقل إضافية.</p>
+          <div id="hospPackagesBoard" class="status-line" style="flex-wrap:wrap;gap:8px;margin:10px 0"></div>
+          <div id="hospCondolenceBoard" class="status-line" style="flex-wrap:wrap;gap:8px;margin:0 0 12px"></div>
+          <div class="layout">
+            <div>
+              <h4>حجز مناسبة</h4>
+              <div class="form">
+                <input id="hEventClient" placeholder="اسم العميل">
+                <input id="hEventPhone" placeholder="الهاتف">
+                <input id="hEventDate" type="date">
+                <input id="hEventGuests" type="number" min="1" placeholder="عدد الضيوف" value="150">
+                <label class="mini" style="display:flex;align-items:center;gap:6px"><input id="hEventOutside" type="checkbox"> خارج نزوى (نقل إضافي)</label>
+                <input id="hEventPaid" type="number" step="0.001" placeholder="المدفوع الآن (عربون)">
+                <textarea id="hEventNotes" placeholder="ملاحظات المناسبة"></textarea>
+              </div>
+              <div class="toolbar" style="gap:8px;margin-top:8px">
+                <button type="button" class="ghost" onclick="quoteHospitalityEvent()">عرض السعر</button>
+                <button type="button" class="gold-btn" onclick="bookHospitalityEvent()">حفظ حجز المناسبة</button>
+              </div>
+              <pre id="hEventQuoteOut" class="mini" style="white-space:pre-wrap;background:rgba(0,0,0,.04);padding:10px;border-radius:8px;margin-top:8px">أدخل عدد الضيوف ثم اعرض السعر.</pre>
+            </div>
+            <div>
+              <h4>حجز واجب عزاء (3 أيام)</h4>
+              <div class="form">
+                <input id="hCondClient" placeholder="اسم صاحب العزاء / العميل">
+                <input id="hCondPhone" placeholder="الهاتف">
+                <input id="hCondDate" type="date">
+                <select id="hCondZone">
+                  <option value="nizwa">داخل نزوى — 450 ر.ع</option>
+                  <option value="near">خارج نزوى (قريب) — 500 ر.ع</option>
+                  <option value="outside">خارج المحافظة — من 550 ر.ع</option>
+                </select>
+                <input id="hCondPaid" type="number" step="0.001" placeholder="المدفوع الآن (عربون)">
+                <textarea id="hCondNotes" placeholder="ملاحظات العزاء"></textarea>
+              </div>
+              <div class="toolbar" style="gap:8px;margin-top:8px">
+                <button type="button" class="ghost" onclick="quoteHospitalityCondolence()">عرض السعر</button>
+                <button type="button" class="gold-btn" onclick="bookHospitalityCondolence()">حفظ حجز العزاء</button>
+              </div>
+              <pre id="hCondQuoteOut" class="mini" style="white-space:pre-wrap;background:rgba(0,0,0,.04);padding:10px;border-radius:8px;margin-top:8px">اختر المنطقة ثم اعرض السعر.</pre>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <h4>حجوزات الباقات والعزاء</h4>
+            <div id="hospitalityEventsTable"></div>
+          </div>
         </div>
         <div class="card"><h3>تحليلات الضيافة</h3><div class="toolbar"><input id="hSummaryFrom" type="date"><input id="hSummaryTo" type="date"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التحليل</button><button class="gold-btn" type="button" onclick="openHospitalityReport()">تقرير الضيافة PDF</button></div><div id="hospitalitySummaryBox" class="status-line"></div><div id="hospitalityTypeBox"></div></div>
         <div class="card"><h3>تنبيهات Check-out</h3><div id="hospitalityCheckoutAlerts" class="status-line"></div></div>
@@ -1297,10 +1346,10 @@
   <script src="lq-payroll-import.js?v=pi3-real" defer></script>
   <script src="lq-walid-intel.js?v=wi2" defer></script>
   <script src="lq-enterprise.js?v=ent6-v59" defer></script>
-  <script src="lq-business-catalog.js?v=biz1-v61" defer></script>
+  <script src="lq-business-catalog.js?v=biz1-v62" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal24-v61" defer></script>
+  <script src="app.js?v=portal24-v62" defer></script>
   <script src="lq-edition-terrifying.js?v=td3" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>
