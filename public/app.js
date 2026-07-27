@@ -3913,6 +3913,7 @@ function applySavedPortalChoice(){
     location.replace('/portal-select.html?from=app&t=' + Date.now() + (tok ? ('&token=' + tok) : ''));
     return;
   }
+  buildNav();
   if(choice==='hospitality') showSection('hospitality-platform');
   else if(choice==='accounting') showSection('accounting-platform');
   else showSection('estate-platform');
