@@ -1,12 +1,15 @@
-Launch Quality LLC v49 — Direct Production Deployment
+Launch Quality LLC v68-stable — Production Baseline (مثبّت)
 
 Repo: https://github.com/walednajjar2-salam/jawdah-cloud-v47
+Release notes: RELEASE_v68.md
+Live: https://web-production-08d73.up.railway.app/fresh
+Health: https://web-production-08d73.up.railway.app/api/health
+Expected version: Launch-Quality-LLC-v68-stable
 
-1) Push branch to GitHub (repo root)
-2) Railway -> Deploy from GitHub -> select jawdah-cloud-v47
-3) Ensure Volume exists and is mounted:
+1) Deploy from GitHub branch `main` (tagged v68-stable)
+2) Railway Volume mounted at:
    /app/data
-4) Variables:
+3) Core variables:
    JAWDAH_HOST=0.0.0.0
    JAWDAH_DATA_DIR=/app/data
    JAWDAH_BACKUP_DIR=/app/data/backups
@@ -15,12 +18,15 @@ Repo: https://github.com/walednajjar2-salam/jawdah-cloud-v47
    JAWDAH_BACKUP_RETENTION=30
    JAWDAH_STORAGE_WARN_GB=2
    ADMIN_PASSWORD=<secure-password>
-5) Generate domain and verify:
-   /api/health
-   /api/backup/status
-   /api/permissions/audit (admin)
-6) Smoke flow:
-   login -> create client -> create/approve contract -> invoice -> payment -> backup
+4) Verify:
+   /api/health  -> version contains v68-stable, ok=true, platform_ready=true
+   /fresh       -> clear cache then login
+5) Smoke flow:
+   portal select -> estate / majlis / accounting hubs
+   majlis event book OR estate contract -> invoice -> payment -> backup
 
 Start command: python server.py
 Health check: /api/health
+
+Policy: do not reset existing user passwords on deploy.
+Stable freeze: do not ship unsolicited feature changes on top of v68 without a new version request.
