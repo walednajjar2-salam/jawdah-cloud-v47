@@ -1819,7 +1819,7 @@ function renderDashMegaCockpit(k,data,eng){
     : (portal==='accounting'
       ? `<article class="bento-tile bento-span-12 saas-glass hotel-hero"><div class="bento-head"><h4>💼 منصة المحاسبة</h4><button type="button" class="saas-link-btn" onclick="showSection('accounting-platform')">دخول المنصة</button></div><div class="status-line"><span class="badge">صافي ${money(k.net||0)}</span><span class="badge">متأخر ${money(k.overdue||0)}</span><span class="badge">تحصيل ${fmt(eng.collectionPct)}%</span></div></article>`
       : `<article class="bento-tile bento-span-12 saas-glass hotel-hero"><div class="bento-head"><h4>🏢 منصة العقارات</h4><button type="button" class="saas-link-btn" onclick="showSection('estate-platform')">دخول المنصة</button></div><div class="status-line"><span class="badge">وحدات ${fmt(k.properties||0)}</span><span class="badge">إشغال ${fmt(k.occupancy||0)}%</span><span class="badge">عقود نشطة ${fmt(activeCount)}</span></div></article>`);
-  const estateBlock = portal==='realestate' || (!portal || (portal!=='hospitality' && portal!=='accounting')) ? `
+  const estateBlock = portal==='realestate' ? `
     <article class="bento-tile bento-span-6 saas-glass cockpit-zone mega-portfolio-map"><span class="cockpit-zone-label">Portfolio Map · خريطة المحفظة</span><div class="bento-head"><h4>🔥 حرارة الأداء · 6 أشهر</h4><button type="button" class="saas-link-btn" onclick="showSection('estate-platform')">المحفظة</button></div><div class="heat-map">${heatHtml}</div><div class="bld-list" style="margin-top:12px">${bldHtml}</div></article>
     <article class="bento-tile bento-span-6 saas-glass cockpit-zone"><div class="bento-head"><h4>💳 أعمار الذمم + مسار العقود</h4></div><div class="pipe-list" style="margin-bottom:12px">${pipeHtml}</div><div class="aging-bars">${agingHtml}</div></article>
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>👥 أفضل العملاء</h4><button type="button" class="saas-link-btn" onclick="showSection('clients')">الكل</button></div><div class="rank-list">${clientsHtml}</div></article>
@@ -1891,7 +1891,7 @@ function renderDashboard(){
     {key:'health',icon:'🎯',label:'نسبة التحصيل',value:fmt(k.billed?Math.round((Number(k.paid||0)/Number(k.billed))*100):0)+'%',go:'accounting-platform',hint:money(k.overdue||0)+' متأخر',trend:'↑'}
   ];
   const kpis = portal==='hospitality' ? majlisKpis : (portal==='accounting' ? accountingKpis : estateKpis);
-  const kpis2 = portal==='realestate' || (portal!=='hospitality' && portal!=='accounting') ? [
+  const kpis2 = portal==='realestate' ? [
     {key:'vacant',icon:'🏠',label:'وحدات شاغرة',value:fmt(k.vacant||0),go:estateGo,hint:'تسويق',trend:Number(k.vacant||0)>0?'↓':'↑'},
     {key:'maintenance',icon:'🔧',label:'صيانة مفتوحة',value:fmt(openMaint.length),go:'maintenance',hint:'طلبات',trend:openMaint.length?'↓':'↑'},
     {key:'contracts',icon:'📄',label:'عقود نشطة',value:fmt(contracts.filter(c=>String(c.status||'').toLowerCase()==='active').length),go:'contracts',hint:'سارية',trend:'↑'},
