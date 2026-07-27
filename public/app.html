@@ -383,8 +383,8 @@
         </button>
         <button type="button" class="portal-tile" onclick="choosePortal('hospitality')">
           <span class="portal-icon">🏨</span>
-          <b>منصة الضيافة</b>
-          <small>مجالس خارجية · مناسبات · عزاء (مفصولة عن العقارات)</small>
+          <b>منصة المجالس</b>
+          <small>مجالس خارجية · مناسبات · عزاء</small>
         </button>
         <button type="button" class="portal-tile" onclick="choosePortal('accounting')">
           <span class="portal-icon">💼</span>
@@ -482,7 +482,7 @@
         <div id="lqCockpitWrap" class="lq-cockpit-wrap">
         <div id="vaDashBanner" class="va-dash-banner saas-glass"></div>
         <div class="lq-cockpit-grid">
-        <div id="dashSimStage" class="lq-sim-stage saas-glass lq-area-sim" aria-label="محاكاة تشغيلية"></div>
+        <div id="dashSimStage" class="lq-sim-stage saas-glass lq-area-sim hidden" aria-hidden="true" style="display:none!important"></div>
         <div id="dashExecHero" class="saas-exec-hero saas-glass lq-area-hero"></div>
 
         <div id="dashLiveTicker" class="dash-live-ticker saas-glass lq-area-ticker"></div>
@@ -593,7 +593,7 @@
             <button type="button" class="estate-dock-btn" data-estate-panel="tables" onclick="showEstatePanel('tables')"><span>📋</span><b>جداول</b></button>
             <button type="button" class="estate-dock-btn" data-estate-panel="booking" onclick="showEstatePanel('booking')"><span>📌</span><b>حجز وعقود</b></button>
             <button type="button" class="estate-dock-btn" data-estate-panel="finance" onclick="showEstatePanel('finance')"><span>💰</span><b>تحصيل وإقفال</b></button>
-            <button type="button" class="estate-dock-btn" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>منصة الضيافة</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>منصة المجالس</b></button>
           </nav>
 
           <div class="estate-panels">
@@ -1025,8 +1025,8 @@
       <section id="sec-timeline" class="section"><div id="timelinePageBox"></div></section>
       <section id="sec-hospitality-platform" class="section">
         <div class="card accounting-hero">
-          <h3>منصة الضيافة — المجالس الخارجية</h3>
-          <p class="mini">خدمة ضيافة في المجالس والمناسبات الخارجية فقط · مفصولة تماماً عن العقارات والغرف · عربون 30% · تأكيد قبل 72 ساعة.</p>
+          <h3>منصة المجالس الخارجية</h3>
+          <p class="mini">خدمة ضيافة في المجالس والمناسبات الخارجية فقط · مفصولة تماماً عن العقارات · عربون 30% · تأكيد قبل 72 ساعة.</p>
           <div id="hospPlatformKpis" class="grid kpis"></div>
           <div id="hospitalityQuickBox" class="status-line" style="margin-top:10px"></div>
         </div>
@@ -1036,7 +1036,7 @@
         </div>
         <div class="card" id="hospMajlisSection">
           <h3>باقات المجالس الخارجية وواجب العزاء</h3>
-          <p class="mini">هذه الباقات تُنفَّذ في مجالس خارجية (موقع العميل) — ليست غرفاً وليست وحدات عقارية.</p>
+          <p class="mini">تُنفَّذ في مجالس خارجية (موقع العميل) — ليست غرفاً وليست وحدات عقارية.</p>
           <div id="hospPackagesBoard" class="status-line" style="flex-wrap:wrap;gap:8px;margin:10px 0"></div>
           <div id="hospCondolenceBoard" class="status-line" style="flex-wrap:wrap;gap:8px;margin:0 0 12px"></div>
           <div class="layout">
@@ -1085,25 +1085,6 @@
             <div id="hospitalityEventsTable"></div>
           </div>
         </div>
-        <details class="card" id="hospRoomsSecondary" style="margin-top:12px">
-          <summary style="cursor:pointer;font-weight:800;font-size:1.05rem">قسم منفصل اختياري: غرف الإقامة (ليس للمجالس)</summary>
-          <p class="mini" style="margin:8px 0 12px">هذا القسم للإقامة الليلية فقط إن لزم — لا علاقة له بباقات المجالس الخارجية ولا بمنصة العقارات التشغيلية للمجالس.</p>
-          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>تحليلات غرف الإقامة</h3><div class="toolbar"><input id="hSummaryFrom" type="date"><input id="hSummaryTo" type="date"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التحليل</button><button class="gold-btn" type="button" onclick="openHospitalityReport()">تقرير الغرف PDF</button></div><div id="hospitalitySummaryBox" class="status-line"></div><div id="hospitalityTypeBox"></div></div>
-          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>تنبيهات Check-out</h3><div id="hospitalityCheckoutAlerts" class="status-line"></div></div>
-          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>تقويم حجوزات الغرف</h3><div class="toolbar"><input id="hCalMonth" type="month"><button class="ghost" type="button" onclick="renderHospitalityPortal(true)">تحديث التقويم</button></div><div id="hospitalityCalendarBox"></div></div>
-          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>Timeline الغرف</h3><p class="mini">اسحب الحجز بالكامل لتحريك الفترة، أو اسحب الحافة لتعديل تاريخ الدخول/الخروج.</p><div id="hospitalityTimelineBox"></div></div>
-          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>تسعير موسمي للغرف</h3><div class="form"><select id="hSeasonProperty"></select><input id="hSeasonRoomType" placeholder="نوع الغرفة (اختياري)"><input id="hSeasonName" placeholder="اسم الموسم"><input id="hSeasonStart" type="date"><input id="hSeasonEnd" type="date"><input id="hSeasonRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><select id="hSeasonActive"><option value="1">Active</option><option value="0">Inactive</option></select><textarea id="hSeasonNotes" placeholder="ملاحظات الموسم"></textarea></div><button class="gold-btn" onclick="createHospitalitySeasonRate()">حفظ التسعير</button></div>
-          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>إضافة غرفة إقامة</h3><div class="form"><select id="hRoomProperty"></select><input id="hRoomCode" placeholder="رمز/رقم الغرفة"><input id="hRoomType" placeholder="نوع الغرفة"><input id="hRoomCapacity" placeholder="السعة" type="number"><input id="hRoomRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><select id="hRoomStatus"><option value="available">available</option><option value="reserved">reserved</option><option value="occupied">occupied</option><option value="maintenance">maintenance</option></select><textarea id="hRoomNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createHospitalityRoom()">حفظ الغرفة</button></div>
-          <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>حجز غرفة إقامة</h3><div class="form"><select id="hBookingRoom"></select><select id="hBookingClient"></select><input id="hBookingGuest" placeholder="اسم النزيل"><input id="hBookingPhone" placeholder="هاتف النزيل"><input id="hBookingCheckin" type="date"><input id="hBookingCheckout" type="date"><input id="hBookingRate" placeholder="سعر الليلة OMR" type="number" step="0.001"><input id="hBookingPaid" placeholder="المدفوع OMR" type="number" step="0.001"><select id="hBookingStatus"><option value="reserved">reserved</option><option value="checked_in">checked_in</option><option value="checked_out">checked_out</option><option value="cancelled">cancelled</option></select><input id="hBookingSource" placeholder="مصدر الحجز"><textarea id="hBookingNotes" placeholder="ملاحظات الحجز"></textarea></div><button class="gold-btn" onclick="createHospitalityBooking()">حفظ حجز الغرفة</button></div>
-          <div class="layout">
-            <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>الغرف</h3><div id="hospitalityRoomsTable"></div></div>
-            <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>حجوزات الغرف</h3><div id="hospitalityBookingsTable"></div></div>
-          </div>
-          <div class="layout">
-            <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>أسعار المواسم</h3><div id="hospitalitySeasonsTable"></div></div>
-            <div class="card" style="box-shadow:none;border:1px solid rgba(0,0,0,.08)"><h3>فوليو الغرف</h3><div id="hospitalityFoliosTable"></div></div>
-          </div>
-        </details>
       </section>
 
       <section id="sec-properties" class="section">
@@ -1360,7 +1341,7 @@
   <script src="lq-business-catalog.js?v=biz1-v64" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal24-v64" defer></script>
+  <script src="app.js?v=portal24-v66" defer></script>
   <script src="lq-edition-terrifying.js?v=td3" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>

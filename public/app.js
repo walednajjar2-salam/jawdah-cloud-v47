@@ -41,7 +41,7 @@ const PROPERTY_STATUSES = ['شاغرة', 'محجوزة', 'مستأجرة', 'تح
 const NAV_SAAS_ITEMS = [
   ['dashboard','لوحة التحكم','🏠'],
   ['estate-platform','منصة العقارات','🏢'],
-  ['hospitality-platform','منصة الضيافة','🏨'],
+  ['hospitality-platform','منصة المجالس','🏨'],
   ['accounting-platform','منصة المحاسبة','💼'],
   ['daily-ops','العمليات اليومية','🗂️'],
   ['properties','المشاريع','🏢'],
@@ -60,18 +60,54 @@ const NAV_SAAS_ITEMS = [
   ['business-catalog','كتالوج العمل','📋'],
   ['production','المتابعة','✅'],
   ['timeline','الجدول الزمني','📅'],
-  ['backup','المستندات','📂'],
+  ['backup','النسخ الاحتياطي','📂'],
   ['settings','الإعدادات','⚙️']
 ];
+/** Portal-scoped product nav — only these appear in Operations for each portal. */
+const PORTAL_NAV_IDS = {
+  realestate: new Set([
+    'dashboard','estate-platform','clients','contracts','invoices','receivables',
+    'maintenance','inventory','daily-ops','reports','messages','timeline','backup'
+  ]),
+  hospitality: new Set([
+    'dashboard','hospitality-platform','clients','invoices','receivables',
+    'business-catalog','daily-ops','reports','messages','backup'
+  ]),
+  accounting: new Set([
+    'dashboard','accounting-platform','accounts','invoices','receivables','revenues',
+    'admin-expenses','purchases','payroll','bank','bank-reconciliation','financial-periods',
+    'chart-accounts','statements','approvals','reports','messages','backup'
+  ]),
+};
+/** Hidden from normal ops nav — owner/admin tools only. */
+const ADMIN_TOOL_NAV_IDS = new Set(['walid','enterprise','production','qa','users','settings']);
+/** Demoted from product nav (still reachable if linked). */
+const DEMOTED_NAV_IDS = new Set(['properties','tasks','hospitality']);
 const SECTION_TITLES = {
-  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','hospitality-platform':'منصة الضيافة · مجالس','accounting-platform':'منصة المحاسبة','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'منصة الضيافة · مجالس',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
+  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','hospitality-platform':'منصة المجالس','accounting-platform':'منصة المحاسبة','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'منصة المجالس',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
   revenues:'الإيرادات',invoices:'المدفوعات',receivables:'التحصيل الذكي','admin-expenses':'المصروفات',maintenance:'الصيانة',
-  reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي','business-catalog':'كتالوج العمل',production:'المتابعة',timeline:'الجدول الزمني',
-  backup:'المستندات',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
+  reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي','business-catalog':'كتالوج العمل',production:'أدوات الجاهزية',timeline:'الجدول الزمني',
+  backup:'النسخ الاحتياطي',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
   purchases:'فواتير المشتريات',payroll:'الرواتب',inventory:'المخزن',bank:'كشف البنك',
   'chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية',statements:'القوائم المالية',
   approvals:'مركز الاعتمادات'
 };
+function currentPortalChoice(){
+  const c = String(localStorage.getItem('jawdah_portal_choice')||'realestate').trim().toLowerCase();
+  if(c==='hospitality' || c==='accounting') return c;
+  return 'realestate';
+}
+function portalAllowsNavId(id){
+  const portal = currentPortalChoice();
+  const allowed = PORTAL_NAV_IDS[portal] || PORTAL_NAV_IDS.realestate;
+  if(DEMOTED_NAV_IDS.has(id)) return false;
+  if(ADMIN_TOOL_NAV_IDS.has(id)) return false;
+  // Cross-portal hubs: never show other platforms in the same sidebar.
+  if(id==='estate-platform' && portal!=='realestate') return false;
+  if(id==='hospitality-platform' && portal!=='hospitality') return false;
+  if(id==='accounting-platform' && portal!=='accounting') return false;
+  return allowed.has(id);
+}
 function resolveSection(id){
   if(id==='hospitality') return 'hospitality-platform';
   return id==='settings' ? (canManageUsersSection() ? 'users' : 'backup') : id;
@@ -1046,48 +1082,53 @@ function employeeGreeting(name){
 function buildNav(){
   const nav=$('#nav'); if(!nav) return; nav.innerHTML='';
   const addGroup=(t)=>{const g=document.createElement('div'); g.className='nav-group-label'; g.textContent=t; nav.appendChild(g);};
+  const addBtn=(id,label,icon,cls='')=>{
+    if(!uiAllowedSection(id)) return;
+    const b=document.createElement('button'); b.dataset.section=id;
+    if(cls) b.className=cls;
+    b.innerHTML=`<span class="nav-icon">${icon}</span><span class="nav-text"><span class="nav-ar">${label}</span></span>`;
+    b.onclick=()=>showSection(id); nav.appendChild(b);
+  };
+  const portal = currentPortalChoice();
+  const portalLabel = portal==='hospitality' ? 'مجالس' : (portal==='accounting' ? 'محاسبة' : 'عقارات');
   if(canManageUsersSection()){
     addGroup('Owner · المالك');
     if(isPrimaryOwnerUser()){
-      const ob=document.createElement('button'); ob.dataset.section='owner-staff';
-      ob.innerHTML='<span class="nav-icon">👑</span><span class="nav-text"><span class="nav-ar">متابعة الموظفين</span></span>';
-      ob.onclick=()=>showSection('owner-staff'); nav.appendChild(ob);
-    }
-    if(isPrimaryOwnerUser()){
-      const lb=document.createElement('button'); lb.dataset.section='owner-live';
-      lb.innerHTML='<span class="nav-icon">🛰️</span><span class="nav-text"><span class="nav-ar">لوحة المالك الحية</span></span>';
-      lb.onclick=()=>showSection('owner-live'); nav.appendChild(lb);
+      addBtn('owner-staff','متابعة الموظفين','👑');
+      addBtn('owner-live','لوحة المالك الحية','🛰️');
     }
   }
-  addGroup('Operations · التشغيل');
+  addGroup(`تشغيل · ${portalLabel}`);
   NAV_SAAS_ITEMS.forEach(([id,label,icon])=>{
-    if(!uiAllowedSection(id)) return;
+    if(!portalAllowsNavId(id)) return;
     if(['revenues','admin-expenses'].includes(id) && !canSeeFinance()) return;
     if(id==='settings' && !Jawdah.user) return;
-    const b=document.createElement('button'); b.dataset.section=id;
-    b.innerHTML=`<span class="nav-icon">${icon}</span><span class="nav-text"><span class="nav-ar">${label}</span></span>`;
-    b.onclick=()=>showSection(id); nav.appendChild(b);
+    addBtn(id,label,icon);
   });
-  if(canSeeFinance() || canSeeInventory()){
-    addGroup('Finance · المالية');
-    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{
+  // Finance extras only inside accounting portal (or inventory for realestate).
+  if(portal==='accounting' && (canSeeFinance() || canSeeInventory())){
+    addGroup('المالية');
+    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{
       if(!canSeeFinanceSection(id)) return;
-      const b=document.createElement('button'); b.dataset.section=id; b.className='nav-finance-extra';
-      b.innerHTML=`<span class="nav-icon">${icon}</span><span class="nav-text"><span class="nav-ar">${label}</span></span>`;
-      b.onclick=()=>showSection(id); nav.appendChild(b);
+      if(!portalAllowsNavId(id) && id!=='accounts') return;
+      addBtn(id,label,icon,'nav-finance-extra');
     });
   }
-  if(canSeeApprovals()){
-    addGroup('Governance · الاعتمادات');
-    const b=document.createElement('button'); b.dataset.section='approvals';
-    b.innerHTML='<span class="nav-icon">✅</span><span class="nav-text"><span class="nav-ar">مركز الاعتمادات</span></span>';
-    b.onclick=()=>showSection('approvals'); nav.appendChild(b);
+  if(portal==='realestate' && canSeeInventory()){
+    addBtn('inventory','المخزن','📦','nav-finance-extra');
+  }
+  if(portal==='accounting' && canSeeApprovals()){
+    addGroup('الاعتمادات');
+    addBtn('approvals','مركز الاعتمادات','✅');
   }
   if(canManageUsersSection()){
-    addGroup('Intelligence · الإدارة');
-    const b=document.createElement('button'); b.dataset.section='users';
-    b.innerHTML=`<span class="nav-icon">🛡️</span><span class="nav-text"><span class="nav-ar">المستخدمين</span></span>`;
-    b.onclick=()=>showSection('users'); nav.appendChild(b);
+    addGroup('أدوات الإدارة');
+    addBtn('users','المستخدمين','🛡️');
+    addBtn('business-catalog','كتالوج العمل','📋');
+    addBtn('walid','وليد · الذكاء','🤖');
+    addBtn('enterprise','التوسع / البنية','🏛️');
+    addBtn('production','جاهزية النظام','✅');
+    if(portal==='realestate') addBtn('properties','المشاريع (قائمة)','🏢');
   }
   renderDashSideMenu();
 }
@@ -1095,13 +1136,15 @@ function renderDashSideMenu(){
   const host=$('#dashSideMenu'); if(!host) return;
   const items=[];
   NAV_SAAS_ITEMS.forEach(([id,label,icon])=>{
+    if(!portalAllowsNavId(id)) return;
     if(['revenues','admin-expenses'].includes(id) && !canSeeFinance()) return;
     items.push({id,label,icon});
   });
-  if(canSeeFinance() || canSeeInventory()){
-    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['inventory','مخزن','📦'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
+  if(currentPortalChoice()==='accounting' && (canSeeFinance() || canSeeInventory())){
+    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
   }
-  if(canSeeApprovals()) items.push({id:'approvals',label:'مركز الاعتمادات',icon:'✅'});
+  if(currentPortalChoice()==='realestate' && canSeeInventory()) items.push({id:'inventory',label:'المخزن',icon:'📦'});
+  if(currentPortalChoice()==='accounting' && canSeeApprovals()) items.push({id:'approvals',label:'مركز الاعتمادات',icon:'✅'});
   if(canManageUsersSection()) items.push({id:'users',label:'المستخدمين',icon:'🛡️'});
   if(isPrimaryOwnerUser()){
     items.push({id:'owner-staff',label:'متابعة الموظفين',icon:'👑'});
@@ -1691,6 +1734,10 @@ function renderDashLiveTicker(ticker){
 }
 function renderDashSimStage(k,eng){
   const host=$('#dashSimStage'); if(!host) return;
+  // Simulation stage retired from production UX.
+  host.classList.add('hidden');
+  host.style.display='none';
+  return;
   const health=Math.round(Number(k.health||k.occupancy||0));
   const occ=Math.round(Number(k.occupancy||0));
   const coll=eng?.collectionPct||0;
@@ -1783,7 +1830,7 @@ function renderDashMegaCockpit(k,data,eng){
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>👥 أفضل العملاء</h4><button type="button" class="saas-link-btn" onclick="showSection('clients')">الكل</button></div><div class="rank-list">${clientsHtml}</div></article>
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>🏢 أداء العقارات</h4><button type="button" class="saas-link-btn" onclick="showSection('properties')">الكل</button></div><div class="rank-list">${propsHtml}</div></article>
     <article class="bento-tile bento-span-4 saas-glass"><div class="bento-head"><h4>🔧 عمليات الصيانة</h4></div><div class="maint-ops"><div><b>${fmt(eng.openMaintCount)}</b><span>مفتوحة</span></div><div><b>${fmt(eng.closedMaintCount)}</b><span>مغلقة</span></div><div><b>${fmt(eng.slaPct)}%</b><span>SLA</span></div></div><button type="button" class="ghost" onclick="showSection('maintenance')">إدارة الصيانة</button></article>
-    <article class="bento-tile bento-span-12 saas-glass hotel-hero"><div class="bento-head"><h4>🏨 منصة الضيافة · مجالس خارجية</h4><button type="button" class="saas-link-btn" onclick="showSection('hospitality-platform')">دخول المنصة</button></div><div class="status-line"><span class="badge">مجالس خارجية</span><span class="badge">مفصولة عن العقارات</span><span class="badge">غرف إقامة اختيارية منفصلة</span></div><div class="hotel-grid">${hCards}</div></article>
+    <article class="bento-tile bento-span-12 saas-glass hotel-hero"><div class="bento-head"><h4>🏨 منصة المجالس الخارجية</h4><button type="button" class="saas-link-btn" onclick="choosePortal('hospitality')">دخول المنصة</button></div><div class="status-line"><span class="badge">مجالس خارجية</span><span class="badge">مفصولة عن العقارات</span><span class="badge">مناسبات · عزاء</span></div></article>
     <article class="bento-tile bento-span-12 saas-glass"><div class="bento-head"><h4>📅 الأحداث القادمة</h4><button type="button" class="saas-link-btn" onclick="showSection('timeline')">الجدول</button></div><div class="event-list">${eventsHtml}</div></article>`;
 }
 function renderDashRecentInvoices(invoices){
@@ -3834,6 +3881,7 @@ function choosePortal(portal){
   const choice = portal==='hospitality' ? 'hospitality' : (portal==='accounting' ? 'accounting' : 'realestate');
   localStorage.setItem('jawdah_portal_choice', choice);
   closePortalSwitch();
+  buildNav();
   if(choice==='hospitality') showSection('hospitality-platform');
   else if(choice==='accounting') showSection('accounting-platform');
   else showSection('estate-platform');
@@ -4175,22 +4223,10 @@ function bindHospitalityTimelineInteractions(monthStart, monthEnd, daysInMonth){
 async function renderHospitalityPortal(force=false){
   const host = $('#hospitalityQuickBox');
   if(!host && !$('#sec-hospitality-platform')) return;
-  const props = Jawdah.data?.properties || [];
-  const rooms = Jawdah.data?.hospitality_rooms || [];
-  const bookings = Jawdah.data?.hospitality_bookings || [];
   const events = Jawdah.data?.hospitality_events || [];
-  const seasons = Jawdah.data?.hospitality_season_rates || [];
-  const folios = Jawdah.data?.hospitality_folios || [];
-  const clients = Jawdah.data?.clients || [];
-  const hRows = props.filter(r=>['hospitality','hotel','resort','short-term'].includes(String(r.type||'').toLowerCase()));
-  const occupied = rooms.filter(r=>String(r.status||'').toLowerCase()==='occupied').length;
-  const activeBookings = bookings.filter(b=>['reserved','checked_in'].includes(String(b.status||'').toLowerCase())).length;
   const activeEvents = events.filter(e=>['reserved','confirmed'].includes(String(e.status||'').toLowerCase())).length;
-  const paidRooms = bookings.reduce((s,b)=>s+Number(b.paid_amount||0),0);
   const paidEvents = events.reduce((s,e)=>s+Number(e.paid_amount||0),0);
-  const paid = paidRooms + paidEvents;
   const eventRevenue = events.reduce((s,e)=>s+Number(e.total_amount||0),0);
-  const roomRevenue = bookings.reduce((s,b)=>s+Number(b.total_amount||0),0);
   const kpiHost = $('#hospPlatformKpis');
   if(kpiHost){
     kpiHost.innerHTML = `
@@ -4210,29 +4246,13 @@ async function renderHospitalityPortal(force=false){
       ['سجل الحجوزات','hospitalityEventsTable'],
       ['حجز مناسبة','hEventClient'],
       ['حجز عزاء','hCondClient']
-    ].map(([label, target])=>`<button class="ghost" type="button" onclick="document.getElementById('${target}')?.scrollIntoView({behavior:'smooth',block:'start'})">➜ ${label}</button>`).join('')
-      + `<button class="ghost" type="button" onclick="document.getElementById('hospRoomsSecondary')?.setAttribute('open','');document.getElementById('hospRoomsSecondary')?.scrollIntoView({behavior:'smooth'})">غرف إقامة (منفصل)</button>`;
+    ].map(([label, target])=>`<button class="ghost" type="button" onclick="document.getElementById('${target}')?.scrollIntoView({behavior:'smooth',block:'start'})">➜ ${label}</button>`).join('');
   }
   if(host){
     host.innerHTML = `<span class="badge">قناة: مجالس خارجية</span><span class="badge">مفصولة عن العقارات</span><span class="badge">حجوزات مجالس: ${fmt(activeEvents)}</span><span class="badge">تحصيل مجالس: ${money(paidEvents)}</span><span class="badge">إيراد مجالس: ${money(eventRevenue)}</span>`;
   }
-
-  fillSelect('#hRoomProperty', props, true, 'id', 'name', propertyLabel);
-  fillSelect('#hSeasonProperty', props, true, 'id', 'name', propertyLabel);
-  fillSelect('#hBookingClient', clients, true, 'id', 'name');
-  const roomOpts = (rooms||[]).map(r=>`<option value="${r.id}">${htmlEscape(r.room_code||r.id)} · ${htmlEscape(byId('properties',r.property_id).name||'')}</option>`).join('');
-  if($('#hBookingRoom')) $('#hBookingRoom').innerHTML = '<option value="">اختر غرفة</option>' + roomOpts;
-  if($('#hBookingCheckin') && !$('#hBookingCheckin').value) $('#hBookingCheckin').value = today();
-  if($('#hBookingCheckout') && !$('#hBookingCheckout').value) $('#hBookingCheckout').value = today();
   if($('#hEventDate') && !$('#hEventDate').value) $('#hEventDate').value = today();
   if($('#hCondDate') && !$('#hCondDate').value) $('#hCondDate').value = today();
-  if($('#hSummaryFrom') && !$('#hSummaryFrom').value) $('#hSummaryFrom').value = today().slice(0,8)+'01';
-  if($('#hSummaryTo') && !$('#hSummaryTo').value) $('#hSummaryTo').value = today();
-  if($('#hCalMonth') && !$('#hCalMonth').value) $('#hCalMonth').value = today().slice(0,7);
-  if($('#hSeasonStart') && !$('#hSeasonStart').value) $('#hSeasonStart').value = today();
-  if($('#hSeasonEnd') && !$('#hSeasonEnd').value) $('#hSeasonEnd').value = today();
-  if($('#hRoomCapacity') && !$('#hRoomCapacity').value) $('#hRoomCapacity').value = '2';
-
   renderHospitalityPackagesBoard();
   const eventsTable = $('#hospitalityEventsTable');
   if(eventsTable) eventsTable.innerHTML = tableHtml(
@@ -4240,94 +4260,6 @@ async function renderHospitalityPortal(force=false){
     events,
     r=>`<button class="ghost" onclick="editRecord('hospitality_events','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('hospitality_events','${r.id}')">حذف</button>`
   );
-
-  const alertsHost = $('#hospitalityCheckoutAlerts');
-  if(alertsHost){
-    const soon = bookings.filter(b=>{
-      const st = String(b.status||'').toLowerCase();
-      if(!['reserved','checked_in'].includes(st)) return false;
-      if(!b.checkout_date) return false;
-      const diff = Math.floor((new Date(b.checkout_date+'T00:00:00') - new Date())/(1000*60*60*24));
-      return diff >= 0 && diff <= 2;
-    }).sort((a,b)=>String(a.checkout_date||'').localeCompare(String(b.checkout_date||'')));
-    alertsHost.innerHTML = soon.length
-      ? soon.slice(0,8).map(b=>`<span class="badge overdue">Check-out قريب: ${htmlEscape(b.guest_name||'')||'نزيل'} · ${htmlEscape(b.checkout_date||'')}</span>`).join('')
-      : '<span class="badge paid">لا توجد عمليات Check-out عاجلة خلال 48 ساعة</span>';
-  }
-
-  const calHost = $('#hospitalityCalendarBox');
-  if(calHost){
-    const monthVal = val('hCalMonth') || today().slice(0,7);
-    const [yy,mm] = monthVal.split('-').map(Number);
-    const monthStart = new Date(yy, (mm||1)-1, 1);
-    const monthEnd = new Date(yy, (mm||1), 0);
-    const firstWeekday = monthStart.getDay();
-    const daysInMonth = monthEnd.getDate();
-    const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const cellItems = [];
-    for(let i=0;i<firstWeekday;i++) cellItems.push('<div class="hcal-cell muted"></div>');
-    for(let d=1; d<=daysInMonth; d++){
-      const ds = `${yy}-${String(mm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const dayBookings = bookings.filter(b=>{
-        const st = String(b.status||'').toLowerCase();
-        if(['cancelled','checked_out'].includes(st)) return false;
-        return (String(b.checkin_date||'') <= ds) && (String(b.checkout_date||'') >= ds);
-      });
-      const chips = dayBookings.slice(0,2).map(b=>`<span class="hcal-chip">${htmlEscape((rooms.find(r=>r.id===b.room_id)?.room_code)||'غرفة')} · ${htmlEscape(b.guest_name||'')}</span>`).join('');
-      const more = dayBookings.length>2 ? `<span class="hcal-more">+${dayBookings.length-2}</span>` : '';
-      cellItems.push(`<div class="hcal-cell"><div class="hcal-day">${d}</div>${chips}${more}</div>`);
-    }
-    calHost.innerHTML = `<div class="hcal-grid hcal-head">${dayLabels.map(x=>`<div class="hcal-head-cell">${x}</div>`).join('')}</div><div class="hcal-grid">${cellItems.join('')}</div>`;
-  }
-  const tlHost = $('#hospitalityTimelineBox');
-  if(tlHost){
-    const mode = canEditHospitalityTimeline() ? 'تعديل مباشر (Drag/Resize) مفعل' : 'عرض فقط — التعديل للمالك/الإدارة/العمليات';
-    tlHost.setAttribute('data-mode', mode);
-  }
-
-  const roomsTable = $('#hospitalityRoomsTable');
-  if(roomsTable) roomsTable.innerHTML = tableHtml(
-    [['العقار','property_id',v=>v?propertyLabel(byId('properties',v)):'—'],['الغرفة','room_code'],['النوع','room_type'],['السعة','capacity',v=>fmt(v)],['سعر الليلة','rate_per_night',v=>money(v)],['الحالة','status',v=>badge(v)]],
-    rooms,
-    r=>`<button class="ghost" onclick="editRecord('hospitality_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('hospitality_rooms','${r.id}')">حذف</button>`
-  );
-  const bookingsTable = $('#hospitalityBookingsTable');
-  if(bookingsTable) bookingsTable.innerHTML = tableHtml(
-    [['الغرفة','room_id',v=>(rooms.find(x=>x.id===v)?.room_code)||v],['النزيل','guest_name'],['الهاتف','guest_phone'],['الدخول','checkin_date'],['الخروج','checkout_date'],['ليالٍ','nights',v=>fmt(v)],['الإجمالي','total_amount',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['المتبقي','balance_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],
-    bookings,
-    r=>`<button class="ghost" onclick="setHospitalityBookingStatus('${r.id}','checked_in')">Check-in</button> <button class="ghost" onclick="setHospitalityBookingStatus('${r.id}','checked_out')">Check-out</button> <button class="ghost" onclick="editRecord('hospitality_bookings','${r.id}')">تعديل</button>`
-  );
-  renderHospitalityTimeline(rooms, bookings);
-  const seasonsTable = $('#hospitalitySeasonsTable');
-  if(seasonsTable) seasonsTable.innerHTML = tableHtml(
-    [['العقار','property_id',v=>v?propertyLabel(byId('properties',v)):'كل العقارات'],['النوع','room_type',v=>v||'كل الأنواع'],['الموسم','season_name'],['من','start_date'],['إلى','end_date'],['سعر الليلة','nightly_rate',v=>money(v)],['نشط','active',v=>v?badge('active'):badge('inactive')]],
-    seasons,
-    r=>`<button class="ghost" onclick="editRecord('hospitality_season_rates','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('hospitality_season_rates','${r.id}')">حذف</button>`
-  );
-  const foliosTable = $('#hospitalityFoliosTable');
-  if(foliosTable) foliosTable.innerHTML = tableHtml(
-    [['رقم الفوليو','folio_no'],['الحجز','booking_id'],['تاريخ الإصدار','issue_date'],['الإجمالي','total_amount',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['المتبقي','balance_amount',v=>money(v)],['الحالة','status',v=>badge(v)]],
-    folios,
-    r=>`<button class="gold-btn" onclick="printHospitalityFolio('${r.id}')">PDF</button>`
-  );
-  const sumHost = $('#hospitalitySummaryBox');
-  const typeHost = $('#hospitalityTypeBox');
-  if(sumHost){
-    try{
-      const from = val('hSummaryFrom') || (today().slice(0,8)+'01');
-      const to = val('hSummaryTo') || today();
-      const res = await api(`hospitality_summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
-      const s = res.summary || {};
-      const k = s.kpis || {};
-      sumHost.innerHTML = `<span class="badge">Occupancy: ${fmt(k.occupancy_pct||0)}%</span><span class="badge">ADR: ${money(k.adr||0)}</span><span class="badge">RevPAR: ${money(k.revpar||0)}</span><span class="badge">إجمالي إيراد: ${money(k.total_revenue||0)}</span><span class="badge">مدفوع: ${money(k.paid_revenue||0)}</span><span class="badge">متبقي: ${money(k.balance_revenue||0)}</span><span class="badge">Sold Nights: ${fmt(k.sold_nights||0)}</span>`;
-      if(typeHost){
-        typeHost.innerHTML = tableHtml([['نوع الغرفة','room_type'],['عدد الحجوزات','bookings',v=>fmt(v)],['الإيراد','revenue',v=>money(v)]], s.room_type_breakdown || []);
-      }
-    }catch(e){
-      sumHost.innerHTML = '<span class="badge pending">تعذر تحميل ملخص الضيافة</span>';
-      if(typeHost) typeHost.innerHTML = '';
-    }
-  }
 }
 const HOSPITALITY_PACKAGE_FALLBACK = [
   {code:'offer1', name_ar:'العرض الأول', guests_min:20, guests_max:120, waiters:5, supervisors:1, dallahs:'5', price_omr:140},
@@ -5171,7 +5103,7 @@ window.printHospitalityFolio = printHospitalityFolio;
         ['finance','💰','تحصيل وإقفال'],
       ];
       host.innerHTML = items.map(([id,icon,label])=>`<button type="button" data-estate-panel="${id}" onclick="showEstatePanel('${id}')"><span>${icon}</span><b>${label}</b></button>`).join('')
-        + `<button type="button" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>منصة الضيافة</b></button>`;
+        + `<button type="button" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>منصة المجالس</b></button>`;
       const header = shell.querySelector('.app-header');
       if(header && header.nextSibling) header.parentNode.insertBefore(host, header.nextSibling);
       else shell.insertBefore(host, shell.firstChild);
