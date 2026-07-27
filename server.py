@@ -98,7 +98,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v67-portal-ready"
+APP_VERSION = "Launch-Quality-LLC-v68-portal-accuracy"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -2626,32 +2626,34 @@ def build_owner_live_hub(db: sqlite3.Connection, timeline_days: int = 7) -> Dict
     )
     timeline_days = normalize_timeline_days(timeline_days, 7)
     timeline_cutoff = (datetime.now() - timedelta(days=timeline_days)).strftime("%Y-%m-%d %H:%M:%S") if timeline_days > 0 else ""
-    timeline_sql = """
+    # Majlis external events (not hotel room bookings)
+    events_sql = """
             SELECT
-                a.id,
-                a.created_at,
-                a.username,
-                a.entity_id AS booking_id,
-                a.details,
-                b.guest_name,
-                b.checkin_date,
-                b.checkout_date,
-                r.room_code
-            FROM audit_log a
-            LEFT JOIN hospitality_bookings b ON b.id = a.entity_id
-            LEFT JOIN hospitality_rooms r ON r.id = b.room_id
-            WHERE a.action = 'timeline_update'
-              AND a.entity = 'hospitality_bookings'
+                id,
+                created_at,
+                client_name,
+                package_name,
+                event_date,
+                venue_location,
+                status,
+                total_amount,
+                paid_amount,
+                balance_amount,
+                service_kind,
+                phone
+            FROM hospitality_events
     """
-    timeline_args: List[Any] = []
+    events_args: List[Any] = []
     if timeline_days > 0:
-        timeline_sql += " AND datetime(a.created_at) >= datetime(?)"
-        timeline_args.append(timeline_cutoff)
-    timeline_sql += """
-            ORDER BY a.created_at DESC
+        events_sql += " WHERE datetime(COALESCE(created_at, event_date)) >= datetime(?)"
+        events_args.append(timeline_cutoff)
+    events_sql += """
+            ORDER BY datetime(COALESCE(created_at, event_date)) DESC
             LIMIT 20
     """
-    timeline_updates = rows_to_dicts(db.execute(timeline_sql, tuple(timeline_args)).fetchall())
+    majlis_events = rows_to_dicts(db.execute(events_sql, tuple(events_args)).fetchall())
+    # Keep empty room-timeline list for backward compatibility; UI now shows majlis events.
+    timeline_updates: List[Dict[str, Any]] = []
     prop_map = {p["id"]: p for p in properties}
     inv_value_by_property: Dict[str, float] = {}
     for item in inventory_items:
@@ -2685,18 +2687,25 @@ def build_owner_live_hub(db: sqlite3.Connection, timeline_days: int = 7) -> Dict
             }
         )
     property_finance.sort(key=lambda x: x["net"], reverse=True)
-    hospitality_ids = {
-        p["id"]
-        for p in properties
-        if str(p.get("type") or "").strip().lower() in ("hospitality", "hotel", "resort", "short-term")
-    }
-    hospitality_income = 0.0
-    for row in accounts:
-        pid = str(row.get("property_id") or "").strip()
-        if pid and pid in hospitality_ids and str(row.get("type") or "").lower() == "income":
-            hospitality_income += float(row.get("amount") or 0)
-    hs = build_hospitality_summary(db, date.today().replace(day=1).isoformat(), today())
-    hk = hs.get("kpis") or {}
+    all_majlis = rows_to_dicts(
+        db.execute(
+            """
+            SELECT id, status, total_amount, paid_amount, balance_amount, service_kind, event_date
+            FROM hospitality_events
+            """
+        ).fetchall()
+    )
+    active_majlis = [
+        e
+        for e in all_majlis
+        if str(e.get("status") or "").lower() in ("reserved", "confirmed")
+    ]
+    majlis_revenue = sum(float(e.get("total_amount") or 0) for e in all_majlis)
+    majlis_paid = sum(float(e.get("paid_amount") or 0) for e in all_majlis)
+    majlis_balance = sum(
+        float(e.get("balance_amount") or max(0.0, float(e.get("total_amount") or 0) - float(e.get("paid_amount") or 0)))
+        for e in all_majlis
+    )
     return {
         "kpis": {
             "properties": int(k.get("properties") or 0),
@@ -2714,19 +2723,26 @@ def build_owner_live_hub(db: sqlite3.Connection, timeline_days: int = 7) -> Dict
                 "property_stock_items": sum(1 for i in inventory_items if i.get("property_id")),
             },
             "hospitality": {
-                "units": len(hospitality_ids),
-                "income": round(hospitality_income, 3),
-                "active_bookings": int(hk.get("active_bookings") or 0),
-                "occupancy_pct": float(hk.get("occupancy_pct") or 0),
-                "adr": float(hk.get("adr") or 0),
-                "revpar": float(hk.get("revpar") or 0),
-                "note": "تشغيل حي متصل بالحجوزات والتحصيل.",
+                "events_total": len(all_majlis),
+                "active_events": len(active_majlis),
+                "revenue": round(majlis_revenue, 3),
+                "collected": round(majlis_paid, 3),
+                "balance": round(majlis_balance, 3),
+                # Legacy hotel keys kept at zero so old UI never shows fake room occupancy.
+                "units": 0,
+                "income": round(majlis_revenue, 3),
+                "active_bookings": len(active_majlis),
+                "occupancy_pct": 0,
+                "adr": 0,
+                "revpar": 0,
+                "note": "مجالس خارجية · مفصولة عن العقارات والغرف",
             },
         },
         "property_finance": property_finance[:12],
         "recent_staff_journal": journals,
         "recent_staff_actions": audits,
         "recent_timeline_updates": timeline_updates,
+        "recent_majlis_events": majlis_events,
         "timeline_filter": {"days": timeline_days},
         "ts": now_iso(),
     }

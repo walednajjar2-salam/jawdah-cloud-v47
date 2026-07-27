@@ -1602,15 +1602,48 @@ function healthRingSvg(pct){
 }
 function renderVaDashBanner(k){
   const host=$('#vaDashBanner'); if(!host) return;
+  const portal=currentPortalChoice();
   const coll=k.billed?Math.round((Number(k.paid||0)/Number(k.billed||1))*100):0;
-  host.innerHTML=`<div class="va-dash-banner-left"><span class="va-dash-pill">🌟 Visual Analytics</span><h2>Data Insights Dashboard</h2><p>لوحة تحليلات مباشرة · عقارات · مالية · ضيافة · ذكاء تنفيذي</p></div><div class="va-dash-banner-stats"><div class="va-dash-stat"><b>${fmt(k.occupancy||0)}%</b><span>إشغال</span></div><div class="va-dash-stat"><b>${fmt(coll)}%</b><span>تحصيل</span></div><div class="va-dash-stat"><b>${money(k.net||0)}</b><span>صافي</span></div><div class="va-dash-stat"><b>${fmt(k.health||0)}%</b><span>جاهزية</span></div></div>`;
+  const hEvents=(Jawdah.data&&Jawdah.data.hospitality_events)||[];
+  const majlisPaid=hEvents.reduce((s,e)=>s+Number(e.paid_amount||0),0);
+  const majlisTotal=hEvents.reduce((s,e)=>s+Number(e.total_amount||0),0);
+  const majlisColl=majlisTotal?Math.round((majlisPaid/majlisTotal)*100):0;
+  const sub = portal==='hospitality'
+    ? 'لوحة تحليلات مباشرة · مجالس خارجية · تحصيل · ذكاء تنفيذي'
+    : (portal==='accounting'
+      ? 'لوحة تحليلات مباشرة · محاسبة · ذمم · تدفق نقدي'
+      : 'لوحة تحليلات مباشرة · عقارات · مالية · ذكاء تنفيذي');
+  const s1 = portal==='hospitality'
+    ? `<div class="va-dash-stat"><b>${fmt(hEvents.length)}</b><span>حجوزات</span></div><div class="va-dash-stat"><b>${fmt(majlisColl)}%</b><span>تحصيل مجالس</span></div>`
+    : (portal==='accounting'
+      ? `<div class="va-dash-stat"><b>${money(k.overdue||0)}</b><span>متأخر</span></div><div class="va-dash-stat"><b>${fmt(coll)}%</b><span>تحصيل</span></div>`
+      : `<div class="va-dash-stat"><b>${fmt(k.occupancy||0)}%</b><span>إشغال</span></div><div class="va-dash-stat"><b>${fmt(coll)}%</b><span>تحصيل</span></div>`);
+  host.innerHTML=`<div class="va-dash-banner-left"><span class="va-dash-pill">🌟 Visual Analytics</span><h2>Data Insights Dashboard</h2><p>${sub}</p></div><div class="va-dash-banner-stats">${s1}<div class="va-dash-stat"><b>${money(k.net||0)}</b><span>صافي</span></div><div class="va-dash-stat"><b>${fmt(k.health||0)}%</b><span>جاهزية</span></div></div>`;
 }
 function renderDashExecHero(k){
   const host=$('#dashExecHero'); if(!host) return;
+  const portal=currentPortalChoice();
   const name=displayUserName(Jawdah.user)||DISPLAY_OWNER_NAME;
   const d=new Date().toLocaleDateString('ar-OM',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const collection=k.billed?Math.round((Number(k.paid||0)/Number(k.billed||1))*100):0;
-  host.innerHTML=`<div class="exec-hero-left"><span class="exec-badge exec-badge-command">🌟 Data Insights · Visual Analytics</span><h2>${dashGreeting()}، ${htmlEscape(name)}</h2><p>مشاريع الانطلاقة — مركز تحليلات البيانات التنفيذية · BI مباشر</p><div class="exec-meta exec-meta-command"><span class="exec-pill exec-pill-gold">Health ${fmt(k.health||0)}%</span><span class="exec-pill">Occupancy ${fmt(k.occupancy||0)}%</span><span class="exec-pill">Collection ${fmt(collection)}%</span><span class="exec-pill">Net ${money(k.net||0)}</span><span>📅 ${d}</span></div></div><div class="exec-hero-stats exec-hero-stats-command"><div class="exec-stat"><b>${fmt(k.properties)}</b><span>إجمالي المشاريع</span></div><div class="exec-stat"><b>${money(k.income||0)}</b><span>الإيرادات</span></div><div class="exec-stat"><b>${money(k.expense||0)}</b><span>المصروفات</span></div><div class="exec-stat"><b>${money(k.net||0)}</b><span>صافي الربح</span></div><div class="exec-health">${healthRingSvg(k.health)}<span>صحة التشغيل</span></div></div>`;
+  const hEvents=(Jawdah.data&&Jawdah.data.hospitality_events)||[];
+  const activeMajlis=hEvents.filter(e=>['reserved','confirmed'].includes(String(e.status||'').toLowerCase())).length;
+  const portalLine = portal==='hospitality'
+    ? 'منصة المجالس الخارجية — حجوزات المناسبات والعزاء · مفصولة عن العقارات'
+    : (portal==='accounting'
+      ? 'منصة المحاسبة — ذمم · تحصيل · قوائم مالية'
+      : 'منصة العقارات — محفظة الوحدات والعقود · BI مباشر');
+  const pills = portal==='hospitality'
+    ? `<span class="exec-pill exec-pill-gold">Health ${fmt(k.health||0)}%</span><span class="exec-pill">مجالس نشطة ${fmt(activeMajlis)}</span><span class="exec-pill">Collection ${fmt(collection)}%</span><span class="exec-pill">Net ${money(k.net||0)}</span>`
+    : (portal==='accounting'
+      ? `<span class="exec-pill exec-pill-gold">Health ${fmt(k.health||0)}%</span><span class="exec-pill">Collection ${fmt(collection)}%</span><span class="exec-pill">Overdue ${money(k.overdue||0)}</span><span class="exec-pill">Net ${money(k.net||0)}</span>`
+      : `<span class="exec-pill exec-pill-gold">Health ${fmt(k.health||0)}%</span><span class="exec-pill">Occupancy ${fmt(k.occupancy||0)}%</span><span class="exec-pill">Collection ${fmt(collection)}%</span><span class="exec-pill">Net ${money(k.net||0)}</span>`);
+  const stats = portal==='hospitality'
+    ? `<div class="exec-stat"><b>${fmt(hEvents.length)}</b><span>حجوزات المجالس</span></div><div class="exec-stat"><b>${fmt(activeMajlis)}</b><span>نشطة</span></div><div class="exec-stat"><b>${money(hEvents.reduce((s,e)=>s+Number(e.total_amount||0),0))}</b><span>إيراد المجالس</span></div><div class="exec-stat"><b>${money(k.net||0)}</b><span>صافي النظام</span></div>`
+    : (portal==='accounting'
+      ? `<div class="exec-stat"><b>${money(k.income||0)}</b><span>الإيرادات</span></div><div class="exec-stat"><b>${money(k.expense||0)}</b><span>المصروفات</span></div><div class="exec-stat"><b>${money(k.paid||0)}</b><span>محصّل</span></div><div class="exec-stat"><b>${money(k.overdue||0)}</b><span>متأخر</span></div>`
+      : `<div class="exec-stat"><b>${fmt(k.properties)}</b><span>إجمالي المشاريع</span></div><div class="exec-stat"><b>${money(k.income||0)}</b><span>الإيرادات</span></div><div class="exec-stat"><b>${money(k.expense||0)}</b><span>المصروفات</span></div><div class="exec-stat"><b>${money(k.net||0)}</b><span>صافي الربح</span></div>`);
+  host.innerHTML=`<div class="exec-hero-left"><span class="exec-badge exec-badge-command">🌟 Data Insights · Visual Analytics</span><h2>${dashGreeting()}، ${htmlEscape(name)}</h2><p>${portalLine}</p><div class="exec-meta exec-meta-command">${pills}<span>📅 ${d}</span></div></div><div class="exec-hero-stats exec-hero-stats-command">${stats}<div class="exec-health">${healthRingSvg(k.health)}<span>صحة التشغيل</span></div></div>`;
 }
 function renderDashPropStatus(k){
   const host=$('#dashPropStatus'); if(!host) return;
@@ -1632,14 +1665,30 @@ function renderDashRenewalStrip(){
 }
 function renderDashInsights(k,data){
   const host=$('#dashInsights'); if(!host) return;
+  const portal=currentPortalChoice();
   const insights=[];
   const decisions=dashDecisions();
-  decisions.forEach(d=>insights.push({icon:d.level==='High'?'🔴':d.level==='Medium'?'🟡':'🟢',t:d.text,p:d.level==='High'?'high':d.level==='Medium'?'med':'ok'}));
+  if(portal==='realestate'){
+    decisions.forEach(d=>insights.push({icon:d.level==='High'?'🔴':d.level==='Medium'?'🟡':'🟢',t:d.text,p:d.level==='High'?'high':d.level==='Medium'?'med':'ok'}));
+  }
   if(Number(k.overdue||0)>0) insights.push({icon:'💳',t:`ذمم متأخرة بقيمة ${money(k.overdue)} — أولوية تحصيل`,p:'high'});
-  if(Number(k.expired||0)>0) insights.push({icon:'📄',t:`${fmt(k.expired)} عقد منتهٍ يحتاج إغلاق أو تجديد`,p:'high'});
-  if(Number(k.expiring||0)>0) insights.push({icon:'⏳',t:`${fmt(k.expiring)} عقد يقترب من الانتهاء`,p:'med'});
-  if(Number(k.vacant||0)>0) insights.push({icon:'🏠',t:`${fmt(k.vacant)} وحدة شاغرة — فرصة تسويق`,p:'med'});
-  if(Number(k.maintenance||0)>0) insights.push({icon:'🔧',t:`${fmt(k.maintenance)} طلب صيانة مفتوح`,p:'med'});
+  if(portal==='hospitality'){
+    const ev=data.hospitality_events||[];
+    const openBal=ev.filter(e=>Number(e.balance_amount||0)>0 || (Number(e.total_amount||0)>Number(e.paid_amount||0)));
+    const upcoming=ev.filter(e=>String(e.event_date||'')>=today() && ['reserved','confirmed'].includes(String(e.status||'').toLowerCase()));
+    if(openBal.length) insights.push({icon:'🏨',t:`${fmt(openBal.length)} حجز مجلس بمتبقي تحصيل`,p:'high'});
+    if(upcoming.length) insights.push({icon:'📅',t:`${fmt(upcoming.length)} مناسبة قادمة مؤكدة/محجوزة`,p:'med'});
+    if(!ev.length) insights.push({icon:'🏨',t:'لا حجوزات مجالس بعد — ابدأ من منصة المجالس',p:'med'});
+  }else if(portal==='accounting'){
+    if(Number(k.expired||0)>0) insights.push({icon:'📄',t:`${fmt(k.expired)} عقد منتهٍ قد يؤثر على الذمم`,p:'med'});
+    const openInv=(data.invoices||[]).filter(i=>Number(i.amount||0)>Number(i.paid_amount||0));
+    if(openInv.length) insights.push({icon:'🧾',t:`${fmt(openInv.length)} فاتورة مفتوحة تحتاج متابعة`,p:'med'});
+  }else{
+    if(Number(k.expired||0)>0) insights.push({icon:'📄',t:`${fmt(k.expired)} عقد منتهٍ يحتاج إغلاق أو تجديد`,p:'high'});
+    if(Number(k.expiring||0)>0) insights.push({icon:'⏳',t:`${fmt(k.expiring)} عقد يقترب من الانتهاء`,p:'med'});
+    if(Number(k.vacant||0)>0) insights.push({icon:'🏠',t:`${fmt(k.vacant)} وحدة شاغرة — فرصة تسويق`,p:'med'});
+    if(Number(k.maintenance||0)>0) insights.push({icon:'🔧',t:`${fmt(k.maintenance)} طلب صيانة مفتوح`,p:'med'});
+  }
   if(!insights.length) insights.push({icon:'✅',t:'الوضع التشغيلي مستقر — لا مخاطر عاجلة',p:'ok'});
   host.innerHTML=`<h4>قرارات ذكية</h4><div class="insight-list">${insights.slice(0,8).map(x=>`<div class="insight-item ${x.p}"><span class="insight-ico">${x.icon}</span><p>${htmlEscape(x.t)}</p></div>`).join('')}</div>`;
 }
@@ -1686,6 +1735,15 @@ function dashEngine(data,k){
   });
   const openMaint=maint.filter(x=>!String(x.status||'').toLowerCase().match(/closed|done|complete/));
   openMaint.forEach(m=>events.push({d:m.request_date||todayStr,t:'صيانة',title:m.title||'طلب',sub:propertyLabel(byId('properties',m.property_id)),prio:String(m.priority||'').toLowerCase()==='high'?'high':'med'}));
+  (data.hospitality_events||[]).forEach(e=>{
+    events.push({
+      d:e.event_date||todayStr,
+      t:String(e.service_kind||'')==='condolence'?'عزاء':'مجلس',
+      title:e.package_name||e.client_name||e.id,
+      sub:e.venue_location||e.client_name||'',
+      prio:['reserved','confirmed'].includes(String(e.status||'').toLowerCase())?'med':'low'
+    });
+  });
   events.sort((a,b)=>String(a.d).localeCompare(String(b.d)));
   const byBuilding={};
   props.forEach(p=>{const b=p.building_no||'عام'; if(!byBuilding[b]) byBuilding[b]={total:0,rented:0,vacant:0}; byBuilding[b].total++; const s=String(p.status||''); if(s.includes('مستأ')) byBuilding[b].rented++; else if(s.includes('شاغ')) byBuilding[b].vacant++; });
@@ -1706,22 +1764,75 @@ function dashEngine(data,k){
   if(collectionPct<80) risks.push({l:'تحصيل منخفض',v:fmt(collectionPct)+'%',s:'med'});
   const series=chartSeries();
   const heat=series.map(x=>({m:String(x.month||'').slice(5),score:Math.min(100,Math.round((Number(x.income||0)/(Math.max(Number(x.expense||0),1)))*20+Number(k.occupancy||0)*0.5))}));
-  const brief=[
-    `المحفظة تضم ${fmt(k.properties)} وحدة بإشغال ${fmt(k.occupancy||0)}%.`,
-    `الإيرادات ${money(k.income||0)} والمصروفات ${money(k.expense||0)} بصافي ${money(k.net||0)} (هامش ${profitMargin}%).`,
-    `التحصيل عند ${fmt(collectionPct)}% مع ذمم متأخرة ${money(k.overdue||0)}.`,
-    activeContracts.length?`إيراد شهري متوقع من العقود النشطة: ${money(monthlyForecast)}.`:'لا عقود نشطة حالياً — أولوية التسويق والتأجير.',
-    openMaintCount?`${fmt(openMaintCount)} طلب صيانة مفتوح يحتاج إغلاق لرفع جودة الخدمة.`:'لا طلبات صيانة مفتوحة — التشغيل مستقر.'
-  ].join(' ');
-  const ticker=[
-    `⚡ جاهزية النظام ${fmt(k.health||0)}%`,
-    `🏢 إشغال ${fmt(k.occupancy||0)}% · ${fmt(k.rented||0)} مستأجرة`,
-    `💳 تحصيل ${fmt(collectionPct)}% · متأخر ${money(k.overdue||0)}`,
-    `📄 ${fmt(activeContracts.length)} عقد نشط · ${fmt(k.expiring||0)} ينتهي قريباً`,
-    `🔧 صيانة ${fmt(openMaintCount)} مفتوحة · SLA ${fmt(slaPct)}%`,
-    `📈 صافي ${money(k.net||0)} · هامش ${profitMargin}%`
-  ];
-  return {clientScores,propScores,aging,pipeline,events:events.slice(0,16),buildingRows,monthlyForecast,slaPct,collectionPct,profitMargin,risks,heat,brief,ticker,openMaintCount,closedMaintCount};
+  const portal=(typeof currentPortalChoice==='function')?currentPortalChoice():'realestate';
+  const hEvents=data.hospitality_events||[];
+  const activeMajlis=hEvents.filter(e=>['reserved','confirmed'].includes(String(e.status||'').toLowerCase()));
+  const majlisTotal=hEvents.reduce((s,e)=>s+Number(e.total_amount||0),0);
+  const majlisPaid=hEvents.reduce((s,e)=>s+Number(e.paid_amount||0),0);
+  const majlisBal=Math.max(0, majlisTotal-majlisPaid);
+  const majlisColl=majlisTotal?Math.round((majlisPaid/majlisTotal)*100):0;
+  let scopedRisks=risks;
+  if(portal==='hospitality'){
+    scopedRisks=risks.filter(r=>['ذمم متأخرة','تحصيل منخفض'].includes(r.l));
+    if(majlisBal>0) scopedRisks.push({l:'متبقي مجالس',v:money(majlisBal),s:'high'});
+    if(!hEvents.length) scopedRisks.push({l:'لا حجوزات مجالس',v:'0',s:'med'});
+  }else if(portal==='accounting'){
+    scopedRisks=risks.filter(r=>!['وحدات شاغرة','صيانة مفتوحة'].includes(r.l));
+  }
+  let brief;
+  let ticker;
+  if(portal==='hospitality'){
+    brief=[
+      `منصة المجالس الخارجية: ${fmt(hEvents.length)} حجز · ${fmt(activeMajlis.length)} نشط.`,
+      `إيراد المجالس ${money(majlisTotal)} · محصّل ${money(majlisPaid)} · متبقي ${money(majlisBal)} (تحصيل ${fmt(majlisColl)}%).`,
+      `صافي النظام ${money(k.net||0)} · ذمم عامة متأخرة ${money(k.overdue||0)}.`,
+      'القناة: مجالس ومناسبات في موقع العميل — ليست غرفاً وليست وحدات عقارية.'
+    ].join(' ');
+    ticker=[
+      `⚡ جاهزية النظام ${fmt(k.health||0)}%`,
+      `🏨 مجالس ${fmt(activeMajlis.length)} نشطة · إجمالي ${fmt(hEvents.length)}`,
+      `💳 تحصيل مجالس ${fmt(majlisColl)}% · متبقي ${money(majlisBal)}`,
+      `📈 صافي ${money(k.net||0)} · متأخر عام ${money(k.overdue||0)}`
+    ];
+  }else if(portal==='accounting'){
+    brief=[
+      `منصة المحاسبة: إيراد ${money(k.income||0)} · مصروف ${money(k.expense||0)} · صافي ${money(k.net||0)} (هامش ${profitMargin}%).`,
+      `التحصيل عند ${fmt(collectionPct)}% مع ذمم متأخرة ${money(k.overdue||0)}.`,
+      activeContracts.length?`عقود نشطة مرتبطة بالذمم: ${fmt(activeContracts.length)}.`:'لا عقود نشطة حالياً.',
+      'ركز على أعمار الذمم والتحصيل والقوائم المالية.'
+    ].join(' ');
+    ticker=[
+      `⚡ جاهزية النظام ${fmt(k.health||0)}%`,
+      `💳 تحصيل ${fmt(collectionPct)}% · متأخر ${money(k.overdue||0)}`,
+      `💰 إيراد ${money(k.income||0)} · مصروف ${money(k.expense||0)}`,
+      `📈 صافي ${money(k.net||0)} · هامش ${profitMargin}%`
+    ];
+  }else{
+    brief=[
+      `المحفظة تضم ${fmt(k.properties)} وحدة بإشغال ${fmt(k.occupancy||0)}%.`,
+      `الإيرادات ${money(k.income||0)} والمصروفات ${money(k.expense||0)} بصافي ${money(k.net||0)} (هامش ${profitMargin}%).`,
+      `التحصيل عند ${fmt(collectionPct)}% مع ذمم متأخرة ${money(k.overdue||0)}.`,
+      activeContracts.length?`إيراد شهري متوقع من العقود النشطة: ${money(monthlyForecast)}.`:'لا عقود نشطة حالياً — أولوية التسويق والتأجير.',
+      openMaintCount?`${fmt(openMaintCount)} طلب صيانة مفتوح يحتاج إغلاق لرفع جودة الخدمة.`:'لا طلبات صيانة مفتوحة — التشغيل مستقر.'
+    ].join(' ');
+    ticker=[
+      `⚡ جاهزية النظام ${fmt(k.health||0)}%`,
+      `🏢 إشغال ${fmt(k.occupancy||0)}% · ${fmt(k.rented||0)} مستأجرة`,
+      `💳 تحصيل ${fmt(collectionPct)}% · متأخر ${money(k.overdue||0)}`,
+      `📄 ${fmt(activeContracts.length)} عقد نشط · ${fmt(k.expiring||0)} ينتهي قريباً`,
+      `🔧 صيانة ${fmt(openMaintCount)} مفتوحة · SLA ${fmt(slaPct)}%`,
+      `📈 صافي ${money(k.net||0)} · هامش ${profitMargin}%`
+    ];
+  }
+  let scopedEvents=events;
+  if(portal==='hospitality'){
+    scopedEvents=events.filter(e=>e.t==='مجلس'||e.t==='عزاء'||e.t==='فاتورة');
+  }else if(portal==='accounting'){
+    scopedEvents=events.filter(e=>e.t==='فاتورة'||e.t==='عقد');
+  }else{
+    scopedEvents=events.filter(e=>e.t!=='مجلس'&&e.t!=='عزاء');
+  }
+  return {clientScores,propScores,aging,pipeline,events:scopedEvents.slice(0,16),buildingRows,monthlyForecast,slaPct,collectionPct,profitMargin,risks:scopedRisks,heat,brief,ticker,openMaintCount,closedMaintCount,portal,majlisColl,majlisTotal,majlisPaid,activeMajlisCount:activeMajlis.length,hEventsCount:hEvents.length};
 }
 function gaugeSvg(pct,label,color){
   const p=Math.max(0,Math.min(100,Number(pct||0))), off=176-(176*p/100);
@@ -1775,7 +1886,22 @@ function renderDashSimStage(k,eng){
 }
 function renderDashKpiTertiary(k){
   const host=$('#saasKpiRow3'); if(!host) return;
-  const items=[
+  const portal=currentPortalChoice();
+  const items= portal==='hospitality' ? [
+    {icon:'🏨',label:'منصة المجالس',value:'فتح',go:'hospitality-platform',hint:'تشغيل'},
+    {icon:'💳',label:'المدفوعات',value:money(k.paid||0),go:'invoices',hint:'تحصيل'},
+    {icon:'👥',label:'العملاء',value:fmt((Jawdah.data.clients||[]).length),go:'clients',hint:'سجل'},
+    {icon:'📉',label:'متأخرات',value:money(k.overdue||0),go:'receivables',hint:'ذمم'},
+    {icon:'📘',label:'التقارير',value:'—',go:'reports',hint:'تحليل'},
+    {icon:'💾',label:'النسخ',value:'—',go:'backup',hint:'حماية'}
+  ] : (portal==='accounting' ? [
+    {icon:'🏦',label:'رصيد البنك',value:money(k.bank_balance||0),go:'bank',hint:'سيولة'},
+    {icon:'👔',label:'الرواتب',value:money(k.payroll||0),go:'payroll',hint:'شهري'},
+    {icon:'🧾',label:'مشتريات مستحقة',value:money(k.purchases_due||0),go:'purchases',hint:'ذمم'},
+    {icon:'💎',label:'فواتير مصدرة',value:money(k.billed||0),go:'invoices',hint:'إجمالي'},
+    {icon:'✅',label:'محصّل',value:money(k.paid||0),go:'invoices',hint:'نقدي'},
+    {icon:'📘',label:'القوائم',value:'—',go:'statements',hint:'مالية'}
+  ] : [
     {icon:'🏦',label:'رصيد البنك',value:money(k.bank_balance||0),go:'bank',hint:'سيولة'},
     {icon:'👔',label:'الرواتب',value:money(k.payroll||0),go:'payroll',hint:'شهري'},
     {icon:'📦',label:'قيمة المخزون',value:money(k.inventory_value||0),go:'inventory',hint:'أصول'},
@@ -1784,27 +1910,46 @@ function renderDashKpiTertiary(k){
     {icon:'⚠️',label:'عقود منتهية',value:fmt(k.expired||0),go:'contracts',hint:'قرار'},
     {icon:'💎',label:'فواتير مصدرة',value:money(k.billed||0),go:'invoices',hint:'إجمالي'},
     {icon:'✅',label:'محصّل',value:money(k.paid||0),go:'invoices',hint:'نقدي'}
-  ].filter((_,i)=>canSeeFinance()||i>=4);
+  ].filter((_,i)=>canSeeFinance()||i>=4));
   host.innerHTML=items.map(x=>`<article class="saas-kpi saas-kpi-tert saas-glass" onclick="showSection('${x.go}')"><div class="saas-kpi-icon">${x.icon}</div><strong>${x.value}</strong><span>${x.label}</span><small class="saas-kpi-hint">${x.hint}</small></article>`).join('');
 }
 function renderDashMegaCockpit(k,data,eng){
   const host=$('#dashMegaCockpit'); if(!host) return;
-  const gauges=[
-    gaugeSvg(k.occupancy,'إشغال','#00D4FF'),
-    gaugeSvg(eng.collectionPct,'تحصيل','#00C853'),
-    gaugeSvg(k.health,'جاهزية','#6D5DFC'),
-    gaugeSvg(eng.profitMargin,'هامش ربح','#7C4DFF'),
-    gaugeSvg(eng.slaPct,'SLA صيانة','#FFB300'),
-    gaugeSvg(k.vacant&&k.properties?Math.round((Number(k.vacant)/Number(k.properties))*100):0,'شغور','#FF5252')
-  ].join('');
-  const riskHtml=eng.risks.length?eng.risks.map(r=>`<div class="risk-pill ${r.s} glow-pulse"><b>${htmlEscape(r.l)}</b><span>${htmlEscape(r.v)}</span></div>`).join(''):'<p class="mini">لا مخاطر حرجة</p>';
-  const clientsHtml=eng.clientScores.slice(0,6).map((x,i)=>`<div class="rank-row" onclick="showSection('clients')"><span class="rank-no">${i+1}</span><div><b>${htmlEscape(x.client.name||'')}</b><small>${fmt(x.count)} فاتورة</small></div><strong>${money(x.paid)}</strong></div>`).join('')||'<p class="mini">لا عملاء</p>';
-  const propsHtml=eng.propScores.slice(0,6).map((x,i)=>`<div class="rank-row" onclick="showSection('estate-platform')"><span class="rank-no">${i+1}</span><div><b>${htmlEscape(propertyLabel(x.property))}</b><small>${htmlEscape(x.status)}</small></div><strong>${money(x.paid||x.rent)}</strong></div>`).join('')||'<p class="mini">لا عقارات</p>';
   const portal = currentPortalChoice();
   const hEvents = data.hospitality_events||[];
   const activeMajlis = hEvents.filter(e=>['reserved','confirmed'].includes(String(e.status||'').toLowerCase()));
   const majlisPaid = hEvents.reduce((s,e)=>s+Number(e.paid_amount||0),0);
   const majlisTotal = hEvents.reduce((s,e)=>s+Number(e.total_amount||0),0);
+  const majlisColl = majlisTotal?Math.round((majlisPaid/majlisTotal)*100):(eng.majlisColl||0);
+  const gauges = portal==='hospitality'
+    ? [
+        gaugeSvg(majlisColl,'تحصيل مجالس','#00C853'),
+        gaugeSvg(eng.collectionPct,'تحصيل عام','#00D4FF'),
+        gaugeSvg(k.health,'جاهزية','#6D5DFC'),
+        gaugeSvg(eng.profitMargin,'هامش ربح','#7C4DFF'),
+        gaugeSvg(hEvents.length?Math.round((activeMajlis.length/Math.max(hEvents.length,1))*100):0,'نشط','#FFB300'),
+        gaugeSvg(majlisTotal?Math.round((Math.max(0,majlisTotal-majlisPaid)/majlisTotal)*100):0,'متبقي','#FF5252')
+      ].join('')
+    : (portal==='accounting'
+      ? [
+          gaugeSvg(eng.collectionPct,'تحصيل','#00C853'),
+          gaugeSvg(k.health,'جاهزية','#6D5DFC'),
+          gaugeSvg(eng.profitMargin,'هامش ربح','#7C4DFF'),
+          gaugeSvg(k.billed?Math.min(100,Math.round((Number(k.overdue||0)/Math.max(Number(k.billed),1))*100)):0,'ضغط متأخرات','#FF5252'),
+          gaugeSvg(eng.slaPct,'إغلاق فترات','#FFB300'),
+          gaugeSvg(Math.max(0,100-Number(eng.profitMargin||0)),'ضغط تكلفة','#00D4FF')
+        ].join('')
+      : [
+          gaugeSvg(k.occupancy,'إشغال','#00D4FF'),
+          gaugeSvg(eng.collectionPct,'تحصيل','#00C853'),
+          gaugeSvg(k.health,'جاهزية','#6D5DFC'),
+          gaugeSvg(eng.profitMargin,'هامش ربح','#7C4DFF'),
+          gaugeSvg(eng.slaPct,'SLA صيانة','#FFB300'),
+          gaugeSvg(k.vacant&&k.properties?Math.round((Number(k.vacant)/Number(k.properties))*100):0,'شغور','#FF5252')
+        ].join(''));
+  const riskHtml=eng.risks.length?eng.risks.map(r=>`<div class="risk-pill ${r.s} glow-pulse"><b>${htmlEscape(r.l)}</b><span>${htmlEscape(r.v)}</span></div>`).join(''):'<p class="mini">لا مخاطر حرجة</p>';
+  const clientsHtml=eng.clientScores.slice(0,6).map((x,i)=>`<div class="rank-row" onclick="showSection('clients')"><span class="rank-no">${i+1}</span><div><b>${htmlEscape(x.client.name||'')}</b><small>${fmt(x.count)} فاتورة</small></div><strong>${money(x.paid)}</strong></div>`).join('')||'<p class="mini">لا عملاء</p>';
+  const propsHtml=eng.propScores.slice(0,6).map((x,i)=>`<div class="rank-row" onclick="showSection('estate-platform')"><span class="rank-no">${i+1}</span><div><b>${htmlEscape(propertyLabel(x.property))}</b><small>${htmlEscape(x.status)}</small></div><strong>${money(x.paid||x.rent)}</strong></div>`).join('')||'<p class="mini">لا عقارات</p>';
   const pipeMax=Math.max(...eng.pipeline.map(x=>x.v),1);
   const pipeHtml=eng.pipeline.map(x=>`<div class="pipe-item"><div class="pipe-top"><span>${x.l}</span><b>${fmt(x.v)}</b></div><div class="pipe-track ${x.c}"><i style="width:${Math.round((x.v/pipeMax)*100)}%"></i></div></div>`).join('');
   const agingMax=Math.max(...Object.values(eng.aging),1);
@@ -1828,14 +1973,19 @@ function renderDashMegaCockpit(k,data,eng){
   const financeBlock = (portal==='hospitality' || portal==='accounting') ? `
     <article class="bento-tile bento-span-6 saas-glass cockpit-zone"><div class="bento-head"><h4>💳 أعمار الذمم</h4><button type="button" class="saas-link-btn" onclick="showSection('accounting-platform')">المحاسبة</button></div><div class="aging-bars">${agingHtml}</div></article>
     <article class="bento-tile bento-span-6 saas-glass"><div class="bento-head"><h4>👥 العملاء</h4><button type="button" class="saas-link-btn" onclick="showSection('clients')">الكل</button></div><div class="rank-list">${clientsHtml}</div></article>` : '';
+  const forecastLine = portal==='hospitality'
+    ? `إيراد مجالس ${money(majlisTotal)} · نشط ${fmt(activeMajlis.length)} · تحصيل مجالس ${fmt(majlisColl)}%`
+    : (portal==='accounting'
+      ? `توقع شهري · تحصيل ${fmt(eng.collectionPct)}% · متأخر ${money(k.overdue||0)}`
+      : `توقع شهري · ${fmt(activeCount)} عقد نشط · تحصيل ${fmt(eng.collectionPct)}%`);
   host.innerHTML=`
     <article class="bento-tile bento-span-12 saas-glass bento-brief bento-ai-brief cockpit-zone glow-pulse"><span class="cockpit-zone-label">AI Brief · ملخص ذكي</span><div class="bento-head"><h4>📋 الملخص التنفيذي</h4><span class="saas-sub">Executive Brief · ${new Date().toLocaleTimeString('ar-OM',{hour:'2-digit',minute:'2-digit'})}</span></div><p class="exec-brief-text">${htmlEscape(eng.brief)}</p></article>
-    <article class="bento-tile bento-span-8 saas-glass cockpit-zone mega-revenue-engine"><span class="cockpit-zone-label">Revenue Engine · محرك الإيراد</span><div class="bento-head"><h4>🎛️ لوحة المؤشرات</h4><button type="button" class="saas-link-btn" onclick="showSection('${portal==='accounting'?'accounting-platform':(portal==='hospitality'?'hospitality-platform':'estate-platform')}')">المنصة</button></div><div class="bento-gauges">${gauges}</div><div class="forecast-box" style="margin-top:14px"><strong>${money(eng.monthlyForecast)}</strong><span>توقع شهري · ${fmt(activeCount)} عقد نشط · تحصيل ${fmt(eng.collectionPct)}%</span></div></article>
+    <article class="bento-tile bento-span-8 saas-glass cockpit-zone mega-revenue-engine"><span class="cockpit-zone-label">Revenue Engine · محرك الإيراد</span><div class="bento-head"><h4>🎛️ لوحة المؤشرات</h4><button type="button" class="saas-link-btn" onclick="showSection('${portal==='accounting'?'accounting-platform':(portal==='hospitality'?'hospitality-platform':'estate-platform')}')">المنصة</button></div><div class="bento-gauges">${gauges}</div><div class="forecast-box" style="margin-top:14px"><strong>${money(portal==='hospitality'?majlisTotal:eng.monthlyForecast)}</strong><span>${forecastLine}</span></div></article>
     <article class="bento-tile bento-span-4 saas-glass cockpit-zone mega-risk-radar"><span class="cockpit-zone-label">Risk Radar · رادار المخاطر</span><div class="bento-head"><h4>⚠️ مصفوفة المخاطر</h4><button type="button" class="saas-link-btn" onclick="showSection('reports')">التقارير</button></div><div class="risk-grid">${riskHtml}</div></article>
     ${estateBlock}
     ${financeBlock}
     ${portalHero}
-    <article class="bento-tile bento-span-12 saas-glass"><div class="bento-head"><h4>📅 الأحداث القادمة</h4><button type="button" class="saas-link-btn" onclick="showSection('timeline')">الجدول</button></div><div class="event-list">${eventsHtml}</div></article>`;
+    <article class="bento-tile bento-span-12 saas-glass"><div class="bento-head"><h4>📅 الأحداث القادمة</h4><button type="button" class="saas-link-btn" onclick="showSection('${portal==='hospitality'?'hospitality-platform':'timeline'}')">الجدول</button></div><div class="event-list">${eventsHtml}</div></article>`;
 }
 function renderDashRecentInvoices(invoices){
   const host=$('#dashRecentInvoices'); if(!host) return;
@@ -3065,10 +3215,10 @@ const EDIT_CONFIG = {
   accounts: {title:'تعديل حركة مالية', fields:[['entry_date','التاريخ','date'],['type','النوع','select'],['category','التصنيف','text'],['description','الوصف','text'],['client_id','العميل','select'],['property_id','العقار','select'],['invoice_id','الفاتورة','select'],['amount','المبلغ','number']]},
   maintenance: {title:'تعديل طلب صيانة', fields:[['property_id','العقار','select'],['title','عنوان الطلب','text'],['priority','الأولوية','select'],['status','الحالة','select'],['request_date','تاريخ الطلب','date'],['cost','التكلفة','number'],['notes','ملاحظات','textarea']]},
   chart_accounts: {title:'تعديل حساب في الدليل', fields:[['code','رمز الحساب','text'],['name','اسم الحساب','text'],['type','نوع الحساب','select'],['parent_code','الحساب الأب','select'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
-  hospitality_rooms: {title:'تعديل غرفة ضيافة', fields:[['property_id','العقار','select'],['room_code','رمز الغرفة','text'],['room_type','النوع','text'],['capacity','السعة','number'],['rate_per_night','سعر الليلة','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
-  hospitality_bookings: {title:'تعديل حجز ضيافة', fields:[['room_id','الغرفة','select'],['client_id','العميل','select'],['guest_name','اسم النزيل','text'],['guest_phone','الهاتف','text'],['checkin_date','الدخول','date'],['checkout_date','الخروج','date'],['rate_per_night','سعر الليلة','number'],['total_amount','الإجمالي','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['booking_source','المصدر','text'],['notes','ملاحظات','textarea']]},
+  hospitality_rooms: {title:'(متوقف) غرفة ضيافة — استخدم منصة المجالس', fields:[['property_id','العقار','select'],['room_code','رمز الغرفة','text'],['room_type','النوع','text'],['capacity','السعة','number'],['rate_per_night','سعر الليلة','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
+  hospitality_bookings: {title:'(متوقف) حجز غرفة — استخدم حجز المجلس', fields:[['room_id','الغرفة','select'],['client_id','العميل','select'],['guest_name','اسم النزيل','text'],['guest_phone','الهاتف','text'],['checkin_date','الدخول','date'],['checkout_date','الخروج','date'],['rate_per_night','سعر الليلة','number'],['total_amount','الإجمالي','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['booking_source','المصدر','text'],['notes','ملاحظات','textarea']]},
   hospitality_events: {title:'تعديل حجز مجلس/عزاء', fields:[['service_kind','النوع','select'],['package_name','الباقة','text'],['client_name','العميل','text'],['phone','الهاتف','text'],['venue_location','موقع المجلس','text'],['event_date','التاريخ','date'],['guests','الضيوف','number'],['location_zone','المنطقة','text'],['total_amount','الإجمالي','number'],['deposit_required','العربون المطلوب','number'],['paid_amount','المدفوع','number'],['balance_amount','المتبقي','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
-  hospitality_season_rates: {title:'تعديل تسعير موسمي', fields:[['property_id','العقار','select'],['room_type','نوع الغرفة','text'],['season_name','اسم الموسم','text'],['start_date','بداية الموسم','date'],['end_date','نهاية الموسم','date'],['nightly_rate','سعر الليلة','number'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
+  hospitality_season_rates: {title:'(متوقف) تسعير موسمي للغرف', fields:[['property_id','العقار','select'],['room_type','نوع الغرفة','text'],['season_name','اسم الموسم','text'],['start_date','بداية الموسم','date'],['end_date','نهاية الموسم','date'],['nightly_rate','سعر الليلة','number'],['active','نشط','select'],['notes','ملاحظات','textarea']]},
   financial_periods: {title:'تعديل فترة مالية', fields:[['period_name','اسم الفترة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   bank_reconciliations: {title:'تعديل تسوية بنك', fields:[['bank_name','البنك','text'],['period_name','الفترة','text'],['book_balance','رصيد الدفاتر','number'],['bank_balance','رصيد كشف البنك','number'],['difference','الفرق','number'],['status','الحالة','select'],['notes','ملاحظات','textarea']]},
   users: {title:'تعديل مستخدم', fields:[['username','اسم المستخدم','text'],['name','الاسم','text'],['email','البريد الإلكتروني','text'],['role','الدور','select'],['active','نشط','select'],['must_change_password','إجبار تغيير كلمة المرور عند أول دخول','select'],['password','كلمة مرور جديدة - اختياري','password']]}
@@ -4124,11 +4274,13 @@ async function renderOwnerLiveHub(){
     const journals = (hub.recent_staff_journal || []).slice(0,8);
     const actions = (hub.recent_staff_actions || []).slice(0,10);
     const timelineUpdates = (hub.recent_timeline_updates || []).slice(0,10);
+    const majlisEvents = (hub.recent_majlis_events || []).slice(0,10);
     const timelineDaysFromApi = normalizeOwnerTimelineDays((hub.timeline_filter || {}).days);
+    const hosp = ch.hospitality || {};
     host.innerHTML = `
       <div class="card accounting-hero">
         <h3>لوحة المالك الحية · LIVE</h3>
-        <p class="mini">مرتبطة مباشرة بإدخالات الموظفين من العقارات والحسابات.</p>
+        <p class="mini">مرتبطة مباشرة بإدخالات الموظفين من العقارات والمجالس والمحاسبة.</p>
         <div class="status-line">
           <span class="badge">عقارات ${fmt(k.properties||0)}</span>
           <span class="badge">إشغال ${fmt(k.occupancy||0)}%</span>
@@ -4139,18 +4291,24 @@ async function renderOwnerLiveHub(){
       </div>
       <div class="layout">
         <div class="card"><h3>قناة العقارات</h3><div class="status-line"><span class="badge">وحدات ${fmt(ch.realestate?.units||0)}</span><span class="badge">عقود نشطة ${fmt(ch.realestate?.active_contracts||0)}</span><span class="badge">مخزون عقاري ${fmt(ch.realestate?.property_stock_items||0)}</span></div></div>
-        <div class="card"><h3>قناة الضيافة</h3><div class="status-line"><span class="badge">وحدات ${fmt(ch.hospitality?.units||0)}</span><span class="badge">حجوزات نشطة ${fmt(ch.hospitality?.active_bookings||0)}</span><span class="badge">Occupancy ${fmt(ch.hospitality?.occupancy_pct||0)}%</span><span class="badge">ADR ${money(ch.hospitality?.adr||0)}</span><span class="badge">RevPAR ${money(ch.hospitality?.revpar||0)}</span><span class="badge">إيراد ${money(ch.hospitality?.income||0)}</span><span class="badge">${htmlEscape(ch.hospitality?.note||'—')}</span></div></div>
+        <div class="card"><h3>قناة المجالس الخارجية</h3><div class="status-line"><span class="badge">حجوزات ${fmt(hosp.events_total||0)}</span><span class="badge">نشطة ${fmt(hosp.active_events||hosp.active_bookings||0)}</span><span class="badge">إيراد ${money(hosp.revenue||hosp.income||0)}</span><span class="badge">محصّل ${money(hosp.collected||0)}</span><span class="badge">متبقي ${money(hosp.balance||0)}</span><span class="badge">${htmlEscape(hosp.note||'مجالس خارجية')}</span></div></div>
       </div>
       <div class="layout">
         <div class="card"><h3>ربحية العقارات (مالية + مخزن)</h3>${tableHtml([['العقار','property_name'],['إيراد','income',v=>money(v)],['مصروف','expense',v=>money(v)],['صافي','net',v=>money(v)],['قيمة المخزون','inventory_value',v=>money(v)]],pf)}</div>
-        <div class="card"><h3>SALAM</h3><div class="status-line"><span class="badge">يوصي بالتحصيل السريع عند المتأخرات</span><span class="badge">يراقب صافي الربحية لكل عقار</span><span class="badge">يتابع المخزون المرتبط بالعقار</span></div><div class="toolbar" style="margin-top:10px"><button class="gold-btn" type="button" onclick="showSection('accounts')">تنفيذ مالي</button><button class="ghost" type="button" onclick="showSection('inventory')">مخزن العقارات</button><button class="ghost" type="button" onclick="showSection('owner-staff')">متابعة الموظفين</button></div></div>
+        <div class="card"><h3>SALAM</h3><div class="status-line"><span class="badge">يوصي بالتحصيل السريع عند المتأخرات</span><span class="badge">يراقب صافي الربحية لكل عقار</span><span class="badge">يتابع حجوزات المجالس الخارجية</span></div><div class="toolbar" style="margin-top:10px"><button class="gold-btn" type="button" onclick="showSection('accounts')">تنفيذ مالي</button><button class="ghost" type="button" onclick="showSection('hospitality-platform')">منصة المجالس</button><button class="ghost" type="button" onclick="showSection('owner-staff')">متابعة الموظفين</button></div></div>
       </div>
       <div class="layout">
         <div class="card"><h3>آخر يوميات الموظفين</h3>${tableHtml([['الموظف','user_name'],['التاريخ','work_date'],['الوقت','created_at',v=>String(v||'').slice(11,16)],['العمل','text']],journals)}</div>
         <div class="card"><h3>آخر الإجراءات</h3>${tableHtml([['الوقت','created_at',v=>String(v||'').slice(0,16)],['المستخدم','username'],['الإجراء','action'],['الكيان','entity'],['التفاصيل','details']],actions)}</div>
       </div>
       <div class="layout">
-        <div class="card"><h3>سجل تعديل Timeline الحجوزات</h3><div class="toolbar" style="margin-bottom:8px;gap:8px"><span class="mini">الفترة:</span><select id="ownerTimelineFilter" onchange="setOwnerTimelineFilter(this.value)"><option value="1" ${timelineDaysFromApi===1?'selected':''}>آخر 24 ساعة</option><option value="7" ${timelineDaysFromApi===7?'selected':''}>آخر 7 أيام</option><option value="30" ${timelineDaysFromApi===30?'selected':''}>آخر 30 يوم</option><option value="90" ${timelineDaysFromApi===90?'selected':''}>آخر 90 يوم</option><option value="0" ${timelineDaysFromApi===0?'selected':''}>كل الفترات</option></select><span class="badge">${htmlEscape(ownerTimelineFilterLabel(timelineDaysFromApi))}</span><button class="ghost" type="button" onclick="exportOwnerTimelineCsv()">تصدير CSV</button></div>${tableHtml([['الوقت','created_at',v=>String(v||'').slice(0,16)],['المستخدم','username'],['الغرفة','room_code'],['النزيل','guest_name'],['فترة الحجز الحالية','checkin_date',(v,r)=>`${htmlEscape(String(v||'—'))} → ${htmlEscape(String(r.checkout_date||'—'))}`],['التعديل','details']],timelineUpdates)}</div>
+        <div class="card"><h3>سجل حجوزات المجالس</h3><div class="toolbar" style="margin-bottom:8px;gap:8px"><span class="mini">الفترة:</span><select id="ownerTimelineFilter" onchange="setOwnerTimelineFilter(this.value)"><option value="1" ${timelineDaysFromApi===1?'selected':''}>آخر 24 ساعة</option><option value="7" ${timelineDaysFromApi===7?'selected':''}>آخر 7 أيام</option><option value="30" ${timelineDaysFromApi===30?'selected':''}>آخر 30 يوم</option><option value="90" ${timelineDaysFromApi===90?'selected':''}>آخر 90 يوم</option><option value="0" ${timelineDaysFromApi===0?'selected':''}>كل الفترات</option></select><span class="badge">${htmlEscape(ownerTimelineFilterLabel(timelineDaysFromApi))}</span><button class="ghost" type="button" onclick="showSection('hospitality-platform')">منصة المجالس</button></div>${
+          majlisEvents.length
+            ? tableHtml([['الوقت','created_at',v=>String(v||'').slice(0,16)],['النوع','service_kind',v=>v==='condolence'?'عزاء':'مجلس'],['الباقة','package_name'],['العميل','client_name'],['الموقع','venue_location',v=>v||'—'],['التاريخ','event_date'],['الإجمالي','total_amount',v=>money(v)],['المدفوع','paid_amount',v=>money(v)],['الحالة','status',v=>statusBadge(v)]], majlisEvents)
+            : (timelineUpdates.length
+              ? `<p class="mini">لا حجوزات مجالس في الفترة — سجل غرف قديم مخفي من التشغيل.</p>`
+              : '<p class="mini">لا حجوزات مجالس في الفترة المحددة.</p>')
+        }</div>
       </div>`;
     if(typeof ensureEnglishDigits==='function') ensureEnglishDigits(host);
   }catch(e){
@@ -4511,73 +4669,28 @@ async function bookHospitalityCondolence(){
   }catch(e){ toastErr(e); }
 }
 async function createHospitalityRoom(){
-  try{
-    await api('hospitality_rooms',{method:'POST',body:JSON.stringify({
-      property_id: val('hRoomProperty') || null,
-      room_code: val('hRoomCode'),
-      room_type: val('hRoomType') || 'Standard',
-      capacity: num('hRoomCapacity') || 2,
-      rate_per_night: num('hRoomRate'),
-      status: val('hRoomStatus') || 'available',
-      notes: val('hRoomNotes'),
-    })});
-    toast('تم حفظ الغرفة');
-    await loadAll();
-  }catch(e){ toastErr(e); }
+  toastNotice('غرف الضيافة غير مستخدمة — منصة المجالس للحجوزات الخارجية فقط');
+  if(typeof showSection==='function') showSection('hospitality-platform');
 }
 async function createHospitalityBooking(){
-  try{
-    await api('hospitality_bookings',{method:'POST',body:JSON.stringify({
-      room_id: val('hBookingRoom'),
-      client_id: val('hBookingClient') || null,
-      guest_name: val('hBookingGuest'),
-      guest_phone: val('hBookingPhone'),
-      checkin_date: val('hBookingCheckin') || today(),
-      checkout_date: val('hBookingCheckout') || today(),
-      rate_per_night: num('hBookingRate'),
-      paid_amount: num('hBookingPaid'),
-      status: val('hBookingStatus') || 'reserved',
-      booking_source: val('hBookingSource') || 'direct',
-      notes: val('hBookingNotes'),
-    })});
-    toast('تم حفظ الحجز');
-    await loadAll();
-  }catch(e){ toastErr(e); }
+  toastNotice('حجز الغرف متوقف — استخدم حجز المجلس أو واجب العزاء');
+  if(typeof showSection==='function') showSection('hospitality-platform');
 }
 async function createHospitalitySeasonRate(){
-  try{
-    await api('hospitality_season_rates',{method:'POST',body:JSON.stringify({
-      property_id: val('hSeasonProperty') || null,
-      room_type: val('hSeasonRoomType') || null,
-      season_name: val('hSeasonName'),
-      start_date: val('hSeasonStart') || today(),
-      end_date: val('hSeasonEnd') || today(),
-      nightly_rate: num('hSeasonRate'),
-      active: Number(val('hSeasonActive')||'1'),
-      notes: val('hSeasonNotes'),
-    })});
-    toast('تم حفظ تسعير الموسم');
-    await loadAll();
-  }catch(e){ toastErr(e); }
+  toastNotice('التسعير الموسمي للغرف متوقف — باقات المجالس هي المرجع');
+  if(typeof showSection==='function') showSection('hospitality-platform');
 }
 async function setHospitalityBookingStatus(bookingId,status){
-  try{
-    await api(`hospitality_bookings/${bookingId}`,{method:'PUT',body:JSON.stringify({status})});
-    toast('تم تحديث حالة الحجز');
-    await loadAll();
-  }catch(e){ toastErr(e); }
+  toastNotice('حجوزات الغرف متوقفة — عدّل حجوزات المجالس من السجل');
+  if(typeof showSection==='function') showSection('hospitality-platform');
 }
 function openHospitalityReport(){
-  const from = val('hSummaryFrom') || (today().slice(0,8)+'01');
-  const to = val('hSummaryTo') || today();
-  const url='/api/report/hospitality?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to)+'&token='+encodeURIComponent(Jawdah.token||'');
-  const w=window.open(url,'_blank','noopener');
-  if(!w) toastNotice('تعذر فتح التقرير — فعّل النوافذ المنبثقة');
+  toastNotice('تقرير الغرف الفندقية متوقف — راجع سجل المجالس والتحصيل');
+  if(typeof showSection==='function') showSection('hospitality-platform');
 }
 function printHospitalityFolio(folioId){
-  const url='/api/report/hospitality?folio_id='+encodeURIComponent(folioId)+'&token='+encodeURIComponent(Jawdah.token||'');
-  const w=window.open(url,'_blank','noopener');
-  if(!w) toastNotice('تعذر فتح الفوليو — فعّل النوافذ المنبثقة');
+  toastNotice('فوليو الغرف متوقف — خدمة المجالس الخارجية لا تستخدم فوليو ليلي');
+  if(typeof showSection==='function') showSection('hospitality-platform');
 }
 function runSalamAgent(){
   const host = $('#salamAgentBox');
