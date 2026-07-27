@@ -57,6 +57,7 @@ const NAV_SAAS_ITEMS = [
   ['messages','التنبيهات','🔔'],
   ['walid','وليد · الذكاء','🤖'],
   ['enterprise','التوسع','🏛️'],
+  ['business-catalog','كتالوج العمل','📋'],
   ['production','المتابعة','✅'],
   ['timeline','الجدول الزمني','📅'],
   ['backup','المستندات','📂'],
@@ -65,7 +66,7 @@ const NAV_SAAS_ITEMS = [
 const SECTION_TITLES = {
   dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','accounting-platform':'منصة المحاسبة','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'الضيافة',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
   revenues:'الإيرادات',invoices:'المدفوعات',receivables:'التحصيل الذكي','admin-expenses':'المصروفات',maintenance:'الصيانة',
-  reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي',production:'المتابعة',timeline:'الجدول الزمني',
+  reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي','business-catalog':'كتالوج العمل',production:'المتابعة',timeline:'الجدول الزمني',
   backup:'المستندات',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
   purchases:'فواتير المشتريات',payroll:'الرواتب',inventory:'المخزن',bank:'كشف البنك',
   'chart-accounts':'دليل الحسابات','bank-reconciliation':'تسوية البنك','financial-periods':'الفترات المالية',statements:'القوائم المالية',
@@ -1123,7 +1124,7 @@ function showSection(id){
   }
   const resolved=resolveSection(id);
   syncPortalChoiceFromSection(resolved);
-  const needsSkeleton=!['dashboard','owner-staff','owner-live','tasks','messages','walid','enterprise','timeline','hospitality'].includes(resolved);
+  const needsSkeleton=!['dashboard','owner-staff','owner-live','tasks','messages','walid','enterprise','business-catalog','timeline','hospitality'].includes(resolved);
   if(needsSkeleton){ const sk=$('#sec-'+resolved); if(sk && !sk.dataset.rendered) renderSectionSkeleton(id); }
   Jawdah.activeSection=id;
   let s=$('#sec-'+resolved);
@@ -1143,6 +1144,7 @@ function showSection(id){
   if(resolved==='messages') renderMessagesPage();
   if(resolved==='walid') renderWalidPage();
   if(resolved==='enterprise') renderEnterprisePage();
+  if(resolved==='business-catalog') renderBusinessCatalogPage();
   if(resolved==='timeline') renderTimelinePage();
   if(resolved==='daily-ops' && typeof renderDailyOpsPage==='function') renderDailyOpsPage();
   if(resolved==='owner-staff' && window.LQ_OWNER_STAFF) LQ_OWNER_STAFF.render();
@@ -1305,6 +1307,15 @@ function renderEnterprisePage(){
     return;
   }
   box.innerHTML='<p class="mini">Enterprise module loading…</p>';
+}
+function renderBusinessCatalogPage(){
+  const box=$('#businessCatalogBox'); if(!box) return;
+  if(window.LQ_BUSINESS){
+    box.innerHTML='<p class="mini">جاري تحميل كتالوج العمل…</p>';
+    window.LQ_BUSINESS.refresh().catch(()=>{});
+    return;
+  }
+  box.innerHTML='<p class="mini">Business catalog loading…</p>';
 }
 function renderWalidPage(){
   const box=$('#walidIntelBox'); if(!box) return;

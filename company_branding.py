@@ -7,28 +7,31 @@ from pathlib import Path
 from typing import Any, Dict
 
 DEFAULT_COMPANY_SETTINGS: Dict[str, Any] = {
-    "name_ar": "جودة الانطلاقة للخدمات ل.ل.س",
-    "name_en": "Quality of Launch Services LLC",
+    "name_ar": "مشاريع جودة الانطلاقة للخدمات",
+    "name_en": "QUALITY OF LAUNCH PROJECTS LLC",
     "cr_no": "1466316",
     "postal_code": "611",
     "po_box": "320",
     "vat_rate": 0.05,
     "vat_reg_no": "",
-    "logo_url": "assets/logo-primary.png",
+    "logo_url": "assets/brand-logo-gold.png",
+    "address_ar": "نزوى — حي التراث الشمالي قرب الدوار",
+    "email": "jiwdat@gmail.com",
     "description_ar": (
-        "جودة الانطلاقة للخدمات ل.ل.س هي مؤسسة خدمية متخصصة في تقديم الخدمات المتعلقة بالعقارات، "
-        "بالإضافة إلى خدمات الضيافة للمناسبات والعزاء، من خلال كادر وظيفي مترابط وذو خبرة طويلة في هذه المجالات، "
-        "بما يضمن تقديم خدمات منظمة وموثوقة وبجودة عالية."
+        "مشاريع جودة الانطلاقة مؤسسة معتمدة لإدارة وتأجير العقارات ووساطة العقارات "
+        "وخدمات الإسكان المعتمدة من وزارة الإسكان، بالإضافة إلى خدمات الضيافة للمناسبات والعزاء."
     ),
     "description_en": (
-        "Quality of Launch Services LLC is a service-oriented company specializing in real estate-related services "
-        "and hospitality services for various occasions, including events and condolence gatherings. The company "
-        "operates with a well-coordinated professional team that has extensive experience in these fields, "
-        "ensuring reliable, organized, and high-quality service delivery."
+        "Quality of Launch Projects is a licensed real-estate management, brokerage, "
+        "housing-services, and hospitality company based in Nizwa, Oman."
     ),
     "contacts": {
         "customer_service": "25225026",
+        "whatsapp": "98203088",
+        "mobile_1": "92120205",
+        "mobile_2": "92269656",
         "hospitality_manager": "92204210",
+        "fast_pay": "92200218",
     },
     "bank": {
         "name": "Bank Muscat",

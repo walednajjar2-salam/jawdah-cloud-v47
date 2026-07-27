@@ -36,6 +36,7 @@ from lq_expand.offsite import offsite_config, push_offsite_backup
 from lq_expand import object_storage as lq_object_storage
 import lq_payroll_import
 import lq_postgres
+import lq_business_catalog
 from lq_expand.openapi import build_openapi_spec
 from lq_expand.security import (
     device_trust_days,
@@ -97,7 +98,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v60-ops-complete"
+APP_VERSION = "Launch-Quality-LLC-v61-real-business"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -439,8 +440,8 @@ MODULE_FIX_PREVIEWS: Dict[str, Dict[str, Any]] = {}
 BIOMETRIC_CHALLENGE_TTL_SECONDS = 180
 BIOMETRIC_CHALLENGES: Dict[str, Dict[str, Any]] = {}
 BIOMETRIC_FLOW_STATES: Dict[str, Dict[str, Any]] = {}
-SUPPORT_PHONE = os.environ.get("LQ_SUPPORT_PHONE", "+96871924089")
-SUPPORT_EMAIL = os.environ.get("LQ_SUPPORT_EMAIL", "info@alamal.info")
+SUPPORT_PHONE = os.environ.get("LQ_SUPPORT_PHONE", "+96898203088")
+SUPPORT_EMAIL = os.environ.get("LQ_SUPPORT_EMAIL", "jiwdat@gmail.com")
 VAT_RATE = float(os.environ.get("LQ_VAT_RATE", "0.05") or "0.05")
 COMPANY_VAT_NO = os.environ.get("LQ_VAT_NO", "OM-VAT-PENDING").strip()
 AI_ASSISTANT_NAME = "WALEED"
@@ -3956,24 +3957,31 @@ def purge_demo_business_data(db: sqlite3.Connection) -> Dict[str, int]:
 
 def ensure_team_users(db: sqlite3.Connection) -> None:
     team = [
-        ("waleed", "وليد", "admin", "111111"),
-        ("yaqoub", "يعقوب", "owner", "owner2015"),
-        ("owner", "يعقوب فاضل حمد الخصيبي", "owner", "001970"),
+        ("waleed", "وليد محمد عبد الهادي", "accountant", "111111"),
+        ("yaqoub", "يعقوب فاضل الخصيبي", "owner", "owner2015"),
+        ("owner", "يعقوب فاضل الخصيبي", "owner", "001970"),
         ("razan", "رزان", "accountant", "222222"),
         ("amjad", "امجد", "operations", "333333"),
-        ("ali", "علي", "maintenance", "444444"),
+        ("ali", "علي محمد علي التريكي", "operations", "444444"),
         ("admin", "System Admin", "admin", "555555"),
     ]
     for username, name, role, password in team:
         ensure_user(db, username, name, role, password)
+    # Real office roster from management list (no password overwrite on existing users).
+    try:
+        lq_business_catalog.ensure_business_staff(db, ensure_user)
+    except Exception:
+        pass
     # Keep Ahmed enabled as executive manager without rotating his password.
     db.execute(
         "UPDATE users SET role='admin', active=1 WHERE lower(username) IN ('ahmed.najjar','ahmed')"
     )
-    # Owner account requested for production entry: Owner / 001970
     db.execute(
-        "UPDATE users SET role='owner', active=1, name=COALESCE(NULLIF(name,''), 'يعقوب فاضل حمد الخصيبي') "
+        "UPDATE users SET role='owner', active=1, name=COALESCE(NULLIF(name,''), 'يعقوب فاضل الخصيبي') "
         "WHERE lower(username)='owner'"
+    )
+    db.execute(
+        "UPDATE users SET role='owner', active=1, name='يعقوب فاضل الخصيبي' WHERE lower(username)='yaqoub'"
     )
 
 
@@ -4293,6 +4301,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "platform_readiness" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_platform_readiness(db)
+                if parts[0] == "business_catalog" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_business_catalog(db)
+                if parts[0] == "business_catalog" and len(parts) >= 2 and parts[1] == "office_fee" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_business_office_fee()
+                if parts[0] == "business_catalog" and len(parts) >= 2 and parts[1] == "hospitality_quote" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_business_hospitality_quote()
+                if parts[0] == "documents" and len(parts) >= 2 and parts[1] == "lease_cancel" and method == "POST":
+                    user = self.require_user(db, "contracts:read")
+                    return None if not user else self.api_lease_cancel_template(db, user)
                 if parts[0] == "database" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_database_status(db, user)
@@ -7743,6 +7763,123 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_platform_readiness(self, db: sqlite3.Connection) -> None:
         self.send_json(build_platform_readiness(db))
 
+    def api_business_catalog(self, db: sqlite3.Connection) -> None:
+        payload = lq_business_catalog.catalog_payload()
+        users = rows_to_dicts(
+            db.execute(
+                "SELECT username, name, role, active FROM users WHERE active=1 ORDER BY role, name"
+            ).fetchall()
+        )
+        self.send_json({"ok": True, "version": APP_VERSION, "catalog": payload, "active_users": users})
+
+    def api_business_office_fee(self) -> None:
+        data = self.read_json()
+        code = str(data.get("service_code") or data.get("code") or "").strip()
+        parties = int(data.get("parties") or 2)
+        result = lq_business_catalog.calc_office_fee(code, parties)
+        status = 200 if result.get("ok") else 400
+        self.send_json(result, status)
+
+    def api_business_hospitality_quote(self) -> None:
+        data = self.read_json()
+        guests = int(data.get("guests") or 0)
+        pkg = lq_business_catalog.pick_hospitality_package(guests)
+        if not pkg:
+            return self.send_json({"ok": False, "error": "لا عرض مناسب"}, 400)
+        self.send_json(
+            {
+                "ok": True,
+                "guests": guests,
+                "package": pkg,
+                "terms": lq_business_catalog.HOSPITALITY_TERMS,
+                "currency": "OMR",
+            }
+        )
+
+    def api_lease_cancel_template(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        company = lq_business_catalog.COMPANY_PROFILE
+        applicant = str(data.get("applicant_name") or "").strip()
+        id_no = str(data.get("id_no") or "").strip()
+        building = str(data.get("building_no") or "").strip()
+        apartment = str(data.get("apartment_no") or "").strip()
+        room = str(data.get("room_no") or "").strip()
+        shop = str(data.get("shop_no") or "").strip()
+        reasons = data.get("reasons") or []
+        if isinstance(reasons, str):
+            reasons = [r.strip() for r in reasons.split("\n") if r.strip()]
+        while len(reasons) < 3:
+            reasons.append("")
+        effective = str(data.get("effective_date") or "").strip()
+        unit_kind = str(data.get("unit_kind") or "apartment").strip().lower()
+        clause = (
+            "البند رقم (5) من العقد — غرف: إيجار، إنترنت، صرف صحي، أو أي أضرار/صيانة"
+            if unit_kind == "room"
+            else "البند رقم (4) من العقد — شقق/محلات: كهرباء، ماء، إنترنت، إيجار أو صيانة"
+        )
+        to_name = str(data.get("to_name") or company["name_ar"]).strip()
+        submitted = str(data.get("submitted_at") or today())
+        reason_rows = "".join(
+            f"<tr><td style='width:28px'>{i+1}.</td><td>{html_escape(reasons[i] or '................................')}</td></tr>"
+            for i in range(3)
+        )
+        html = f"""<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>طلب إلغاء عقد الإيجار</title>
+<style>
+@page{{size:A4;margin:16mm}}
+body{{font-family:Tajawal,Segoe UI,Arial,sans-serif;color:#111;line-height:1.9;margin:0}}
+.sheet{{max-width:900px;margin:0 auto;padding:18px}}
+h1{{text-align:center;margin:0 0 18px;font-size:22px}}
+.meta{{font-size:13px;color:#444;text-align:center;margin-bottom:18px}}
+.line{{margin:10px 0}}
+.box{{border:1px solid #ddd;border-radius:10px;padding:12px;margin:14px 0;background:#fafafa}}
+table{{width:100%;border-collapse:collapse}}
+td{{padding:6px 4px;vertical-align:top}}
+.sign{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:28px}}
+.sig{{border:1px dashed #999;min-height:90px;padding:10px;border-radius:8px}}
+.actions{{margin-bottom:12px}}
+button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radius:10px;font-weight:800}}
+@media print{{.actions{{display:none}}}}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="actions"><button onclick="window.print()">طباعة</button></div>
+  <h1>طلب إلغاء عقد الإيجار</h1>
+  <div class="meta">{html_escape(company['name_ar'])} · س.ت {html_escape(company['cr_no'])} · {html_escape(company['address_ar'])}<br>
+  هاتف: {html_escape(company['phones']['landline'])} · واتساب: {html_escape(company['phones']['whatsapp'])}</div>
+  <p class="line">إلى الأفاضل / <strong>{html_escape(to_name)}</strong></p>
+  <p class="line">أتقدم إليكم أنا / <strong>{html_escape(applicant or '................')}</strong>
+  حامل الهوية رقم / <strong>{html_escape(id_no or '................')}</strong></p>
+  <p class="line">بطلب إلغاء عقد إيجار:
+    المبنى رقم <strong>{html_escape(building or '....')}</strong> ·
+    الشقة رقم <strong>{html_escape(apartment or '....')}</strong> ·
+    الغرفة <strong>{html_escape(room or '....')}</strong> ·
+    المحل <strong>{html_escape(shop or '....')}</strong>
+  </p>
+  <div class="box">
+    <strong>وذلك للأسباب التالية:</strong>
+    <table>{reason_rows}</table>
+  </div>
+  <p class="line">ويكون إلغاء العقد اعتباراً من تاريخ: <strong>{html_escape(effective or '__ / __ / ____')}</strong></p>
+  <p class="line">مع الالتزام بفترة الإخطار الشهرية وسداد أجرة شهر الإخطار حسب العقد.</p>
+  <div class="box"><strong>الالتزامات المالية:</strong><br>{html_escape(clause)}</div>
+  <p class="line">سوف أكون شاكراً لكم على حسن تعاونكم معنا.</p>
+  <div class="sign">
+    <div class="sig">مقدم الطلب /<br>{html_escape(applicant)}</div>
+    <div class="sig">تاريخ تقديم الطلب /<br>{html_escape(submitted)}</div>
+    <div class="sig">التوقيع /</div>
+  </div>
+</div>
+</body>
+</html>"""
+        audit(db, user, "lease_cancel_template", "documents", None, applicant or "blank")
+        db.commit()
+        self.send_json({"ok": True, "html": html})
+
     def api_database_status(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         status = lq_postgres.build_database_platform_status(db, TABLES)
         self.send_json({"ok": True, "database": status})
@@ -8188,7 +8325,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
         tenant_nat = html_escape(c["tenant_nationality"] or "")
         company_ar = "مشاريع جودة الانطلاقة للخدمات"
         company_en = "QUALITY OF LAUNCH PROJECTS LLC"
-        owner_line = "يعقوب فاضل سعيد الخصيبي · Yaqoub Fadel Saeed Al-Khasibi"
+        owner_line = "يعقوب فاضل الخصيبي · Yaqoub Fadel Al-Khasibi"
+        phones = "25225026 · GSM: 98203088 / 92120205 / 92269656"
+        email = "jiwdat@gmail.com"
+        addr = "نزوى — حي التراث الشمالي قرب الدوار"
         html = f"""<!doctype html>
 <html lang="ar" dir="ltr">
 <head>
@@ -8232,8 +8372,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
       <h1>{company_ar}</h1>
       <h2>{company_en}</h2>
       <p>{owner_line}<br>إدارة العقارات والضيافة · Real Estate & Hospitality Management<br>
-      س.ت: 1466316 · الرمز البريدي: 611 · سلطنة عُمان · Sultanate of Oman<br>
-      info@alamal.info · +968 71924089 · GSM: 96203068 / 92120205</p>
+      س.ت: 1466316 · الرمز البريدي: 611 · {addr} · سلطنة عُمان<br>
+      {email} · هاتف: {phones}</p>
       <span class="badge">عقد إيجار · Lease Contract — {html_escape(c['contract_no'] or c['id'])}</span>
     </div>
   </header>
@@ -8266,7 +8406,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
     <div class="sig"><strong>توقيع الشركة</strong><br>{html_escape(c['company_signatory'] or company_en)}</div>
     <div class="sig"><strong>الختم</strong></div>
   </section>
-  <div class="footer">{company_ar} · {company_en} · C.R. 1466316 · info@alamal.info · +968 71924089</div>
+  <div class="footer">{company_ar} · {company_en} · C.R. 1466316 · {email} · {phones}</div>
 </div>
 </body>
 </html>"""

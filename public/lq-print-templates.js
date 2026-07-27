@@ -5,15 +5,15 @@
   const COMPANY = {
     ar: "مشاريع جودة الانطلاقة للخدمات",
     en: "QUALITY OF LAUNCH PROJECTS LLC",
-    ownerAr: "يعقوب فاضل سعيد الخصيبي",
-    ownerEn: "Yaqoub Fadel Saeed Al-Khasibi",
+    ownerAr: "يعقوب فاضل الخصيبي",
+    ownerEn: "Yaqoub Fadel Al-Khasibi",
     cr: "1466316",
     postal: "611",
-    country: "سلطنة عُمان · Sultanate of Oman",
-    email: "info@alamal.info",
-    phone: "+968 71924089",
-    phoneAlt: "96203068 / 92120205",
-    activity: "إدارة العقارات والضيافة · Real Estate & Hospitality Management",
+    country: "نزوى — حي التراث · سلطنة عُمان",
+    email: "jiwdat@gmail.com",
+    phone: "25225026",
+    phoneAlt: "98203088 / 92120205 / 92269656",
+    activity: "إدارة وتأجير العقارات ووساطة العقارات · خدمات الضيافة",
     vatNo: "OM-VAT-PENDING",
   };
 
