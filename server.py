@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Launch Quality LLC
 Real Estate & Hospitality Management System backend.
@@ -98,7 +98,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v62-hospitality-live"
+APP_VERSION = "Launch-Quality-LLC-v63-hospitality-platform"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -11301,7 +11301,7 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
 
 
 UI_SECTIONS_ALL = [
-    "dashboard", "estate-platform", "accounting-platform", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
+    "dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "owner-staff", "owner-live", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "revenues", "invoices",
     "receivables",
     "admin-expenses", "maintenance", "reports", "messages", "walid", "enterprise", "business-catalog",
     "production", "timeline", "backup", "settings", "accounts", "purchases", "payroll",
@@ -11309,7 +11309,7 @@ UI_SECTIONS_ALL = [
     "financial-periods", "approvals", "users", "qa",
 ]
 UI_WRITE_SECTIONS_ALL = [
-    "estate-platform", "accounting-platform", "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
+    "estate-platform", "accounting-platform", "hospitality-platform", "properties", "clients", "contracts", "invoices", "hospitality", "maintenance", "inventory",
     "accounts", "purchases", "payroll", "revenues", "admin-expenses", "bank",
     "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
     "users", "approvals", "backup",
@@ -11324,7 +11324,7 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     "admin": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
     "accountant": {
         "sections": [
-            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "receivables", "revenues",
+            "dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "receivables", "revenues",
             "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
             "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
             "reports", "backup", "messages", "timeline", "walid", "approvals", "business-catalog",
@@ -11336,19 +11336,19 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     },
     "operations": {
         "sections": [
-            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices", "receivables",
+            "dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices", "receivables",
             "maintenance", "inventory", "reports", "messages", "timeline", "backup",
             "walid", "approvals", "production", "business-catalog",
         ],
         "kpis": ["properties", "rented", "vacant", "occupancy", "maintenance", "expiring", "health"],
     },
     "maintenance": {
-        "sections": ["dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
+        "sections": ["dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
         "kpis": ["maintenance", "properties", "vacant", "inventory_value", "health"],
     },
     "viewer": {
         "sections": [
-            "dashboard", "estate-platform", "accounting-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
+            "dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
             "maintenance", "messages", "timeline", "backup",
         ],
         "kpis": ["properties", "occupancy", "health", "overdue", "net"],
@@ -11358,12 +11358,12 @@ UI_WRITE_BY_ROLE: Dict[str, List[str]] = {
     "owner": list(UI_WRITE_SECTIONS_ALL),
     "admin": list(UI_WRITE_SECTIONS_ALL),
     "accountant": [
-        "accounting-platform", "invoices", "hospitality", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
+        "accounting-platform", "hospitality-platform", "invoices", "hospitality", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
         "bank", "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
         "approvals", "backup",
     ],
     "operations": [
-        "estate-platform", "accounting-platform", "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
+        "estate-platform", "accounting-platform", "hospitality-platform", "properties", "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory", "approvals",
     ],
     "maintenance": ["estate-platform", "accounting-platform", "maintenance", "inventory"],
     "viewer": [],

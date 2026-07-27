@@ -383,8 +383,8 @@
         </button>
         <button type="button" class="portal-tile" onclick="choosePortal('hospitality')">
           <span class="portal-icon">🏨</span>
-          <b>الضيافة</b>
-          <small>تشغيل الضيافة (قيد التطوير)</small>
+          <b>منصة الضيافة</b>
+          <small>باقات المناسبات · العزاء · الغرف والحجوزات</small>
         </button>
         <button type="button" class="portal-tile" onclick="choosePortal('accounting')">
           <span class="portal-icon">💼</span>
@@ -593,7 +593,7 @@
             <button type="button" class="estate-dock-btn" data-estate-panel="tables" onclick="showEstatePanel('tables')"><span>📋</span><b>جداول</b></button>
             <button type="button" class="estate-dock-btn" data-estate-panel="booking" onclick="showEstatePanel('booking')"><span>📌</span><b>حجز وعقود</b></button>
             <button type="button" class="estate-dock-btn" data-estate-panel="finance" onclick="showEstatePanel('finance')"><span>💰</span><b>تحصيل وإقفال</b></button>
-            <button type="button" class="estate-dock-btn" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>الضيافة</b></button>
+            <button type="button" class="estate-dock-btn" data-estate-panel="hospitality" onclick="choosePortal('hospitality')"><span>🏨</span><b>منصة الضيافة</b></button>
           </nav>
 
           <div class="estate-panels">
@@ -1023,11 +1023,16 @@
       <section id="sec-enterprise" class="section"><div id="enterpriseBox"></div></section>
       <section id="sec-business-catalog" class="section"><div id="businessCatalogBox"></div></section>
       <section id="sec-timeline" class="section"><div id="timelinePageBox"></div></section>
-      <section id="sec-hospitality" class="section">
+      <section id="sec-hospitality-platform" class="section">
         <div class="card accounting-hero">
-          <h3>قسم الضيافة</h3>
-          <p class="mini">تشغيل ضيافة فعلي: باقات المناسبات، واجب العزاء، غرف، حجوزات، وتحصيل مباشر.</p>
-          <div id="hospitalityQuickBox" class="status-line"></div>
+          <h3>منصة الضيافة</h3>
+          <p class="mini">منصة تشغيل مستقلة: باقات المناسبات، واجب العزاء، الغرف، الحجوزات، التحصيل، وتقارير الإشغال.</p>
+          <div id="hospPlatformKpis" class="grid kpis"></div>
+          <div id="hospitalityQuickBox" class="status-line" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <h3>لوحة تشغيل الضيافة</h3>
+          <div id="hospPlatformQuick" class="toolbar" style="flex-wrap:wrap"></div>
         </div>
         <div class="card">
           <h3>باقات المناسبات وواجب العزاء</h3>
@@ -1346,10 +1351,10 @@
   <script src="lq-payroll-import.js?v=pi3-real" defer></script>
   <script src="lq-walid-intel.js?v=wi2" defer></script>
   <script src="lq-enterprise.js?v=ent6-v59" defer></script>
-  <script src="lq-business-catalog.js?v=biz1-v62" defer></script>
+  <script src="lq-business-catalog.js?v=biz1-v63" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal24-v62" defer></script>
+  <script src="app.js?v=portal24-v63" defer></script>
   <script src="lq-edition-terrifying.js?v=td3" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>
