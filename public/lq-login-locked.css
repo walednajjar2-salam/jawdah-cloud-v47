@@ -315,11 +315,11 @@ body.login-ultra #loginScreen .login-field-label{
   opacity:1 !important;
 }
 body.login-ultra #loginScreen .login-field-icon{display:none !important;}
-body.login-ultra #loginScreen .login-form input,
+body.login-ultra #loginScreen .login-form input:not(.ev-otp-input),
 body.login-ultra #loginScreen #loginUser,
 body.login-ultra #loginScreen #loginPass,
 body.login-ultra #loginScreen #otpUser,
-body.login-ultra #loginScreen input[type="text"],
+body.login-ultra #loginScreen input[type="text"]:not(.ev-otp-input),
 body.login-ultra #loginScreen input[type="password"]{
   width:100% !important;
   box-sizing:border-box !important;
@@ -416,3 +416,49 @@ body.login-ultra #lqBrandWatermark{display:none !important;}
     max-height:140px !important;
   }
 }
+
+/* MFA / OTP digits: one horizontal row (not stacked full-width inputs) */
+body.login-ultra #loginScreen .ev-otp-inputs{
+  display:flex !important;
+  flex-direction:row !important;
+  flex-wrap:nowrap !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:8px !important;
+  width:100% !important;
+  margin:8px 0 12px !important;
+  direction:ltr !important;
+}
+body.login-ultra #loginScreen .ev-otp-inputs .ev-otp-input,
+body.login-ultra #loginScreen input.ev-otp-input{
+  display:inline-block !important;
+  flex:0 0 42px !important;
+  width:42px !important;
+  min-width:42px !important;
+  max-width:42px !important;
+  height:48px !important;
+  margin:0 !important;
+  padding:0 !important;
+  text-align:center !important;
+  font-size:18px !important;
+  font-weight:800 !important;
+  border-radius:12px !important;
+  border:1px solid rgba(0,0,0,.28) !important;
+  background:#ffffff !important;
+  color:#0a0a0a !important;
+  -webkit-text-fill-color:#0a0a0a !important;
+  box-sizing:border-box !important;
+}
+@media (max-width:420px){
+  body.login-ultra #loginScreen .ev-otp-inputs{gap:6px !important}
+  body.login-ultra #loginScreen .ev-otp-inputs .ev-otp-input,
+  body.login-ultra #loginScreen input.ev-otp-input{
+    flex-basis:36px !important;
+    width:36px !important;
+    min-width:36px !important;
+    max-width:36px !important;
+    height:44px !important;
+    font-size:16px !important;
+  }
+}
+
