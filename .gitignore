@@ -1,11 +1,11 @@
-data/
-*.sqlite3
-.env
-__pycache__/
-*.pyc
-.DS_Store
-Thumbs.db
-jawdah-cloud-v47/
-lanch-qulaty/
-_zip-check/
-backups/
+# Android build toolchain (large — regenerate via scripts/build_android_webview_apk.sh)
+tools/android/sdk/
+tools/android/*.zip
+tools/android/gradle-*/
+tools/android/.temp/
+
+# Android project build outputs
+mobile/android-webview/.gradle/
+mobile/android-webview/build/
+mobile/android-webview/app/build/
+mobile/android-webview/local.properties

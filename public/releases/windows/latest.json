@@ -1,16 +1,17 @@
 {
   "channel": "stable",
-  "version": "56.2.0",
+  "version": "68.2.0",
   "installer_url": "https://web-production-08d73.up.railway.app/LaunchQuality.exe",
   "portable_url": "https://web-production-08d73.up.railway.app/lq-portable.zip",
+  "android_apk_url": "https://web-production-08d73.up.railway.app/releases/android/Launch-Quality-Staff.apk",
+  "android_page": "https://web-production-08d73.up.railway.app/get-android",
   "setup_page": "https://web-production-08d73.up.railway.app/get-windows?auto=1",
   "app_url": "https://web-production-08d73.up.railway.app/app.html",
-  "download_page": "https://web-production-08d73.up.railway.app/get-windows",
-  "published_at": "2026-07-26T14:10:00Z",
+  "download_page": "https://web-production-08d73.up.railway.app/download.html",
+  "published_at": "2026-07-28T09:30:00Z",
   "release_notes": [
-    "Full rebuild: direct LaunchQuality.exe download",
-    "Flat ZIP + 1-تثبيت-الآن.bat for desktop icon",
-    "Force-download page with auto=1",
-    "Setup.exe replaced with working launcher"
+    "Windows launcher rebuilt (GUI) for production URL",
+    "Android WebView APK published under /releases/android",
+    "Download hubs: /get-windows and /get-android"
   ]
 }

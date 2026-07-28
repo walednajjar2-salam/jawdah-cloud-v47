@@ -98,8 +98,8 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v68.1-otp-row"
-# Production baseline family: v68. Patch 68.1 = OTP digit row layout fix.
+APP_VERSION = "Launch-Quality-LLC-v68.2-native-apps"
+# Production baseline family: v68. Patch 68.2 = Windows + Android native downloads.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
 STABLE_TAG = "v68-stable"
@@ -469,16 +469,16 @@ WORKFLOW_POLICY_DEFAULTS: Dict[str, Any] = {
     "invoice_backdate_limit_days": 7,
     "invoice_future_limit_days": 180,
 }
-STAFF_APP_VERSION = os.environ.get("LQ_STAFF_APP_VERSION", "2.0.0").strip()
+STAFF_APP_VERSION = os.environ.get("LQ_STAFF_APP_VERSION", "68.2.0").strip()
+PRODUCTION_URL = os.environ.get("LQ_PRODUCTION_URL", "https://web-production-08d73.up.railway.app").strip()
 STAFF_DOWNLOAD_APK = os.environ.get(
     "LQ_STAFF_APK_URL",
-    "https://github.com/walednajjar2-salam/launch-quality-mobile/raw/downloads-v1.0.1-staff/downloads/Launch-Quality-Staff.apk",
+    f"{PRODUCTION_URL.rstrip('/')}/releases/android/Launch-Quality-Staff.apk",
 ).strip()
 STAFF_DOWNLOAD_ZIP = os.environ.get(
     "LQ_STAFF_ZIP_URL",
-    "https://github.com/walednajjar2-salam/launch-quality-mobile/raw/downloads-v1.0.1-staff/downloads/Launch-Quality-Staff-Windows.zip",
+    f"{PRODUCTION_URL.rstrip('/')}/lq-portable.zip",
 ).strip()
-PRODUCTION_URL = os.environ.get("LQ_PRODUCTION_URL", "https://web-production-08d73.up.railway.app").strip()
 LQ_DATABASE_URL = (os.environ.get("LQ_DATABASE_URL") or os.environ.get("DATABASE_URL") or "").strip()
 
 APPROVAL_DECIDE_ROLES = {
@@ -4187,6 +4187,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
             path = "/releases/windows/LaunchQuality-Setup.exe"
         if path in ("/windows-setup", "/get-windows", "/تحميل-ويندوز", "/download-windows"):
             path = "/get-windows.html"
+        if path in ("/get-android", "/android-apk", "/تحميل-اندرويد", "/download-android"):
+            path = "/get-android.html"
+        if path in ("/lq-staff.apk", "/Launch-Quality-Staff.apk", "/android.apk"):
+            download_name = "Launch-Quality-Staff.apk"
+            path = "/releases/android/Launch-Quality-Staff.apk"
         if path in ("/lq-portable.zip", "/windows-portable.zip", "/LaunchQuality-Windows.zip", "/windows.zip"):
             download_name = "LaunchQuality-Windows.zip"
             path = "/releases/windows/LaunchQuality-Portable.zip"
