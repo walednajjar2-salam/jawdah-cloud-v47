@@ -98,8 +98,8 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v68-stable"
-# Frozen production baseline — do not bump casually; request v69+ for new work.
+APP_VERSION = "Launch-Quality-LLC-v68.1-otp-row"
+# Production baseline family: v68. Patch 68.1 = OTP digit row layout fix.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
 STABLE_TAG = "v68-stable"
