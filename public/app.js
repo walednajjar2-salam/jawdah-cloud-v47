@@ -108,8 +108,14 @@ function portalAllowsNavId(id){
   if(id==='accounting-platform' && portal!=='accounting') return false;
   return allowed.has(id);
 }
+function estatePortfolioReady(){
+  const apts = Jawdah.data?.estate_apartments || [];
+  const rooms = Jawdah.data?.estate_rooms || [];
+  return (apts.length + rooms.length) > 0;
+}
 function resolveSection(id){
   if(id==='hospitality') return 'hospitality-platform';
+  if(id==='properties' && estatePortfolioReady()) return 'estate-platform';
   return id==='settings' ? (canManageUsersSection() ? 'users' : 'backup') : id;
 }
 function canSeeApprovals(){ return Jawdah.user && ['admin','owner','accountant','operations'].includes(Jawdah.user.role); }
@@ -1699,7 +1705,13 @@ function renderDashCashFlow(k){
   host.innerHTML=`<h4>التدفق النقدي · 6 أشهر</h4><div class="cashflow-bars">${series.map(x=>{const inc=Number(x.income||0), exp=Number(x.expense||0); const ih=(inc/max)*100, eh=(exp/max)*100; const m=String(x.month||'').slice(5); return `<div class="cashflow-month"><div class="cashflow-col"><i class="inc" style="height:${ih}%"></i><i class="exp" style="height:${eh}%"></i></div><span>${m}</span><small>${money(inc-exp)}</small></div>`;}).join('')}</div><div class="cashflow-legend"><span><i class="inc"></i> إيراد</span><span><i class="exp"></i> مصروف</span><span>صافي: ${money(k.net||0)}</span></div>`;
 }
 function dashEngine(data,k){
-  const invoices=data.invoices||[], contracts=data.contracts||[], clients=data.clients||[], props=data.properties||[], maint=data.maintenance||[], accounts=data.accounts||[];
+  const portal=(typeof currentPortalChoice==='function')?currentPortalChoice():'realestate';
+  const useEstate = portal==='realestate' && estatePortfolioReady();
+  const invoices=data.invoices||[], contracts=data.contracts||[], clients=data.clients||[], props=useEstate?(data.estate_properties||[]):(data.properties||[]), maint=useEstate?(data.estate_maintenance||[]):(data.maintenance||[]), accounts=data.accounts||[];
+  const estateContracts=data.estate_contracts||[];
+  const estateInvoices=data.estate_contract_invoices||[];
+  const estateApts=data.estate_apartments||[];
+  const estateBuildings=data.estate_buildings||[];
   const todayStr=today();
   const daysLate=d=>{const x=new Date(String(d||todayStr)+'T00:00:00'), n=new Date(); return Math.max(0,Math.floor((n-x)/(86400000)));};
   const clientScores=clients.map(c=>{
@@ -1707,34 +1719,64 @@ function dashEngine(data,k){
     const total=inv.reduce((s,i)=>s+Number(i.amount||0),0), paid=inv.reduce((s,i)=>s+Number(i.paid_amount||0),0);
     return {client:c,total,paid,outstanding:Math.max(0,total-paid),count:inv.length};
   }).sort((a,b)=>b.paid-a.paid);
-  const propScores=props.map(p=>{
+  const propScores=useEstate
+    ? props.map(p=>{
+        const inv=estateInvoices.filter(i=>{
+          const c=estateContracts.find(x=>x.id===i.contract_id);
+          return c && c.property_id===p.id;
+        });
+        const paid=inv.reduce((s,i)=>s+Number(i.paid_amount||0),0);
+        const active=estateContracts.find(x=>x.property_id===p.id && String(x.status||'').toLowerCase()==='active');
+        const units=estateApts.filter(a=>a.property_id===p.id);
+        const occ=units.filter(a=>String(a.status||'').toLowerCase()==='occupied').length;
+        const status=units.length?`${occ}/${units.length} مؤجرة`:(p.status||'—');
+        return {property:p,paid,rent:Number(active?.rent_amount||p.base_rent_price||0),status};
+      }).sort((a,b)=>b.paid-a.paid)
+    : props.map(p=>{
     const inv=invoices.filter(i=>i.property_id===p.id);
     const paid=inv.reduce((s,i)=>s+Number(i.paid_amount||0),0);
     const active=contracts.find(x=>x.property_id===p.id && String(x.status||'').toLowerCase()==='active');
     return {property:p,paid,rent:Number(active?.rent_amount||p.price||0),status:p.status||'—'};
   }).sort((a,b)=>b.paid-a.paid);
   const aging={'0-30':0,'31-60':0,'61-90':0,'90+':0};
-  invoices.forEach(inv=>{
+  const agingSource = useEstate
+    ? estateInvoices.map(inv=>({amount:inv.amount,paid_amount:inv.paid_amount,due_date:inv.due_date}))
+    : invoices;
+  agingSource.forEach(inv=>{
     const rem=Math.max(0,Number(inv.amount||0)-Number(inv.paid_amount||0)); if(!rem) return;
     const late=daysLate(inv.due_date);
     if(late<=30) aging['0-30']+=rem; else if(late<=60) aging['31-60']+=rem; else if(late<=90) aging['61-90']+=rem; else aging['90+']+=rem;
   });
-  const activeContracts=contracts.filter(c=>String(c.status||'').toLowerCase()==='active');
+  const contractSource = useEstate ? estateContracts : contracts;
+  const activeContracts=contractSource.filter(c=>String(c.status||'').toLowerCase()==='active');
   const pipeline=[
-    {l:'مسودات',v:contracts.filter(c=>String(c.status||'').toLowerCase()==='draft').length,c:'draft'},
+    {l:'مسودات',v:contractSource.filter(c=>String(c.status||'').toLowerCase()==='draft').length,c:'draft'},
     {l:'نشطة',v:activeContracts.length,c:'active'},
     {l:'تنتهي قريباً',v:Number(k.expiring||0),c:'warn'},
     {l:'منتهية',v:Number(k.expired||0),c:'danger'}
   ];
   const events=[];
-  invoices.filter(i=>Number(i.amount||0)>Number(i.paid_amount||0)).forEach(i=>{
-    events.push({d:i.due_date||todayStr,t:'فاتورة',title:i.invoice_no||i.id,sub:byId('clients',i.client_id).name||'',prio:daysLate(i.due_date)>0?'high':'med'});
-  });
+  if(useEstate){
+    estateInvoices.filter(i=>Number(i.amount||0)>Number(i.paid_amount||0)).forEach(i=>{
+      const c=estateContracts.find(x=>x.id===i.contract_id);
+      events.push({d:i.due_date||todayStr,t:'فاتورة',title:i.invoice_no||i.id,sub:byId('clients',c?.client_id).name||'',prio:daysLate(i.due_date)>0?'high':'med'});
+    });
+  }else{
+    invoices.filter(i=>Number(i.amount||0)>Number(i.paid_amount||0)).forEach(i=>{
+      events.push({d:i.due_date||todayStr,t:'فاتورة',title:i.invoice_no||i.id,sub:byId('clients',i.client_id).name||'',prio:daysLate(i.due_date)>0?'high':'med'});
+    });
+  }
   activeContracts.forEach(c=>{
     events.push({d:c.end_date,t:'عقد',title:c.contract_no||c.id,sub:byId('clients',c.client_id).name||'',prio:daysLate(c.end_date)>0?'high':'med'});
   });
   const openMaint=maint.filter(x=>!String(x.status||'').toLowerCase().match(/closed|done|complete/));
-  openMaint.forEach(m=>events.push({d:m.request_date||todayStr,t:'صيانة',title:m.title||'طلب',sub:propertyLabel(byId('properties',m.property_id)),prio:String(m.priority||'').toLowerCase()==='high'?'high':'med'}));
+  openMaint.forEach(m=>events.push({
+    d:m.request_date||m.maintenance_date||todayStr,
+    t:'صيانة',
+    title:m.title||'طلب',
+    sub:useEstate?(m.apartment_id||m.room_id||m.property_id||''):propertyLabel(byId('properties',m.property_id)),
+    prio:String(m.priority||'').toLowerCase()==='high'?'high':'med'
+  }));
   (data.hospitality_events||[]).forEach(e=>{
     events.push({
       d:e.event_date||todayStr,
@@ -1746,7 +1788,16 @@ function dashEngine(data,k){
   });
   events.sort((a,b)=>String(a.d).localeCompare(String(b.d)));
   const byBuilding={};
-  props.forEach(p=>{const b=p.building_no||'عام'; if(!byBuilding[b]) byBuilding[b]={total:0,rented:0,vacant:0}; byBuilding[b].total++; const s=String(p.status||''); if(s.includes('مستأ')) byBuilding[b].rented++; else if(s.includes('شاغ')) byBuilding[b].vacant++; });
+  if(useEstate){
+    estateBuildings.forEach(b=>{
+      const units=estateApts.filter(a=>a.building_id===b.id);
+      const rented=units.filter(a=>String(a.status||'').toLowerCase()==='occupied').length;
+      const vacant=units.filter(a=>String(a.status||'').toLowerCase()==='vacant').length;
+      byBuilding[b.name||b.id]={total:units.length,rented,vacant};
+    });
+  }else{
+    props.forEach(p=>{const b=p.building_no||'عام'; if(!byBuilding[b]) byBuilding[b]={total:0,rented:0,vacant:0}; byBuilding[b].total++; const s=String(p.status||''); if(s.includes('مستأ')) byBuilding[b].rented++; else if(s.includes('شاغ')) byBuilding[b].vacant++; });
+  }
   const buildingRows=Object.entries(byBuilding).map(([b,x])=>({b,...x,occ:x.total?Math.round((x.rented/x.total)*100):0})).sort((a,b)=>b.total-a.total);
   const monthlyForecast=activeContracts.reduce((s,c)=>s+Number(c.rent_amount||0),0);
   const openMaintCount=maint.filter(x=>!String(x.status||'').toLowerCase().match(/closed|done|complete/)).length;
@@ -1764,7 +1815,6 @@ function dashEngine(data,k){
   if(collectionPct<80) risks.push({l:'تحصيل منخفض',v:fmt(collectionPct)+'%',s:'med'});
   const series=chartSeries();
   const heat=series.map(x=>({m:String(x.month||'').slice(5),score:Math.min(100,Math.round((Number(x.income||0)/(Math.max(Number(x.expense||0),1)))*20+Number(k.occupancy||0)*0.5))}));
-  const portal=(typeof currentPortalChoice==='function')?currentPortalChoice():'realestate';
   const hEvents=data.hospitality_events||[];
   const activeMajlis=hEvents.filter(e=>['reserved','confirmed'].includes(String(e.status||'').toLowerCase()));
   const majlisTotal=hEvents.reduce((s,e)=>s+Number(e.total_amount||0),0);
@@ -1957,7 +2007,9 @@ function renderDashMegaCockpit(k,data,eng){
   const eventsHtml=eng.events.length?eng.events.map(e=>`<div class="event-row ${e.prio}"><span class="event-date">${e.d||'—'}</span><div><b>${htmlEscape(e.title)}</b><small>${htmlEscape(e.t)} · ${htmlEscape(e.sub)}</small></div></div>`).join(''):'<p class="mini">لا أحداث قادمة</p>';
   const bldHtml=eng.buildingRows.slice(0,6).map(b=>`<div class="bld-row"><b>بناية ${htmlEscape(b.b)}</b><span>${fmt(b.total)} وحدة</span><div class="bld-bar"><i style="width:${b.occ}%"></i></div><small>${fmt(b.occ)}% إشغال</small></div>`).join('')||'<p class="mini">لا بيانات بنايات</p>';
   const heatHtml=eng.heat.map(h=>`<div class="heat-cell" style="--heat:${h.score}" title="${h.m}"><span>${h.m}</span><i></i></div>`).join('');
-  const activeCount=(data.contracts||[]).filter(c=>String(c.status||'').toLowerCase()==='active').length;
+  const activeCount = estatePortfolioReady()
+    ? (data.estate_contracts||[]).filter(c=>String(c.status||'').toLowerCase()==='active').length
+    : (data.contracts||[]).filter(c=>String(c.status||'').toLowerCase()==='active').length;
   const majlisRows = activeMajlis.slice(0,6).map((e,i)=>`<div class="rank-row" onclick="showSection('hospitality-platform')"><span class="rank-no">${i+1}</span><div><b>${htmlEscape(e.package_name||'مجلس')}</b><small>${htmlEscape(e.client_name||'')} · ${htmlEscape(e.event_date||'')}</small></div><strong>${money(e.total_amount)}</strong></div>`).join('') || '<p class="mini">لا حجوزات مجالس بعد</p>';
   const portalHero = portal==='hospitality'
     ? `<article class="bento-tile bento-span-12 saas-glass hotel-hero"><div class="bento-head"><h4>🏨 منصة المجالس</h4><button type="button" class="saas-link-btn" onclick="showSection('hospitality-platform')">تشغيل المجالس</button></div><div class="status-line"><span class="badge">نشط ${fmt(activeMajlis.length)}</span><span class="badge">إيراد ${money(majlisTotal)}</span><span class="badge">تحصيل ${money(majlisPaid)}</span><span class="badge">مفصولة عن العقارات</span></div><div class="rank-list" style="margin-top:10px">${majlisRows}</div></article>`
@@ -4137,7 +4189,7 @@ function quickAddNew(){
     showSection(canSeeFinance()?'accounts':'accounting-platform');
     return;
   }
-  showSection('properties');
+  showSection('estate-platform');
 }
 window.quickAddNew = quickAddNew;
 function applySavedPortalChoice(){
@@ -5464,6 +5516,58 @@ window.printHospitalityFolio = printHospitalityFolio;
       monthCloses
     );
   }
+  function renderEstateAnalyticsAlerts(cards){
+    const execBox = $('#estateExecAlertsBox');
+    if(!execBox || !Array.isArray(cards)) return;
+    execBox.innerHTML = cards.map(c=>`<div class="statement-row"><span>${htmlEscape(c.title)}<small class="mini"> · ${htmlEscape(c.subtitle||'')}</small></span><b class="badge ${htmlEscape(c.tone||'')}">${fmt(c.value||0)}</b></div>${(c.details||[]).map(d=>`<div class="statement-row mini"><span>↳ ${htmlEscape(d)}</span><b></b></div>`).join('')}`).join('');
+  }
+  function renderEstateAnalyticsOccupancy(snapshot){
+    const occHost = $('#estateOccupancyReportBox');
+    if(!occHost) return;
+    if(!snapshot || !snapshot.current){
+      occHost.innerHTML = '<p class="badge overdue">أدخل شهرًا صحيحًا بصيغة YYYY-MM</p>';
+      return;
+    }
+    occHost.innerHTML = `
+      <div class="kpis grid">
+        <div class="kpi"><span>إشغال الشهر</span><strong>${fmt(snapshot.current.occupancy_pct)}%</strong></div>
+        <div class="kpi"><span>الوحدات المؤجرة</span><strong>${fmt(snapshot.current.occupied_units)}</strong></div>
+        <div class="kpi"><span>إجمالي الوحدات</span><strong>${fmt(snapshot.current.total_units)}</strong></div>
+        <div class="kpi"><span>تغير شهري MoM</span><strong class="${snapshot.delta_pct>=0?'linked-ok':'low-stock'}">${snapshot.delta_pct>=0?'+':''}${fmt(snapshot.delta_pct)}%</strong></div>
+      </div>
+      <div class="statement-row"><span>الشهر الحالي</span><b>${htmlEscape(snapshot.current.month_key)} · مؤجر ${fmt(snapshot.current.occupied_units)} من ${fmt(snapshot.current.total_units)}</b></div>
+      <div class="statement-row"><span>الشهر السابق</span><b>${htmlEscape(snapshot.previous?.month_key || '—')} · مؤجر ${fmt(snapshot.previous?.occupied_units || 0)} من ${fmt(snapshot.previous?.total_units || 0)}</b></div>
+      <div class="statement-row"><span>فرق الوحدات</span><b>${snapshot.delta_units>=0?'+':''}${fmt(snapshot.delta_units)} وحدة</b></div>
+    `;
+  }
+  function renderEstateAnalyticsTrace(trace){
+    const host = $('#estateUnitTraceBox');
+    if(!host || !trace) return;
+    const rows = Array.isArray(trace.timeline) ? trace.timeline : [];
+    host.innerHTML = rows.map(e=>`<div class="statement-row"><span>${e.icon||'•'} ${htmlEscape(e.title||'')}</span><b>${htmlEscape(String(e.date||'').slice(0,10) || '—')} · ${htmlEscape(e.meta||'')}</b></div>`).join('') || '<p class="mini">لا توجد أحداث لهذه الوحدة بعد</p>';
+  }
+  let __estateAnalyticsLoading = false;
+  async function loadEstateAnalytics(){
+    if(__estateAnalyticsLoading) return;
+    __estateAnalyticsLoading = true;
+    try{
+      const monthKey = String($('#estateOccMonth')?.value || '');
+      const entityType = String($('#estateTraceEntityType')?.value || 'apartment');
+      const entityId = String($('#estateTraceEntityId')?.value || '');
+      const q = new URLSearchParams();
+      if(monthKey) q.set('month', monthKey);
+      if(entityType) q.set('entity_type', entityType);
+      if(entityId) q.set('entity_id', entityId);
+      const res = await api(`estate_analytics?${q.toString()}`);
+      if(Array.isArray(res.exec_alerts)) renderEstateAnalyticsAlerts(res.exec_alerts);
+      if(res.occupancy) renderEstateAnalyticsOccupancy(res.occupancy);
+      if(res.unit_trace) renderEstateAnalyticsTrace(res.unit_trace);
+    }catch(_e){
+      /* client-side fallback already rendered */
+    }finally{
+      __estateAnalyticsLoading = false;
+    }
+  }
   window.renderEstatePlatform = function(){
     renderEstateIcons();
     renderEstatePhotoGallery();
@@ -5584,6 +5688,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     }
     ensureEnglishDigits(document.getElementById('sec-estate-platform'));
     if(typeof loadEstateOperationsCheck==='function') loadEstateOperationsCheck(true);
+    loadEstateAnalytics();
   };
   function nowDay(){ return today ? today() : new Date().toISOString().slice(0,10); }
   function monthStartEnd(monthKey){

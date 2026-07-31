@@ -98,8 +98,8 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v68.2-native-apps"
-# Production baseline family: v68. Patch 68.2 = Windows + Android native downloads.
+APP_VERSION = "Launch-Quality-LLC-v68.3-estate-closure"
+# Production baseline family: v68. Patch 68.3 = estate dashboard + server analytics closure.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
 STABLE_TAG = "v68-stable"
@@ -2691,6 +2691,14 @@ def build_owner_live_hub(db: sqlite3.Connection, timeline_days: int = 7) -> Dict
             }
         )
     property_finance.sort(key=lambda x: x["net"], reverse=True)
+    estate_units = estate_units_count(db)
+    estate_active_contracts = int(
+        db.execute("SELECT COUNT(*) FROM estate_contracts WHERE lower(status)='active'").fetchone()[0] or 0
+    )
+    if estate_units > 0:
+        estate_finance = build_estate_property_finance(db)
+        if estate_finance:
+            property_finance = estate_finance[:12]
     all_majlis = rows_to_dicts(
         db.execute(
             """
@@ -2722,9 +2730,10 @@ def build_owner_live_hub(db: sqlite3.Connection, timeline_days: int = 7) -> Dict
         },
         "channels": {
             "realestate": {
-                "units": len(properties),
-                "active_contracts": int(db.execute("SELECT COUNT(*) FROM contracts WHERE lower(status)='active'").fetchone()[0]),
+                "units": estate_units if estate_units > 0 else len(properties),
+                "active_contracts": estate_active_contracts if estate_units > 0 else int(db.execute("SELECT COUNT(*) FROM contracts WHERE lower(status)='active'").fetchone()[0]),
                 "property_stock_items": sum(1 for i in inventory_items if i.get("property_id")),
+                "estate_source": estate_units > 0,
             },
             "hospitality": {
                 "events_total": len(all_majlis),
@@ -3356,6 +3365,380 @@ def contract_duration_months(start: str, end: str) -> int:
     if e.day >= s.day:
         months = max(1, months)
     return months
+
+
+def estate_units_count(db: sqlite3.Connection) -> int:
+    apt = int(db.execute("SELECT COUNT(*) FROM estate_apartments").fetchone()[0] or 0)
+    room = int(db.execute("SELECT COUNT(*) FROM estate_rooms").fetchone()[0] or 0)
+    return apt + room
+
+
+def use_estate_portfolio(db: sqlite3.Connection) -> bool:
+    return estate_units_count(db) > 0
+
+
+def _estate_status_bucket(status: str) -> str:
+    st = str(status or "").strip().lower()
+    if st in ("occupied", "rented", "leased", "مستأجرة"):
+        return "rented"
+    if st == "reserved":
+        return "reserved"
+    if st in ("maintenance", "صيانة"):
+        return "maintenance"
+    if st in ("suspended",):
+        return "suspended"
+    return "vacant"
+
+
+def build_estate_portfolio_stats(db: sqlite3.Connection) -> Dict[str, Any]:
+    rows = db.execute(
+        """
+        SELECT status FROM estate_apartments
+        UNION ALL
+        SELECT status FROM estate_rooms
+        """
+    ).fetchall()
+    total = len(rows)
+    rented = vacant = reserved = maintenance_props = suspended = 0
+    for row in rows:
+        bucket = _estate_status_bucket(str(row["status"] or ""))
+        if bucket == "rented":
+            rented += 1
+        elif bucket == "reserved":
+            reserved += 1
+        elif bucket == "maintenance":
+            maintenance_props += 1
+        elif bucket == "suspended":
+            suspended += 1
+        else:
+            vacant += 1
+    eligible = max(0, total - maintenance_props - suspended)
+    occupancy = round((rented / eligible * 100), 1) if eligible else 0.0
+    estate_maint = int(
+        db.execute(
+            "SELECT COUNT(*) FROM estate_maintenance WHERE lower(status) NOT IN ('closed','done','completed')"
+        ).fetchone()[0]
+        or 0
+    )
+    return {
+        "properties": total,
+        "rented": rented,
+        "vacant": vacant,
+        "reserved": reserved,
+        "maintenance_properties": maintenance_props,
+        "maintenance": estate_maint,
+        "occupancy": occupancy,
+        "source": "estate",
+    }
+
+
+def estate_contract_renewal_stats(db: sqlite3.Connection, notice_days: int = 30) -> Dict[str, int]:
+    today_d = date.today()
+    expiring = 0
+    expired = 0
+    rows = db.execute(
+        "SELECT end_date, status FROM estate_contracts WHERE lower(status)='active'"
+    ).fetchall()
+    for row in rows:
+        try:
+            end = datetime.fromisoformat(str(row["end_date"])).date()
+        except ValueError:
+            continue
+        days_left = (end - today_d).days
+        if days_left < 0:
+            expired += 1
+        elif days_left <= notice_days:
+            expiring += 1
+    return {"expiring": expiring, "expired": expired}
+
+
+def estate_contract_overdue_total(db: sqlite3.Connection) -> float:
+    rows = db.execute(
+        """
+        SELECT amount, paid_amount FROM estate_contract_invoices
+        WHERE lower(status)!='paid' AND date(due_date) < date(?)
+        """,
+        (today(),),
+    ).fetchall()
+    return sum(max(0.0, float(r["amount"] or 0) - float(r["paid_amount"] or 0)) for r in rows)
+
+
+def _month_start_end(month_key: str) -> Optional[Dict[str, str]]:
+    m = str(month_key or "").strip()
+    if not re.match(r"^\d{4}-\d{2}$", m):
+        return None
+    y, mm = m.split("-")
+    y_i, mm_i = int(y), int(mm)
+    if not (y_i > 2000 and 1 <= mm_i <= 12):
+        return None
+    start = date(y_i, mm_i, 1)
+    if mm_i == 12:
+        end = date(y_i + 1, 1, 1) - timedelta(days=1)
+    else:
+        end = date(y_i, mm_i + 1, 1) - timedelta(days=1)
+    return {"month_key": m, "start": start.isoformat(), "end": end.isoformat()}
+
+
+def _previous_month_key(month_key: str) -> str:
+    info = _month_start_end(month_key)
+    if not info:
+        return ""
+    d = datetime.fromisoformat(info["start"]).date().replace(day=1) - timedelta(days=1)
+    return d.strftime("%Y-%m")
+
+
+def _overlaps_month(start_date: str, end_date: str, month_info: Dict[str, str]) -> bool:
+    s = str(start_date or "").strip()
+    e = str(end_date or "").strip()
+    if not s or not e or not month_info:
+        return False
+    return not (e < month_info["start"] or s > month_info["end"])
+
+
+def build_estate_occupancy_snapshot(db: sqlite3.Connection, month_key: str) -> Optional[Dict[str, Any]]:
+    curr = _month_start_end(month_key)
+    if not curr:
+        return None
+    prev = _month_start_end(_previous_month_key(month_key))
+    units: List[Dict[str, str]] = []
+    for row in rows_to_dicts(db.execute("SELECT id, status FROM estate_apartments").fetchall()):
+        units.append({"entity_type": "apartment", "entity_id": row["id"], "status": str(row.get("status") or "").lower()})
+    for row in rows_to_dicts(db.execute("SELECT id, status FROM estate_rooms").fetchall()):
+        units.append({"entity_type": "room", "entity_id": row["id"], "status": str(row.get("status") or "").lower()})
+    contracts = rows_to_dicts(
+        db.execute("SELECT entity_type, entity_id, status, start_date, end_date FROM estate_contracts WHERE lower(status)!='cancelled'").fetchall()
+    )
+
+    def calc(month_info: Optional[Dict[str, str]]) -> Optional[Dict[str, Any]]:
+        if not month_info:
+            return None
+        eligible = [u for u in units if u["status"] not in ("maintenance", "suspended")]
+        total = len(eligible)
+        active_keys = {
+            f"{str(c.get('entity_type') or '').lower()}::{c.get('entity_id')}"
+            for c in contracts
+            if _overlaps_month(str(c.get("start_date") or ""), str(c.get("end_date") or ""), month_info)
+        }
+        occupied = sum(
+            1
+            for u in eligible
+            if f"{u['entity_type']}::{u['entity_id']}" in active_keys
+            or u["status"] == "occupied"
+        )
+        reserved = sum(1 for u in units if u["status"] == "reserved")
+        rate = round((occupied / total * 100), 2) if total else 0.0
+        return {
+            "month_key": month_info["month_key"],
+            "total_units": total,
+            "occupied_units": occupied,
+            "reserved_units": reserved,
+            "occupancy_pct": rate,
+        }
+
+    current = calc(curr)
+    previous = calc(prev) if prev else None
+    if not current:
+        return None
+    return {
+        "current": current,
+        "previous": previous,
+        "delta_pct": round(float(current["occupancy_pct"]) - float((previous or {}).get("occupancy_pct") or 0), 2),
+        "delta_units": int(current["occupied_units"]) - int((previous or {}).get("occupied_units") or 0),
+    }
+
+
+def build_estate_exec_alerts(db: sqlite3.Connection) -> List[Dict[str, Any]]:
+    now_str = today()
+    in7 = (date.today() + timedelta(days=7)).isoformat()
+    contracts = rows_to_dicts(db.execute("SELECT contract_no, id, status, end_date FROM estate_contracts").fetchall())
+    inv = rows_to_dicts(db.execute("SELECT invoice_no, id, status, due_date FROM estate_contract_invoices").fetchall())
+    maint = rows_to_dicts(
+        db.execute("SELECT title, status, maintenance_date FROM estate_maintenance").fetchall()
+    )
+    units: List[Dict[str, str]] = []
+    for row in rows_to_dicts(db.execute("SELECT name, status, reservation_end_date FROM estate_apartments").fetchall()):
+        units.append({"kind": "شقة", "name": row.get("name") or "", "status": row.get("status") or "", "end": row.get("reservation_end_date") or ""})
+    for row in rows_to_dicts(db.execute("SELECT name, status, reservation_end_date FROM estate_rooms").fetchall()):
+        units.append({"kind": "غرفة", "name": row.get("name") or "", "status": row.get("status") or "", "end": row.get("reservation_end_date") or ""})
+
+    overdue_inv = [x for x in inv if str(x.get("status") or "").lower() != "paid" and str(x.get("due_date") or "") < now_str]
+    due_soon_inv = [
+        x
+        for x in inv
+        if str(x.get("status") or "").lower() != "paid"
+        and now_str <= str(x.get("due_date") or "") <= in7
+    ]
+    ending_contracts = [
+        x
+        for x in contracts
+        if str(x.get("status") or "").lower() == "active"
+        and now_str <= str(x.get("end_date") or "") <= in7
+    ]
+    open_maint_aging: List[Dict[str, Any]] = []
+    for x in maint:
+        if "closed" in str(x.get("status") or "").lower():
+            continue
+        d = str(x.get("maintenance_date") or "").strip()
+        days = 0
+        if d:
+            try:
+                days = max(0, (date.today() - datetime.fromisoformat(d).date()).days)
+            except ValueError:
+                days = 0
+        if days >= 10:
+            open_maint_aging.append({"title": x.get("title") or "طلب", "days": days})
+    overdue_reserved = [
+        x
+        for x in units
+        if str(x.get("status") or "").lower() == "reserved" and str(x.get("end") or "") and str(x.get("end") or "") < now_str
+    ]
+    return [
+        {
+            "tone": "overdue" if overdue_inv else "paid",
+            "title": "فواتير متأخرة",
+            "value": len(overdue_inv),
+            "subtitle": "تحصيل فوري مطلوب",
+            "details": [f"{x.get('invoice_no') or x.get('id')} · {x.get('due_date') or '—'}" for x in overdue_inv[:4]],
+        },
+        {
+            "tone": "pending" if due_soon_inv else "paid",
+            "title": "استحقاقات خلال 7 أيام",
+            "value": len(due_soon_inv),
+            "subtitle": "تنبيه استباقي",
+            "details": [f"{x.get('invoice_no') or x.get('id')} · {x.get('due_date') or '—'}" for x in due_soon_inv[:4]],
+        },
+        {
+            "tone": "pending" if ending_contracts else "paid",
+            "title": "عقود على وشك الانتهاء",
+            "value": len(ending_contracts),
+            "subtitle": "تجديد/إغلاق",
+            "details": [f"{x.get('contract_no') or x.get('id')} · {x.get('end_date') or '—'}" for x in ending_contracts[:4]],
+        },
+        {
+            "tone": "overdue" if open_maint_aging else "paid",
+            "title": "صيانة مفتوحة +10 أيام",
+            "value": len(open_maint_aging),
+            "subtitle": "تدخل إداري مطلوب",
+            "details": [f"{x.get('title') or 'طلب'} · {x.get('days')} يوم" for x in open_maint_aging[:4]],
+        },
+        {
+            "tone": "overdue" if overdue_reserved else "paid",
+            "title": "حجوزات متأخرة للتحويل",
+            "value": len(overdue_reserved),
+            "subtitle": "تسريع التحويل إلى عقد/إشغال",
+            "details": [f"{x.get('kind')} {x.get('name') or ''} · {x.get('end') or '—'}" for x in overdue_reserved[:4]],
+        },
+    ]
+
+
+def build_estate_unit_trace(db: sqlite3.Connection, entity_type: str, entity_id: str) -> Dict[str, Any]:
+    entity_type = str(entity_type or "apartment").strip().lower()
+    entity_id = str(entity_id or "").strip()
+    if entity_type not in ("apartment", "room") or not entity_id:
+        return {"entity_type": entity_type, "entity_id": entity_id, "timeline": []}
+    col = "room_id" if entity_type == "room" else "apartment_id"
+    maintenance_rows = rows_to_dicts(
+        db.execute(f"SELECT title, status, maintenance_date, closed_at, total_cost FROM estate_maintenance WHERE {col}=?", (entity_id,)).fetchall()
+    )
+    contract_rows = rows_to_dicts(
+        db.execute(
+            "SELECT id, contract_no, status, start_date, end_date, created_at FROM estate_contracts WHERE lower(entity_type)=? AND entity_id=?",
+            (entity_type, entity_id),
+        ).fetchall()
+    )
+    contract_ids = [c["id"] for c in contract_rows]
+    invoice_rows: List[Dict[str, Any]] = []
+    if contract_ids:
+        placeholders = ",".join("?" for _ in contract_ids)
+        invoice_rows = rows_to_dicts(
+            db.execute(
+                f"SELECT invoice_no, id, status, amount, due_date, issued_at FROM estate_contract_invoices WHERE contract_id IN ({placeholders})",
+                tuple(contract_ids),
+            ).fetchall()
+        )
+    status_rows = rows_to_dicts(
+        db.execute(
+            "SELECT old_status, new_status, changed_at, note FROM estate_status_history WHERE lower(entity_type)=? AND entity_id=?",
+            (entity_type, entity_id),
+        ).fetchall()
+    )
+    timeline: List[Dict[str, Any]] = []
+    for x in status_rows:
+        timeline.append(
+            {
+                "date": x.get("changed_at") or "",
+                "icon": "🔄",
+                "title": f"حالة: {x.get('old_status') or '—'} → {x.get('new_status') or '—'}",
+                "meta": x.get("note") or "",
+            }
+        )
+    for x in maintenance_rows:
+        timeline.append(
+            {
+                "date": x.get("maintenance_date") or x.get("closed_at") or "",
+                "icon": "🛠️",
+                "title": f"صيانة: {x.get('title') or '—'} ({x.get('status') or 'Open'})",
+                "meta": str(round(float(x.get("total_cost") or 0), 3)),
+            }
+        )
+    for x in contract_rows:
+        timeline.append(
+            {
+                "date": x.get("created_at") or x.get("start_date") or "",
+                "icon": "📄",
+                "title": f"عقد: {x.get('contract_no') or x.get('id')} ({x.get('status') or ''})",
+                "meta": f"{x.get('start_date') or '—'} → {x.get('end_date') or '—'}",
+            }
+        )
+    for x in invoice_rows:
+        timeline.append(
+            {
+                "date": x.get("issued_at") or x.get("due_date") or "",
+                "icon": "🧾",
+                "title": f"فاتورة: {x.get('invoice_no') or x.get('id')} ({x.get('status') or ''})",
+                "meta": f"{round(float(x.get('amount') or 0), 3)} · استحقاق {x.get('due_date') or '—'}",
+            }
+        )
+    timeline.sort(key=lambda row: str(row.get("date") or ""), reverse=True)
+    return {"entity_type": entity_type, "entity_id": entity_id, "timeline": timeline}
+
+
+def build_estate_property_finance(db: sqlite3.Connection) -> List[Dict[str, Any]]:
+    props = rows_to_dicts(db.execute("SELECT id, name FROM estate_properties").fetchall())
+    prop_map = {p["id"]: p for p in props}
+    finance: Dict[str, Dict[str, float]] = {}
+    rows = rows_to_dicts(
+        db.execute(
+            """
+            SELECT c.property_id, i.amount, i.paid_amount
+            FROM estate_contract_invoices i
+            JOIN estate_contracts c ON c.id = i.contract_id
+            WHERE c.property_id IS NOT NULL AND c.property_id != ''
+            """
+        ).fetchall()
+    )
+    for row in rows:
+        pid = str(row.get("property_id") or "").strip()
+        if not pid:
+            continue
+        if pid not in finance:
+            finance[pid] = {"income": 0.0, "expense": 0.0}
+        finance[pid]["income"] += float(row.get("paid_amount") or 0)
+        finance[pid]["expense"] += max(0.0, float(row.get("amount") or 0) - float(row.get("paid_amount") or 0))
+    result = []
+    for pid, vals in finance.items():
+        result.append(
+            {
+                "property_id": pid,
+                "property_name": (prop_map.get(pid) or {}).get("name") or pid,
+                "income": round(vals.get("income", 0), 3),
+                "expense": round(vals.get("expense", 0), 3),
+                "net": round(vals.get("income", 0) - vals.get("expense", 0), 3),
+                "inventory_value": 0.0,
+            }
+        )
+    result.sort(key=lambda x: x["net"], reverse=True)
+    return result
 
 
 def contract_renewal_stats(db: sqlite3.Connection) -> Dict[str, int]:
@@ -4763,6 +5146,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_operations_check" and method == "GET":
                     user = self.require_user(db, "estate_apartments:read")
                     return None if not user else self.api_estate_operations_check(db, user)
+                if parts[0] == "estate_analytics" and method == "GET":
+                    user = self.require_user(db, "estate_apartments:read")
+                    return None if not user else self.api_estate_analytics(db, user, query)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -6473,6 +6859,26 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "active_contracts_past_end": int(active_past_end or 0),
                     "closed_months": int(closed_months or 0),
                 },
+            }
+        )
+
+    def api_estate_analytics(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        month_key = (params.get("month") or [date.today().strftime("%Y-%m")])[0]
+        entity_type = (params.get("entity_type") or ["apartment"])[0]
+        entity_id = (params.get("entity_id") or [""])[0]
+        exec_alerts = build_estate_exec_alerts(db)
+        occupancy = build_estate_occupancy_snapshot(db, month_key)
+        unit_trace = build_estate_unit_trace(db, entity_type, entity_id) if entity_id else {"entity_type": entity_type, "entity_id": "", "timeline": []}
+        portfolio = build_estate_portfolio_stats(db) if use_estate_portfolio(db) else None
+        self.send_json(
+            {
+                "ok": True,
+                "exec_alerts": exec_alerts,
+                "occupancy": occupancy,
+                "unit_trace": unit_trace,
+                "portfolio": portfolio,
+                "month": month_key,
             }
         )
 
@@ -13207,20 +13613,32 @@ def protected_delete_reason(db: sqlite3.Connection, table: str, row_id: str) -> 
 
 
 def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
-    prop_total = db.execute("SELECT COUNT(*) FROM properties").fetchone()[0]
-    rented = db.execute(
-        "SELECT COUNT(*) FROM properties WHERE status='مستأجرة' OR lower(status) LIKE '%rented%' OR lower(status) LIKE '%leased%'"
-    ).fetchone()[0]
-    vacant = db.execute(
-        "SELECT COUNT(*) FROM properties WHERE status='شاغرة' OR lower(status) LIKE '%vacant%'"
-    ).fetchone()[0]
-    reserved = db.execute(
-        "SELECT COUNT(*) FROM properties WHERE status='محجوزة' OR lower(status) LIKE '%pending%' OR lower(status) LIKE '%reserved%'"
-    ).fetchone()[0]
-    maintenance_props = db.execute(
-        "SELECT COUNT(*) FROM properties WHERE status='صيانة' OR lower(status) LIKE '%maintenance%'"
-    ).fetchone()[0]
-    maintenance_count = db.execute("SELECT COUNT(*) FROM maintenance WHERE lower(status) NOT IN ('closed','done','completed')").fetchone()[0]
+    estate_mode = use_estate_portfolio(db)
+    if estate_mode:
+        estate_stats = build_estate_portfolio_stats(db)
+        prop_total = estate_stats["properties"]
+        rented = estate_stats["rented"]
+        vacant = estate_stats["vacant"]
+        reserved = estate_stats["reserved"]
+        maintenance_props = estate_stats["maintenance_properties"]
+        maintenance_count = estate_stats["maintenance"]
+        occupancy = estate_stats["occupancy"]
+    else:
+        prop_total = db.execute("SELECT COUNT(*) FROM properties").fetchone()[0]
+        rented = db.execute(
+            "SELECT COUNT(*) FROM properties WHERE status='مستأجرة' OR lower(status) LIKE '%rented%' OR lower(status) LIKE '%leased%'"
+        ).fetchone()[0]
+        vacant = db.execute(
+            "SELECT COUNT(*) FROM properties WHERE status='شاغرة' OR lower(status) LIKE '%vacant%'"
+        ).fetchone()[0]
+        reserved = db.execute(
+            "SELECT COUNT(*) FROM properties WHERE status='محجوزة' OR lower(status) LIKE '%pending%' OR lower(status) LIKE '%reserved%'"
+        ).fetchone()[0]
+        maintenance_props = db.execute(
+            "SELECT COUNT(*) FROM properties WHERE status='صيانة' OR lower(status) LIKE '%maintenance%'"
+        ).fetchone()[0]
+        maintenance_count = db.execute("SELECT COUNT(*) FROM maintenance WHERE lower(status) NOT IN ('closed','done','completed')").fetchone()[0]
+        occupancy = round((rented / prop_total * 100), 1) if prop_total else 0
     invoices = rows_to_dicts(db.execute("SELECT * FROM invoices").fetchall())
     accounts = rows_to_dicts(db.execute("SELECT * FROM accounts").fetchall())
     income = sum(float(a["amount"] or 0) for a in accounts if a["type"] == "income")
@@ -13234,7 +13652,12 @@ def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
         and not int(i.get("is_void") or 0)
         and str(i.get("due_date") or "") < today()
     )
-    occupancy = round((rented / prop_total * 100), 1) if prop_total else 0
+    if estate_mode:
+        estate_billed = db.execute("SELECT COALESCE(SUM(amount),0) FROM estate_contract_invoices").fetchone()[0]
+        estate_paid = db.execute("SELECT COALESCE(SUM(paid_amount),0) FROM estate_contract_invoices").fetchone()[0]
+        billed = float(estate_billed or 0) or billed
+        paid = float(estate_paid or 0) or paid
+        overdue = estate_contract_overdue_total(db) or overdue
     months = []
     for m in range(5, -1, -1):
         d = date.today().replace(day=1) - timedelta(days=31*m)
@@ -13247,7 +13670,7 @@ def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
     if maintenance_count > 0: health -= min(20, maintenance_count * 5)
     if occupancy < 70: health -= 15
     health = max(0, min(100, health))
-    renewal = contract_renewal_stats(db)
+    renewal = estate_contract_renewal_stats(db) if estate_mode else contract_renewal_stats(db)
     expiring = renewal["expiring"]
     expired = renewal["expired"]
     if expiring > 0:
@@ -13293,6 +13716,7 @@ def build_dashboard(db: sqlite3.Connection) -> Dict[str, Any]:
             "approval_threshold": APPROVAL_THRESHOLD,
             "alert_center_total": int(alert_summary.get("total") or 0),
             "alert_center_high": int(alert_summary.get("high") or 0) + int(alert_summary.get("critical") or 0),
+            "estate_source": estate_mode,
         },
         "series": months,
         "decisions": decisions,
