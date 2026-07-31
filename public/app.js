@@ -4887,6 +4887,62 @@ window.printHospitalityFolio = printHospitalityFolio;
 })();
 
 (function(){
+  function mkPostBlock(label, goal, body, copyId){
+    const safe = htmlEscape(body||'');
+    return `<div class="card" style="margin:10px 0;padding:12px;background:#f8fbff">
+      <div class="statement-row"><span><b>${htmlEscape(label)}</b></span><button class="ghost" type="button" onclick="copyMkWeeklyPost('${copyId}')">نسخ</button></div>
+      <p class="mini"><strong>هدف القناة:</strong> ${htmlEscape(goal||'')}</p>
+      <pre id="${copyId}" style="white-space:pre-wrap;font-family:inherit;font-size:13px;margin:8px 0 0;background:#fff;border:1px solid #e3eaf5;padding:10px;border-radius:8px">${safe}</pre>
+    </div>`;
+  }
+  window.copyMkWeeklyPost = async function(elId){
+    const el = document.getElementById(elId);
+    const text = el?.textContent || '';
+    try{
+      if(navigator?.clipboard?.writeText){
+        await navigator.clipboard.writeText(text);
+        toast('تم نسخ المنشور');
+        return;
+      }
+    }catch(_e){}
+    toast('انسخ النص يدوياً من المربع');
+  };
+  window.markMkWeeklyPublished = async function(postId){
+    try{
+      await api(`marketing_weekly_posts/${postId}`, { method:'PUT', body: JSON.stringify({ status: 'published' }) });
+      toast('تم تعليم الموجة كـ «منشور»');
+      await loadAll();
+      renderMarketingPlatform();
+    }catch(e){ toastErr(e); }
+  };
+  function renderMkWeeklyPosts(posts, weekKey){
+    const meta = $('#mkWeeklyMeta');
+    const host = $('#mkWeeklyPostsBox');
+    if(meta){
+      meta.innerHTML = `<span class="badge paid">أسبوع ${htmlEscape(weekKey||'—')}</span><span class="badge">3 موجات · IG + FB + WA</span><span class="badge">توليد تلقائي</span>`;
+    }
+    if(!host) return;
+    const rows = Array.isArray(posts) ? posts : [];
+    if(!rows.length){
+      host.innerHTML = '<p class="mini">جاري تجهيز اقتراحات الأسبوع...</p>';
+      return;
+    }
+    host.innerHTML = rows.map((p,i)=>{
+      const st = String(p.status||'auto_generated').toLowerCase();
+      const badge = st==='published' ? 'paid' : 'pending';
+      const prefix = `mkwp_${String(p.id||i).replace(/[^a-zA-Z0-9_-]/g,'')}`;
+      return `<article class="card" style="margin-bottom:14px">
+        <div class="statement-row">
+          <span><b>${htmlEscape(p.suggestion_title||'اقتراح')}</b><small class="mini"> · موجة ${fmt(p.slot_index||i+1)} · ${htmlEscape(p.scheduled_date||'')}</small></span>
+          <b class="badge ${badge}">${st==='published'?'منشور ✅':'جاهز للنشر'}</b>
+        </div>
+        ${mkPostBlock('📸 إنستغرام', p.goal_instagram, p.post_instagram, `${prefix}_ig`)}
+        ${mkPostBlock('👥 فيسبوك', p.goal_facebook, p.post_facebook, `${prefix}_fb`)}
+        ${mkPostBlock('💬 واتساب', p.goal_whatsapp, p.post_whatsapp, `${prefix}_wa`)}
+        <button class="ghost" type="button" onclick="markMkWeeklyPublished('${String(p.id||'').replace(/'/g,'')}')">✓ تعليم كمنشور</button>
+      </article>`;
+    }).join('');
+  }
   window.renderMarketingPlatform = async function(){
     const quick = $('#mkPlatformQuick');
     if(quick){
@@ -4910,6 +4966,7 @@ window.printHospitalityFolio = printHospitalityFolio;
           <div class="kpi"><span>حملات نشطة</span><strong>${fmt(k.campaigns_active||0)}</strong></div>
           <div class="kpi"><span>معدل التحويل</span><strong>${fmt(k.conversion_rate||0)}%</strong></div>
           <div class="kpi"><span>وحدات شاغرة</span><strong>${fmt(k.vacant_units||0)}</strong></div>
+          <div class="kpi"><span>موجات الأسبوع</span><strong>${fmt(k.weekly_posts_count||0)}/3</strong></div>
           <div class="kpi"><span>متابعات متأخرة</span><strong>${fmt(k.overdue_followups||0)}</strong></div>
         `;
       }
@@ -4920,8 +4977,10 @@ window.printHospitalityFolio = printHospitalityFolio;
           <div class="statement-row"><span>Leads محوّلة</span><b class="linked-ok">${fmt(k.leads_won||0)}</b></div>
           <div class="statement-row"><span>حجوزات/مجالس قيد المتابعة</span><b>${fmt(k.majlis_pipeline||0)}</b></div>
           <div class="statement-row"><span>أنشطة مخططة</span><b>${fmt(k.activities_planned||0)}</b></div>
+          <div class="statement-row"><span>اقتراحات الأسبوع (${htmlEscape(k.week_key||'')})</span><b class="linked-ok">${fmt(k.weekly_posts_count||0)} / 3</b></div>
         `;
       }
+      renderMkWeeklyPosts(res.weekly_posts || Jawdah.data?.marketing_weekly_posts || [], k.week_key || res.weekly_auto?.week_key);
       const plan = res.plan || {};
       const planHost = $('#mkPlanBox');
       if(planHost){

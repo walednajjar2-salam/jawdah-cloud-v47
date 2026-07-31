@@ -99,8 +99,8 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v68.4-marketing-platform"
-# Production baseline family: v68. Patch 68.4 = marketing portal + campaigns/leads.
+APP_VERSION = "Launch-Quality-LLC-v68.5-weekly-marketing-posts"
+# Production baseline family: v68. Patch 68.5 = auto weekly social posts (IG/FB/WA x3).
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
 STABLE_TAG = "v68-stable"
@@ -160,9 +160,9 @@ ROLE_PERMISSIONS = {
     "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
     "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
 }
-ROLE_PERMISSIONS["operations"].update({"estate_actions_convert", "estate_actions_contract_create", "marketing_campaigns", "marketing_leads", "marketing_activities"})
-ROLE_PERMISSIONS["accountant"].update({"estate_actions_contract_close", "estate_actions_month_close", "estate_actions_pricing_edit", "marketing_campaigns:read", "marketing_leads:read", "marketing_activities:read"})
-ROLE_PERMISSIONS["viewer"].update({"marketing_campaigns:read", "marketing_leads:read", "marketing_activities:read"})
+ROLE_PERMISSIONS["operations"].update({"estate_actions_convert", "estate_actions_contract_create", "marketing_campaigns", "marketing_leads", "marketing_activities", "marketing_weekly_posts"})
+ROLE_PERMISSIONS["accountant"].update({"estate_actions_contract_close", "estate_actions_month_close", "estate_actions_pricing_edit", "marketing_campaigns:read", "marketing_leads:read", "marketing_activities:read", "marketing_weekly_posts:read"})
+ROLE_PERMISSIONS["viewer"].update({"marketing_campaigns:read", "marketing_leads:read", "marketing_activities:read", "marketing_weekly_posts:read"})
 
 TABLES = {
     "branches": ["id", "code", "name", "city", "address", "manager", "active", "notes", "created_at"],
@@ -196,6 +196,11 @@ TABLES = {
     "marketing_campaigns": ["id", "name", "channel", "product_line", "status", "budget_omr", "start_date", "end_date", "target_audience", "goal", "owner_name", "notes", "created_at"],
     "marketing_leads": ["id", "campaign_id", "name", "phone", "email", "source", "product_interest", "status", "followup_date", "assigned_to", "notes", "created_at"],
     "marketing_activities": ["id", "campaign_id", "activity_type", "title", "scheduled_date", "status", "channel", "content_brief", "result_notes", "created_at"],
+    "marketing_weekly_posts": [
+        "id", "week_key", "slot_index", "suggestion_title", "product_line", "scheduled_date",
+        "goal_instagram", "goal_facebook", "goal_whatsapp",
+        "post_instagram", "post_facebook", "post_whatsapp", "status", "created_at",
+    ],
     "approvals": ["id", "entity", "entity_id", "request_type", "status", "requested_by", "approved_by", "requested_at", "approved_at", "notes"],
     "bank_reconciliations": ["id", "bank_name", "period_name", "book_balance", "bank_balance", "difference", "status", "reconciled_by", "reconciled_at", "notes", "matched_count", "unmatched_count", "period_start", "period_end"],
     "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
@@ -1653,6 +1658,23 @@ def init_db() -> None:
                 content_brief TEXT,
                 result_notes TEXT,
                 created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS marketing_weekly_posts (
+                id TEXT PRIMARY KEY,
+                week_key TEXT NOT NULL,
+                slot_index INTEGER NOT NULL,
+                suggestion_title TEXT NOT NULL,
+                product_line TEXT NOT NULL DEFAULT 'both',
+                scheduled_date TEXT NOT NULL,
+                goal_instagram TEXT,
+                goal_facebook TEXT,
+                goal_whatsapp TEXT,
+                post_instagram TEXT NOT NULL,
+                post_facebook TEXT NOT NULL,
+                post_whatsapp TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'auto_generated',
+                created_at TEXT NOT NULL,
+                UNIQUE(week_key, slot_index)
             );
             CREATE TABLE IF NOT EXISTS approvals (
                 id TEXT PRIMARY KEY,
@@ -13260,6 +13282,116 @@ def protected_delete_reason(db: sqlite3.Connection, table: str, row_id: str) -> 
     return ""
 
 
+def build_marketing_generation_context(db: sqlite3.Connection) -> Dict[str, Any]:
+    today_d = date.today()
+    week_key = lq_marketing.iso_week_key(today_d)
+    estate_vacant = int(db.execute("SELECT COUNT(*) FROM estate_apartments WHERE lower(status) IN ('vacant','available','')").fetchone()[0] or 0)
+    estate_vacant += int(db.execute("SELECT COUNT(*) FROM estate_rooms WHERE lower(status) IN ('vacant','available','')").fetchone()[0] or 0)
+    legacy_vacant = int(
+        db.execute("SELECT COUNT(*) FROM properties WHERE status='شاغرة' OR lower(status) LIKE '%vacant%'").fetchone()[0] or 0
+    )
+    vacant_units = estate_vacant if estate_vacant > 0 else legacy_vacant
+    featured = db.execute(
+        """
+        SELECT a.name, a.rent_price, p.location
+        FROM estate_apartments a
+        LEFT JOIN estate_properties p ON p.id = a.property_id
+        WHERE lower(a.status) IN ('vacant','available','')
+        ORDER BY a.rowid DESC LIMIT 1
+        """
+    ).fetchone()
+    if not featured:
+        featured = db.execute(
+            """
+            SELECT name, price AS rent_price, location FROM properties
+            WHERE status='شاغرة' OR lower(status) LIKE '%vacant%'
+            ORDER BY rowid DESC LIMIT 1
+            """
+        ).fetchone()
+    profile = lq_business_catalog.COMPANY_PROFILE
+    phones = profile.get("phones") or {}
+    return {
+        "week_key": week_key,
+        "vacant_units": vacant_units,
+        "featured_unit_name": (dict(featured).get("name") if featured else None) or "وحدة للإيجار",
+        "featured_unit_rent": float(dict(featured).get("rent_price") or 0) if featured else 0,
+        "company_name": profile.get("name_ar") or "مشاريع جودة الانطلاقة",
+        "address": profile.get("address_ar") or "نزوى",
+        "whatsapp": phones.get("whatsapp") or "98203088",
+        "majlis_hook": "باقات مجالس خارجية · واجب عزاء · مناسبات عائلية",
+    }
+
+
+def ensure_weekly_marketing_posts(db: sqlite3.Connection) -> List[Dict[str, Any]]:
+    today_d = date.today()
+    week_key = lq_marketing.iso_week_key(today_d)
+    existing = int(db.execute("SELECT COUNT(*) FROM marketing_weekly_posts WHERE week_key=?", (week_key,)).fetchone()[0] or 0)
+    context = build_marketing_generation_context(db)
+    week_start = lq_marketing.week_start_sunday(today_d)
+    slot_dates = lq_marketing.slot_scheduled_dates(week_start)
+    if existing < 3:
+        for slot in lq_marketing.WEEKLY_POST_SLOTS:
+            idx = int(slot["slot_index"])
+            if db.execute(
+                "SELECT 1 FROM marketing_weekly_posts WHERE week_key=? AND slot_index=? LIMIT 1",
+                (week_key, idx),
+            ).fetchone():
+                continue
+            sched = slot_dates[idx - 1].isoformat() if idx - 1 < len(slot_dates) else today_d.isoformat()
+            bundle = lq_marketing.generate_weekly_post_bundle(context, idx, sched)
+            row_id = uid("MWP")
+            created = now_iso()
+            insert(
+                db,
+                "marketing_weekly_posts",
+                {
+                    "id": row_id,
+                    "week_key": week_key,
+                    "slot_index": idx,
+                    "suggestion_title": bundle["suggestion_title"],
+                    "product_line": bundle["product_line"],
+                    "scheduled_date": bundle["scheduled_date"],
+                    "goal_instagram": bundle["goal_instagram"],
+                    "goal_facebook": bundle["goal_facebook"],
+                    "goal_whatsapp": bundle["goal_whatsapp"],
+                    "post_instagram": bundle["post_instagram"],
+                    "post_facebook": bundle["post_facebook"],
+                    "post_whatsapp": bundle["post_whatsapp"],
+                    "status": "auto_generated",
+                    "created_at": created,
+                },
+            )
+            for channel, body, goal in (
+                ("instagram", bundle["post_instagram"], bundle["goal_instagram"]),
+                ("facebook", bundle["post_facebook"], bundle["goal_facebook"]),
+                ("whatsapp", bundle["post_whatsapp"], bundle["goal_whatsapp"]),
+            ):
+                insert(
+                    db,
+                    "marketing_activities",
+                    {
+                        "id": uid("MACT"),
+                        "campaign_id": None,
+                        "activity_type": "weekly_auto_post",
+                        "title": f"{bundle['suggestion_title']} · {channel}",
+                        "scheduled_date": bundle["scheduled_date"],
+                        "status": "scheduled",
+                        "channel": channel,
+                        "content_brief": body,
+                        "result_notes": f"goal:{goal}",
+                        "created_at": created,
+                    },
+                )
+        db.commit()
+    rows = rows_to_dicts(
+        db.execute(
+            "SELECT * FROM marketing_weekly_posts WHERE week_key=? ORDER BY slot_index ASC",
+            (week_key,),
+        ).fetchall()
+    )
+    return rows
+
+
 def build_marketing_platform_overview(db: sqlite3.Connection) -> Dict[str, Any]:
     campaigns = rows_to_dicts(db.execute("SELECT * FROM marketing_campaigns ORDER BY created_at DESC").fetchall())
     leads = rows_to_dicts(db.execute("SELECT * FROM marketing_leads ORDER BY created_at DESC").fetchall())
@@ -13293,6 +13425,8 @@ def build_marketing_platform_overview(db: sqlite3.Connection) -> Dict[str, Any]:
     if leads:
         won = lead_by_status.get("won", 0)
         conversion_rate = round((won / len(leads)) * 100, 1)
+    weekly_posts = ensure_weekly_marketing_posts(db)
+    gen_ctx = build_marketing_generation_context(db)
     return {
         "kpis": {
             "campaigns_total": len(campaigns),
@@ -13306,11 +13440,21 @@ def build_marketing_platform_overview(db: sqlite3.Connection) -> Dict[str, Any]:
             "vacant_units": vacant_units,
             "majlis_pipeline": majlis_open,
             "activities_planned": sum(1 for a in activities if str(a.get("status") or "").lower() in ("planned", "scheduled")),
+            "weekly_posts_count": len(weekly_posts),
+            "week_key": gen_ctx.get("week_key"),
         },
         "pipeline": lead_by_status,
         "recent_leads": leads[:12],
         "recent_campaigns": campaigns[:8],
         "upcoming_activities": [a for a in activities if str(a.get("status") or "").lower() != "done"][:10],
+        "weekly_posts": weekly_posts,
+        "weekly_auto": {
+            "enabled": True,
+            "slots_per_week": 3,
+            "channels": lq_marketing.SOCIAL_CHANNELS,
+            "week_key": gen_ctx.get("week_key"),
+            "next_refresh": "auto on new ISO week",
+        },
         "plan": lq_marketing.MARKETING_PLAN,
         "playbook": lq_marketing.WEEKLY_PLAYBOOK,
         "channels": lq_marketing.CHANNELS,
