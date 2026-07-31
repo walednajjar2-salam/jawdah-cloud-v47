@@ -66,6 +66,10 @@ def validate_new_password(password: str, username: str) -> Optional[str]:
         return "كلمة المرور ضعيفة — اختر كلمة أقوى"
     if pwd.isdigit():
         return "أضف حروفاً مع الأرقام"
+    if not any(ch.isalpha() for ch in pwd):
+        return "أضف حرفاً واحداً على الأقل"
+    if not any(ch.isdigit() for ch in pwd):
+        return "أضف رقماً واحداً على الأقل"
     return None
 
 

@@ -1,32 +1,50 @@
-# Launch Quality LLC - Credentials Report
+# Launch Quality LLC — تقرير الحسابات (بدون كلمات مرور)
 
-This report documents bootstrap usernames and initial passwords configured in code.
+هذا الملف **لا يحتوي** أي كلمات مرور نصية.
 
-## Important security notes
+## سياسة الأمان
 
-- These are bootstrap credentials and may already be changed in production.
-- Password hashes are stored in the database; current plain-text passwords cannot be retrieved from DB.
-- On first secure deployment, rotate all passwords and keep only role-based access.
-- Environment variables can override these defaults:
-  - `LQ_PASSWORD_<USERNAME>` (per user, highest priority)
-  - `LQ_ADMIN_PASSWORD` (admin)
-  - `LQ_TEAM_BOOTSTRAP_PASSWORD` (team bootstrap)
+- كلمات المرور تُخزَّن **مشفّرة (hash)** داخل قاعدة البيانات فقط.
+- لا تُحفظ كلمات المرور في حزمة الموظف ولا في المستودع.
+- عند النشر الأول: عيّن كلمات المرور عبر متغيرات البيئة ثم أدرها فوراً.
 
-## Seed and team users (code defaults - 6 accounts only)
+## متغيرات البيئة (الأولوية الأعلى)
 
-| Username | Role | Bootstrap Password |
-|---|---|---|
-| `waleed` | `admin` | `111111` |
-| `yaqoub` | `owner` | `owner2015` |
-| `owner` | `owner` | `001970` |
-| `razan` | `accountant` | `222222` |
-| `amjad` | `operations` | `333333` |
-| `ali` | `maintenance` | `444444` |
-| `admin` | `admin` | `555555` |
+| المتغير | الاستخدام |
+|---------|-----------|
+| `LQ_PASSWORD_<USERNAME>` | كلمة مرور مستخدم محدد (مثال: `LQ_PASSWORD_OWNER`) |
+| `LQ_ADMIN_PASSWORD` | كلمة مرور حساب `admin` عند الإنشاء الأول فقط |
+| `LQ_TEAM_BOOTSTRAP_PASSWORD` | كلمة مرور bootstrap للفريق عند الإنشاء الأول فقط |
 
-## Deployment action checklist
+## حسابات النظام (أسماء فقط)
 
-1. Set per-user passwords via environment variables.
-2. Disable or rotate bootstrap passwords in production after handover.
-3. Keep only required active accounts for operations.
-4. Do not store plaintext credentials in any package artifact.
+| Username | الدور الافتراضي | الوظيفة |
+|----------|-----------------|---------|
+| `owner` / `yaqoub` | owner | المدير العام / المالك |
+| `waleed` | admin / accountant | نائب / محاسبة |
+| `admin` | admin | مدير النظام |
+| `razan` | accountant | محاسب |
+| `amjad` | operations | مسؤول العقارات / تشغيل |
+| `ali` | maintenance | صيانة |
+
+> كلمات المرور الحالية تُدار في Railway Environment فقط — **لا تُكتب هنا**.
+
+## أدوار الصلاحيات
+
+| الدور (key) | التسمية العربية |
+|-------------|-----------------|
+| `owner` | المدير العام |
+| `admin` | مدير النظام |
+| `deputy` | نائب المدير |
+| `accountant` | محاسب |
+| `operations` | مسؤول العقارات / التشغيل |
+| `reception` | استقبال |
+| `maintenance` | صيانة |
+| `viewer` | مشاهدة فقط |
+
+## قائمة التحقق عند التسليم
+
+1. عيّن كلمات مرور قوية عبر Environment Variables.
+2. أجبر تغيير كلمة المرور عند أول دخول (`must_change_password`).
+3. عطّل الحسابات غير المستخدمة (`active=0`) — لا تحذفها.
+4. لا تضمّن هذا الملف أو أي ملف كلمات مرور داخل EXE الموظفين.

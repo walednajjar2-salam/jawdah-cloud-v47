@@ -98,16 +98,18 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v68.2-native-apps"
-# Production baseline family: v68. Patch 68.2 = Windows + Android native downloads.
+APP_VERSION = "Launch-Quality-LLC-v69.0-ops-complete"
+# Production baseline family: v69. Ops-complete = full 42-item requirements closure.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
-STABLE_TAG = "v68-stable"
+STABLE_TAG = "v69-ops-complete"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
 APP_BASE_EDITION = os.environ.get("LQ_BASE_EDITION", "terrifying-dev").strip().lower() or "terrifying-dev"
 APP_EDITION_LABEL = os.environ.get("LQ_EDITION_LABEL", "التطوير المؤسسي").strip() or "التطوير المؤسسي"
+APP_ENV_MODE = os.environ.get("LQ_ENV_MODE", "official" if APP_EDITION == "official" else "trial").strip().lower() or "official"
+APP_ENV_LABEL_AR = "نسخة رسمية" if APP_ENV_MODE in ("official", "production", "prod") else "نسخة تجريبية"
 BACKUP_DIR = Path(os.environ.get("JAWDAH_BACKUP_DIR", str(DATA_DIR / "backups"))).resolve()
 AUTO_BACKUP_ENABLED = os.environ.get("JAWDAH_AUTO_BACKUP", "1").strip().lower() not in ("0", "false", "no", "off")
 BACKUP_INTERVAL_HOURS = max(1, int(os.environ.get("JAWDAH_BACKUP_INTERVAL_HOURS", "24") or "24"))
@@ -154,13 +156,26 @@ FALLBACK_JS = _load_public_asset("app.js", FALLBACK_JS)
 ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
+    "deputy": {"all"},
     "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets"},
     "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read"},
+    "reception": {"dashboard", "properties:read", "clients", "contracts:read", "invoices:read", "hospitality_events", "hospitality_bookings:read", "reports:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "messages"},
     "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
     "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
 }
 ROLE_PERMISSIONS["operations"].update({"estate_actions_convert", "estate_actions_contract_create"})
 ROLE_PERMISSIONS["accountant"].update({"estate_actions_contract_close", "estate_actions_month_close", "estate_actions_pricing_edit"})
+ROLE_PERMISSIONS["reception"].update({"estate_actions_convert"})
+ROLE_LABELS_AR = {
+    "owner": "المدير العام",
+    "admin": "مدير النظام",
+    "deputy": "نائب المدير",
+    "accountant": "محاسب",
+    "operations": "مسؤول العقارات",
+    "reception": "استقبال",
+    "maintenance": "صيانة",
+    "viewer": "مشاهدة فقط",
+}
 
 TABLES = {
     "branches": ["id", "code", "name", "city", "address", "manager", "active", "notes", "created_at"],
@@ -214,7 +229,7 @@ FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.k
 PRIMARY_OWNER_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi"}
 DAILY_OPS_MANAGER_USERNAMES = {"razan", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
 
-WRITE_ROLES = {"admin", "accountant", "operations", "maintenance"}
+WRITE_ROLES = {"owner", "admin", "deputy", "accountant", "operations", "reception", "maintenance"}
 
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
@@ -3581,7 +3596,8 @@ def prepare_property_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str, A
             return None, "رقم الغرفة مطلوب للوحدة من نوع غرفة مستقلة"
         payload["room_no"] = room_no
     else:
-        payload["room_no"] = room_no
+        # Full apartment: do not store a room number — rooms_count is informational only.
+        payload["room_no"] = ""
     rooms_count_raw = payload.get("unit_rooms_count")
     if rooms_count_raw in (None, ""):
         payload["unit_rooms_count"] = None
@@ -4231,7 +4247,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
         safe = Path(urllib.parse.unquote(path).lstrip("/")).as_posix()
         if safe.startswith("uploads/"):
             # Secure contract and sensitive uploads behind authenticated sessions.
-            protected_prefixes = ("uploads/contracts/", "uploads/client_cards/", "uploads/payment_proofs/", "uploads/work_journal/")
+            protected_prefixes = (
+                "uploads/contracts/",
+                "uploads/client_cards/",
+                "uploads/payment_proofs/",
+                "uploads/work_journal/",
+                "uploads/properties/",
+                "uploads/estate_images/",
+                "uploads/attachments/",
+            )
             if safe.startswith(protected_prefixes):
                 static_query = urllib.parse.urlparse(self.path).query
                 with connect() as db:
@@ -4321,6 +4345,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "edition": APP_EDITION,
                         "base_edition": APP_BASE_EDITION,
                         "edition_label": APP_EDITION_LABEL,
+                        "env_mode": APP_ENV_MODE,
+                        "env_label_ar": APP_ENV_LABEL_AR,
                         "base_name_ar": "التطوير المؤسسي",
                         "database": str(DB_PATH),
                         "database_engine": "sqlite",
@@ -4480,6 +4506,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "version": APP_VERSION,
                         "base_edition": APP_BASE_EDITION,
                         "edition_label": APP_EDITION_LABEL,
+                        "env_mode": APP_ENV_MODE,
+                        "env_label_ar": APP_ENV_LABEL_AR,
                     })
                 if parts[0] == "dashboard" and method == "GET":
                     user = self.require_user(db, "dashboard")
@@ -6016,6 +6044,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if not row:
             return self.send_json({"ok": False, "error": "العنصر غير موجود"}, 404)
         status_now = str(row["status"] or "").strip().lower()
+        if status_now in ("maintenance", "suspended"):
+            return self.send_json({"ok": False, "error": "لا يمكن تأجير أو تفعيل عقد لوحدة تحت الصيانة أو موقوفة"}, 400)
         if status_now not in ("reserved", "occupied"):
             return self.send_json({"ok": False, "error": "يجب أن تكون الحالة محجوزة أو مؤجرة قبل إنشاء العقد"}, 400)
         active_exists = db.execute(
@@ -6505,6 +6535,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if method == "DELETE":
             if not item_id:
                 return self.send_json({"ok": False, "error": "Missing id"}, 400)
+            if table == "users":
+                return self.send_json(
+                    {
+                        "ok": False,
+                        "error": "لا يُسمح بحذف المستخدمين. عطّل الحساب (active=0) للحفاظ على سجل العمليات.",
+                        "hint": "استخدم PUT /api/users/{id} مع active=false",
+                    },
+                    400,
+                )
             if table == "properties":
                 row = db.execute("SELECT image FROM properties WHERE id=?", (item_id,)).fetchone()
                 if row:
@@ -6841,11 +6880,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "reserved": "reserved",
                 "محجوزة": "reserved",
                 "محجوز": "reserved",
+                "suspended": "suspended",
+                "موقوفة": "suspended",
+                "موقوف": "suspended",
             }
             raw_status = str(data.get("status") or "vacant").strip().lower()
             status_norm = status_map.get(raw_status)
             if not status_norm:
-                return self.send_json({"ok": False, "error": "حالة الشقة غير معتمدة. المسموح: مؤجرة/فارغة/صيانة/محجوزة"}, 400)
+                return self.send_json({"ok": False, "error": "حالة الشقة غير معتمدة. المسموح: شاغرة/محجوزة/مؤجرة/تحت الصيانة/موقوفة"}, 400)
             data["status"] = status_norm
             data["property_id"] = prop_id
             data["building_id"] = bld_id
@@ -6927,14 +6969,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
             status_map = {
                 "draft": "draft", "مسودة": "draft",
                 "vacant": "vacant", "فارغة": "vacant", "شاغرة": "vacant",
-                "occupied": "occupied", "مؤجرة": "occupied",
+                "occupied": "occupied", "مؤجرة": "occupied", "rented": "occupied",
                 "maintenance": "maintenance", "صيانة": "maintenance", "تحت الصيانة": "maintenance",
                 "reserved": "reserved", "محجوزة": "reserved", "محجوز": "reserved",
+                "suspended": "suspended", "موقوفة": "suspended", "موقوف": "suspended",
             }
             raw_status = str(data.get("status") or "vacant").strip().lower()
             status_norm = status_map.get(raw_status)
             if not status_norm:
-                return self.send_json({"ok": False, "error": "حالة الغرفة غير معتمدة"}, 400)
+                return self.send_json({"ok": False, "error": "حالة الغرفة غير معتمدة. المسموح: شاغرة/محجوزة/مؤجرة/تحت الصيانة/موقوفة"}, 400)
             data["status"] = status_norm
             data["property_id"] = prop_id
             data["building_id"] = bld_id
@@ -12177,8 +12220,8 @@ def build_accountant_report_html(
         body += f"<p><strong>إجمالي المتأخرات:</strong> {fmt_omr(data.get('total',0))} ({data.get('count',0)} فاتورة)</p>"
     elif report_type == "deposits":
         rows = [[r.get("contract_no",""), r.get("client_name",""), r.get("start_date",""), r.get("end_date",""), fmt_omr(r.get("deposit_amount",0))] for r in data.get("rows",[])]
-        body = table(["العقد", "العميل", "البداية", "النهاية", "التأمين"], rows)
-        body += f"<p><strong>إجمالي التأمينات غير المستلمة:</strong> {fmt_omr(data.get('total',0))}</p>"
+        body = table(["العقد", "العميل", "البداية", "النهاية", "عربون/وديعة"], rows)
+        body += f"<p><strong>إجمالي العربون/الودائع غير المستلمة:</strong> {fmt_omr(data.get('total',0))} (عقود الإيجار تُنشأ بدون تأمين إيجار)</p>"
     elif report_type == "client_statement":
         c = data.get("client") or {}
         t = data.get("totals") or {}

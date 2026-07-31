@@ -52,6 +52,24 @@ body.lq-edition-terrifying .lq-edition-badge small {
 body.lq-edition-terrifying .lq-edition-badge.is-healthy {
   border-color: rgba(31, 122, 77, 0.35) !important;
 }
+#lqEditionBadge.lq-env-official,
+body.lq-edition-terrifying .lq-edition-badge.lq-env-official {
+  border-color: rgba(31, 122, 77, 0.45) !important;
+  background: linear-gradient(145deg, #f3fbf6 0%, #eef4fb 100%) !important;
+}
+#lqEditionBadge.lq-env-official .lq-ed-kicker,
+body.lq-edition-terrifying .lq-edition-badge.lq-env-official .lq-ed-kicker {
+  color: #1f7a4d !important;
+}
+#lqEditionBadge.lq-env-trial,
+body.lq-edition-terrifying .lq-edition-badge.lq-env-trial {
+  border-color: rgba(184, 137, 45, 0.55) !important;
+  background: linear-gradient(145deg, #fff8e8 0%, #f7f1e4 100%) !important;
+}
+#lqEditionBadge.lq-env-trial .lq-ed-kicker,
+body.lq-edition-terrifying .lq-edition-badge.lq-env-trial .lq-ed-kicker {
+  color: #9a6a12 !important;
+}
 
 /* Header composition as base */
 body.lq-edition-terrifying.app-ready .lq-header-welcome-row {
