@@ -377,7 +377,7 @@
   <div id="portalSwitchOverlay" class="portal-switch-overlay hidden">
     <div class="portal-switch-card">
       <h3>اختر مسار العمل</h3>
-      <p class="mini">منصة موحّدة بثلاثة مسارات: العقارات، الضيافة، والمحاسبة.</p>
+      <p class="mini">منصة موحّدة بأربعة مسارات: العقارات، المجالس، المحاسبة، والتسويق.</p>
       <div class="portal-switch-grid">
         <button type="button" class="portal-tile" onclick="choosePortal('realestate')">
           <span class="portal-icon">🏢</span>
@@ -393,6 +393,11 @@
           <span class="portal-icon">💼</span>
           <b>المحاسبة</b>
           <small>منصة مالية مستقلة للمشروع</small>
+        </button>
+        <button type="button" class="portal-tile" onclick="choosePortal('marketing')">
+          <span class="portal-icon">📣</span>
+          <b>التسويق</b>
+          <small>Leads · حملات · خطة 90 يوم</small>
         </button>
       </div>
       <div class="toolbar" style="justify-content:center;margin-top:12px">
@@ -1017,6 +1022,79 @@
         </div>
       </section>
 
+      <section id="sec-marketing-platform" class="section">
+        <div class="card accounting-hero">
+          <h3>منصة التسويق</h3>
+          <p class="mini">خطة تسويق موحّدة لعقارات · مجالس · خدمات — Leads، حملات، ومتابعة أسبوعية.</p>
+          <div id="mkPlatformKpis" class="grid kpis"></div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>اختصارات التسويق</h3>
+            <div id="mkPlatformQuick" class="toolbar" style="flex-wrap:wrap"></div>
+          </div>
+          <div class="card">
+            <h3>مؤشرات الأسبوع</h3>
+            <div id="mkPlatformAlerts"></div>
+          </div>
+        </div>
+        <div class="card accounting-hero" style="margin-top:12px">
+          <h3>🤖 اقتراحات الأسبوع — 3 موجات تلقائية</h3>
+          <p class="mini">تُولَّد تلقائياً كل أسبوع (أحد · ثلاثاء · خميس) — منشورات جاهزة لإنستغرام وفيسبوك وواتساب مع أهداف كل قناة.</p>
+          <div id="mkWeeklyMeta" class="status-line" style="margin-bottom:10px"></div>
+          <div id="mkWeeklyPostsBox"></div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>📋 خطة التسويق (90 يوم)</h3>
+            <div id="mkPlanBox"></div>
+          </div>
+          <div class="card">
+            <h3>📅 دليل التشغيل الأسبوعي</h3>
+            <div id="mkPlaybookBox"></div>
+          </div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h3>➕ حملة جديدة</h3>
+            <div class="form">
+              <input id="mkCampName" placeholder="اسم الحملة">
+              <select id="mkCampChannel"><option value="whatsapp">واتساب</option><option value="instagram">إنستغرام</option><option value="google_maps">Google Maps</option><option value="referral">إحالة</option></select>
+              <select id="mkCampProduct"><option value="realestate">عقارات</option><option value="hospitality">مجالس</option><option value="both">الكل</option></select>
+              <input id="mkCampBudget" type="number" min="0" step="0.001" placeholder="الميزانية OMR">
+              <input id="mkCampStart" type="date">
+              <input id="mkCampEnd" type="date">
+              <input id="mkCampAudience" placeholder="الجمهور المستهدف">
+              <textarea id="mkCampNotes" placeholder="ملاحظات"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="createMarketingCampaign()">حفظ الحملة</button>
+            <button class="ghost" type="button" onclick="seedMarketingTemplates()" style="margin-top:8px">تحميل قوالب جاهزة</button>
+          </div>
+          <div class="card">
+            <h3>➕ Lead جديد</h3>
+            <div class="form">
+              <input id="mkLeadName" placeholder="اسم العميل المحتمل">
+              <input id="mkLeadPhone" placeholder="الهاتف / واتساب">
+              <input id="mkLeadEmail" placeholder="البريد (اختياري)">
+              <select id="mkLeadSource"><option value="whatsapp">واتساب</option><option value="instagram">إنستغرام</option><option value="walk_in">زيارة مباشرة</option><option value="referral">إحالة</option></select>
+              <select id="mkLeadProduct"><option value="realestate">عقار</option><option value="hospitality">مجلس</option><option value="accounting">خدمات</option></select>
+              <select id="mkLeadStatus"><option value="new">جديد</option><option value="contacted">تم التواصل</option><option value="qualified">مؤهل</option><option value="visit_scheduled">زيارة مجدولة</option></select>
+              <input id="mkLeadFollowup" type="date">
+              <textarea id="mkLeadNotes" placeholder="ملاحظات"></textarea>
+            </div>
+            <button class="gold-btn" type="button" onclick="createMarketingLead()">تسجيل Lead</button>
+          </div>
+        </div>
+        <div class="layout">
+          <div class="card"><h3>🎯 الحملات</h3><div id="mkCampaignsTable"></div></div>
+          <div class="card"><h3>👥 مسار Leads</h3><div id="mkLeadsTable"></div></div>
+        </div>
+        <div class="card">
+          <h3>📣 فرص تسويقية من التشغيل</h3>
+          <div id="mkInventoryBox"></div>
+        </div>
+      </section>
+
       <section id="sec-owner-staff" class="section"><div id="ownerStaffBox"></div></section>
       <section id="sec-owner-live" class="section"><div id="ownerLiveHubBox"></div></section>
       <section id="sec-daily-ops" class="section"><div id="dailyOpsBox"></div></section>
@@ -1353,7 +1431,7 @@
   <script src="lq-business-catalog.js?v=biz1-v64" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal24-v68-stable" defer></script>
+  <script src="app.js?v=portal27-v68-weekly-posts" defer></script>
   <script src="lq-edition-terrifying.js?v=td3" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>

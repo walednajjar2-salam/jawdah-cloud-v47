@@ -50,9 +50,12 @@
     }
     .choices{
       display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
+      grid-template-columns:repeat(2,minmax(0,1fr));
       gap:20px;
       margin-top:14px;
+    }
+    @media (min-width:900px){
+      .choices{ grid-template-columns:repeat(4,minmax(0,1fr)); }
     }
     .card{
       border:1px solid var(--line);
@@ -170,6 +173,13 @@
         <p>القيود، التحصيل، الذمم، التسويات، وإقفال الفترات.</p>
         <button class="btn" type="button" onclick="enterPortal('accounting')">دخول المحاسبة</button>
       </article>
+
+      <article class="card">
+        <div class="circle" aria-label="التسويق" style="font-size:64px;line-height:170px">📣</div>
+        <h3>منصة التسويق</h3>
+        <p>Leads، حملات، خطة 90 يوم، ومتابعة أسبوعية.</p>
+        <button class="btn" type="button" onclick="enterPortal('marketing')">دخول التسويق</button>
+      </article>
     </section>
 
     <div class="foot">Launch Quality LLC · التطوير المؤسسي</div>
@@ -209,7 +219,7 @@
 
     async function enterPortal(choice) {
       const token = readToken();
-      const c = (choice === "hospitality") ? "hospitality" : ((choice === "accounting") ? "accounting" : "realestate");
+      const c = (choice === "hospitality") ? "hospitality" : ((choice === "accounting") ? "accounting" : ((choice === "marketing") ? "marketing" : "realestate"));
       localStorage.setItem("jawdah_portal_choice", c);
       if (token) localStorage.setItem("jawdah_cloud_token", token);
       // Always carry portal + token in the URL so app.html never falls back to login

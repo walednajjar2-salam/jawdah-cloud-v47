@@ -42,6 +42,7 @@ const NAV_SAAS_ITEMS = [
   ['dashboard','لوحة التحكم','🏠'],
   ['estate-platform','منصة العقارات','🏢'],
   ['hospitality-platform','منصة المجالس','🏨'],
+  ['marketing-platform','منصة التسويق','📣'],
   ['accounting-platform','منصة المحاسبة','💼'],
   ['daily-ops','العمليات اليومية','🗂️'],
   ['properties','المشاريع','🏢'],
@@ -78,13 +79,17 @@ const PORTAL_NAV_IDS = {
     'admin-expenses','purchases','payroll','bank','bank-reconciliation','financial-periods',
     'chart-accounts','statements','approvals','reports','messages','backup'
   ]),
+  marketing: new Set([
+    'dashboard','marketing-platform','clients','business-catalog','properties','estate-platform',
+    'hospitality-platform','reports','messages','timeline','daily-ops','backup'
+  ]),
 };
 /** Hidden from normal ops nav — owner/admin tools only. */
 const ADMIN_TOOL_NAV_IDS = new Set(['walid','enterprise','production','qa','users','settings']);
 /** Demoted from product nav (still reachable if linked). */
 const DEMOTED_NAV_IDS = new Set(['properties','tasks','hospitality']);
 const SECTION_TITLES = {
-  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','hospitality-platform':'منصة المجالس','accounting-platform':'منصة المحاسبة','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'منصة المجالس',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
+  dashboard:'لوحة التحكم','estate-platform':'منصة العقارات','hospitality-platform':'منصة المجالس','accounting-platform':'منصة المحاسبة','marketing-platform':'منصة التسويق','owner-staff':'متابعة الموظفين','owner-live':'لوحة المالك الحية','daily-ops':'العمليات اليومية',hospitality:'منصة المجالس',properties:'المشاريع',tasks:'المهام',clients:'العملاء',contracts:'العقود',
   revenues:'الإيرادات',invoices:'المدفوعات',receivables:'التحصيل الذكي','admin-expenses':'المصروفات',maintenance:'الصيانة',
   reports:'التقارير',messages:'مركز التنبيهات',walid:'وليد · الذكاء التشغيلي',enterprise:'التوسع المؤسسي','business-catalog':'كتالوج العمل',production:'أدوات الجاهزية',timeline:'الجدول الزمني',
   backup:'النسخ الاحتياطي',settings:'الإعدادات',accounts:'الحسابات',users:'المستخدمين',qa:'اختبار التشغيل',
@@ -94,7 +99,7 @@ const SECTION_TITLES = {
 };
 function currentPortalChoice(){
   const c = String(localStorage.getItem('jawdah_portal_choice')||'realestate').trim().toLowerCase();
-  if(c==='hospitality' || c==='accounting') return c;
+  if(c==='hospitality' || c==='accounting' || c==='marketing') return c;
   return 'realestate';
 }
 function portalAllowsNavId(id){
@@ -102,10 +107,10 @@ function portalAllowsNavId(id){
   const allowed = PORTAL_NAV_IDS[portal] || PORTAL_NAV_IDS.realestate;
   if(DEMOTED_NAV_IDS.has(id)) return false;
   if(ADMIN_TOOL_NAV_IDS.has(id)) return false;
-  // Cross-portal hubs: never show other platforms in the same sidebar.
-  if(id==='estate-platform' && portal!=='realestate') return false;
-  if(id==='hospitality-platform' && portal!=='hospitality') return false;
-  if(id==='accounting-platform' && portal!=='accounting') return false;
+  if(id==='estate-platform' && portal!=='realestate' && portal!=='marketing') return false;
+  if(id==='hospitality-platform' && portal!=='hospitality' && portal!=='marketing') return false;
+  if(id==='accounting-platform' && portal!=='accounting' && portal!=='marketing') return false;
+  if(id==='marketing-platform' && portal!=='marketing') return false;
   return allowed.has(id);
 }
 function resolveSection(id){
@@ -885,7 +890,7 @@ async function checkSession(){
       localStorage.setItem('jawdah_cloud_token', qToken);
       qs.delete('token');
     }
-    if(qPortal === 'hospitality' || qPortal === 'accounting' || qPortal === 'realestate'){
+    if(qPortal === 'hospitality' || qPortal === 'accounting' || qPortal === 'realestate' || qPortal === 'marketing'){
       localStorage.setItem('jawdah_portal_choice', qPortal);
       qs.delete('portal');
     }
@@ -1090,7 +1095,7 @@ function buildNav(){
     b.onclick=()=>showSection(id); nav.appendChild(b);
   };
   const portal = currentPortalChoice();
-  const portalLabel = portal==='hospitality' ? 'مجالس' : (portal==='accounting' ? 'محاسبة' : 'عقارات');
+  const portalLabel = portal==='hospitality' ? 'مجالس' : (portal==='accounting' ? 'محاسبة' : (portal==='marketing' ? 'تسويق' : 'عقارات'));
   if(canManageUsersSection()){
     addGroup('Owner · المالك');
     if(isPrimaryOwnerUser()){
@@ -1205,6 +1210,7 @@ function showSection(id){
     const ph=$('.page-head'); if(ph) ph.style.display='';
     const fd=document.getElementById('lqForceEstateDock'); if(fd) fd.style.display='none';
   }
+  if(resolved==='marketing-platform' && typeof renderMarketingPlatform==='function') renderMarketingPlatform();
   if(resolved==='accounting-platform' && typeof renderAccountingPlatform==='function') renderAccountingPlatform();
   if(resolved==='dashboard') renderDashboard();
   populateSelects();
@@ -4112,18 +4118,20 @@ function closePortalSwitch(){
   $('#portalSwitchOverlay')?.classList.add('hidden');
 }
 function choosePortal(portal){
-  const choice = portal==='hospitality' ? 'hospitality' : (portal==='accounting' ? 'accounting' : 'realestate');
+  const choice = portal==='hospitality' ? 'hospitality' : (portal==='accounting' ? 'accounting' : (portal==='marketing' ? 'marketing' : 'realestate'));
   localStorage.setItem('jawdah_portal_choice', choice);
   closePortalSwitch();
   buildNav();
   if(choice==='hospitality') showSection('hospitality-platform');
   else if(choice==='accounting') showSection('accounting-platform');
+  else if(choice==='marketing') showSection('marketing-platform');
   else showSection('estate-platform');
 }
 function syncPortalChoiceFromSection(sectionId){
   const id=String(sectionId||'');
   if(id==='hospitality-platform' || id==='hospitality') localStorage.setItem('jawdah_portal_choice','hospitality');
   else if(id==='accounting-platform' || id==='accounts') localStorage.setItem('jawdah_portal_choice','accounting');
+  else if(id==='marketing-platform') localStorage.setItem('jawdah_portal_choice','marketing');
   else if(id==='estate-platform' || id==='properties') localStorage.setItem('jawdah_portal_choice','realestate');
 }
 function quickAddNew(){
@@ -4137,7 +4145,12 @@ function quickAddNew(){
     showSection(canSeeFinance()?'accounts':'accounting-platform');
     return;
   }
-  showSection('properties');
+  if(portal==='marketing'){
+    showSection('marketing-platform');
+    setTimeout(()=>{ try{ $('#mkLeadName')?.focus(); }catch(_){ } }, 80);
+    return;
+  }
+  showSection('estate-platform');
 }
 window.quickAddNew = quickAddNew;
 function applySavedPortalChoice(){
@@ -4150,6 +4163,7 @@ function applySavedPortalChoice(){
   buildNav();
   if(choice==='hospitality') showSection('hospitality-platform');
   else if(choice==='accounting') showSection('accounting-platform');
+  else if(choice==='marketing') showSection('marketing-platform');
   else showSection('estate-platform');
 }
 function canManageDailyOps(){
@@ -4870,6 +4884,202 @@ window.printHospitalityFolio = printHospitalityFolio;
       if(loginMini) loginMini.textContent = 'Real Estate & Hospitality Management System · التطوير المؤسسي';
     },100);
   });
+})();
+
+(function(){
+  function mkPostBlock(label, goal, body, copyId){
+    const safe = htmlEscape(body||'');
+    return `<div class="card" style="margin:10px 0;padding:12px;background:#f8fbff">
+      <div class="statement-row"><span><b>${htmlEscape(label)}</b></span><button class="ghost" type="button" onclick="copyMkWeeklyPost('${copyId}')">نسخ</button></div>
+      <p class="mini"><strong>هدف القناة:</strong> ${htmlEscape(goal||'')}</p>
+      <pre id="${copyId}" style="white-space:pre-wrap;font-family:inherit;font-size:13px;margin:8px 0 0;background:#fff;border:1px solid #e3eaf5;padding:10px;border-radius:8px">${safe}</pre>
+    </div>`;
+  }
+  window.copyMkWeeklyPost = async function(elId){
+    const el = document.getElementById(elId);
+    const text = el?.textContent || '';
+    try{
+      if(navigator?.clipboard?.writeText){
+        await navigator.clipboard.writeText(text);
+        toast('تم نسخ المنشور');
+        return;
+      }
+    }catch(_e){}
+    toast('انسخ النص يدوياً من المربع');
+  };
+  window.markMkWeeklyPublished = async function(postId){
+    try{
+      await api(`marketing_weekly_posts/${postId}`, { method:'PUT', body: JSON.stringify({ status: 'published' }) });
+      toast('تم تعليم الموجة كـ «منشور»');
+      await loadAll();
+      renderMarketingPlatform();
+    }catch(e){ toastErr(e); }
+  };
+  function renderMkWeeklyPosts(posts, weekKey){
+    const meta = $('#mkWeeklyMeta');
+    const host = $('#mkWeeklyPostsBox');
+    if(meta){
+      meta.innerHTML = `<span class="badge paid">أسبوع ${htmlEscape(weekKey||'—')}</span><span class="badge">3 موجات · IG + FB + WA</span><span class="badge">توليد تلقائي</span>`;
+    }
+    if(!host) return;
+    const rows = Array.isArray(posts) ? posts : [];
+    if(!rows.length){
+      host.innerHTML = '<p class="mini">جاري تجهيز اقتراحات الأسبوع...</p>';
+      return;
+    }
+    host.innerHTML = rows.map((p,i)=>{
+      const st = String(p.status||'auto_generated').toLowerCase();
+      const badge = st==='published' ? 'paid' : 'pending';
+      const prefix = `mkwp_${String(p.id||i).replace(/[^a-zA-Z0-9_-]/g,'')}`;
+      return `<article class="card" style="margin-bottom:14px">
+        <div class="statement-row">
+          <span><b>${htmlEscape(p.suggestion_title||'اقتراح')}</b><small class="mini"> · موجة ${fmt(p.slot_index||i+1)} · ${htmlEscape(p.scheduled_date||'')}</small></span>
+          <b class="badge ${badge}">${st==='published'?'منشور ✅':'جاهز للنشر'}</b>
+        </div>
+        ${mkPostBlock('📸 إنستغرام', p.goal_instagram, p.post_instagram, `${prefix}_ig`)}
+        ${mkPostBlock('👥 فيسبوك', p.goal_facebook, p.post_facebook, `${prefix}_fb`)}
+        ${mkPostBlock('💬 واتساب', p.goal_whatsapp, p.post_whatsapp, `${prefix}_wa`)}
+        <button class="ghost" type="button" onclick="markMkWeeklyPublished('${String(p.id||'').replace(/'/g,'')}')">✓ تعليم كمنشور</button>
+      </article>`;
+    }).join('');
+  }
+  window.renderMarketingPlatform = async function(){
+    const quick = $('#mkPlatformQuick');
+    if(quick){
+      quick.innerHTML = [
+        ['العملاء','clients','👥'],
+        ['كتالوج الخدمات','business-catalog','📋'],
+        ['منصة العقارات','estate-platform','🏢'],
+        ['منصة المجالس','hospitality-platform','🏨'],
+        ['التقارير','reports','📈'],
+        ['الجدول الزمني','timeline','📅']
+      ].map(x=>`<button class="ghost" type="button" onclick="showSection('${x[1]}')">${x[2]} ${x[0]}</button>`).join('');
+    }
+    try{
+      const res = await api('marketing_platform_overview');
+      const k = res.kpis || {};
+      const hostKpi = $('#mkPlatformKpis');
+      if(hostKpi){
+        hostKpi.innerHTML = `
+          <div class="kpi"><span>Leads إجمالي</span><strong>${fmt(k.leads_total||0)}</strong></div>
+          <div class="kpi"><span>Leads جديدة</span><strong>${fmt(k.leads_new||0)}</strong></div>
+          <div class="kpi"><span>حملات نشطة</span><strong>${fmt(k.campaigns_active||0)}</strong></div>
+          <div class="kpi"><span>معدل التحويل</span><strong>${fmt(k.conversion_rate||0)}%</strong></div>
+          <div class="kpi"><span>وحدات شاغرة</span><strong>${fmt(k.vacant_units||0)}</strong></div>
+          <div class="kpi"><span>موجات الأسبوع</span><strong>${fmt(k.weekly_posts_count||0)}/3</strong></div>
+          <div class="kpi"><span>متابعات متأخرة</span><strong>${fmt(k.overdue_followups||0)}</strong></div>
+        `;
+      }
+      const alerts = $('#mkPlatformAlerts');
+      if(alerts){
+        alerts.innerHTML = `
+          <div class="statement-row"><span>Leads مؤهلة</span><b>${fmt(k.leads_qualified||0)}</b></div>
+          <div class="statement-row"><span>Leads محوّلة</span><b class="linked-ok">${fmt(k.leads_won||0)}</b></div>
+          <div class="statement-row"><span>حجوزات/مجالس قيد المتابعة</span><b>${fmt(k.majlis_pipeline||0)}</b></div>
+          <div class="statement-row"><span>أنشطة مخططة</span><b>${fmt(k.activities_planned||0)}</b></div>
+          <div class="statement-row"><span>اقتراحات الأسبوع (${htmlEscape(k.week_key||'')})</span><b class="linked-ok">${fmt(k.weekly_posts_count||0)} / 3</b></div>
+        `;
+      }
+      renderMkWeeklyPosts(res.weekly_posts || Jawdah.data?.marketing_weekly_posts || [], k.week_key || res.weekly_auto?.week_key);
+      const plan = res.plan || {};
+      const planHost = $('#mkPlanBox');
+      if(planHost){
+        const pillars = (plan.pillars||[]).map(p=>`<div class="statement-row"><span><b>${htmlEscape(p.title_ar||'')}</b></span><b></b></div>${(p.actions_ar||[]).map(a=>`<div class="mini" style="margin:4px 0 8px 12px">• ${htmlEscape(a)}</div>`).join('')}`).join('');
+        const phases = (plan.phases||[]).map(ph=>`<div class="statement-row"><span>أسابيع ${htmlEscape(ph.weeks||'')} · ${htmlEscape(ph.title_ar||'')}</span><b>${htmlEscape((ph.goals_ar||[]).join(' · '))}</b></div>`).join('');
+        planHost.innerHTML = `<p class="mini">${htmlEscape(plan.vision_ar||'')}</p><h4>الركائز</h4>${pillars}<h4 style="margin-top:12px">المراحل (${htmlEscape(plan.horizon||'')})</h4>${phases}`;
+      }
+      const pbHost = $('#mkPlaybookBox');
+      if(pbHost){
+        pbHost.innerHTML = (res.playbook||[]).map(day=>`<div class="statement-row"><span><b>${htmlEscape(day.day_ar||'')}</b></span><b></b></div>${(day.tasks_ar||[]).map(t=>`<div class="mini" style="margin:4px 0 8px 12px">✓ ${htmlEscape(t)}</div>`).join('')}`).join('');
+      }
+      const campHost = $('#mkCampaignsTable');
+      if(campHost){
+        const rows = Jawdah.data?.marketing_campaigns || res.recent_campaigns || [];
+        campHost.innerHTML = rows.length ? tableHtml(
+          [['الحملة','name'],['القناة','channel'],['الخط','product_line'],['الحالة','status',(v)=>statusBadge(v)],['الميزانية','budget_omr',(v)=>money(v)]],
+          rows.slice(0,12)
+        ) : '<p class="mini">لا توجد حملات — ابدأ بحملة أو حمّل القوالب الجاهزة.</p>';
+      }
+      const leadHost = $('#mkLeadsTable');
+      if(leadHost){
+        const rows = Jawdah.data?.marketing_leads || res.recent_leads || [];
+        leadHost.innerHTML = rows.length ? tableHtml(
+          [['الاسم','name'],['الهاتف','phone'],['المصدر','source'],['الاهتمام','product_interest'],['الحالة','status',(v)=>statusBadge(v)],['متابعة','followup_date']],
+          rows.slice(0,15)
+        ) : '<p class="mini">لا Leads بعد — سجّل أول عميل محتمل.</p>';
+      }
+      const invHost = $('#mkInventoryBox');
+      if(invHost){
+        invHost.innerHTML = `
+          <div class="statement-row"><span>🏢 وحدات شاغرة للترويج</span><b>${fmt(k.vacant_units||0)}</b><button class="ghost" type="button" onclick="showSection('estate-platform')">العقارات</button></div>
+          <div class="statement-row"><span>🏨 مسار مجالس/حجوزات</span><b>${fmt(k.majlis_pipeline||0)}</b><button class="ghost" type="button" onclick="showSection('hospitality-platform')">المجالس</button></div>
+          <div class="statement-row"><span>📋 كتالوج الخدمات والأسعار</span><b>جاهز</b><button class="ghost" type="button" onclick="showSection('business-catalog')">الكتالوج</button></div>
+        `;
+      }
+    }catch(e){
+      const hostKpi = $('#mkPlatformKpis');
+      if(hostKpi) hostKpi.innerHTML = `<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    }
+  };
+  window.createMarketingCampaign = async function(){
+    try{
+      await api('marketing_campaigns', { method:'POST', body: JSON.stringify({
+        name: val('mkCampName'),
+        channel: val('mkCampChannel') || 'whatsapp',
+        product_line: val('mkCampProduct') || 'realestate',
+        status: 'active',
+        budget_omr: Number(val('mkCampBudget')||0),
+        start_date: val('mkCampStart') || today(),
+        end_date: val('mkCampEnd') || '',
+        target_audience: val('mkCampAudience') || '',
+        owner_name: Jawdah.user?.name || Jawdah.user?.username || '',
+        notes: val('mkCampNotes') || '',
+        created_at: new Date().toISOString()
+      })});
+      toast('تم حفظ الحملة');
+      await loadAll();
+      renderMarketingPlatform();
+    }catch(e){ toastErr(e); }
+  };
+  window.createMarketingLead = async function(){
+    try{
+      await api('marketing_leads', { method:'POST', body: JSON.stringify({
+        name: val('mkLeadName'),
+        phone: val('mkLeadPhone') || '',
+        email: val('mkLeadEmail') || '',
+        source: val('mkLeadSource') || 'whatsapp',
+        product_interest: val('mkLeadProduct') || 'realestate',
+        status: val('mkLeadStatus') || 'new',
+        followup_date: val('mkLeadFollowup') || today(),
+        assigned_to: Jawdah.user?.name || Jawdah.user?.username || '',
+        notes: val('mkLeadNotes') || '',
+        created_at: new Date().toISOString()
+      })});
+      toast('تم تسجيل Lead');
+      await loadAll();
+      renderMarketingPlatform();
+    }catch(e){ toastErr(e); }
+  };
+  window.seedMarketingTemplates = async function(){
+    try{
+      const res = await api('marketing_platform_overview');
+      const templates = res.templates || [];
+      for(const t of templates){
+        await api('marketing_campaigns', { method:'POST', body: JSON.stringify({
+          ...t,
+          status: 'draft',
+          start_date: today(),
+          end_date: '',
+          owner_name: Jawdah.user?.name || '',
+          notes: 'قالب جاهز من منصة التسويق',
+          created_at: new Date().toISOString()
+        })});
+      }
+      toast('تم تحميل قوالب الحملات');
+      await loadAll();
+      renderMarketingPlatform();
+    }catch(e){ toastErr(e); }
+  };
 })();
 
 (function(){
