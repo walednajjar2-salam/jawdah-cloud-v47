@@ -50,13 +50,16 @@
       }
     }
     badge.innerHTML =
-      '<span class="lq-ed-kicker">قاعدة النظام</span>' +
+      '<span class="lq-ed-kicker" id="lqEnvModeLabel">' +
+      (document.documentElement.getAttribute("data-lq-env-label") || "نسخة رسمية") +
+      "</span>" +
       "<strong>" +
       EDITION.labelAr +
       "</strong>" +
-      '<small dir="ltr">' +
-      EDITION.uiVersion +
-      "</small>";
+      '<small dir="ltr">v69-ops</small>';
+    var mode = document.documentElement.getAttribute("data-lq-env-mode") || "official";
+    badge.classList.toggle("lq-env-trial", mode === "trial" || mode === "demo");
+    badge.classList.toggle("lq-env-official", mode === "official" || mode === "production");
   }
 
   function healLayout() {
