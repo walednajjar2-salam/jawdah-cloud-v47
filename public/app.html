@@ -35,7 +35,7 @@
   <!-- LOGIN UI LOCKED 2026-07-23: use lq-login-locked.css only -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css?v=portal9">
   <link rel="stylesheet" href="lq-shell.css?v=shell30">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
@@ -45,8 +45,9 @@
   <link rel="stylesheet" href="lq-emergency-clean.css?v=ec14">
   <link rel="stylesheet" href="lq-edition-terrifying.css?v=td3">
   <link rel="stylesheet" href="lq-login-locked.css?v=locked11-otp-row">
+  <link rel="stylesheet" href="lq-exec-theme.css?v=nizwa3">
 </head>
-<body class="login-ultra saas-login enterprise-vision va-theme lq-edition-terrifying" data-edition="terrifying-dev">
+<body class="login-ultra saas-login enterprise-vision va-theme lq-edition-terrifying lq-exec" data-edition="terrifying-dev">
   <style>
     #loginScreen,#app{position:relative;z-index:10;min-height:100vh}
     #loginScreen.hidden,#app.hidden{display:none!important}
@@ -243,10 +244,6 @@
                 <span class="login-card-brand-en" dir="ltr" lang="en">Launch Quality LLC</span>
               </div>
             </div>
-            <div class="ev-auth-tabs" role="tablist" aria-label="Authentication methods">
-              <button type="button" class="ev-auth-tab active" data-auth="password" role="tab">Password</button>
-              <button type="button" class="ev-auth-tab" data-auth="otp" role="tab">OTP</button>
-            </div>
             <div id="authPanePassword" class="ev-auth-pane login-form" role="tabpanel">
               <label class="login-field">
                 <span class="login-field-label" dir="ltr">Username</span>
@@ -285,24 +282,6 @@
               <p dir="ltr">Touch ID · Fingerprint authentication</p>
               <p>المصادقة بالبصمة — طبقة أمان مؤسسية</p>
               <button type="button" class="gold-btn login-submit" data-bio-action="fingerprint">Scan Fingerprint</button>
-            </div>
-            <div id="authPaneOtp" class="ev-auth-pane ev-auth-alt hidden" role="tabpanel">
-              <label class="login-field">
-                <span class="login-field-label" dir="ltr">Username</span>
-                <input id="otpUser" placeholder="👤 اسم المستخدم" autocomplete="username">
-              </label>
-              <button type="button" id="otpSendBtn" class="ghost login-submit" style="margin-bottom:10px">إرسال رمز OTP · Send code</button>
-              <p dir="ltr">One-Time Password · 6-digit code</p>
-              <div class="ev-otp-inputs">
-                <input class="ev-otp-input" maxlength="1" inputmode="numeric" aria-label="Digit 1">
-                <input class="ev-otp-input" maxlength="1" inputmode="numeric" aria-label="Digit 2">
-                <input class="ev-otp-input" maxlength="1" inputmode="numeric" aria-label="Digit 3">
-                <input class="ev-otp-input" maxlength="1" inputmode="numeric" aria-label="Digit 4">
-                <input class="ev-otp-input" maxlength="1" inputmode="numeric" aria-label="Digit 5">
-                <input class="ev-otp-input" maxlength="1" inputmode="numeric" aria-label="Digit 6">
-              </div>
-              <button type="button" id="otpLoginBtn" class="gold-btn login-submit">Verify & Sign In · دخول ذكي</button>
-              <p id="otpStatus" class="mini">أدخل رمز التحقق المرسل إلى هاتفك المؤسسي</p>
             </div>
             <div id="authPaneSso" class="ev-auth-pane ev-auth-alt hidden" role="tabpanel">
               <p dir="ltr">Single Sign-On · Corporate identity</p>
@@ -698,6 +677,7 @@
               <input id="ebName" placeholder="اسم/رقم البناية">
               <select id="ebStatus"><option value="active">نشطة</option><option value="inactive">غير نشطة</option><option value="suspended">موقوفة</option></select>
               <input id="ebLocation" placeholder="موقع البناية">
+              <input id="ebUnitCount" type="number" min="0" placeholder="عدد الوحدات">
               <input id="ebApartmentCount" type="number" min="0" placeholder="عدد الشقق">
               <input id="ebRoomCount" type="number" min="0" placeholder="عدد الغرف">
               <input id="ebBaseRentPrice" type="number" min="0" step="0.001" placeholder="سعر الإيجار الأساسي OMR">
@@ -706,6 +686,7 @@
               <input id="ebManager" placeholder="مسؤول البناية">
               <select id="ebTenantClient"></select>
               <input id="ebTenantPhone" placeholder="هاتف المستأجر">
+              <textarea id="ebDescription" placeholder="وصف البناية (اختياري)"></textarea>
               <input id="ebImage" placeholder="رابط صورة حية للبناية (اختياري)">
               <label class="mini">رفع صورة البناية (مباشر)
                 <input id="ebImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
@@ -732,6 +713,8 @@
                 <option value="suspended">موقوفة</option>
               </select>
               <input id="eaRoomCount" type="number" min="0" placeholder="عدد غرف الشقة (معلومة فقط)">
+              <input id="eaFloorNo" type="number" placeholder="الطابق">
+              <input id="eaAreaSqm" type="number" min="0" step="0.01" placeholder="المساحة (م²)">
               <input id="eaRentPrice" type="number" min="0" step="0.001" placeholder="سعر الإيجار OMR">
               <div id="eaReservedFields" class="estate-state-fields hidden">
                 <input id="eaBookingDeposit" type="number" min="0" step="0.001" placeholder="عربون حجز OMR (ليس تأمين إيجار)">
@@ -768,8 +751,10 @@
               <select id="erBuilding"></select>
               <select id="erApartment"></select>
               <input id="erName" placeholder="اسم/رقم الغرفة">
-              <input id="erType" placeholder="نوع الغرفة">
+              <select id="erType"><option value="غرفة مستقلة">غرفة مستقلة</option></select>
               <select id="erStatus"><option value="vacant">شاغرة</option><option value="reserved">محجوزة</option><option value="occupied">مؤجرة</option><option value="maintenance">تحت الصيانة</option><option value="suspended">موقوفة</option></select>
+              <input id="erFloorNo" type="number" placeholder="الطابق">
+              <input id="erAreaSqm" type="number" min="0" step="0.01" placeholder="المساحة (م²)">
               <input id="erRentPrice" type="number" min="0" step="0.001" placeholder="سعر الغرفة OMR">
               <div id="erReservedFields" class="estate-state-fields hidden">
                 <input id="erBookingDeposit" type="number" min="0" step="0.001" placeholder="عربون حجز الغرفة OMR (ليس تأمين إيجار)">
@@ -889,7 +874,7 @@
               <select id="ecPaymentCycle"><option value="monthly">شهري</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option><option value="once">مرة واحدة</option></select>
               <textarea id="ecNotes" placeholder="ملاحظات العقد"></textarea>
             </div>
-            <button class="gold-btn" type="button" onclick="createEstateContractFromFlow()">إنشاء عقد نشط الآن</button>
+            <button class="gold-btn" type="button" onclick="createEstateContractFromFlow()">إنشاء عقد (مسودة)</button>
             <div class="toolbar" style="margin-top:10px">
               <select id="ecScheduleContract"></select>
               <button class="ghost" type="button" onclick="generateEstateContractSchedule(false)">توليد الجدولة</button>
@@ -1353,7 +1338,9 @@
   <script src="lq-business-catalog.js?v=biz1-v64" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=portal28-v69-ops-complete" defer></script>
+  <script src="lq-i18n.js?v=i18n1" defer></script>
+  <script src="app.js?v=nizwa3-fix" defer></script>
+  <script src="lq-exec-app.js?v=exec2" defer></script>
   <script src="lq-edition-terrifying.js?v=td3" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>
@@ -1367,7 +1354,7 @@
     <script src="lq-role-ui.js?v=role1" defer></script>
   <script src="lq-owner-staff.js?v=own2" defer></script>
     <script src="lq-ui-unify.js?v=ui2" defer></script>
-  <script src="lq-layout-v2.js?v=lay9" defer></script>
+  <script src="lq-layout-v2.js?v=lay10" defer></script>
     <script src="pwa-install.js?v=pwa9" defer></script>
   <script>
     (function(){

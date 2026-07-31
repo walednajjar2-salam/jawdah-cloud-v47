@@ -67,11 +67,18 @@ const NAV_SAAS_ITEMS = [
 const PORTAL_NAV_IDS = {
   realestate: new Set([
     'dashboard','estate-platform','clients','contracts','invoices','receivables',
-    'maintenance','inventory','daily-ops','reports','messages','timeline','backup'
+    'maintenance','inventory','daily-ops','reports','messages','timeline','backup','properties'
   ]),
   hospitality: new Set([
     'dashboard','hospitality-platform','clients','invoices','receivables',
-    'business-catalog','daily-ops','reports','messages','backup'
+    'business-catalog','inventory','daily-ops','reports','messages','backup'
+  ]),
+  products: new Set([
+    'dashboard','business-catalog','inventory','purchases','reports','messages','backup'
+  ]),
+  overview: new Set([
+    'dashboard','estate-platform','hospitality-platform','clients','contracts','invoices',
+    'receivables','maintenance','inventory','business-catalog','reports','messages','timeline','backup'
   ]),
   accounting: new Set([
     'dashboard','accounting-platform','accounts','invoices','receivables','revenues',
@@ -94,29 +101,55 @@ const SECTION_TITLES = {
 };
 function currentPortalChoice(){
   const c = String(localStorage.getItem('jawdah_portal_choice')||'realestate').trim().toLowerCase();
-  if(c==='hospitality' || c==='accounting') return c;
+  if(c==='quickestate') return 'nizwaestate';
+  if(['hospitality','accounting','products','overview','realestate','nizwaestate'].includes(c)) return c;
   return 'realestate';
 }
 function portalAllowsNavId(id){
   const portal = currentPortalChoice();
   const allowed = PORTAL_NAV_IDS[portal] || PORTAL_NAV_IDS.realestate;
-  if(DEMOTED_NAV_IDS.has(id)) return false;
+  if(DEMOTED_NAV_IDS.has(id) && portal!=='realestate' && portal!=='overview') return false;
   if(ADMIN_TOOL_NAV_IDS.has(id)) return false;
-  // Cross-portal hubs: never show other platforms in the same sidebar.
-  if(id==='estate-platform' && portal!=='realestate') return false;
-  if(id==='hospitality-platform' && portal!=='hospitality') return false;
+  // Cross-portal hubs: never show other platforms in the same sidebar (overview may show both).
+  if(id==='estate-platform' && portal!=='realestate' && portal!=='overview') return false;
+  if(id==='hospitality-platform' && portal!=='hospitality' && portal!=='overview') return false;
   if(id==='accounting-platform' && portal!=='accounting') return false;
+  if(id==='business-catalog' && portal!=='products' && portal!=='hospitality' && portal!=='overview') return false;
   return allowed.has(id);
 }
 function resolveSection(id){
   if(id==='hospitality') return 'hospitality-platform';
   return id==='settings' ? (canManageUsersSection() ? 'users' : 'backup') : id;
 }
-function canSeeApprovals(){ return Jawdah.user && ['admin','owner','accountant','operations'].includes(Jawdah.user.role); }
-function canDecideApprovals(){ return Jawdah.user && ['admin','owner','accountant'].includes(Jawdah.user.role); }
-function canActivateContracts(){ return Jawdah.user && ['admin','owner'].includes(Jawdah.user.role); }
-function canSeeInventory(){ return Jawdah.user && ['admin','owner','accountant','operations','maintenance'].includes(Jawdah.user.role); }
-function canSeeFinance(){ return Jawdah.user && ['admin','owner','accountant'].includes(Jawdah.user.role); }
+function isRestrictedAdminUser(){
+  const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
+  return ['ahmed','ahmed.najjar','ahmed.alnajjar'].includes(uname);
+}
+function canSeeApprovals(){
+  if(!Jawdah.user) return false;
+  if(isRestrictedAdminUser()) return false;
+  return ['admin','owner','accountant','operations'].includes(Jawdah.user.role);
+}
+function canDecideApprovals(){
+  if(!Jawdah.user) return false;
+  if(isRestrictedAdminUser()) return false;
+  return ['owner','accountant'].includes(Jawdah.user.role);
+}
+function canActivateContracts(){
+  if(!Jawdah.user) return false;
+  if(isRestrictedAdminUser()) return false;
+  return isPrimaryOwnerUser() || Jawdah.user.role==='owner';
+}
+function canSeeInventory(){
+  if(!Jawdah.user) return false;
+  if(isRestrictedAdminUser()) return true;
+  return ['admin','owner','accountant','operations','maintenance'].includes(Jawdah.user.role);
+}
+function canSeeFinance(){
+  if(!Jawdah.user) return false;
+  if(isRestrictedAdminUser()) return false;
+  return ['admin','owner','accountant'].includes(Jawdah.user.role);
+}
 function canSeeFinanceSection(id){
   if(id==='inventory') return canSeeInventory();
   return canSeeFinance();
@@ -129,7 +162,7 @@ const DISPLAY_OWNER_NAME = 'القائد يعقوب فاضل الخصيبي';
 const DISPLAY_OWNER_ROLE = 'المالك العام';
 const OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
 const PRIMARY_OWNER_USERNAMES = new Set(['yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
-const EXECUTIVE_MANAGER_USERNAMES = new Set(['ahmed.najjar','ahmed']);
+const EXECUTIVE_MANAGER_USERNAMES = new Set([]);
 const DAILY_OPS_MANAGER_USERNAMES = new Set(['razan','yaqoub.khasibi','yaqoub','waleed.najjar','waleed']);
 const DAILY_OPS_ICON_BY_USERNAME = {
   'owner': '👑',
@@ -320,7 +353,7 @@ function estateRolePermissions(role){
 }
 function hasEstatePermission(permission){
   const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
-  if(OWNER_USERNAMES.has(uname) || EXECUTIVE_MANAGER_USERNAMES.has(uname)) return true;
+  if(OWNER_USERNAMES.has(uname)) return true;
   const perms = estateRolePermissions(Jawdah.user?.role);
   if(perms.has('all') || perms.has(permission)) return true;
   const base = String(permission||'').split(':',1)[0];
@@ -478,7 +511,7 @@ function maybeSendWelcomeMessage(user){
   if(sessionStorage.getItem(cacheKey)==='1') return;
   sessionStorage.setItem(cacheKey,'1');
   const msg = welcomeMessageForUser(user);
-  toastOk(msg);
+  // Keep greeting in notification center only — never cover the active workspace.
   pushRealtimeNotification({
     key: `welcome:${u}:${todayKey}`,
     icon:'🤝',
@@ -759,22 +792,7 @@ async function login(){
     const device_label = (window.LQ_SECURITY && LQ_SECURITY.deviceLabel) ? LQ_SECURITY.deviceLabel() : 'Browser';
     const res=await api('login',{method:'POST',body:JSON.stringify({username,password,remember_device:remember,device_fingerprint,device_label})});
     if(res.mfa_required){
-      const mfaPayload={challenge_id:res.challenge_id,username:res.username||username,mfa_method:res.mfa_method||'email'};
-      if(res.totp_secret){ mfaPayload.totp_secret=res.totp_secret; mfaPayload.totp_uri=res.totp_uri||''; }
-      localStorage.setItem('lq_mfa_challenge', JSON.stringify(mfaPayload));
-      document.querySelector('.ev-auth-tab[data-auth="otp"]')?.click();
-      const otpUser=$('#otpUser'); if(otpUser) otpUser.value = res.username || username;
-      const status=$('#otpStatus');
-      if(status){
-        if(res.mfa_method==='totp_enroll' && res.totp_secret){
-          status.textContent = 'سر المصادقة: '+res.totp_secret+' — أضفه في Authenticator ثم أدخل الرمز';
-        }else if(res.mfa_method==='totp'){
-          status.textContent = 'أدخل رمز تطبيق المصادقة';
-        }else{
-          status.textContent = res.message || 'أدخل رمز OTP';
-        }
-      }
-      toastNotice(res.message || 'أدخل رمز التحقق لإكمال الدخول');
+      toastErr('تم إلغاء OTP — أعد المحاولة أو تواصل مع الدعم');
       return;
     }
     Jawdah.token=res.token; Jawdah.user=res.user; localStorage.setItem('jawdah_cloud_token',res.token);
@@ -897,7 +915,8 @@ async function checkSession(){
       localStorage.setItem('jawdah_cloud_token', qToken);
       qs.delete('token');
     }
-    if(qPortal === 'hospitality' || qPortal === 'accounting' || qPortal === 'realestate'){
+    if(qPortal==='quickestate') qPortal='nizwaestate';
+    if(['hospitality','accounting','realestate','products','overview','nizwaestate'].includes(qPortal)){
       localStorage.setItem('jawdah_portal_choice', qPortal);
       qs.delete('portal');
     }
@@ -936,6 +955,12 @@ async function checkSession(){
   if(!portalChoice){
     const tok = encodeURIComponent(Jawdah.token||'');
     location.replace('/portal-select.html?from=session&t=' + Date.now() + '&token=' + tok);
+    return;
+  }
+  if(['nizwaestate','quickestate'].includes(String(portalChoice).toLowerCase())){
+    localStorage.setItem('jawdah_portal_choice', 'nizwaestate');
+    const tok = encodeURIComponent(Jawdah.token||'');
+    location.replace('/quick-estate.html?portal=nizwaestate&t=' + Date.now() + '&token=' + tok);
     return;
   }
 
@@ -1080,9 +1105,9 @@ function renderSidebarUser(){
   const el=$('#sidebarUser'); if(!el||!Jawdah.user) return;
   const name=displayUserName(Jawdah.user);
   const role=displayUserRole(Jawdah.user);
-  const greet=employeeGreeting(name);
   const initial=(name||'ي').trim().charAt(0);
-  el.innerHTML=`<div class="su-avatar">${initial}</div><div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div><div class="mini">${htmlEscape(greet)}</div><button type="button" class="su-logout">Sign Out · خروج</button></div>`;
+  // Compact account card only — greeting stays in the header (do not cover nav/content).
+  el.innerHTML=`<div class="su-avatar">${initial}</div><div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div><button type="button" class="su-logout">Sign Out · خروج</button></div>`;
   el.querySelector('.su-logout').onclick=logout;
 }
 function employeeGreeting(name){
@@ -1112,6 +1137,16 @@ function buildNav(){
     }
   }
   addGroup(`تشغيل · ${portalLabel}`);
+  if(portal==='realestate' || portal==='overview'){
+    const nz=document.createElement('button');
+    nz.type='button';
+    nz.innerHTML=`<span class="nav-icon">🏘️</span><span class="nav-text"><span class="nav-ar">عقارات نزوى</span></span>`;
+    nz.onclick=()=>{
+      const tok=encodeURIComponent(Jawdah.token||'');
+      location.href='/quick-estate.html?portal=nizwaestate&t='+Date.now()+(tok?('&token='+tok):'');
+    };
+    nav.appendChild(nz);
+  }
   NAV_SAAS_ITEMS.forEach(([id,label,icon])=>{
     if(!portalAllowsNavId(id)) return;
     if(['revenues','admin-expenses'].includes(id) && !canSeeFinance()) return;
@@ -4144,18 +4179,23 @@ function closePortalSwitch(){
   $('#portalSwitchOverlay')?.classList.add('hidden');
 }
 function choosePortal(portal){
-  const choice = portal==='hospitality' ? 'hospitality' : (portal==='accounting' ? 'accounting' : 'realestate');
+  const p=String(portal||'').toLowerCase();
+  const choice = ['hospitality','accounting','products','overview','realestate'].includes(p) ? p : 'realestate';
   localStorage.setItem('jawdah_portal_choice', choice);
   closePortalSwitch();
   buildNav();
   if(choice==='hospitality') showSection('hospitality-platform');
   else if(choice==='accounting') showSection('accounting-platform');
+  else if(choice==='products') showSection('business-catalog');
+  else if(choice==='overview') showSection('dashboard');
   else showSection('estate-platform');
+  if(window.LQ_EXEC?.refreshBoard) setTimeout(()=>LQ_EXEC.refreshBoard(), 60);
 }
 function syncPortalChoiceFromSection(sectionId){
   const id=String(sectionId||'');
   if(id==='hospitality-platform' || id==='hospitality') localStorage.setItem('jawdah_portal_choice','hospitality');
   else if(id==='accounting-platform' || id==='accounts') localStorage.setItem('jawdah_portal_choice','accounting');
+  else if(id==='business-catalog') localStorage.setItem('jawdah_portal_choice','products');
   else if(id==='estate-platform' || id==='properties') localStorage.setItem('jawdah_portal_choice','realestate');
 }
 function quickAddNew(){
@@ -4182,7 +4222,10 @@ function applySavedPortalChoice(){
   buildNav();
   if(choice==='hospitality') showSection('hospitality-platform');
   else if(choice==='accounting') showSection('accounting-platform');
+  else if(choice==='products') showSection('business-catalog');
+  else if(choice==='overview') showSection('dashboard');
   else showSection('estate-platform');
+  if(window.LQ_EXEC?.refreshBoard) setTimeout(()=>LQ_EXEC.refreshBoard(), 80);
 }
 function canManageDailyOps(){
   const uname = String(Jawdah.user?.username||'').trim().toLowerCase();
@@ -5276,8 +5319,8 @@ window.printHospitalityFolio = printHospitalityFolio;
 
     const ecType = String($('#ecEntityType')?.value || 'apartment');
     const contractSrc = ecType === 'room'
-      ? rooms.filter(x=>['reserved','occupied'].includes(String(x.status||'').toLowerCase()))
-      : apts.filter(x=>['reserved','occupied'].includes(String(x.status||'').toLowerCase()));
+      ? rooms.filter(x=>!['maintenance','suspended'].includes(String(x.status||'').toLowerCase()))
+      : apts.filter(x=>!['maintenance','suspended'].includes(String(x.status||'').toLowerCase()));
     const ecEntity = $('#ecEntityId');
     if(ecEntity){
       ecEntity.innerHTML = '<option value="">— اختر —</option>'+contractSrc.map(x=>`<option value="${htmlEscape(x.id)}">${htmlEscape(x.name||x.id)} · ${htmlEscape(ecType==='room'?roomStatusLabel(x.status):apartmentStatusLabel(x.status))}</option>`).join('');
@@ -5400,7 +5443,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     );
     const bTable = $('#estateBuildingsTable');
     if(bTable) bTable.innerHTML = tableHtml(
-      [['الصورة','id',(_,r)=>estateThumbHtml(r,'building',`بناية ${r.name||r.id}`)],['العقار','property_id',(v)=>pickName(props,v)],['البناية','name'],['الحالة','status',(v)=>statusBadge(estateActiveStatusLabel(v))],['الموقع','location'],['عدد الشقق','apartment_count'],['عدد الغرف','room_count'],['سعر الإيجار الأساسي','base_rent_price',(v)=>money(v)],['رسوم الخدمة','service_charge',(v)=>money(v)],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      [['الصورة','id',(_,r)=>estateThumbHtml(r,'building',`بناية ${r.name||r.id}`)],['العقار','property_id',(v)=>pickName(props,v)],['البناية','name'],['الحالة','status',(v)=>statusBadge(estateActiveStatusLabel(v))],['الموقع','location'],['عدد الوحدات','unit_count'],['عدد الشقق','apartment_count'],['عدد الغرف','room_count'],['سعر الإيجار الأساسي','base_rent_price',(v)=>money(v)],['رسوم الخدمة','service_charge',(v)=>money(v)],['الوصف','description'],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
       blds,
       r=>`<button class="ghost" onclick="editRecord('estate_buildings','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_buildings','${r.id}')">حذف</button>`
     );
@@ -5411,8 +5454,11 @@ window.printHospitalityFolio = printHospitalityFolio;
         ['العقار','property_id',(v)=>pickName(props,v)],
         ['البناية','building_id',(v)=>pickName(blds,v)],
         ['الشقة','name'],
+        ['نوع الوحدة','unit_kind',(v)=>v||'شقة كاملة'],
         ['الحالة','status',(v)=>statusBadge(apartmentStatusLabel(v))],
         ['عدد الغرف','room_count'],
+        ['الطابق','floor_no',(v)=>v ?? '—'],
+        ['المساحة (م²)','area_sqm',(v)=>Number(v||0)>0?fmt(v):'—'],
         ['سعر الإيجار','rent_price',(v)=>money(v)],
         ['عربون الحجز','booking_deposit',(v)=>money(v)],
         ['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],
@@ -5434,23 +5480,23 @@ window.printHospitalityFolio = printHospitalityFolio;
         const convertBtn = st==='reserved' && canEstateConvertReservation()
           ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مؤجرة</button> `
           : '';
-        const contractBtn = ['reserved','occupied'].includes(st) && canEstateCreateContract()
-          ? `<button class="gold-btn" onclick="openEstateContractFlow('apartment','${r.id}')">إنشاء عقد نشط</button> `
+        const contractBtn = !['maintenance','suspended'].includes(st) && canEstateCreateContract()
+          ? `<button class="gold-btn" onclick="openEstateContractFlow('apartment','${r.id}')">إنشاء عقد (مسودة)</button> `
           : '';
         return `${convertBtn}${contractBtn}<button class="ghost" onclick="editRecord('estate_apartments','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_apartments','${r.id}')">حذف</button>`;
       }
     );
     const rTable = $('#estateRoomsTable');
     if(rTable) rTable.innerHTML = tableHtml(
-      [['الصورة','id',(_,r)=>estateThumbHtml(r,'room',`غرفة ${r.name||r.id}`)],['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)],['الغرفة','name'],['النوع','room_type'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['سعر الغرفة','rent_price',(v)=>money(v)],['عربون الحجز','booking_deposit',(v)=>money(v)],['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],['فترة الحجز','id',(_,r)=>String(r.status||'').toLowerCase()==='reserved' ? `${htmlEscape(r.reservation_start_date||'—')} → ${htmlEscape(r.reservation_end_date||'—')}` : '—'],['تفاصيل الحجز/الصيانة','id',(_,r)=>{const st=String(r.status||'').toLowerCase(); if(st==='reserved') return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`; if(st==='maintenance') return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`; return '—';}],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
+      [['الصورة','id',(_,r)=>estateThumbHtml(r,'room',`غرفة ${r.name||r.id}`)],['العقار','property_id',(v)=>pickName(props,v)],['البناية','building_id',(v)=>pickName(blds,v)],['الشقة','apartment_id',(v)=>pickName(apts,v)||'—'],['الغرفة','name'],['نوع الوحدة','unit_kind',(v)=>v||'غرفة مستقلة'],['الحالة','status',(v)=>statusBadge(roomStatusLabel(v))],['الطابق','floor_no',(v)=>v ?? '—'],['المساحة (م²)','area_sqm',(v)=>Number(v||0)>0?fmt(v):'—'],['سعر الغرفة','rent_price',(v)=>money(v)],['عربون الحجز','booking_deposit',(v)=>money(v)],['مدفوع مقدمًا','prepaid_amount',(v)=>money(v)],['فترة الحجز','id',(_,r)=>String(r.status||'').toLowerCase()==='reserved' ? `${htmlEscape(r.reservation_start_date||'—')} → ${htmlEscape(r.reservation_end_date||'—')}` : '—'],['تفاصيل الحجز/الصيانة','id',(_,r)=>{const st=String(r.status||'').toLowerCase(); if(st==='reserved') return `${htmlEscape(r.booked_client_name||'—')}<br><small>${htmlEscape(r.booked_client_phone||'')}</small><br><small>الموظف: ${htmlEscape(r.booked_by_employee||'—')}</small>`; if(st==='maintenance') return `${money(r.maintenance_cost||0)}<br><small>${htmlEscape(r.maintenance_notes||'')}</small>`; return '—';}],['المسؤول','manager_name'],['المستأجر','id',(_,r)=>tenantCell(r.tenant_client_id,r.tenant_phone)]],
       rooms,
       r=>{
         const st = String(r.status||'').toLowerCase();
         const convertBtn = st==='reserved' && canEstateConvertReservation()
           ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مؤجرة</button> `
           : '';
-        const contractBtn = ['reserved','occupied'].includes(st) && canEstateCreateContract()
-          ? `<button class="gold-btn" onclick="openEstateContractFlow('room','${r.id}')">إنشاء عقد نشط</button> `
+        const contractBtn = !['maintenance','suspended'].includes(st) && canEstateCreateContract()
+          ? `<button class="gold-btn" onclick="openEstateContractFlow('room','${r.id}')">إنشاء عقد (مسودة)</button> `
           : '';
         return `${convertBtn}${contractBtn}<button class="ghost" onclick="editRecord('estate_rooms','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_rooms','${r.id}')">حذف</button>`;
       }
@@ -5479,8 +5525,16 @@ window.printHospitalityFolio = printHospitalityFolio;
     );
     const cTable = $('#estateContractsTable');
     if(cTable) cTable.innerHTML = tableHtml(
-      [['رقم العقد','contract_no'],['النوع','entity_type',(v)=>v==='room'?'غرفة':'شقة'],['المعرف','entity_id'],['العميل','client_id',(v)=>clientName(v)],['البداية','start_date'],['النهاية','end_date'],['الإيجار','rent_amount',(v)=>money(v)],['الدورية','payment_cycle'],['الحالة','status',(v)=>statusBadge(v)],['أنشئ بواسطة','created_by']],
-      contracts
+      [['رقم العقد','contract_no'],['النوع','entity_type',(v)=>v==='room'?'غرفة مستقلة':'شقة كاملة'],['المعرف','entity_id'],['العميل','client_id',(v)=>clientName(v)],['البداية','start_date'],['النهاية','end_date'],['الإيجار','rent_amount',(v)=>money(v)],['الدورية','payment_cycle'],['الحالة','status',(v)=>statusBadge(v)],['أنشئ بواسطة','created_by']],
+      contracts,
+      r=>{
+        const st = String(r.status||'').toLowerCase();
+        const requestBtn = st==='draft' ? `<button class="gold-btn" onclick="requestEstateContractApproval('${r.id}')">طلب اعتماد</button> ` : '';
+        const approveBtn = st==='approvalrequested' && canDecideApprovals() ? `<button class="gold-btn" onclick="approveEstateContract('${r.id}')">اعتماد</button> ` : '';
+        const activateBtn = st==='approved' ? `<button class="gold-btn" onclick="activateEstateContract('${r.id}')">تفعيل</button> ` : '';
+        const closeBtn = st==='active' ? `<button class="ghost" onclick="closeEstateContractById('${r.id}')">إنهاء</button> ` : '';
+        return `${requestBtn}${approveBtn}${activateBtn}${closeBtn}<button class="ghost" onclick="editRecord('estate_contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_contracts','${r.id}')">حذف</button>`;
+      }
     );
     const ciTable = $('#estateContractInvoicesTable');
     if(ciTable) ciTable.innerHTML = tableHtml(
@@ -5797,6 +5851,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       name: val('ebName'),
       status: val('ebStatus') || 'active',
       location: val('ebLocation'),
+      unit_count: num('ebUnitCount'),
       apartment_count: num('ebApartmentCount'),
       room_count: num('ebRoomCount'),
       base_rent_price: num('ebBaseRentPrice'),
@@ -5805,12 +5860,13 @@ window.printHospitalityFolio = printHospitalityFolio;
       manager_name: val('ebManager'),
       tenant_client_id: tenant,
       tenant_phone: val('ebTenantPhone') || tenantObj.phone || '',
+      description: val('ebDescription'),
       notes: val('ebNotes'),
       image: val('ebImage'),
       image_upload: imageUpload,
       last_update: nowDay(),
     });
-    clearEstateForm(['ebName','ebLocation','ebApartmentCount','ebRoomCount','ebBaseRentPrice','ebServiceCharge','ebAttachments','ebManager','ebTenantPhone','ebNotes','ebImage','ebImageFile']);
+    clearEstateForm(['ebName','ebLocation','ebUnitCount','ebApartmentCount','ebRoomCount','ebBaseRentPrice','ebServiceCharge','ebAttachments','ebManager','ebTenantPhone','ebDescription','ebNotes','ebImage','ebImageFile']);
   };
   window.createEstateApartment = async function(){
     const imageUpload = await estateImageUploadPayload('eaImageFile');
@@ -5824,8 +5880,11 @@ window.printHospitalityFolio = printHospitalityFolio;
       property_id: val('eaProperty'),
       building_id: val('eaBuilding'),
       name: val('eaName'),
+      unit_kind: 'شقة كاملة',
       status,
       room_count: num('eaRoomCount'),
+      floor_no: val('eaFloorNo') || null,
+      area_sqm: num('eaAreaSqm'),
       rent_price: num('eaRentPrice'),
       booking_deposit: num('eaBookingDeposit'),
       prepaid_amount: num('eaPrepaidAmount'),
@@ -5846,7 +5905,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       image_upload: imageUpload,
       last_update: nowDay(),
     });
-    clearEstateForm(['eaName','eaRoomCount','eaRentPrice','eaBookingDeposit','eaPrepaidAmount','eaReservationStart','eaReservationEnd','eaBookedClientName','eaBookedClientPhone','eaBookedClientId','eaBookedByEmployee','eaMaintenanceNotes','eaMaintenanceCost','eaAttachments','eaManager','eaTenantPhone','eaNotes','eaImage','eaImageFile']);
+    clearEstateForm(['eaName','eaRoomCount','eaFloorNo','eaAreaSqm','eaRentPrice','eaBookingDeposit','eaPrepaidAmount','eaReservationStart','eaReservationEnd','eaBookedClientName','eaBookedClientPhone','eaBookedClientId','eaBookedByEmployee','eaMaintenanceNotes','eaMaintenanceCost','eaAttachments','eaManager','eaTenantPhone','eaNotes','eaImage','eaImageFile']);
   };
   window.createEstateRoom = async function(){
     const imageUpload = await estateImageUploadPayload('erImageFile');
@@ -5861,8 +5920,11 @@ window.printHospitalityFolio = printHospitalityFolio;
       building_id: val('erBuilding'),
       apartment_id: val('erApartment'),
       name: val('erName'),
-      room_type: val('erType'),
+      unit_kind: 'غرفة مستقلة',
+      room_type: val('erType') || 'غرفة مستقلة',
       status,
+      floor_no: val('erFloorNo') || null,
+      area_sqm: num('erAreaSqm'),
       rent_price: num('erRentPrice'),
       booking_deposit: num('erBookingDeposit'),
       prepaid_amount: num('erPrepaidAmount'),
@@ -5883,7 +5945,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       image_upload: imageUpload,
       last_update: nowDay(),
     });
-    clearEstateForm(['erName','erType','erRentPrice','erBookingDeposit','erPrepaidAmount','erReservationStart','erReservationEnd','erBookedClientName','erBookedClientPhone','erBookedClientId','erBookedByEmployee','erMaintenanceNotes','erMaintenanceCost','erAttachments','erManager','erTenantPhone','erNotes','erImage','erImageFile']);
+    clearEstateForm(['erName','erType','erFloorNo','erAreaSqm','erRentPrice','erBookingDeposit','erPrepaidAmount','erReservationStart','erReservationEnd','erBookedClientName','erBookedClientPhone','erBookedClientId','erBookedByEmployee','erMaintenanceNotes','erMaintenanceCost','erAttachments','erManager','erTenantPhone','erNotes','erImage','erImageFile']);
   };
   window.createEstateMaintenance = async function(){
     await postEstate('estate_maintenance',{
@@ -5946,7 +6008,7 @@ window.printHospitalityFolio = printHospitalityFolio;
     }catch(e){ toastErr(e); }
   };
   window.openEstateContractFlow = function(entityType, entityId){
-    if(!canEstateCreateContract()) return toastErr('لا تملك صلاحية إنشاء عقد نشط');
+    if(!canEstateCreateContract()) return toastErr('لا تملك صلاحية إنشاء عقود الإيجار');
     const t = entityType === 'room' ? 'room' : 'apartment';
     const typeSel = $('#ecEntityType');
     if(typeSel) typeSel.value = t;
@@ -5966,7 +6028,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   };
   window.createEstateContractFromFlow = async function(){
     try{
-      if(!canEstateCreateContract()) return toastErr('لا تملك صلاحية إنشاء عقد نشط');
+      if(!canEstateCreateContract()) return toastErr('لا تملك صلاحية إنشاء العقود');
       const entityType = String($('#ecEntityType')?.value || 'apartment');
       const entityId = String($('#ecEntityId')?.value || '').trim();
       if(!entityId) return toastErr('اختر الشقة/الغرفة أولاً');
@@ -5981,7 +6043,44 @@ window.printHospitalityFolio = printHospitalityFolio;
         notes: String($('#ecNotes')?.value || '').trim(),
       };
       await api('estate_convert_to_contract',{ method:'POST', body:JSON.stringify(payload) });
-      toast('تم إنشاء عقد الإيجار النشط بنجاح');
+      toast('تم إنشاء مسودة العقد بنجاح');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  };
+  window.requestEstateContractApproval = async function(contractId){
+    try{
+      const notes = prompt('ملاحظات طلب الاعتماد (اختياري)','طلب اعتماد عقد إيجار');
+      if(notes===null) return;
+      await api('estate_contract_request_approval',{ method:'POST', body:JSON.stringify({ contract_id: contractId, notes: String(notes||'').trim() }) });
+      toast('تم إرسال طلب الاعتماد');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  };
+  window.approveEstateContract = async function(contractId){
+    try{
+      if(!confirm('تأكيد اعتماد العقد؟')) return;
+      await api('estate_contract_approve',{ method:'POST', body:JSON.stringify({ contract_id: contractId }) });
+      toast('تم اعتماد العقد');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  };
+  window.activateEstateContract = async function(contractId){
+    try{
+      if(!confirm('تفعيل العقد سيحوّل حالة الوحدة إلى مؤجرة ويولّد جدول الفواتير. متابعة؟')) return;
+      await api('estate_contract_activate',{ method:'POST', body:JSON.stringify({ contract_id: contractId }) });
+      toast('تم تفعيل العقد وإصدار الفواتير');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  };
+  window.closeEstateContractById = async function(contractId){
+    try{
+      if(!confirm('إنهاء العقد وإرجاع الوحدة إلى شاغرة (إذا لم تكن صيانة/موقوفة)؟')) return;
+      await api('estate_contract_close',{ method:'POST', body:JSON.stringify({ contract_id: contractId, close_status: 'ended' }) });
+      toast('تم إنهاء العقد');
       await loadAll();
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }

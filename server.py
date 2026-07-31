@@ -37,6 +37,7 @@ from lq_expand import object_storage as lq_object_storage
 import lq_payroll_import
 import lq_postgres
 import lq_business_catalog
+import lq_quick_estate
 from lq_expand.openapi import build_openapi_spec
 from lq_expand.security import (
     device_trust_days,
@@ -98,7 +99,7 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v69.0-ops-complete"
+APP_VERSION = "Launch-Quality-LLC-v70.3-dock-sidebar"
 # Production baseline family: v69. Ops-complete = full 42-item requirements closure.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
@@ -129,6 +130,8 @@ CONTRACT_CORE_FIELDS = {
     "rent_amount",
     "payment_cycle",
 }
+ESTATE_UNIT_ACTIVE_STATUSES = {"active"}
+ESTATE_CONTRACT_FLOW_STATUSES = {"draft", "approvalrequested", "approved", "active", "ended", "cancelled"}
 CORE_USERNAMES = {"waleed", "yaqoub", "razan", "amjad", "ali", "admin", "owner"}
 
 # Fallback assets: Railway can still open the app even if the public folder is misplaced.
@@ -210,12 +213,12 @@ TABLES = {
     "bank_reconciliations": ["id", "bank_name", "period_name", "book_balance", "bank_balance", "difference", "status", "reconciled_by", "reconciled_at", "notes", "matched_count", "unmatched_count", "period_start", "period_end"],
     "maintenance": ["id", "property_id", "title", "priority", "status", "request_date", "cost", "notes"],
     "estate_properties": ["id", "name", "status", "location", "building_count", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_buildings": ["id", "property_id", "name", "status", "location", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_apartments": ["id", "property_id", "building_id", "name", "status", "room_count", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
-    "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "room_type", "status", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_buildings": ["id", "property_id", "name", "status", "location", "unit_count", "apartment_count", "room_count", "base_rent_price", "service_charge", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "description", "notes", "image", "last_update"],
+    "estate_apartments": ["id", "property_id", "building_id", "name", "unit_kind", "status", "room_count", "floor_no", "area_sqm", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
+    "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "unit_kind", "room_type", "status", "floor_no", "area_sqm", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_accessories": ["id", "property_id", "building_id", "apartment_id", "room_id", "name", "category", "status", "qty", "unit_cost", "supplier", "invoice_no", "responsible_name", "notes", "last_update"],
     "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
-    "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "closed_at", "close_note", "notes"],
+    "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "approved_by", "approved_at", "activated_by", "activated_at", "closed_at", "close_note", "attachments", "notes"],
     "estate_contract_invoices": ["id", "invoice_no", "contract_id", "due_date", "amount", "paid_amount", "status", "issued_at", "note"],
     "estate_contract_settlements": ["id", "contract_id", "close_date", "total_scheduled", "total_paid", "outstanding_due", "future_cancelled", "closed_by", "note", "created_at"],
     "estate_month_closes": ["id", "month_key", "status", "total_invoiced", "total_collected", "outstanding_due", "closed_by", "closed_at", "note"],
@@ -225,9 +228,10 @@ TABLES = {
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
-FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi", "ahmed", "ahmed.najjar"}
+FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi"}
 PRIMARY_OWNER_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi"}
 DAILY_OPS_MANAGER_USERNAMES = {"razan", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
+RESTRICTED_ADMIN_USERNAMES = {"ahmed", "ahmed.najjar", "ahmed.alnajjar"}
 
 WRITE_ROLES = {"owner", "admin", "deputy", "accountant", "operations", "reception", "maintenance"}
 
@@ -1682,6 +1686,7 @@ def init_db() -> None:
                 name TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'active',
                 location TEXT,
+                unit_count INTEGER NOT NULL DEFAULT 0,
                 apartment_count INTEGER NOT NULL DEFAULT 0,
                 room_count INTEGER NOT NULL DEFAULT 0,
                 base_rent_price REAL NOT NULL DEFAULT 0,
@@ -1690,6 +1695,7 @@ def init_db() -> None:
                 manager_name TEXT,
                 tenant_client_id TEXT,
                 tenant_phone TEXT,
+                description TEXT,
                 notes TEXT,
                 image TEXT,
                 last_update TEXT,
@@ -1700,8 +1706,11 @@ def init_db() -> None:
                 property_id TEXT NOT NULL,
                 building_id TEXT NOT NULL,
                 name TEXT NOT NULL,
+                unit_kind TEXT NOT NULL DEFAULT 'شقة كاملة',
                 status TEXT NOT NULL DEFAULT 'vacant',
                 room_count INTEGER NOT NULL DEFAULT 0,
+                floor_no INTEGER,
+                area_sqm REAL NOT NULL DEFAULT 0,
                 rent_price REAL NOT NULL DEFAULT 0,
                 booking_deposit REAL NOT NULL DEFAULT 0,
                 prepaid_amount REAL NOT NULL DEFAULT 0,
@@ -1727,10 +1736,13 @@ def init_db() -> None:
                 id TEXT PRIMARY KEY,
                 property_id TEXT NOT NULL,
                 building_id TEXT NOT NULL,
-                apartment_id TEXT NOT NULL,
+                apartment_id TEXT,
                 name TEXT NOT NULL,
+                unit_kind TEXT NOT NULL DEFAULT 'غرفة مستقلة',
                 room_type TEXT,
                 status TEXT NOT NULL DEFAULT 'vacant',
+                floor_no INTEGER,
+                area_sqm REAL NOT NULL DEFAULT 0,
                 rent_price REAL NOT NULL DEFAULT 0,
                 booking_deposit REAL NOT NULL DEFAULT 0,
                 prepaid_amount REAL NOT NULL DEFAULT 0,
@@ -1816,11 +1828,16 @@ def init_db() -> None:
                 end_date TEXT NOT NULL,
                 rent_amount REAL NOT NULL DEFAULT 0,
                 payment_cycle TEXT NOT NULL DEFAULT 'monthly',
-                status TEXT NOT NULL DEFAULT 'Active',
+                status TEXT NOT NULL DEFAULT 'Draft',
                 created_by TEXT,
                 created_at TEXT NOT NULL,
+                approved_by TEXT,
+                approved_at TEXT,
+                activated_by TEXT,
+                activated_at TEXT,
                 closed_at TEXT,
                 close_note TEXT,
+                attachments TEXT,
                 notes TEXT
             );
             CREATE TABLE IF NOT EXISTS estate_contract_invoices (
@@ -2062,6 +2079,7 @@ def init_db() -> None:
         ]:
             ensure_column(db, "users", col, definition)
         ensure_security_runtime_tables(db)
+        lq_quick_estate.ensure_tables(db)
         ensure_column(db, "clients", "id_card_image", "TEXT")
         ensure_column(db, "payments", "payment_proof_image", "TEXT")
         ensure_column(db, "payments", "received_by", "TEXT")
@@ -2118,10 +2136,15 @@ def init_db() -> None:
             ("status", "TEXT NOT NULL DEFAULT 'active'"),
             ("base_rent_price", "REAL NOT NULL DEFAULT 0"),
             ("service_charge", "REAL NOT NULL DEFAULT 0"),
+            ("unit_count", "INTEGER NOT NULL DEFAULT 0"),
+            ("description", "TEXT"),
         ]:
             ensure_column(db, "estate_buildings", col, definition)
         for col, definition in [
             ("status", "TEXT NOT NULL DEFAULT 'vacant'"),
+            ("unit_kind", "TEXT NOT NULL DEFAULT 'شقة كاملة'"),
+            ("floor_no", "INTEGER"),
+            ("area_sqm", "REAL NOT NULL DEFAULT 0"),
             ("rent_price", "REAL NOT NULL DEFAULT 0"),
             ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
             ("prepaid_amount", "REAL NOT NULL DEFAULT 0"),
@@ -2136,6 +2159,9 @@ def init_db() -> None:
         ]:
             ensure_column(db, "estate_apartments", col, definition)
         for col, definition in [
+            ("unit_kind", "TEXT NOT NULL DEFAULT 'غرفة مستقلة'"),
+            ("floor_no", "INTEGER"),
+            ("area_sqm", "REAL NOT NULL DEFAULT 0"),
             ("rent_price", "REAL NOT NULL DEFAULT 0"),
             ("booking_deposit", "REAL NOT NULL DEFAULT 0"),
             ("prepaid_amount", "REAL NOT NULL DEFAULT 0"),
@@ -2160,11 +2186,16 @@ def init_db() -> None:
             ensure_column(db, "estate_maintenance", col, definition)
         for col, definition in [
             ("payment_cycle", "TEXT NOT NULL DEFAULT 'monthly'"),
-            ("status", "TEXT NOT NULL DEFAULT 'Active'"),
+            ("status", "TEXT NOT NULL DEFAULT 'Draft'"),
             ("created_by", "TEXT"),
             ("created_at", "TEXT"),
+            ("approved_by", "TEXT"),
+            ("approved_at", "TEXT"),
+            ("activated_by", "TEXT"),
+            ("activated_at", "TEXT"),
             ("closed_at", "TEXT"),
             ("close_note", "TEXT"),
+            ("attachments", "TEXT"),
             ("notes", "TEXT"),
         ]:
             ensure_column(db, "estate_contracts", col, definition)
@@ -2279,6 +2310,8 @@ def has_permission(user: Dict[str, Any], permission: str) -> bool:
     uname = str(user.get("username") or "").strip().lower()
     if uname in FULL_ACCESS_USERNAMES:
         return True
+    if uname in RESTRICTED_ADMIN_USERNAMES:
+        role = "operations"
     # Owner/Admin privileges are limited to explicit full-access usernames.
     effective_role = "operations" if role in ("owner", "admin") else role
     perms = ROLE_PERMISSIONS.get(effective_role, set())
@@ -2355,6 +2388,9 @@ def approval_notes_unpack(notes: str) -> Tuple[str, Dict[str, Any]]:
 
 def can_decide_approval(user: Dict[str, Any], request_type: str) -> bool:
     role = user.get("role")
+    uname = str(user.get("username") or "").strip().lower()
+    if uname in RESTRICTED_ADMIN_USERNAMES:
+        return False
     if role in ("admin", "owner") or "all" in ROLE_PERMISSIONS.get(role, set()):
         return True
     allowed = APPROVAL_DECIDE_ROLES.get(request_type, set())
@@ -3145,6 +3181,93 @@ def log_estate_status_history(
             "changed_at": now_iso(),
             "note": note,
         },
+    )
+
+
+def estate_unit_table(entity_type: str) -> str:
+    et = str(entity_type or "").strip().lower()
+    return "estate_rooms" if et == "room" else "estate_apartments"
+
+
+def estate_unit_status_blocks_contract(status: Any) -> bool:
+    return str(status or "").strip().lower() in ("maintenance", "suspended")
+
+
+def estate_contract_dates_overlap(start_a: str, end_a: str, start_b: str, end_b: str) -> bool:
+    try:
+        sa = datetime.fromisoformat(str(start_a)).date()
+        ea = datetime.fromisoformat(str(end_a)).date()
+        sb = datetime.fromisoformat(str(start_b)).date()
+        eb = datetime.fromisoformat(str(end_b)).date()
+    except Exception:
+        return False
+    return not (ea < sb or eb < sa)
+
+
+def conflicting_active_estate_contract(
+    db: sqlite3.Connection,
+    entity_type: str,
+    entity_id: str,
+    start_date: str,
+    end_date: str,
+    exclude_contract_id: str = "",
+) -> Optional[Dict[str, Any]]:
+    rows = rows_to_dicts(
+        db.execute(
+            """
+            SELECT id, contract_no, status, start_date, end_date
+            FROM estate_contracts
+            WHERE lower(entity_type)=lower(?) AND entity_id=? AND (?='' OR id<>?)
+            ORDER BY start_date
+            """,
+            (entity_type, entity_id, exclude_contract_id, exclude_contract_id),
+        ).fetchall()
+    )
+    for row in rows:
+        if str(row.get("status") or "").strip().lower() not in ESTATE_UNIT_ACTIVE_STATUSES:
+            continue
+        if estate_contract_dates_overlap(
+            start_date,
+            end_date,
+            str(row.get("start_date") or ""),
+            str(row.get("end_date") or ""),
+        ):
+            return row
+    return None
+
+
+def set_estate_unit_status(
+    db: sqlite3.Connection,
+    *,
+    entity_type: str,
+    entity_id: str,
+    target_status: str,
+    actor_name: str,
+    note: str,
+) -> None:
+    table = estate_unit_table(entity_type)
+    row = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+    if not row:
+        return
+    current_status = str(row["status"] or "").strip().lower()
+    next_status = str(target_status or "").strip().lower()
+    if not next_status or current_status == next_status:
+        return
+    if next_status == "vacant" and current_status in ("maintenance", "suspended"):
+        return
+    db.execute(
+        f"UPDATE {table} SET status=?, last_update=? WHERE id=?",
+        (next_status, today(), entity_id),
+    )
+    log_estate_status_history(
+        db,
+        entity_type,
+        entity_id,
+        dict(row),
+        current_status,
+        next_status,
+        actor_name,
+        note,
     )
 
 
@@ -3998,6 +4121,64 @@ def ensure_user(
     )
 
 
+def force_user_credentials(
+    db: sqlite3.Connection,
+    username: str,
+    name: str,
+    role: str,
+    password: str,
+    *,
+    email: str = "",
+    active: bool = True,
+) -> None:
+    """Upsert a user and force role/password to be effective now."""
+    username_norm = str(username or "").strip().lower()
+    if not username_norm:
+        return
+    email_val = resolve_user_email(username_norm, email)
+    row = db.execute("SELECT id FROM users WHERE lower(username)=?", (username_norm,)).fetchone()
+    pwd_hash = password_hash(password)
+    now_v = now_iso()
+    active_v = 1 if active else 0
+    if row:
+        db.execute(
+            """
+            UPDATE users
+            SET username=?, name=?, role=?, active=?, password_hash=?, email=?,
+                must_change_password=0, password_changed_at=?
+            WHERE id=?
+            """,
+            (
+                username_norm,
+                name,
+                role,
+                active_v,
+                pwd_hash,
+                email_val or None,
+                now_v,
+                row["id"],
+            ),
+        )
+        return
+    insert(
+        db,
+        "users",
+        {
+            "id": uid("USR"),
+            "username": username_norm,
+            "name": name,
+            "role": role,
+            "active": active_v,
+            "password_hash": pwd_hash,
+            "email": email_val or None,
+            "must_change_password": 0,
+            "password_changed_at": now_v,
+            "created_at": now_v,
+            "last_login": None,
+        },
+    )
+
+
 def purge_demo_business_data(db: sqlite3.Connection) -> Dict[str, int]:
     """Remove known sample/demo business rows so production stays real-only."""
     removed: Dict[str, int] = {}
@@ -4028,25 +4209,48 @@ def purge_demo_business_data(db: sqlite3.Connection) -> Dict[str, int]:
 
 
 def ensure_team_users(db: sqlite3.Connection) -> None:
+    # Force effective credentials + role model for production operations.
+    # Full access required by management: owner + waleed + yaqoub.
     team = [
-        ("waleed", "وليد محمد عبد الهادي", "accountant", "111111"),
-        ("yaqoub", "يعقوب فاضل الخصيبي", "owner", "owner2015"),
         ("owner", "يعقوب فاضل الخصيبي", "owner", "001970"),
-        ("razan", "رزان", "accountant", "222222"),
-        ("amjad", "امجد", "operations", "333333"),
-        ("ali", "علي محمد علي التريكي", "operations", "444444"),
+        ("yaqoub", "يعقوب فاضل الخصيبي", "owner", "owner2015"),
+        ("waleed", "وليد محمد النجار", "owner", "111111"),
+        ("waleed.najjar", "وليد محمد النجار", "owner", "Waleed2026!"),
+        ("ahmed", "أحمد محمد النجار", "admin", "Ahmed2026!"),
+        ("ahmed.najjar", "أحمد محمد النجار", "admin", "Ahmed2026!"),
         ("admin", "System Admin", "admin", "555555"),
+        ("razan", "رزان سالم الشعيلي", "accountant", "222222"),
+        ("razan.shuaili", "رزان سالم الشعيلي", "accountant", "Razan2026!"),
+        ("amjad", "أمجد", "operations", "333333"),
+        ("ali", "علي محمد النديش", "maintenance", "444444"),
+        ("reception", "موظف استقبال", "reception", "Reception2026!"),
+        ("dataentry", "موظف إدخال", "operations", "DataEntry2026!"),
+        ("staff", "موظف عام", "operations", "Staff2026!"),
+        ("viewer", "مشاهد", "viewer", "Viewer2026!"),
     ]
     for username, name, role, password in team:
-        ensure_user(db, username, name, role, password)
+        env_key = "LQ_USER_PASSWORD_" + re.sub(r"[^A-Z0-9]+", "_", str(username).upper()).strip("_")
+        override = (os.environ.get(env_key) or "").strip()
+        effective_password = override or password
+        force_user_credentials(
+            db,
+            username,
+            name,
+            role,
+            effective_password,
+            active=True,
+        )
     # Real office roster from management list (no password overwrite on existing users).
     try:
         lq_business_catalog.ensure_business_staff(db, ensure_user)
     except Exception:
         pass
-    # Keep Ahmed enabled as executive manager without rotating his password.
+    # Force planned roles without rotating passwords.
     db.execute(
-        "UPDATE users SET role='admin', active=1 WHERE lower(username) IN ('ahmed.najjar','ahmed')"
+        "UPDATE users SET role='admin', active=1, name='أحمد محمد النجار' WHERE lower(username) IN ('ahmed.najjar','ahmed')"
+    )
+    db.execute(
+        "UPDATE users SET role='owner', active=1, name='وليد محمد النجار' WHERE lower(username) IN ('waleed','waleed.najjar')"
     )
     db.execute(
         "UPDATE users SET role='owner', active=1, name=COALESCE(NULLIF(name,''), 'يعقوب فاضل الخصيبي') "
@@ -4054,6 +4258,15 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
     )
     db.execute(
         "UPDATE users SET role='owner', active=1, name='يعقوب فاضل الخصيبي' WHERE lower(username)='yaqoub'"
+    )
+    db.execute(
+        "UPDATE users SET role='accountant', active=1 WHERE lower(username) IN ('razan','razan.shuaili')"
+    )
+    db.execute(
+        "UPDATE users SET role='operations', active=1, name=COALESCE(NULLIF(name,''), 'أمجد') WHERE lower(username)='amjad'"
+    )
+    db.execute(
+        "UPDATE users SET role='maintenance', active=1 WHERE lower(username)='ali'"
     )
 
 
@@ -4333,6 +4546,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 parts = [p for p in path.split("/") if p][1:]
                 if not parts:
                     return self.send_json({"ok": True, "status": "production"})
+                if parts[0] == "quick-estate":
+                    user = self.require_user(db, "dashboard")
+                    if not user:
+                        return None
+                    payload: Dict[str, Any] = {}
+                    if method in ("POST", "PUT", "PATCH"):
+                        payload = self.read_json() or {}
+                    qmap = urllib.parse.parse_qs(query or "")
+                    return lq_quick_estate.handle_api(
+                        db, method, parts[1:], qmap, payload, user, self.send_json
+                    )
                 if parts[0] == "health" and method == "GET":
                     return self.send_json({
                         "ok": True,
@@ -4776,6 +5000,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_convert_to_contract" and method == "POST":
                     user = self.require_user(db, "estate_actions_contract_create")
                     return None if not user else self.api_estate_convert_to_contract(db, user)
+                if parts[0] == "estate_contract_request_approval" and method == "POST":
+                    user = self.require_user(db, "approvals:request")
+                    return None if not user else self.api_estate_contract_request_approval(db, user)
+                if parts[0] == "estate_contract_approve" and method == "POST":
+                    user = self.require_user(db, "approvals")
+                    return None if not user else self.api_estate_contract_approve(db, user)
+                if parts[0] == "estate_contract_activate" and method == "POST":
+                    user = self.require_user(db, "estate_actions_contract_create")
+                    return None if not user else self.api_estate_contract_activate(db, user)
                 if parts[0] == "estate_contract_generate_schedule" and method == "POST":
                     user = self.require_user(db, "estate_actions_contract_create")
                     return None if not user else self.api_estate_contract_generate_schedule(db, user)
@@ -6044,16 +6277,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if not row:
             return self.send_json({"ok": False, "error": "العنصر غير موجود"}, 404)
         status_now = str(row["status"] or "").strip().lower()
-        if status_now in ("maintenance", "suspended"):
+        if estate_unit_status_blocks_contract(status_now):
             return self.send_json({"ok": False, "error": "لا يمكن تأجير أو تفعيل عقد لوحدة تحت الصيانة أو موقوفة"}, 400)
-        if status_now not in ("reserved", "occupied"):
-            return self.send_json({"ok": False, "error": "يجب أن تكون الحالة محجوزة أو مؤجرة قبل إنشاء العقد"}, 400)
-        active_exists = db.execute(
-            "SELECT id, contract_no FROM estate_contracts WHERE entity_type=? AND entity_id=? AND lower(status)='active' ORDER BY rowid DESC LIMIT 1",
-            (entity_type, entity_id),
-        ).fetchone()
-        if active_exists:
-            return self.send_json({"ok": False, "error": f"يوجد عقد نشط مسبقًا: {active_exists['contract_no']}"}, 400)
+        if status_now not in ("vacant", "reserved", "occupied"):
+            return self.send_json({"ok": False, "error": "يجب أن تكون حالة الوحدة شاغرة/محجوزة/مؤجرة لإنشاء مسودة عقد"}, 400)
 
         tenant_client_id = str(data.get("tenant_client_id") or "").strip() or str(row["tenant_client_id"] or "").strip() or str(row["booked_client_id"] or "").strip()
         if not tenant_client_id:
@@ -6097,16 +6324,154 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "end_date": edt.isoformat(),
             "rent_amount": rent_amount,
             "payment_cycle": payment_cycle,
-            "status": "Active",
+            "status": "Draft",
             "created_by": str(user.get("name") or user.get("username") or "System"),
             "created_at": now_iso(),
-            "notes": str(data.get("notes") or "Generated from reservation flow"),
+            "attachments": str(data.get("attachments") or "[]"),
+            "notes": str(data.get("notes") or "Generated from reservation flow as draft"),
         }
         insert(db, "estate_contracts", contract_row)
+        audit(db, user, "create_contract_draft", "estate_contracts", contract_row["id"], f"Estate contract draft {contract_row['contract_no']} for {entity_type} {entity_id}")
+        db.commit()
+        self.send_json(
+            {
+                "ok": True,
+                "contract": contract_row,
+                "entity_id": entity_id,
+                "entity_type": entity_type,
+                "message": "تم إنشاء العقد كمسودة. أرسل طلب اعتماد ثم فعّل العقد لإصدار الفواتير.",
+            }
+        )
+
+    def api_estate_contract_request_approval(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        notes = str(data.get("notes") or "طلب اعتماد عقد عقاري").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        row = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+        st = str(row["status"] or "").strip().lower()
+        if st in ("approved", "active"):
+            return self.send_json({"ok": False, "error": "العقد معتمد/مفعّل مسبقاً"}, 400)
+        if st != "draft":
+            return self.send_json({"ok": False, "error": "يمكن إرسال طلب الاعتماد من حالة مسودة فقط"}, 400)
+        approval_id = create_approval_request(
+            db,
+            "estate_contracts",
+            contract_id,
+            "contract",
+            user.get("name") or user.get("username") or "System",
+            notes,
+        )
+        db.execute("UPDATE estate_contracts SET status=? WHERE id=?", ("ApprovalRequested", contract_id))
+        audit(db, user, "request_approval", "estate_contracts", contract_id, f"estate approval {approval_id}")
+        db.commit()
+        self.send_json({"ok": True, "approval_id": approval_id, "status": "ApprovalRequested"})
+
+    def api_estate_contract_approve(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        if not can_decide_approval(user, "contract"):
+            return self.send_json({"ok": False, "error": "لا تملك صلاحية اعتماد العقد"}, 403)
+        row = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+        st = str(row["status"] or "").strip().lower()
+        if st == "active":
+            return self.send_json({"ok": False, "error": "العقد مفعّل مسبقاً"}, 400)
+        if st != "approvalrequested":
+            return self.send_json({"ok": False, "error": "لا يمكن اعتماد العقد إلا بعد طلب اعتماد"}, 400)
+        try:
+            sdt = datetime.fromisoformat(str(row["start_date"] or "")).date()
+            edt = datetime.fromisoformat(str(row["end_date"] or "")).date()
+        except Exception:
+            return self.send_json({"ok": False, "error": "تواريخ العقد غير صحيحة"}, 400)
+        if edt < sdt:
+            return self.send_json({"ok": False, "error": "تاريخ نهاية العقد يجب أن يكون بعد البداية"}, 400)
+        conflict = conflicting_active_estate_contract(
+            db,
+            str(row["entity_type"] or "").strip().lower(),
+            str(row["entity_id"] or "").strip(),
+            str(row["start_date"] or ""),
+            str(row["end_date"] or ""),
+            contract_id,
+        )
+        if conflict:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": f"يوجد عقد متعارض {conflict.get('contract_no') or conflict.get('id')} للفترة {conflict.get('start_date')} - {conflict.get('end_date')}",
+                },
+                400,
+            )
+        db.execute(
+            "UPDATE estate_contracts SET status=?, approved_by=?, approved_at=? WHERE id=?",
+            ("Approved", user.get("name") or user.get("username"), now_iso(), contract_id),
+        )
+        db.execute(
+            """
+            UPDATE approvals
+            SET status='Approved', approved_by=?, approved_at=?
+            WHERE entity='estate_contracts' AND entity_id=? AND request_type='contract' AND lower(status)='pending'
+            """,
+            (user.get("name") or user.get("username"), now_iso(), contract_id),
+        )
+        audit(db, user, "approve", "estate_contracts", contract_id, "Estate contract approved")
+        db.commit()
+        self.send_json({"ok": True, "status": "Approved"})
+
+    def api_estate_contract_activate(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
+        if not contract:
+            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+        status = str(contract["status"] or "").strip().lower()
+        if status == "active":
+            return self.send_json({"ok": False, "error": "العقد مفعّل مسبقاً"}, 400)
+        if status != "approved":
+            return self.send_json({"ok": False, "error": "دورة العقد الإلزامية: مسودة → طلب اعتماد → معتمد → مفعّل"}, 400)
+        entity_type = str(contract["entity_type"] or "").strip().lower()
+        entity_id = str(contract["entity_id"] or "").strip()
+        table = estate_unit_table(entity_type)
+        unit_row = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+        if not unit_row:
+            return self.send_json({"ok": False, "error": "الوحدة المرتبطة بالعقد غير موجودة"}, 404)
+        if estate_unit_status_blocks_contract(unit_row["status"]):
+            return self.send_json({"ok": False, "error": "لا يمكن تفعيل عقد لوحدة تحت الصيانة أو موقوفة"}, 400)
+        conflict = conflicting_active_estate_contract(
+            db,
+            entity_type,
+            entity_id,
+            str(contract["start_date"] or ""),
+            str(contract["end_date"] or ""),
+            contract_id,
+        )
+        if conflict:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": f"يوجد عقد نشط متداخل {conflict.get('contract_no') or conflict.get('id')}",
+                },
+                400,
+            )
+        actor_name = str(user.get("name") or user.get("username") or "System")
+        client_row = db.execute("SELECT phone FROM clients WHERE id=?", (contract["client_id"],)).fetchone()
+        tenant_phone = str(client_row["phone"] if client_row else "").strip() or str(unit_row["tenant_phone"] or "").strip()
+        db.execute(
+            "UPDATE estate_contracts SET status=?, activated_by=?, activated_at=? WHERE id=?",
+            ("Active", user.get("name") or user.get("username"), now_iso(), contract_id),
+        )
         schedule_result = generate_estate_contract_invoices(
             db,
-            contract_row,
-            str(user.get("name") or user.get("username") or "System"),
+            dict(contract),
+            actor_name,
             replace_open=False,
         )
         db.execute(
@@ -6120,26 +6485,25 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 last_update=?
             WHERE id=?
             """,
-            (tenant_client_id, tenant_phone, today(), entity_id),
+            (contract["client_id"], tenant_phone, today(), entity_id),
         )
-        if status_now == "reserved":
-            db.execute(
-                "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed by contract activation at ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
-                (now_iso(), entity_type, entity_id),
-            )
+        db.execute(
+            "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed by contract activation at ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
+            (now_iso(), entity_type, entity_id),
+        )
         log_estate_status_history(
             db,
             entity_type,
             entity_id,
-            dict(row),
-            status_now,
+            dict(unit_row),
+            str(unit_row["status"] or ""),
             "occupied",
-            str(user.get("name") or user.get("username") or "System"),
+            actor_name,
             "Contract activated",
         )
-        audit(db, user, "create_contract", "estate_contracts", contract_row["id"], f"Estate contract {contract_row['contract_no']} for {entity_type} {entity_id}")
+        audit(db, user, "activate", "estate_contracts", contract_id, f"Activated and generated {schedule_result.get('created', 0)} invoices")
         db.commit()
-        self.send_json({"ok": True, "contract": contract_row, "entity_id": entity_id, "entity_type": entity_type, "schedule": schedule_result})
+        self.send_json({"ok": True, "status": "Active", "result": schedule_result})
 
     def api_estate_contract_generate_schedule(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -6300,9 +6664,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 f"UPDATE estate_contract_invoices SET status='Cancelled', note=COALESCE(note,'') || ' | Cancelled due to contract close at ' || ? WHERE id IN ({marks})",
                 [now_iso(), *future_cancel_ids],
             )
+        close_status = str(data.get("close_status") or "ended").strip().lower()
+        if close_status not in ("ended", "cancelled"):
+            close_status = "ended"
         db.execute(
-            "UPDATE estate_contracts SET status='Closed', end_date=?, closed_at=?, close_note=? WHERE id=?",
-            (close_dt.isoformat(), now_iso(), note, contract_id),
+            "UPDATE estate_contracts SET status=?, end_date=?, closed_at=?, close_note=? WHERE id=?",
+            (close_status.capitalize(), close_dt.isoformat(), now_iso(), note, contract_id),
         )
         settlement = {
             "id": uid("ECS"),
@@ -6323,10 +6690,25 @@ class JawdahHandler(BaseHTTPRequestHandler):
             "close_contract",
             "estate_contracts",
             contract_id,
-            f"Closed {contract['contract_no']} | outstanding={settlement['outstanding_due']} | future_cancelled={settlement['future_cancelled']}",
+            f"{close_status.capitalize()} {contract['contract_no']} | outstanding={settlement['outstanding_due']} | future_cancelled={settlement['future_cancelled']}",
         )
+        entity_type = str(contract["entity_type"] or "").strip().lower()
+        entity_id = str(contract["entity_id"] or "").strip()
+        active_after = db.execute(
+            "SELECT id FROM estate_contracts WHERE lower(entity_type)=lower(?) AND entity_id=? AND lower(status)='active' AND id<>?",
+            (entity_type, entity_id, contract_id),
+        ).fetchone()
+        if not active_after and entity_id:
+            set_estate_unit_status(
+                db,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                target_status="vacant",
+                actor_name=str(user.get("name") or user.get("username") or "System"),
+                note=f"Contract {close_status}",
+            )
         db.commit()
-        self.send_json({"ok": True, "contract_id": contract_id, "status": "Closed", "settlement": settlement, "preview": preview})
+        self.send_json({"ok": True, "contract_id": contract_id, "status": close_status.capitalize(), "settlement": settlement, "preview": preview})
 
     def api_estate_month_close(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -6840,6 +7222,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data["room_count"] = int(float(data.get("room_count") or 0))
             if data["apartment_count"] < 0 or data["room_count"] < 0:
                 return self.send_json({"ok": False, "error": "أعداد البناية لا يمكن أن تكون سالبة"}, 400)
+            data["unit_count"] = int(float(data.get("unit_count") or (data["apartment_count"] + data["room_count"])))
+            if data["unit_count"] < 0:
+                return self.send_json({"ok": False, "error": "عدد الوحدات لا يمكن أن يكون سالبًا"}, 400)
+            data["description"] = str(data.get("description") or data.get("notes") or "").strip() or None
             data["base_rent_price"] = round(float(data.get("base_rent_price") or 0), 3)
             data["service_charge"] = round(float(data.get("service_charge") or 0), 3)
             if data["base_rent_price"] < 0 or data["service_charge"] < 0:
@@ -6891,11 +7277,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data["status"] = status_norm
             data["property_id"] = prop_id
             data["building_id"] = bld_id
+            data["unit_kind"] = "شقة كاملة"
             if not str(data.get("name") or "").strip():
                 return self.send_json({"ok": False, "error": "اسم/رقم الشقة مطلوب"}, 400)
             data["room_count"] = int(float(data.get("room_count") or 0))
             if data["room_count"] < 0:
                 return self.send_json({"ok": False, "error": "عدد الغرف لا يمكن أن يكون سالبًا"}, 400)
+            floor_raw = str(data.get("floor_no") or "").strip()
+            data["floor_no"] = int(float(floor_raw)) if floor_raw else None
+            data["area_sqm"] = round(float(data.get("area_sqm") or 0), 3)
+            if data["area_sqm"] < 0:
+                return self.send_json({"ok": False, "error": "المساحة يجب أن تكون موجبة أو صفر"}, 400)
             data["rent_price"] = round(float(data.get("rent_price") or 0), 3)
             data["booking_deposit"] = round(float(data.get("booking_deposit") or 0), 3)
             data["prepaid_amount"] = round(float(data.get("prepaid_amount") or 0), 3)
@@ -6960,9 +7352,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if str(bld["property_id"] or "") != prop_id:
                 return self.send_json({"ok": False, "error": "البناية لا تتبع العقار المحدد"}, 400)
             apt = db.execute("SELECT id, property_id, building_id FROM estate_apartments WHERE id=?", (apt_id,)).fetchone() if apt_id else None
-            if not apt:
-                return self.send_json({"ok": False, "error": "اختر الشقة الصحيحة للغرفة"}, 400)
-            if str(apt["property_id"] or "") != prop_id or str(apt["building_id"] or "") != bld_id:
+            if apt_id and not apt:
+                return self.send_json({"ok": False, "error": "الشقة المحددة غير موجودة"}, 400)
+            if apt and (str(apt["property_id"] or "") != prop_id or str(apt["building_id"] or "") != bld_id):
                 return self.send_json({"ok": False, "error": "الشقة لا تتبع نفس العقار/البناية"}, 400)
             if not str(data.get("name") or "").strip():
                 return self.send_json({"ok": False, "error": "اسم/رقم الغرفة مطلوب"}, 400)
@@ -6981,7 +7373,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data["status"] = status_norm
             data["property_id"] = prop_id
             data["building_id"] = bld_id
-            data["apartment_id"] = apt_id
+            data["apartment_id"] = apt_id or None
+            data["unit_kind"] = "غرفة مستقلة"
+            floor_raw = str(data.get("floor_no") or "").strip()
+            data["floor_no"] = int(float(floor_raw)) if floor_raw else None
+            data["area_sqm"] = round(float(data.get("area_sqm") or 0), 3)
+            if data["area_sqm"] < 0:
+                return self.send_json({"ok": False, "error": "المساحة يجب أن تكون موجبة أو صفر"}, 400)
             data["rent_price"] = round(float(data.get("rent_price") or 0), 3)
             data["booking_deposit"] = round(float(data.get("booking_deposit") or 0), 3)
             data["prepaid_amount"] = round(float(data.get("prepaid_amount") or 0), 3)
@@ -7125,21 +7523,22 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 merged = dict(current)
                 merged.update(data)
                 data = merged
-                if str(current["status"] or "").strip().lower() == "active":
+                if str(current["status"] or "").strip().lower() in ("approved", "active"):
                     locked = {"entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "contract_no"}
                     changed_locked = [k for k in locked if str(current[k] or "") != str(data.get(k) or "")]
                     if changed_locked and user.get("role") not in ("owner", "admin"):
-                        return self.send_json({"ok": False, "error": "لا يمكن تعديل بيانات العقد الأساسية بعد التفعيل إلا للمالك/الإدارة"}, 403)
+                        return self.send_json({"ok": False, "error": "لا يمكن تعديل بيانات العقد الأساسية بعد الاعتماد إلا للمالك/الإدارة"}, 403)
             if method == "POST":
                 required = ["entity_type", "entity_id", "client_id", "start_date", "end_date", "rent_amount"]
                 missing = [k for k in required if not str(data.get(k) or "").strip()]
                 if missing:
                     return self.send_json({"ok": False, "error": f"بيانات العقد ناقصة: {', '.join(missing)}"}, 400)
                 data.setdefault("contract_no", next_estate_contract_no(db))
-                data.setdefault("status", "Active")
+                data.setdefault("status", "Draft")
                 data.setdefault("payment_cycle", "monthly")
                 data.setdefault("created_by", actor_name)
                 data.setdefault("created_at", now_iso())
+                data.setdefault("attachments", "[]")
             data["rent_amount"] = round(float(data.get("rent_amount") or 0), 3)
             if data["rent_amount"] <= 0:
                 return self.send_json({"ok": False, "error": "قيمة الإيجار يجب أن تكون أكبر من صفر"}, 400)
@@ -7163,6 +7562,50 @@ class JawdahHandler(BaseHTTPRequestHandler):
             src_table = "estate_apartments" if et == "apartment" else "estate_rooms"
             if not exists(db, src_table, eid):
                 return self.send_json({"ok": False, "error": "العنصر المرتبط بالعقد غير موجود"}, 400)
+            unit_row = db.execute(f"SELECT status FROM {src_table} WHERE id=?", (eid,)).fetchone()
+            if not unit_row:
+                return self.send_json({"ok": False, "error": "الوحدة المرتبطة بالعقد غير موجودة"}, 400)
+            if estate_unit_status_blocks_contract(unit_row["status"]):
+                return self.send_json({"ok": False, "error": "لا يمكن إنشاء أو تفعيل عقد لوحدة تحت الصيانة أو موقوفة"}, 400)
+            conflict = conflicting_active_estate_contract(
+                db,
+                et,
+                eid,
+                str(data.get("start_date") or ""),
+                str(data.get("end_date") or ""),
+                str(item_id or ""),
+            )
+            if conflict:
+                return self.send_json(
+                    {
+                        "ok": False,
+                        "error": f"يوجد عقد متعارض {conflict.get('contract_no') or conflict.get('id')} للفترة {conflict.get('start_date')} - {conflict.get('end_date')}",
+                    },
+                    400,
+                )
+            raw_status = str(data.get("status") or "Draft").strip().lower()
+            status_map = {
+                "draft": "Draft",
+                "مسودة": "Draft",
+                "approvalrequested": "ApprovalRequested",
+                "طلب اعتماد": "ApprovalRequested",
+                "approved": "Approved",
+                "معتمد": "Approved",
+                "active": "Active",
+                "مفعل": "Active",
+                "activated": "Active",
+                "ended": "Ended",
+                "منتهي": "Ended",
+                "cancelled": "Cancelled",
+                "canceled": "Cancelled",
+                "ملغى": "Cancelled",
+            }
+            normalized_status = status_map.get(raw_status)
+            if not normalized_status:
+                return self.send_json({"ok": False, "error": "حالة العقد غير معتمدة"}, 400)
+            if normalized_status == "Active":
+                return self.send_json({"ok": False, "error": "تفعيل العقد يتم فقط عبر إجراء «تفعيل العقد» بعد الاعتماد"}, 400)
+            data["status"] = normalized_status
         if table == "estate_contract_invoices":
             return self.send_json({"ok": False, "error": "فواتير العقود تُدار عبر محرك الجدولة والتحصيل فقط"}, 403)
         if table == "accounting_budgets":
@@ -7494,7 +7937,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         actor_name,
                     )
                     audit(db, user, "auto_invoice", "estate_reservation_invoices", row_id, f"Auto reservation invoice created for {table}")
-            if table == "estate_contracts":
+            if table == "estate_contracts" and str(clean.get("status") or "").strip().lower() == "active":
                 schedule_result = generate_estate_contract_invoices(
                     db,
                     clean,
@@ -7534,7 +7977,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             sql = f"UPDATE {table} SET {','.join([c+'=?' for c in update_cols])} WHERE id=?"
             db.execute(sql, [clean[c] for c in update_cols] + [item_id])
             audit_details = "Updated record"
-            if table == "contracts" and before_row:
+            if table in ("contracts", "estate_contracts") and before_row:
                 changed = []
                 for fld in update_cols:
                     old_v = before_row[fld] if fld in before_row.keys() else None
@@ -7587,6 +8030,33 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 status = clean.get("status")
                 if property_id and status:
                     sync_property_status_for_contract(db, property_id, status)
+            if table == "estate_contracts":
+                status = str(clean.get("status") or "").strip().lower()
+                entity_type = str(clean.get("entity_type") or "").strip().lower()
+                entity_id = str(clean.get("entity_id") or "").strip()
+                if status == "active" and entity_id:
+                    set_estate_unit_status(
+                        db,
+                        entity_type=entity_type,
+                        entity_id=entity_id,
+                        target_status="occupied",
+                        actor_name=actor_name,
+                        note="Contract set active by update",
+                    )
+                if status in ("ended", "cancelled") and entity_id:
+                    other_active = db.execute(
+                        "SELECT id FROM estate_contracts WHERE lower(entity_type)=lower(?) AND entity_id=? AND lower(status)='active' AND id<>?",
+                        (entity_type, entity_id, str(item_id)),
+                    ).fetchone()
+                    if not other_active:
+                        set_estate_unit_status(
+                            db,
+                            entity_type=entity_type,
+                            entity_id=entity_id,
+                            target_status="vacant",
+                            actor_name=actor_name,
+                            note="Contract ended/cancelled by update",
+                        )
             db.commit()
             return self.send_json({"ok": True})
 
@@ -8392,6 +8862,9 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
         contract_id = str(data.get("contract_id") or "").strip()
         if not contract_id:
             return self.send_json({"ok": False, "error": "contract_id required"}, 400)
+        uname = str(user.get("username") or "").strip().lower()
+        if uname in RESTRICTED_ADMIN_USERNAMES:
+            return self.send_json({"ok": False, "error": "تفعيل العقد يتطلب إذن المالك"}, 403)
         owner_admin_only = _workflow_policy_bool(policies, "contract_activation_owner_admin_only")
         if owner_admin_only and user.get("role") not in ("owner", "admin"):
             return self.send_json({"ok": False, "error": "تفعيل العقد محصور بحسابات الإدارة/المالك"}, 403)
@@ -11274,7 +11747,7 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
         return self.send_json({"ok": False, "error": "Invalid or expired OTP code"}, 401)
 
     def api_permissions_ui(self, user: Dict[str, Any]) -> None:
-        self.send_json({"ok": True, **ui_permissions_for_role(user.get("role", "viewer"))})
+        self.send_json({"ok": True, **ui_permissions_for_user(user)})
 
     def api_permissions_audit(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         role_rows = db.execute("SELECT role, COUNT(*) as c FROM users WHERE active=1 GROUP BY role").fetchall()
@@ -11399,13 +11872,29 @@ UI_KPIS_ALL = [
 ]
 UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     "owner": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
-    "admin": {"sections": UI_SECTIONS_ALL, "kpis": UI_KPIS_ALL},
+    "admin": {
+        "sections": [
+            "dashboard", "estate-platform", "accounting-platform", "hospitality-platform",
+            "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts",
+            "invoices", "receivables", "maintenance", "inventory", "accounts",
+            "purchases", "payroll", "revenues", "admin-expenses", "bank",
+            "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
+            "approvals", "reports", "messages", "timeline", "backup",
+        ],
+        "kpis": [
+            "properties", "rented", "vacant", "income", "expense", "net", "health",
+            "occupancy", "overdue", "maintenance", "expiring", "expired", "paid",
+            "billed", "bank_balance", "payroll", "inventory_value", "purchases_due",
+        ],
+    },
     "accountant": {
         "sections": [
-            "dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "receivables", "revenues",
+            "dashboard", "estate-platform", "accounting-platform", "hospitality-platform",
+            "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices",
+            "receivables", "revenues",
             "admin-expenses", "accounts", "purchases", "payroll", "inventory", "bank",
             "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
-            "reports", "backup", "messages", "timeline", "walid", "approvals", "business-catalog",
+            "reports", "backup", "messages", "timeline", "approvals",
         ],
         "kpis": [
             "income", "expense", "net", "overdue", "paid", "billed", "bank_balance", "payroll",
@@ -11414,19 +11903,33 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
     },
     "operations": {
         "sections": [
-            "dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "daily-ops", "hospitality", "properties", "tasks", "clients", "contracts", "invoices", "receivables",
-            "maintenance", "inventory", "reports", "messages", "timeline", "backup",
-            "walid", "approvals", "production", "business-catalog",
+            "dashboard", "estate-platform", "hospitality-platform", "daily-ops",
+            "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
+            "receivables", "maintenance", "inventory", "reports", "messages", "timeline",
+            "backup", "approvals",
         ],
         "kpis": ["properties", "rented", "vacant", "occupancy", "maintenance", "expiring", "health"],
     },
     "maintenance": {
-        "sections": ["dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "daily-ops", "hospitality", "properties", "maintenance", "inventory", "reports", "messages", "backup"],
+        "sections": [
+            "dashboard", "estate-platform", "hospitality-platform", "daily-ops",
+            "hospitality", "properties", "maintenance", "inventory", "reports",
+            "messages", "backup",
+        ],
         "kpis": ["maintenance", "properties", "vacant", "inventory_value", "health"],
+    },
+    "reception": {
+        "sections": [
+            "dashboard", "estate-platform", "hospitality-platform", "daily-ops",
+            "hospitality", "properties", "tasks", "clients", "contracts", "invoices",
+            "messages", "timeline", "reports",
+        ],
+        "kpis": ["properties", "occupancy", "overdue", "health"],
     },
     "viewer": {
         "sections": [
-            "dashboard", "estate-platform", "accounting-platform", "hospitality-platform", "daily-ops", "hospitality", "properties", "clients", "contracts", "invoices", "reports",
+            "dashboard", "estate-platform", "hospitality-platform", "daily-ops",
+            "hospitality", "properties", "clients", "contracts", "invoices", "reports",
             "maintenance", "messages", "timeline", "backup",
         ],
         "kpis": ["properties", "occupancy", "health", "overdue", "net"],
@@ -11434,7 +11937,13 @@ UI_PERMISSIONS_BY_ROLE: Dict[str, Dict[str, List[str]]] = {
 }
 UI_WRITE_BY_ROLE: Dict[str, List[str]] = {
     "owner": list(UI_WRITE_SECTIONS_ALL),
-    "admin": list(UI_WRITE_SECTIONS_ALL),
+    "admin": [
+        "estate-platform", "accounting-platform", "hospitality-platform", "properties",
+        "hospitality", "clients", "contracts", "invoices", "maintenance", "inventory",
+        "accounts", "purchases", "payroll", "revenues", "admin-expenses", "bank",
+        "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
+        "approvals", "backup",
+    ],
     "accountant": [
         "accounting-platform", "hospitality-platform", "invoices", "hospitality", "accounts", "purchases", "payroll", "revenues", "admin-expenses",
         "bank", "chart-accounts", "statements", "bank-reconciliation", "financial-periods",
@@ -11453,6 +11962,30 @@ def ui_permissions_for_role(role: str) -> Dict[str, Any]:
     base["role"] = role
     base["write_sections"] = list(UI_WRITE_BY_ROLE.get(role, []))
     base["read_only"] = role == "viewer"
+    return base
+
+
+def ui_permissions_for_user(user: Dict[str, Any]) -> Dict[str, Any]:
+    role = str((user or {}).get("role") or "viewer").lower()
+    uname = str((user or {}).get("username") or "").strip().lower()
+    base = ui_permissions_for_role(role)
+    if uname in RESTRICTED_ADMIN_USERNAMES:
+        base = ui_permissions_for_role("operations")
+        # Keep account label as admin while enforcing strict operational scope.
+        base["role"] = "admin"
+        forbidden = {
+            "owner-staff",
+            "owner-live",
+            "users",
+            "walid",
+            "enterprise",
+            "production",
+            "qa",
+            "settings",
+            "business-catalog",
+        }
+        base["sections"] = [s for s in base.get("sections", []) if s not in forbidden]
+        base["write_sections"] = [s for s in base.get("write_sections", []) if s not in forbidden]
     return base
 
 
