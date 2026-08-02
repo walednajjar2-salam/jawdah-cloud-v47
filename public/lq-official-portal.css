@@ -77,17 +77,15 @@ body.lq-official-portal .op-brand{
   text-align:center;
   animation:opRise .85s .08s ease both;
 }
+body.lq-official-portal .op-brand .lq-brand-mark{
+  margin:0 auto 8px;
+}
 body.lq-official-portal .op-logo{
   width:min(132px,34vw);
   height:auto;
   display:block;
   margin:0 auto 10px;
   filter:drop-shadow(0 10px 28px rgba(0,0,0,.35));
-  animation:opLogoGlow 5.5s ease-in-out infinite alternate;
-}
-@keyframes opLogoGlow{
-  from{filter:drop-shadow(0 8px 18px rgba(0,0,0,.28)) brightness(1)}
-  to{filter:drop-shadow(0 14px 34px rgba(201,169,110,.35)) brightness(1.05)}
 }
 body.lq-official-portal .op-brand-name{
   margin:0;

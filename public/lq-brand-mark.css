@@ -1,0 +1,67 @@
+/* Launch Quality — beautiful brand-mark presentation */
+.lq-brand-mark{
+  --bm-size:168px;
+  position:relative;
+  width:var(--bm-size);
+  height:var(--bm-size);
+  margin:0 auto;
+  display:grid;
+  place-items:center;
+  isolation:isolate;
+}
+.lq-brand-mark::before{
+  content:"";
+  position:absolute;
+  inset:-18%;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 45%,
+      rgba(226,196,138,.42) 0%,
+      rgba(201,169,110,.18) 34%,
+      rgba(201,169,110,.05) 58%,
+      transparent 72%);
+  filter:blur(2px);
+  z-index:0;
+  animation:lqBrandHalo 6s ease-in-out infinite alternate;
+}
+.lq-brand-mark::after{
+  content:"";
+  position:absolute;
+  inset:4%;
+  border-radius:50%;
+  border:1px solid rgba(226,196,138,.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.04),
+    0 0 40px rgba(201,169,110,.12);
+  z-index:0;
+  pointer-events:none;
+}
+.lq-brand-mark img{
+  position:relative;
+  z-index:1;
+  width:86%;
+  height:86%;
+  object-fit:contain;
+  display:block;
+  filter:
+    drop-shadow(0 10px 22px rgba(0,0,0,.35))
+    drop-shadow(0 0 18px rgba(201,169,110,.22));
+  animation:lqBrandFloat 5.8s ease-in-out infinite alternate;
+}
+.lq-brand-mark--lg{--bm-size:min(210px,42vw)}
+.lq-brand-mark--md{--bm-size:min(150px,36vw)}
+.lq-brand-mark--sm{--bm-size:96px}
+
+@keyframes lqBrandHalo{
+  from{opacity:.75;transform:scale(.96)}
+  to{opacity:1;transform:scale(1.04)}
+}
+@keyframes lqBrandFloat{
+  from{transform:translateY(0)}
+  to{transform:translateY(-6px)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .lq-brand-mark::before,
+  .lq-brand-mark img{animation:none!important}
+}

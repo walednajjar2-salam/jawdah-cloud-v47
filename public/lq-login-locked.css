@@ -159,28 +159,28 @@ body.login-ultra #loginScreen .login-top-logo{
   gap:0 !important;
 }
 body.login-ultra #loginScreen .login-logo-wrap,
-body.login-ultra #loginScreen .login-logo-wrap--float{
-  margin:0 0 12px !important;
+body.login-ultra #loginScreen .login-logo-wrap--float,
+body.login-ultra #loginScreen .lq-brand-mark{
+  margin:0 auto 10px !important;
   padding:0 !important;
   background:transparent !important;
   border:0 !important;
   box-shadow:none !important;
 }
+body.login-ultra #loginScreen .lq-brand-mark{
+  width:min(210px,42vw) !important;
+  height:min(210px,42vw) !important;
+}
 body.login-ultra #loginScreen .login-logo-img,
-body.login-ultra #loginScreen .login-logo-img--float{
-  width:min(168px,34vw) !important;
-  height:auto !important;
-  max-width:168px !important;
-  max-height:34vh !important;
+body.login-ultra #loginScreen .login-logo-img--float,
+body.login-ultra #loginScreen .lq-brand-mark img{
+  width:86% !important;
+  height:86% !important;
+  max-width:none !important;
+  max-height:none !important;
   object-fit:contain !important;
   display:block !important;
   margin:0 auto !important;
-  filter:drop-shadow(0 12px 28px rgba(0,0,0,.35)) !important;
-  animation:lqLoginLogoGlow 5.5s ease-in-out infinite alternate;
-}
-@keyframes lqLoginLogoGlow{
-  from{filter:drop-shadow(0 8px 18px rgba(0,0,0,.28)) brightness(1)}
-  to{filter:drop-shadow(0 14px 34px rgba(201,169,110,.35)) brightness(1.05)}
 }
 
 /* Brand wordmark beside logo (injected via ::after on wrap when .login-brand-copy exists) */
@@ -526,11 +526,9 @@ body.login-ultra #lqBrandWatermark{display:none !important;}
     gap:14px !important;
     max-width:440px !important;
   }
-  body.login-ultra #loginScreen .login-logo-img,
-  body.login-ultra #loginScreen .login-logo-img--float{
-    width:120px !important;
-    max-width:120px !important;
-    max-height:120px !important;
+  body.login-ultra #loginScreen .lq-brand-mark{
+    width:132px !important;
+    height:132px !important;
   }
   body.login-ultra #loginScreen .login-brand-name{
     font-size:clamp(1.85rem,8vw,2.4rem) !important;
