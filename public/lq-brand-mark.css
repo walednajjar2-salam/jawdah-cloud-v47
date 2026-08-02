@@ -50,7 +50,7 @@
 }
 .lq-brand-mark--lg{--bm-size:min(210px,42vw)}
 .lq-brand-mark--hero{--bm-size:min(420px,56vw)}
-.lq-brand-mark--portal{--bm-size:min(148px,22vh)}
+.lq-brand-mark--portal{--bm-size:min(260px,34vh)}
 .lq-brand-mark--md{--bm-size:min(150px,36vw)}
 .lq-brand-mark--sm{--bm-size:96px}
 
@@ -58,18 +58,27 @@
 .lq-brand-mark--hero{
   perspective:900px;
 }
-/* Portal keeps a compact 3D mark so all 6 platforms fit one viewport */
+/* Portal: large animated 3D mark above compact platform cards */
 .lq-brand-mark--portal{
-  perspective:900px;
+  perspective:1000px;
+}
+.lq-brand-mark--portal::before{
+  inset:-24%;
+  background:
+    radial-gradient(circle at 50% 45%,
+      rgba(255,255,255,.72) 0%,
+      rgba(212,177,93,.44) 26%,
+      rgba(197,165,106,.18) 50%,
+      transparent 72%);
 }
 .lq-brand-mark--portal img{
-  width:92%;
-  height:92%;
+  width:94%;
+  height:94%;
   image-rendering:-webkit-optimize-contrast;
   filter:
-    drop-shadow(0 10px 18px rgba(15,42,74,.24))
-    drop-shadow(0 0 18px rgba(197,165,106,.28))
-    contrast(1.05) saturate(1.06);
+    drop-shadow(0 14px 26px rgba(15,42,74,.28))
+    drop-shadow(0 0 24px rgba(197,165,106,.34))
+    contrast(1.06) saturate(1.08);
   transform-style:preserve-3d;
   animation:lqBrand3d 7s ease-in-out infinite;
 }
@@ -116,5 +125,6 @@
 @media (prefers-reduced-motion:reduce){
   .lq-brand-mark::before,
   .lq-brand-mark img,
-  .lq-brand-mark--hero img{animation:none!important}
+  .lq-brand-mark--hero img,
+  .lq-brand-mark--portal img{animation:none!important}
 }
