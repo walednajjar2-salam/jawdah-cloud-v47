@@ -380,7 +380,7 @@
   <header class="lq-et-top">
     <div>
       <h2>منصة العقارات</h2>
-      <p>شجرة واضحة · تسلسل قصير · اعتمادات منفصلة عن التنبيهات</p>
+      <p>لوحة بسيطة · ادخل لأي قسم بضغطة واحدة</p>
     </div>
     <form class="lq-et-search" id="etSearchForm">
       <input id="etSearchInput" type="search" placeholder="بحث: مبنى · وحدة · عميل · عقد · حجز · دفعة · صيانة" value="${esc(state.searchQ)}" autocomplete="off">
@@ -715,17 +715,26 @@
 
     return `
       <div class="lq-et-home">
-        <h3 class="lq-et-home-title">لوحة العقارات</h3>
-        <div class="lq-et-hub">
-          ${hubs
-            .map(
-              (h) => `<button type="button" class="lq-et-hub-card ${h.urgent ? "urgent" : ""}" data-hub="${esc(h.id)}">
-              <span class="lq-et-hub-label"><span class="lq-et-hub-ico" aria-hidden="true">${h.ico}</span>${esc(h.label)}</span>
-              <strong>${esc(h.value)}</strong>
-              <em>${esc(h.hint)}</em>
-            </button>`
-            )
-            .join("")}
+        <div class="lq-et-home-board">
+          <h3 class="lq-et-home-title">لوحة العقارات</h3>
+          <div class="lq-et-hub">
+            ${hubs
+              .map(
+                (h) => `<button type="button" class="lq-et-hub-card ${h.urgent ? "urgent" : ""}" data-hub="${esc(h.id)}">
+                <span class="lq-et-hub-label"><span class="lq-et-hub-ico" aria-hidden="true">${h.ico}</span>${esc(h.label)}</span>
+                <strong>${esc(h.value)}</strong>
+                <em>${esc(h.hint)}</em>
+              </button>`
+              )
+              .join("")}
+          </div>
+          <button type="button" class="lq-et-home-cta" data-hub="properties">جميع بيانات المنصة</button>
+        </div>
+        <div class="lq-et-home-mini">
+          <button type="button" class="lq-et-kpi" data-hub="properties"><span>إجمالي الوحدات</span><strong>${fmtVal(c.units)}</strong></button>
+          <button type="button" class="lq-et-kpi" data-hub="reservations"><span>الحجوزات</span><strong>${fmtVal(
+            allUnits().filter((u) => unitStatus(u) === "reserved").length
+          )}</strong></button>
         </div>
         <div class="lq-et-home-rule" aria-hidden="true"></div>
         <div class="lq-et-home-cols">
