@@ -40,6 +40,7 @@ from lq_expand.lease_protected import (
     PROTECTED_LEASE_ARTICLES,
     protected_terms_plain_text,
 )
+from lq_expand import contract_lifecycle as lq_lifecycle
 import lq_payroll_import
 import lq_postgres
 import lq_business_catalog
@@ -124,8 +125,8 @@ BACKUP_RETENTION = max(1, int(os.environ.get("JAWDAH_BACKUP_RETENTION", "30") or
 BACKUP_LOCK = threading.Lock()
 LAST_AUTO_BACKUP_AT: Optional[str] = None
 STORAGE_WARN_GB = float(os.environ.get("JAWDAH_STORAGE_WARN_GB", "2") or "2")
-CONTRACT_ACTIVE_STATUSES = {"active", "approved", "activated"}
-CONTRACT_EDIT_LOCK_STATUSES = {"approved", "active", "activated"}
+CONTRACT_ACTIVE_STATUSES = {"active", "approved", "activated", "signed"}
+CONTRACT_EDIT_LOCK_STATUSES = {"approved", "active", "activated", "signed"}
 CONTRACT_CORE_FIELDS = {
     "contract_type",
     "property_id",
@@ -190,7 +191,8 @@ TABLES = {
     "branches": ["id", "code", "name", "city", "address", "manager", "active", "notes", "created_at"],
     "properties": ["id", "name", "type", "status", "price", "location", "building_no", "apartment_no", "room_no", "latitude", "longitude", "image", "last_update", "notes", "branch_id"],
     "clients": ["id", "name", "phone", "email", "national_id", "id_card_image", "balance", "notes"],
-    "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "deposit_received", "deposit_received_at", "deposit_received_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "ended_at", "attachments", "notes"],
+    "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "deposit_received", "deposit_received_at", "deposit_received_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "approved_by", "activated_at", "activated_by", "ended_at", "attachments", "notes", "edition_no", "parent_contract_id", "superseded_by", "lifecycle_step", "locked", "signed_at", "handover_json", "furniture_keys_json", "meter_readings_json", "condition_photos_json", "payment_schedule_json", "signatures_json", "final_handover_json", "eviction_json"],
+    "contract_actions": ["id", "contract_id", "edition_no", "action", "actor", "details", "snapshot_json", "created_at"],
     "invoices": ["id", "invoice_no", "contract_id", "client_id", "property_id", "issue_date", "due_date", "description", "invoice_type", "subtotal", "vat_rate", "vat_amount", "grand_total", "amount", "paid_amount", "status", "is_void", "void_reason", "voided_at", "sequence_year", "sequence_no", "reissued_from"],
     "payments": ["id", "invoice_id", "client_id", "property_id", "contract_id", "payment_date", "amount", "method", "note", "payment_proof_image"],
     "accounts": ["id", "entry_date", "type", "category", "description", "client_id", "property_id", "invoice_id", "amount"],
@@ -2052,6 +2054,37 @@ def init_db() -> None:
         ]:
             ensure_column(db, "contracts", col, definition)
         for col, definition in [
+            ("edition_no", "INTEGER NOT NULL DEFAULT 1"),
+            ("parent_contract_id", "TEXT"),
+            ("superseded_by", "TEXT"),
+            ("lifecycle_step", "TEXT DEFAULT 'parties'"),
+            ("locked", "INTEGER NOT NULL DEFAULT 0"),
+            ("signed_at", "TEXT"),
+            ("handover_json", "TEXT"),
+            ("furniture_keys_json", "TEXT"),
+            ("meter_readings_json", "TEXT"),
+            ("condition_photos_json", "TEXT"),
+            ("payment_schedule_json", "TEXT"),
+            ("signatures_json", "TEXT"),
+            ("final_handover_json", "TEXT"),
+            ("eviction_json", "TEXT"),
+        ]:
+            ensure_column(db, "contracts", col, definition)
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS contract_actions (
+                id TEXT PRIMARY KEY,
+                contract_id TEXT NOT NULL,
+                edition_no INTEGER NOT NULL DEFAULT 1,
+                action TEXT NOT NULL,
+                actor TEXT,
+                details TEXT,
+                snapshot_json TEXT,
+                created_at TEXT NOT NULL
+            );
+            """
+        )
+        for col, definition in [
             ("invoice_type", "TEXT DEFAULT 'rent'"),
             ("subtotal", "REAL"),
             ("vat_rate", "REAL"),
@@ -2890,10 +2923,19 @@ def execute_contract_approval(db: sqlite3.Connection, user: Dict[str, Any], cont
     if conflict:
         raise ValueError(f"Contract period conflicts with {conflict.get('contract_no') or conflict.get('id')}")
     db.execute(
-        "UPDATE contracts SET status=?, approved_at=?, approved_by=? WHERE id=?",
-        ("Approved", now_iso(), user.get("username") or user.get("name"), contract_id),
+        "UPDATE contracts SET status=?, approved_at=?, approved_by=?, locked=1, lifecycle_step=? WHERE id=?",
+        ("Approved", now_iso(), user.get("username") or user.get("name"), "approval", contract_id),
     )
-    audit(db, user, "approve", "contracts", contract_id, "Approved contract; waiting activation")
+    audit(db, user, "approve", "contracts", contract_id, "Approved contract; waiting signature/activation")
+    log_contract_lifecycle_action(
+        db,
+        user,
+        contract_id,
+        "approve",
+        "اعتماد العقد — مغلق للتعديل المباشر",
+        snapshot=lq_lifecycle.contract_snapshot(contract),
+        edition_no=int(contract["edition_no"] or 1) if "edition_no" in contract.keys() else 1,
+    )
     return []
 
 
@@ -2902,10 +2944,13 @@ def execute_contract_activation(db: sqlite3.Connection, user: Dict[str, Any], co
     if not contract:
         raise ValueError("Contract not found")
     status = str(contract["status"] or "").strip().lower()
-    if status not in ("approved", "active", "activated"):
-        raise ValueError("Contract must be approved before activation")
+    if status not in ("approved", "signed", "active", "activated"):
+        raise ValueError("Contract must be approved and signed before activation")
     if status in ("active", "activated"):
         raise ValueError("Contract is already active")
+    gate = contract_activation_gate(db, contract)
+    if not gate.get("ok"):
+        raise ValueError("لا يمكن التفعيل — نواقص: " + "؛ ".join(gate.get("missing") or ["بيانات غير مكتملة"]))
     if active_contract_exists_for_property(db, str(contract["property_id"]), contract_id):
         raise ValueError("Another active contract exists for this property")
     prop = db.execute("SELECT status FROM properties WHERE id=?", (contract["property_id"],)).fetchone()
@@ -2921,43 +2966,89 @@ def execute_contract_activation(db: sqlite3.Connection, user: Dict[str, Any], co
     rent = float(contract["rent_amount"] or 0)
     if rent <= 0 or end < start:
         raise ValueError("Invalid contract dates or rent")
+    # Ensure payment schedule exists before generating invoices
+    schedule = lq_lifecycle.parse_json_field(contract["payment_schedule_json"] if "payment_schedule_json" in contract.keys() else None, [])
+    if not schedule:
+        schedule = lq_lifecycle.build_payment_schedule(
+            contract["start_date"],
+            contract["end_date"],
+            rent,
+            str(contract["payment_cycle"] or "monthly"),
+        )
+        db.execute(
+            "UPDATE contracts SET payment_schedule_json=? WHERE id=?",
+            (lq_lifecycle.dumps_json(schedule), contract_id),
+        )
     created: List[Dict[str, Any]] = []
     created_count = 0
-    cycle = str(contract["payment_cycle"] or "monthly").strip().lower()
-    step_months = 1
-    max_invoices = 120
-    if cycle in ("quarterly", "quarter"):
-        step_months = 3
-    elif cycle in ("yearly", "annual"):
-        step_months = 12
-    elif cycle in ("once", "one-time", "single"):
-        max_invoices = 1
-    due = start
-    while due <= end and created_count < max_invoices:
+    for row in schedule[:120]:
+        due_s = str(row.get("due_date") or "").strip()
+        if not due_s:
+            continue
+        amount = float(row.get("amount") or rent)
         exists_invoice = db.execute(
             "SELECT id FROM invoices WHERE contract_id=? AND due_date=?",
-            (contract_id, due.isoformat()),
+            (contract_id, due_s),
         ).fetchone()
         if not exists_invoice:
-            desc = contract_invoice_description(db, contract, due.isoformat())
+            desc = contract_invoice_description(db, contract, due_s)
             inv = build_invoice_row(
                 db,
                 contract,
                 desc,
-                rent,
-                due_date=due.isoformat(),
+                amount,
+                due_date=due_s,
                 invoice_type="rent",
             )
             insert(db, "invoices", inv)
             created.append(inv)
             created_count += 1
-        due = add_months(due, step_months)
+    # Fallback if schedule somehow empty
+    if not created:
+        cycle = str(contract["payment_cycle"] or "monthly").strip().lower()
+        step_months = 1
+        max_invoices = 120
+        if cycle in ("quarterly", "quarter"):
+            step_months = 3
+        elif cycle in ("yearly", "annual"):
+            step_months = 12
+        elif cycle in ("once", "one-time", "single"):
+            max_invoices = 1
+        due = start
+        while due <= end and created_count < max_invoices:
+            exists_invoice = db.execute(
+                "SELECT id FROM invoices WHERE contract_id=? AND due_date=?",
+                (contract_id, due.isoformat()),
+            ).fetchone()
+            if not exists_invoice:
+                desc = contract_invoice_description(db, contract, due.isoformat())
+                inv = build_invoice_row(
+                    db,
+                    contract,
+                    desc,
+                    rent,
+                    due_date=due.isoformat(),
+                    invoice_type="rent",
+                )
+                insert(db, "invoices", inv)
+                created.append(inv)
+                created_count += 1
+            due = add_months(due, step_months)
     db.execute(
-        "UPDATE contracts SET status=?, activated_at=?, activated_by=? WHERE id=?",
-        ("Active", now_iso(), user.get("username") or user.get("name"), contract_id),
+        "UPDATE contracts SET status=?, activated_at=?, activated_by=?, locked=1, lifecycle_step=? WHERE id=?",
+        ("Active", now_iso(), user.get("username") or user.get("name"), "active", contract_id),
     )
     sync_property_status_for_contract(db, contract["property_id"], "Active")
     audit(db, user, "activate", "contracts", contract_id, f"Activated contract and generated {len(created)} invoices")
+    log_contract_lifecycle_action(
+        db,
+        user,
+        contract_id,
+        "activate",
+        f"تفعيل العقد — تحويل الوحدة لمؤجرة وإنشاء {len(created)} فاتورة/استحقاق",
+        snapshot=lq_lifecycle.contract_snapshot(dict(contract)),
+        edition_no=int(contract["edition_no"] or 1) if "edition_no" in contract.keys() else 1,
+    )
     return created
 
 
@@ -3585,6 +3676,35 @@ def sanitize_doc_text(value: Any, fallback: str = "—") -> str:
     if re.match(r"^\s*[{[]", text) and re.search(r"[}\]]\s*$", text):
         return fallback
     return text
+
+
+def log_contract_lifecycle_action(
+    db: sqlite3.Connection,
+    user: Optional[Dict[str, Any]],
+    contract_id: str,
+    action: str,
+    details: str = "",
+    snapshot: Optional[Dict[str, Any]] = None,
+    edition_no: int = 1,
+) -> str:
+    return lq_lifecycle.log_contract_action(
+        db,
+        user,
+        contract_id,
+        action,
+        details=details,
+        snapshot=snapshot,
+        edition_no=edition_no,
+        uid_fn=uid,
+        now_iso_fn=now_iso,
+        insert_fn=insert,
+    )
+
+
+def contract_activation_gate(db: sqlite3.Connection, contract: Any) -> Dict[str, Any]:
+    client = db.execute("SELECT * FROM clients WHERE id=?", (contract["client_id"],)).fetchone() if contract["client_id"] else None
+    prop = db.execute("SELECT * FROM properties WHERE id=?", (contract["property_id"],)).fetchone() if contract["property_id"] else None
+    return lq_lifecycle.validate_activation_readiness(contract, client, prop)
 
 
 def active_contract_exists_for_property(db: sqlite3.Connection, property_id: str, exclude_contract_id: str = "") -> bool:
@@ -4829,6 +4949,30 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "contract_template" and method == "POST":
                     user = self.require_user(db, "contracts:read")
                     return None if not user else self.api_contract_template(db, user)
+                if parts[0] == "contract_lifecycle" and method == "GET":
+                    user = self.require_user(db, "contracts:read")
+                    return None if not user else self.api_contract_lifecycle_get(db, user, query)
+                if parts[0] == "contract_lifecycle" and method == "POST":
+                    user = self.require_user(db, "contracts")
+                    return None if not user else self.api_contract_lifecycle_save(db, user)
+                if parts[0] == "contract_sign" and method == "POST":
+                    user = self.require_user(db, "contracts")
+                    return None if not user else self.api_contract_sign(db, user)
+                if parts[0] == "contract_amend" and method == "POST":
+                    user = self.require_user(db, "contracts")
+                    return None if not user else self.api_contract_amend(db, user)
+                if parts[0] == "contract_dossier" and method == "POST":
+                    user = self.require_user(db, "contracts")
+                    return None if not user else self.api_contract_dossier_save(db, user)
+                if parts[0] == "contract_final_handover" and method == "POST":
+                    user = self.require_user(db, "contracts")
+                    return None if not user else self.api_contract_final_handover(db, user)
+                if parts[0] == "contract_eviction" and method == "POST":
+                    user = self.require_user(db, "contracts")
+                    return None if not user else self.api_contract_eviction(db, user)
+                if parts[0] == "contract_actions" and method == "GET":
+                    user = self.require_user(db, "contracts:read")
+                    return None if not user else self.api_contract_actions(db, user, query)
                 if parts[0] == "pay_invoice" and method == "POST":
                     user = self.require_user(db, "invoices")
                     return None if not user else self.api_pay_invoice(db, user)
@@ -7185,13 +7329,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     merged.update(data)
                     data = merged
                     current_status = str(current["status"] or "").strip().lower()
-                    if current_status in CONTRACT_EDIT_LOCK_STATUSES:
-                        changed_core = []
-                        for fld in CONTRACT_CORE_FIELDS:
-                            if str(current[fld] or "") != str(data.get(fld) or ""):
-                                changed_core.append(fld)
-                        if changed_core and user.get("role") not in ("owner", "admin"):
-                            return self.send_json({"ok": False, "error": "لا يمكن تعديل بيانات العقد الأساسية بعد الاعتماد إلا بصلاحية خاصة"}, 403)
+                    locked_flag = int(current["locked"] or 0) if "locked" in current.keys() else 0
+                    if current_status in CONTRACT_EDIT_LOCK_STATUSES or locked_flag:
+                        # Hard lock: no direct edits after approve/sign/activate — use amendment API.
+                        if data.get("_allow_lifecycle_patch"):
+                            data.pop("_allow_lifecycle_patch", None)
+                        else:
+                            return self.send_json(
+                                {
+                                    "ok": False,
+                                    "error": "العقد المعتمد/المفعّل مغلق. أي تعديل يجب أن يمر بطلب اعتماد وإصدار جديد عبر «تعديل بإصدار».",
+                                    "locked": True,
+                                    "use_api": "contract_amend",
+                                },
+                                403,
+                            )
             if not data.get("property_id") or not data.get("client_id") or float(data.get("rent_amount") or 0) <= 0:
                 return self.send_json({"ok": False, "error": "اختر العقار والعميل وأدخل مبلغ إيجار أكبر من صفر"}, 400)
             if not exists(db, "properties", data["property_id"]) or not exists(db, "clients", data["client_id"]):
@@ -7239,6 +7391,25 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data.setdefault("legal_terms", default_legal_terms())
             data.setdefault("company_signatory", "Launch Quality LLC")
             data.setdefault("attachments", "[]")
+            data.setdefault("edition_no", 1)
+            data.setdefault("lifecycle_step", "parties")
+            data.setdefault("locked", 0)
+            for dk, dv in lq_lifecycle.empty_dossier_defaults().items():
+                data.setdefault(dk, dv)
+            # Auto payment schedule when finance fields present
+            if method == "POST" and float(data.get("rent_amount") or 0) > 0 and data.get("start_date") and data.get("end_date"):
+                try:
+                    sched = lq_lifecycle.build_payment_schedule(
+                        str(data["start_date"]),
+                        str(data["end_date"]),
+                        float(data["rent_amount"]),
+                        str(data.get("payment_cycle") or "monthly"),
+                    )
+                    data["payment_schedule_json"] = lq_lifecycle.dumps_json(sched)
+                    if str(data.get("lifecycle_step") or "parties") == "parties":
+                        data["lifecycle_step"] = "finance"
+                except Exception:
+                    pass
             uploads = data.get("attachments_upload")
             if isinstance(uploads, list) and uploads:
                 stored_attachments: List[Dict[str, str]] = []
@@ -7253,6 +7424,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         str(file_item.get("name") or "contract-attachment"),
                     )
                     stored["uploaded_by"] = user.get("username") or user.get("name") or "system"
+                    if file_item.get("doc_type"):
+                        stored["doc_type"] = str(file_item.get("doc_type"))
                     stored_attachments.append(stored)
                 if stored_attachments:
                     data["attachments"] = json.dumps(stored_attachments, ensure_ascii=False)
@@ -8830,7 +9003,19 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
         )
         audit(db, user, "request_approval", "approvals", approval_id, f"{request_type} for {entity_id}")
         if request_type == "contract" and entity == "contracts":
-            db.execute("UPDATE contracts SET status=? WHERE id=?", ("ApprovalRequested", entity_id))
+            crow = db.execute("SELECT edition_no FROM contracts WHERE id=?", (entity_id,)).fetchone()
+            db.execute(
+                "UPDATE contracts SET status=?, lifecycle_step=? WHERE id=?",
+                ("ApprovalRequested", "approval", entity_id),
+            )
+            log_contract_lifecycle_action(
+                db,
+                user,
+                entity_id,
+                "request_approval",
+                "إرسال العقد للاعتماد",
+                edition_no=int((crow["edition_no"] if crow else 1) or 1),
+            )
         db.commit()
         self.send_json({
             "ok": True,
@@ -9024,10 +9209,28 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
             "approved_at": None,
             "notes": f"Renewal from {prev_no}",
         }
+        defaults = lq_lifecycle.empty_dossier_defaults()
+        new_contract.update({
+            "edition_no": 1,
+            "parent_contract_id": contract_id,
+            "lifecycle_step": "parties",
+            "locked": 0,
+            **defaults,
+        })
+        try:
+            new_contract["payment_schedule_json"] = lq_lifecycle.dumps_json(
+                lq_lifecycle.build_payment_schedule(
+                    new_contract["start_date"], new_contract["end_date"], rent, str(new_contract.get("payment_cycle") or "monthly")
+                )
+            )
+        except Exception:
+            new_contract["payment_schedule_json"] = "[]"
         insert(db, "contracts", new_contract)
-        db.execute("UPDATE contracts SET status=? WHERE id=?", ("Renewed", contract_id))
+        db.execute("UPDATE contracts SET status=?, superseded_by=?, lifecycle_step=? WHERE id=?", ("Renewed", new_contract["id"], "closed", contract_id))
         sync_property_status_for_contract(db, contract["property_id"], "Renewed")
         audit(db, user, "renew", "contracts", contract_id, f"Renewed {prev_no} -> {new_contract['contract_no']}")
+        log_contract_lifecycle_action(db, user, contract_id, "renew_close", f"تجديد — إغلاق {prev_no}", edition_no=int(contract["edition_no"] or 1) if "edition_no" in contract.keys() else 1)
+        log_contract_lifecycle_action(db, user, new_contract["id"], "renew_create", f"تجديد — مسودة جديدة {new_contract['contract_no']}", snapshot=new_contract, edition_no=1)
         db.commit()
         self.send_json({"ok": True, "contract": new_contract, "previous_contract_id": contract_id})
 
@@ -9054,13 +9257,420 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
             note_line += f": {reason}"
         notes = (existing_notes + "\n" + note_line).strip() if existing_notes else note_line
         db.execute(
-            "UPDATE contracts SET status=?, ended_at=?, notes=? WHERE id=?",
-            (final_status, ended_at, notes, contract_id),
+            "UPDATE contracts SET status=?, ended_at=?, notes=?, lifecycle_step=?, locked=1 WHERE id=?",
+            (final_status, ended_at, notes, "closed", contract_id),
         )
         sync_property_status_for_contract(db, contract["property_id"], final_status)
         audit(db, user, "end", "contracts", contract_id, note_line)
+        log_contract_lifecycle_action(
+            db, user, contract_id, "end",
+            note_line,
+            edition_no=int(contract["edition_no"] or 1) if "edition_no" in contract.keys() else 1,
+        )
         db.commit()
         self.send_json({"ok": True, "status": final_status, "ended_at": ended_at})
+
+
+    def api_contract_lifecycle_get(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        contract_id = (params.get("contract_id") or [""])[0].strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id required"}, 400)
+        c = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not c:
+            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        client = db.execute("SELECT * FROM clients WHERE id=?", (c["client_id"],)).fetchone()
+        prop = db.execute("SELECT * FROM properties WHERE id=?", (c["property_id"],)).fetchone()
+        gate = lq_lifecycle.validate_activation_readiness(c, client, prop)
+        actions = rows_to_dicts(
+            db.execute(
+                "SELECT * FROM contract_actions WHERE contract_id=? ORDER BY created_at DESC LIMIT 100",
+                (contract_id,),
+            ).fetchall()
+        )
+        editions = rows_to_dicts(
+            db.execute(
+                "SELECT id, contract_no, edition_no, status, parent_contract_id, superseded_by, start_date, end_date, rent_amount FROM contracts WHERE id=? OR parent_contract_id=? OR id=? ORDER BY edition_no DESC",
+                (contract_id, contract_id, c["parent_contract_id"] or ""),
+            ).fetchall()
+        )
+        self.send_json({
+            "ok": True,
+            "contract": dict(c),
+            "client": dict(client) if client else None,
+            "property": dict(prop) if prop else None,
+            "readiness": gate,
+            "actions": actions,
+            "editions": editions,
+            "steps": list(lq_lifecycle.LIFECYCLE_STEPS),
+        })
+
+    def api_contract_lifecycle_save(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        """Create or update a draft through wizard steps (parties/finance/review)."""
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        step = str(data.get("step") or "parties").strip().lower()
+        payload = data.get("payload") if isinstance(data.get("payload"), dict) else data
+        if contract_id:
+            current = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+            if not current:
+                return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+            st = str(current["status"] or "").lower()
+            if st in lq_lifecycle.LOCKED_STATUSES or int(current["locked"] or 0):
+                return self.send_json({"ok": False, "error": "العقد مغلق — استخدم تعديل بإصدار", "locked": True}, 403)
+            allowed = {
+                "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no",
+                "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount",
+                "late_fee", "grace_days", "renewal_notice_days", "payment_cycle", "legal_terms",
+                "company_signatory", "notes", "lifecycle_step",
+            }
+            updates = {k: payload[k] for k in allowed if k in payload}
+            if "rent_amount" in updates:
+                updates["rent_amount"] = float(updates["rent_amount"] or 0)
+            if updates.get("start_date") and updates.get("end_date") and updates.get("rent_amount", current["rent_amount"]):
+                try:
+                    updates["payment_schedule_json"] = lq_lifecycle.dumps_json(
+                        lq_lifecycle.build_payment_schedule(
+                            str(updates.get("start_date") or current["start_date"]),
+                            str(updates.get("end_date") or current["end_date"]),
+                            float(updates.get("rent_amount") if "rent_amount" in updates else current["rent_amount"] or 0),
+                            str(updates.get("payment_cycle") or current["payment_cycle"] or "monthly"),
+                        )
+                    )
+                except Exception:
+                    pass
+            updates["lifecycle_step"] = step if step in lq_lifecycle.LIFECYCLE_STEPS else (current["lifecycle_step"] or "parties")
+            if updates:
+                cols = ", ".join(f"{k}=?" for k in updates.keys())
+                db.execute(f"UPDATE contracts SET {cols} WHERE id=?", (*updates.values(), contract_id))
+            row = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+            client = db.execute("SELECT * FROM clients WHERE id=?", (row["client_id"],)).fetchone() if row["client_id"] else None
+            prop = db.execute("SELECT * FROM properties WHERE id=?", (row["property_id"],)).fetchone() if row["property_id"] else None
+            step_check = lq_lifecycle.validate_step(step, row, client, prop)
+            log_contract_lifecycle_action(
+                db, user, contract_id, f"save_{step}",
+                f"حفظ خطوة {step}",
+                snapshot=lq_lifecycle.contract_snapshot(row),
+                edition_no=int(row["edition_no"] or 1),
+            )
+            db.commit()
+            return self.send_json({"ok": True, "contract": dict(row), "step_check": step_check})
+
+        # Create new draft
+        property_id = str(payload.get("property_id") or "").strip()
+        client_id = str(payload.get("client_id") or "").strip()
+        if not property_id or not client_id:
+            return self.send_json({"ok": False, "error": "اختر العميل والوحدة أولاً"}, 400)
+        if not exists(db, "properties", property_id) or not exists(db, "clients", client_id):
+            return self.send_json({"ok": False, "error": "العميل أو العقار غير موجود"}, 400)
+        rent = float(payload.get("rent_amount") or 0)
+        start_date = str(payload.get("start_date") or today())
+        end_date = str(payload.get("end_date") or today())
+        defaults = lq_lifecycle.empty_dossier_defaults()
+        schedule = []
+        if rent > 0:
+            try:
+                schedule = lq_lifecycle.build_payment_schedule(start_date, end_date, rent, str(payload.get("payment_cycle") or "monthly"))
+            except Exception:
+                schedule = []
+        new_id = uid("CT")
+        row = {
+            "id": new_id,
+            "contract_no": next_contract_no(db, payload.get("contract_type") or "Residential"),
+            "contract_type": payload.get("contract_type") or "Residential",
+            "property_id": property_id,
+            "client_id": client_id,
+            "tenant_nationality": payload.get("tenant_nationality") or "",
+            "tenant_id_no": payload.get("tenant_id_no") or "",
+            "unit_details": payload.get("unit_details") or "",
+            "start_date": start_date,
+            "end_date": end_date,
+            "rent_amount": rent,
+            "deposit_amount": float(payload.get("deposit_amount") or 0),
+            "late_fee": float(payload.get("late_fee") or 0),
+            "grace_days": int(payload.get("grace_days") or 5),
+            "renewal_notice_days": int(payload.get("renewal_notice_days") or 30),
+            "status": "Draft",
+            "payment_cycle": payload.get("payment_cycle") or "monthly",
+            "legal_terms": payload.get("legal_terms") or default_legal_terms(),
+            "company_signatory": payload.get("company_signatory") or "Launch Quality LLC",
+            "attachments": "[]",
+            "notes": payload.get("notes") or "",
+            "edition_no": 1,
+            "lifecycle_step": step if step in lq_lifecycle.LIFECYCLE_STEPS else "parties",
+            "locked": 0,
+            **defaults,
+            "payment_schedule_json": lq_lifecycle.dumps_json(schedule),
+        }
+        insert(db, "contracts", row)
+        log_contract_lifecycle_action(db, user, new_id, "create", "إنشاء مسودة دورة عقد", snapshot=row, edition_no=1)
+        audit(db, user, "create", "contracts", new_id, f"Lifecycle draft {row['contract_no']}")
+        db.commit()
+        self.send_json({"ok": True, "contract": row})
+
+    def api_contract_dossier_save(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id required"}, 400)
+        current = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not current:
+            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        st = str(current["status"] or "").lower()
+        # Allow dossier completion on Draft/ApprovalRequested/Approved before activation; block after Active unless final handover APIs.
+        if st in ("active", "activated", "expired", "cancelled", "canceled", "renewed"):
+            return self.send_json({"ok": False, "error": "لا يمكن تعديل ملف الاستلام بعد التفعيل — استخدم التسليم النهائي"}, 403)
+        mapping = {
+            "handover": "handover_json",
+            "furniture_keys": "furniture_keys_json",
+            "meters": "meter_readings_json",
+            "condition_photos": "condition_photos_json",
+            "payment_schedule": "payment_schedule_json",
+            "signatures": "signatures_json",
+        }
+        updates = {}
+        for key, col in mapping.items():
+            if key in data:
+                updates[col] = lq_lifecycle.dumps_json(data[key])
+        # Optional typed attachments append
+        uploads = data.get("attachments_upload")
+        if isinstance(uploads, list) and uploads:
+            try:
+                existing = json.loads(current["attachments"] or "[]")
+            except Exception:
+                existing = []
+            if not isinstance(existing, list):
+                existing = []
+            for file_item in uploads[:12]:
+                if not isinstance(file_item, dict):
+                    continue
+                file_bytes, content_type = decode_upload_payload(file_item)
+                stored = save_contract_attachment(
+                    contract_id,
+                    file_bytes,
+                    content_type,
+                    str(file_item.get("name") or "dossier"),
+                )
+                stored["uploaded_by"] = user.get("username") or user.get("name") or "system"
+                if file_item.get("doc_type"):
+                    stored["doc_type"] = str(file_item.get("doc_type"))
+                existing.append(stored)
+            updates["attachments"] = json.dumps(existing, ensure_ascii=False)
+        if not updates.get("payment_schedule_json"):
+            # keep / rebuild schedule from finance
+            try:
+                sched = lq_lifecycle.build_payment_schedule(
+                    current["start_date"], current["end_date"], float(current["rent_amount"] or 0), str(current["payment_cycle"] or "monthly")
+                )
+                updates.setdefault("payment_schedule_json", lq_lifecycle.dumps_json(sched))
+            except Exception:
+                pass
+        updates["lifecycle_step"] = "dossier"
+        cols = ", ".join(f"{k}=?" for k in updates.keys())
+        db.execute(f"UPDATE contracts SET {cols} WHERE id=?", (*updates.values(), contract_id))
+        row = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        log_contract_lifecycle_action(
+            db, user, contract_id, "dossier_save", "تحديث ملف العقد (محضر/أثاث/عدادات/صور/جدول)",
+            snapshot=lq_lifecycle.contract_snapshot(row),
+            edition_no=int(row["edition_no"] or 1),
+        )
+        client = db.execute("SELECT * FROM clients WHERE id=?", (row["client_id"],)).fetchone()
+        prop = db.execute("SELECT * FROM properties WHERE id=?", (row["property_id"],)).fetchone()
+        gate = lq_lifecycle.validate_activation_readiness(row, client, prop)
+        db.commit()
+        self.send_json({"ok": True, "contract": dict(row), "readiness": gate})
+
+    def api_contract_sign(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        current = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not current:
+            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        st = str(current["status"] or "").lower()
+        if st not in ("approved", "signed"):
+            return self.send_json({"ok": False, "error": "التوقيع متاح بعد اعتماد العقد فقط"}, 400)
+        sig = lq_lifecycle.parse_json_field(current["signatures_json"], {})
+        if data.get("tenant_name"):
+            sig["tenant_name"] = str(data.get("tenant_name"))
+        if data.get("company_name"):
+            sig["company_name"] = str(data.get("company_name"))
+        if data.get("guarantor_name"):
+            sig["guarantor_name"] = str(data.get("guarantor_name"))
+        now = now_iso()
+        if data.get("tenant_signed", True):
+            sig["tenant_signed_at"] = now
+        if data.get("company_signed", True):
+            sig["company_signed_at"] = now
+        if data.get("guarantor_signed"):
+            sig["guarantor_signed_at"] = now
+        db.execute(
+            "UPDATE contracts SET signatures_json=?, signed_at=?, status=?, locked=1, lifecycle_step=? WHERE id=?",
+            (lq_lifecycle.dumps_json(sig), now, "Signed", "signed", contract_id),
+        )
+        row = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        log_contract_lifecycle_action(
+            db, user, contract_id, "sign", "توقيع العقد من الأطراف",
+            snapshot=lq_lifecycle.contract_snapshot(row),
+            edition_no=int(row["edition_no"] or 1),
+        )
+        audit(db, user, "sign", "contracts", contract_id, "Contract signed")
+        db.commit()
+        self.send_json({"ok": True, "contract": dict(row), "status": "Signed"})
+
+    def api_contract_amend(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        """Create a new edition from a locked contract and optionally request approval."""
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        current = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not current:
+            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        st = str(current["status"] or "").lower()
+        if st not in lq_lifecycle.LOCKED_STATUSES and not int(current["locked"] or 0):
+            return self.send_json({"ok": False, "error": "العقد غير مقفل — يمكن تعديله مباشرة كمسودة"}, 400)
+        new_id = uid("CT")
+        actor = user.get("username") or user.get("name") or "system"
+        new_no = next_contract_no(db, current["contract_type"] or "Residential")
+        clone = lq_lifecycle.clone_for_amendment(current, new_id, new_no, actor)
+        # Apply requested field changes onto the new edition only
+        changes = data.get("changes") if isinstance(data.get("changes"), dict) else {}
+        for key in ("rent_amount", "start_date", "end_date", "payment_cycle", "unit_details", "tenant_id_no", "tenant_nationality", "legal_terms", "notes", "contract_type", "grace_days", "late_fee", "renewal_notice_days", "deposit_amount"):
+            if key in changes:
+                clone[key] = changes[key]
+        if clone.get("start_date") and clone.get("end_date"):
+            try:
+                clone["payment_schedule_json"] = lq_lifecycle.dumps_json(
+                    lq_lifecycle.build_payment_schedule(
+                        str(clone["start_date"]), str(clone["end_date"]),
+                        float(clone.get("rent_amount") or 0), str(clone.get("payment_cycle") or "monthly"),
+                    )
+                )
+            except Exception:
+                pass
+        insert(db, "contracts", clone)
+        db.execute("UPDATE contracts SET superseded_by=? WHERE id=?", (new_id, contract_id))
+        # Snapshot old version
+        log_contract_lifecycle_action(
+            db, user, contract_id, "amend_freeze",
+            f"حفظ النسخة القديمة قبل الإصدار {clone['edition_no']}",
+            snapshot=lq_lifecycle.contract_snapshot(current),
+            edition_no=int(current["edition_no"] or 1),
+        )
+        log_contract_lifecycle_action(
+            db, user, new_id, "amend_create",
+            f"إنشاء إصدار جديد {clone['edition_no']} من {current['contract_no'] or contract_id}",
+            snapshot=clone,
+            edition_no=int(clone["edition_no"] or 1),
+        )
+        approval_id = None
+        if data.get("request_approval", True):
+            db.execute("UPDATE contracts SET status=?, lifecycle_step=? WHERE id=?", ("ApprovalRequested", "approval", new_id))
+            approval_id = create_approval_request(
+                db,
+                "contracts",
+                new_id,
+                "contract",
+                actor,
+                f"اعتماد إصدار معدل {clone['contract_no']} (من {current['contract_no'] or contract_id})",
+                meta={"parent_contract_id": contract_id, "edition_no": clone["edition_no"], "changes": changes},
+            )
+            clone["status"] = "ApprovalRequested"
+        audit(db, user, "amend", "contracts", new_id, f"Amendment edition from {contract_id}")
+        db.commit()
+        self.send_json({"ok": True, "contract": clone, "previous_contract_id": contract_id, "approval_id": approval_id})
+
+    def api_contract_final_handover(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        current = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not current:
+            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        payload = {
+            "handed_at": data.get("handed_at") or today(),
+            "condition": data.get("condition") or "",
+            "keys_returned": data.get("keys_returned"),
+            "meters": data.get("meters") or {},
+            "damages": data.get("damages") or "",
+            "deposit_settlement": data.get("deposit_settlement") or "",
+            "notes": data.get("notes") or "",
+            "received_by": data.get("received_by") or (user.get("name") or user.get("username")),
+            "tenant_present": bool(data.get("tenant_present", True)),
+        }
+        end_after = bool(data.get("end_contract", True))
+        final_status = str(data.get("status") or "Expired")
+        if final_status.lower() in ("cancelled", "canceled", "ملغي"):
+            final_status = "Cancelled"
+        else:
+            final_status = "Expired"
+        if end_after:
+            db.execute(
+                "UPDATE contracts SET final_handover_json=?, status=?, ended_at=?, lifecycle_step=?, locked=1 WHERE id=?",
+                (lq_lifecycle.dumps_json(payload), final_status, payload["handed_at"], "closed", contract_id),
+            )
+            sync_property_status_for_contract(db, current["property_id"], final_status)
+        else:
+            db.execute(
+                "UPDATE contracts SET final_handover_json=? WHERE id=?",
+                (lq_lifecycle.dumps_json(payload), contract_id),
+            )
+        row = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        log_contract_lifecycle_action(
+            db, user, contract_id, "final_handover",
+            "التسليم النهائي عند الإخلاء",
+            snapshot={"final_handover": payload, "status": row["status"]},
+            edition_no=int(row["edition_no"] or 1),
+        )
+        audit(db, user, "final_handover", "contracts", contract_id, "Final handover recorded")
+        db.commit()
+        self.send_json({"ok": True, "contract": dict(row), "final_handover": payload})
+
+    def api_contract_eviction(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        current = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        if not current:
+            return self.send_json({"ok": False, "error": "Contract not found"}, 404)
+        st = str(current["status"] or "").lower()
+        if st not in ("active", "activated", "signed", "approved", "expired"):
+            return self.send_json({"ok": False, "error": "طلب الإخلاء متاح للعقود السارية أو المنتهية"}, 400)
+        payload = {
+            "requested_at": data.get("requested_at") or today(),
+            "reason": str(data.get("reason") or "").strip(),
+            "notice_date": data.get("notice_date") or today(),
+            "vacate_by": data.get("vacate_by") or "",
+            "authority": data.get("authority") or "لجنة المنازعات الإيجارية المختصة",
+            "notes": data.get("notes") or "",
+            "requested_by": user.get("name") or user.get("username"),
+            "status": str(data.get("case_status") or "open"),
+        }
+        if not payload["reason"]:
+            return self.send_json({"ok": False, "error": "سبب طلب الإخلاء مطلوب"}, 400)
+        db.execute(
+            "UPDATE contracts SET eviction_json=? WHERE id=?",
+            (lq_lifecycle.dumps_json(payload), contract_id),
+        )
+        log_contract_lifecycle_action(
+            db, user, contract_id, "eviction_request",
+            f"طلب إخلاء: {payload['reason']}",
+            snapshot={"eviction": payload},
+            edition_no=int(current["edition_no"] or 1),
+        )
+        audit(db, user, "eviction", "contracts", contract_id, payload["reason"])
+        db.commit()
+        row = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
+        self.send_json({"ok": True, "contract": dict(row), "eviction": payload})
+
+    def api_contract_actions(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        contract_id = (params.get("contract_id") or [""])[0].strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id required"}, 400)
+        rows = rows_to_dicts(
+            db.execute(
+                "SELECT * FROM contract_actions WHERE contract_id=? ORDER BY created_at DESC LIMIT 200",
+                (contract_id,),
+            ).fetchall()
+        )
+        self.send_json({"ok": True, "items": rows})
 
     def api_contract_template(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         """Fallback multi-page protected lease HTML (matches frontend print branding)."""

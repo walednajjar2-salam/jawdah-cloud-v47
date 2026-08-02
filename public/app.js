@@ -2300,9 +2300,14 @@ function renderContracts(){
     const renewBtn = meta.renewable ? `<button class="gold-btn" onclick="renewContract('${r.id}')">تجديد</button> ` : '';
     const requestBtn = (st==='draft' || !st) ? `<button class="gold-btn" onclick="requestContractApproval('${r.id}')">طلب اعتماد</button> ` : '';
     const approveBtn = (st==='approvalrequested' && canDecideApprovals()) ? `<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button> ` : '';
-    const activateBtn = (st==='approved' && canActivateContracts()) ? `<button class="gold-btn" onclick="activateContract('${r.id}')">تفعيل العقد</button> ` : '';
+    const activateBtn = ((st==='approved' || st==='signed') && canActivateContracts()) ? `<button class="gold-btn" onclick="activateContract('${r.id}')">تفعيل العقد</button> ` : '';
     const invoiceBtn = (st==='active' || st==='activated') ? `<button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> ` : '';
-    return `${renewBtn}${requestBtn}${approveBtn}${activateBtn}<button class="ghost" onclick="contractDocument('${r.id}')">العقد</button> ${invoiceBtn}<button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
+    const cycleBtn = `<button class="ghost" onclick="LQ_CONTRACT_LIFECYCLE&&LQ_CONTRACT_LIFECYCLE.openForContract('${r.id}')">دورة العقد</button> `;
+    const locked = Number(r.locked||0)===1 || ['approved','active','activated','signed'].includes(st);
+    const editBtn = locked
+      ? `<button class="ghost" onclick="LQ_CONTRACT_LIFECYCLE&&LQ_CONTRACT_LIFECYCLE.openForContract('${r.id}')">تعديل بإصدار</button> `
+      : `<button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> `;
+    return `${renewBtn}${requestBtn}${approveBtn}${activateBtn}${cycleBtn}<button class="ghost" onclick="contractDocument('${r.id}')">العقد</button> ${invoiceBtn}${editBtn}<button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
   });
 }
 function renderInvoices(){
@@ -3335,6 +3340,14 @@ function editRecord(table,id){
   const cfg = EDIT_CONFIG[table];
   const row = byId(table,id);
   if(!cfg || !row.id){ toastNotice('لم يتم العثور على السجل'); return; }
+  if(table==='contracts'){
+    const st=String(row.status||'').toLowerCase();
+    if(Number(row.locked||0)===1 || ['approved','active','activated','signed'].includes(st)){
+      toastNotice('العقد مغلق — أي تعديل عبر إصدار جديد من دورة العقد');
+      if(window.LQ_CONTRACT_LIFECYCLE) window.LQ_CONTRACT_LIFECYCLE.openForContract(id);
+      return;
+    }
+  }
   const fields = cfg.fields.map(([key,label,type])=>{
     const value = key === 'password' ? '' : (row[key] ?? '');
     const options = editOptions(key,row,table);

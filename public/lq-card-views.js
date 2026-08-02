@@ -174,6 +174,7 @@
             ${requestBtn}
             ${approveBtn}
             ${activateBtn}
+            <button class="ghost" onclick="LQ_CONTRACT_LIFECYCLE&&LQ_CONTRACT_LIFECYCLE.openForContract('${r.id}')">دورة العقد</button>
             <button class="ghost" onclick="contractDocument('${r.id}')">العقد</button>
             ${invoiceBtn}
             <button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button>

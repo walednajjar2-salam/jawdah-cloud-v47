@@ -386,10 +386,17 @@
       <tr><td>الإصدار</td><td>${esc(edition)}</td></tr>
     </table>`);
 
+    const handover = (() => { try { return typeof c.handover_json === "string" ? JSON.parse(c.handover_json || "{}") : (c.handover_json || {}); } catch (_e) { return {}; } })();
+    const furniture = (() => { try { return typeof c.furniture_keys_json === "string" ? JSON.parse(c.furniture_keys_json || "{}") : (c.furniture_keys_json || {}); } catch (_e) { return {}; } })();
+    const meters = (() => { try { return typeof c.meter_readings_json === "string" ? JSON.parse(c.meter_readings_json || "{}") : (c.meter_readings_json || {}); } catch (_e) { return {}; } })();
+    const photos = (() => { try { return typeof c.condition_photos_json === "string" ? JSON.parse(c.condition_photos_json || "[]") : (c.condition_photos_json || []); } catch (_e) { return []; } })();
+    const schedule = (() => { try { return typeof c.payment_schedule_json === "string" ? JSON.parse(c.payment_schedule_json || "[]") : (c.payment_schedule_json || []); } catch (_e) { return []; } })();
+    const signatures = (() => { try { return typeof c.signatures_json === "string" ? JSON.parse(c.signatures_json || "{}") : (c.signatures_json || {}); } catch (_e) { return {}; } })();
+
     // Group articles into pages of ~4
     const articleChunks = [];
     for (let i = 0; i < articles.length; i += 4) articleChunks.push(articles.slice(i, i + 4));
-    const totalPages = 3 + articleChunks.length + 1; // cover+parties+finance + articles + annex/sign
+    const totalPages = 3 + articleChunks.length + 3; // cover+parties+finance + articles + dossier + schedule + annex/sign
 
     let page = 1;
     const pages = [];
@@ -479,16 +486,75 @@
         totalPages,
         contractNo,
         edition,
+        `<h3 class="lq-lease-h">محضر الاستلام · الأثاث والمفاتيح · العدادات · صور الحالة</h3>
+        <div class="lq-doc-box"><h3>محضر استلام الوحدة</h3><p>
+          تاريخ التسليم: ${esc(cleanText(handover.delivered_at, "—"))}<br>
+          الحالة عند التسليم: ${esc(cleanText(handover.condition, "—"))}<br>
+          سلّم بواسطة: ${esc(cleanText(handover.delivered_by, "—"))}<br>
+          استلم بواسطة: ${esc(cleanText(handover.received_by, "—"))}<br>
+          ملاحظات: ${esc(cleanText(handover.notes, "—"))}
+        </p></div>
+        <div class="lq-doc-grid">
+          <div class="lq-doc-box"><h3>قائمة الأثاث والمفاتيح</h3><p>
+            عدد المفاتيح: ${esc(String(furniture.keys_count ?? "—"))}<br>
+            بطاقات الدخول: ${esc(String(furniture.access_cards ?? "—"))}<br>
+            العناصر:<br>${(Array.isArray(furniture.items) && furniture.items.length ? furniture.items : ["—"]).map((x) => `• ${esc(cleanText(x, "—"))}`).join("<br>")}
+          </p></div>
+          <div class="lq-doc-box"><h3>قراءات العدادات</h3><p>
+            الكهرباء: ${esc(cleanText(meters.electricity, "—"))}<br>
+            المياه: ${esc(cleanText(meters.water, "—"))}<br>
+            الغاز: ${esc(cleanText(meters.gas, "—"))}<br>
+            تاريخ القراءة: ${esc(cleanText(meters.read_at, "—"))}
+          </p></div>
+        </div>
+        <div class="lq-doc-box"><h3>صور حالة الوحدة</h3><p>${
+          Array.isArray(photos) && photos.length
+            ? photos.map((p, i) => `${i + 1}. ${esc(cleanText(typeof p === "string" ? p : p.url || p.name, "صورة"))}`).join("<br>")
+            : "تُرفق صور مؤرخة ضمن ملف العقد وتعد جزءًا لا يتجزأ منه."
+        }</p></div>`
+      )
+    );
+
+    pages.push(
+      pageShell(
+        page++,
+        totalPages,
+        contractNo,
+        edition,
+        `<h3 class="lq-lease-h">جدول الدفعات والاستحقاقات</h3>
+        <table class="lq-doc-table">
+          <thead><tr><th>#</th><th>تاريخ الاستحقاق</th><th>المبلغ</th><th>البيان</th></tr></thead>
+          <tbody>${
+            Array.isArray(schedule) && schedule.length
+              ? schedule
+                  .map(
+                    (r) =>
+                      `<tr><td class="num">${esc(String(r.seq || ""))}</td><td>${esc(cleanText(r.due_date, "—"))}</td><td class="num">${money(r.amount)}</td><td>${esc(cleanText(r.label, "استحقاق إيجار"))}</td></tr>`
+                  )
+                  .join("")
+              : `<tr><td colspan="4">يُنشأ جدول الاستحقاقات عند اعتماد البيانات المالية / التفعيل.</td></tr>`
+          }</tbody>
+        </table>
+        <p class="mini">بعد التفعيل تُحوَّل هذه الاستحقاقات إلى فواتير في النظام تلقائيًا.</p>`
+      )
+    );
+
+    pages.push(
+      pageShell(
+        page++,
+        totalPages,
+        contractNo,
+        edition,
         `<h3 class="lq-lease-h">الملاحق الإلزامية</h3>
         <p class="mini">لا يُعتبر العقد مكتملًا دون الملاحق التالية:</p>
         <ol class="lq-lease-annex">${annexes.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>
-        <h3 class="lq-lease-h" style="margin-top:18px">التوقيعات</h3>
+        <h3 class="lq-lease-h" style="margin-top:18px">صفحة التوقيعات</h3>
         <div class="lq-doc-sign lq-lease-sign">
-          <div><strong>الطرف الأول / المؤجر أو ممثله</strong><br>${esc(COMPANY.ar)}<br><br>التوقيع: __________<br>التاريخ: __________</div>
-          <div class="lq-doc-seal">الختم الرسمي<br>رمز التحقق<br>${esc(edition)}</div>
-          <div><strong>الطرف الثاني / المستأجر</strong><br>${esc(cleanText(client.name, "—"))}<br><br>التوقيع: __________<br>أقر بأنني قرأت العقد وفهمته</div>
+          <div><strong>الطرف الأول / المؤجر أو ممثله</strong><br>${esc(cleanText(signatures.company_name, COMPANY.ar))}<br><br>التوقيع: __________<br>التاريخ: ${esc(cleanText(signatures.company_signed_at || c.signed_at, "__________"))}</div>
+          <div class="lq-doc-seal">الختم الرسمي<br>رمز التحقق<br>${esc(edition)}<br>إصدار العقد: ${esc(String(c.edition_no || 1))}</div>
+          <div><strong>الطرف الثاني / المستأجر</strong><br>${esc(cleanText(signatures.tenant_name || client.name, "—"))}<br><br>التوقيع: __________<br>التاريخ: ${esc(cleanText(signatures.tenant_signed_at || c.signed_at, "__________"))}<br>أقر بأنني قرأت العقد وفهمته</div>
         </div>
-        <div class="lq-doc-box" style="margin-top:12px"><h3>الضامن (إن وجد)</h3><p>الاسم: __________ · التوقيع: __________ · التاريخ: __________</p></div>
+        <div class="lq-doc-box" style="margin-top:12px"><h3>الضامن (إن وجد)</h3><p>الاسم: ${esc(cleanText(signatures.guarantor_name, "__________"))} · التوقيع: __________ · التاريخ: ${esc(cleanText(signatures.guarantor_signed_at, "__________"))}</p></div>
         ${footerBlock()}`
       )
     );
