@@ -34,6 +34,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from lq_expand.offsite import offsite_config, push_offsite_backup
 from lq_expand import object_storage as lq_object_storage
+from lq_expand.lease_protected import (
+    LEASE_PROTECTED_VERSION,
+    MANDATORY_ANNEXES,
+    PROTECTED_LEASE_ARTICLES,
+    protected_terms_plain_text,
+)
 import lq_payroll_import
 import lq_postgres
 import lq_business_catalog
@@ -3364,9 +3370,15 @@ def build_invoice_row(
     vat_rate: float | None = None,
     source_invoice_id: str | None = None,
 ) -> Dict[str, Any]:
+    # Residential ordinary rent is VAT-exempt unless explicitly overridden.
+    if vat_rate is None:
+        vat_rate = vat_rate_for_contract(contract)
     tax = invoice_tax_breakdown(subtotal, vat_rate)
     invoice_no, seq_year, seq_no = next_invoice_no(db)
     description_text = str(description or "").strip() or contract_invoice_description(db, contract, due_date)
+    treatment = tax_treatment_label(tax["vat_rate"], contract)
+    if "المعاملة الضريبية" not in description_text:
+        description_text = f"{description_text} — المعاملة الضريبية: {treatment}"
     return {
         "id": uid("INV"),
         "invoice_no": invoice_no,
@@ -3525,13 +3537,54 @@ def contract_renewal_stats(db: sqlite3.Connection) -> Dict[str, int]:
 
 
 def default_legal_terms() -> str:
-    return (
-        "The tenant shall pay rent on or before the due date. The company may apply late fees after the grace period. "
-        "The tenant is responsible for damages caused by misuse, unauthorized alterations, lost keys, and violations of building rules. "
-        "The unit must be returned in good condition, excluding normal wear. Subleasing is not allowed without written approval. "
-        "Utilities, services, and maintenance responsibilities follow the signed contract and applicable laws in the Sultanate of Oman. "
-        "This contract protects Launch Quality LLC as the property management and leasing company while preserving the tenant's lawful rights."
-    )
+    """Protected Oman lease terms. Print/preview always expands the full 33 articles."""
+    return protected_terms_plain_text()
+
+
+def _contract_text_blob(contract: Any) -> str:
+    parts: List[str] = []
+    for key in ("contract_type", "notes", "unit_details", "payment_cycle"):
+        try:
+            if hasattr(contract, "keys") and key in contract.keys():
+                parts.append(str(contract[key] or ""))
+            else:
+                parts.append(str(getattr(contract, key, "") or ""))
+        except Exception:
+            continue
+    return " ".join(parts).lower()
+
+
+def vat_rate_for_contract(contract: Any) -> float:
+    """Residential ordinary rent is VAT-exempt; commercial/short-stay may be taxable at 5%."""
+    blob = _contract_text_blob(contract)
+    if re.search(
+        r"commercial|تجاري|office|مكتبي|short[\s_-]?stay|إقامة قصيرة|قصير الأمد|hotel|hospit|ضيافة",
+        blob,
+    ):
+        return VAT_RATE
+    return 0.0
+
+
+def tax_treatment_label(rate: float, contract: Any = None) -> str:
+    if float(rate or 0) <= 0:
+        return "معفى من ضريبة القيمة المضافة (إيجار سكني)"
+    return f"خاضع لضريبة القيمة المضافة بنسبة {int(round(float(rate) * 100))}%"
+
+
+def sanitize_doc_text(value: Any, fallback: str = "—") -> str:
+    """Strip code-like leakage from values that appear on printed contracts/invoices."""
+    text = str(value if value is not None else "").strip()
+    if not text:
+        return fallback
+    if re.search(
+        r"\b(function|const|let|var|undefined|null|NaN|true|false|window\.|document\.|Jawdah|console\.|typeof|=>|</?script|onclick=|onerror=)\b",
+        text,
+        re.I,
+    ):
+        return fallback
+    if re.match(r"^\s*[{[]", text) and re.search(r"[}\]]\s*$", text):
+        return fallback
+    return text
 
 
 def active_contract_exists_for_property(db: sqlite3.Connection, property_id: str, exclude_contract_id: str = "") -> bool:
@@ -9010,6 +9063,7 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
         self.send_json({"ok": True, "status": final_status, "ended_at": ended_at})
 
     def api_contract_template(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        """Fallback multi-page protected lease HTML (matches frontend print branding)."""
         data = self.read_json()
         contract_id = data.get("contract_id")
         c = db.execute("SELECT * FROM contracts WHERE id=?", (contract_id,)).fetchone()
@@ -9023,125 +9077,167 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
             attachments = []
         duration_days = max(0, (datetime.fromisoformat(c["end_date"]).date() - datetime.fromisoformat(c["start_date"]).date()).days + 1)
         duration_months = contract_duration_months(c["start_date"], c["end_date"])
-        attachment_html = "".join(
-            f"<li>{html_escape(a.get('name', 'Attachment'))} - {html_escape(a.get('type', 'file'))} - by {html_escape(a.get('uploaded_by', 'system'))} - {html_escape(a.get('uploaded_at', ''))}</li>"
-            for a in attachments if isinstance(a, dict)
-        ) or "<li>لا توجد مرفقات</li>"
-        deposit_required = float(c["deposit_amount"] or 0)
-        inv_rows = db.execute("SELECT description, paid_amount FROM invoices WHERE contract_id=?", (contract_id,)).fetchall()
-        deposit_pool = [
-            r for r in inv_rows
-            if deposit_required > 0 and any(
-                token in str(r["description"] or "").lower()
-                for token in ("تأمين", "deposit", "security", "امان")
-            )
-        ]
-        pool = deposit_pool if deposit_pool else inv_rows
-        deposit_paid = sum(float(r["paid_amount"] or 0) for r in pool)
-        if int(c["deposit_received"] or 0):
-            deposit_label = "تم استلام التأمين المالي"
-            deposit_badge = "ok"
-            deposit_paid = float(c["deposit_received_amount"] or deposit_paid)
-        elif deposit_required <= 0:
-            deposit_label = "لا يوجد تأمين مالي"
-            deposit_badge = "ok"
-        elif deposit_paid >= deposit_required:
-            deposit_label = "تم استلام التأمين المالي"
-            deposit_badge = "ok"
-        else:
-            deposit_label = "لم يُستلم التأمين المالي بالكامل"
-            deposit_badge = "no"
-        client_email = html_escape(client["email"] if client else "")
-        client_national = html_escape(c["tenant_id_no"] or (client["national_id"] if client else ""))
-        tenant_nat = html_escape(c["tenant_nationality"] or "")
+        vat_rate = vat_rate_for_contract(c)
+        tax_label = tax_treatment_label(vat_rate, c)
+        annual = round(float(c["rent_amount"] or 0) * 12, 3)
         company_ar = "مشاريع جودة الانطلاقة للخدمات"
         company_en = "QUALITY OF LAUNCH PROJECTS LLC"
         owner_line = "يعقوب فاضل الخصيبي · Yaqoub Fadel Al-Khasibi"
         phones = "25225026 · GSM: 98203088 / 92120205 / 92269656"
         email = "jiwdat@gmail.com"
         addr = "نزوى — حي التراث الشمالي قرب الدوار"
+        contract_no = sanitize_doc_text(c["contract_no"] or c["id"])
+        edition = LEASE_PROTECTED_VERSION
+        client_name = sanitize_doc_text(client["name"] if client else "")
+        client_phone = sanitize_doc_text(client["phone"] if client else "")
+        client_email = sanitize_doc_text(client["email"] if client else "")
+        client_national = sanitize_doc_text(c["tenant_id_no"] or (client["national_id"] if client else ""))
+        tenant_nat = sanitize_doc_text(c["tenant_nationality"] or "")
+        prop_name = sanitize_doc_text(prop["name"] if prop else "")
+        unit_details = sanitize_doc_text(c["unit_details"] or (prop["location"] if prop else ""))
+        prop_loc = sanitize_doc_text(prop["location"] if prop else "")
+        contract_type = sanitize_doc_text(c["contract_type"] or "سكني")
+        attachment_items = "".join(
+            f"<li>{html_escape(sanitize_doc_text(a.get('name', 'مرفق')))} — {html_escape(sanitize_doc_text(a.get('type', 'ملف')))}</li>"
+            for a in attachments if isinstance(a, dict)
+        ) or "<li>لا توجد مرفقات مسجّلة — تُستكمل ضمن الملاحق الإلزامية</li>"
+
+        article_chunks = [PROTECTED_LEASE_ARTICLES[i:i + 4] for i in range(0, len(PROTECTED_LEASE_ARTICLES), 4)]
+        total_pages = 3 + len(article_chunks) + 1
+        annex_html = "".join(f"<li>{html_escape(x)}</li>" for x in MANDATORY_ANNEXES)
+
+        def page_shell(page_no: int, inner: str) -> str:
+            return f"""
+<section class="lq-lease-page">
+  <div class="lq-lease-page-top">
+    <span>رقم العقد: {html_escape(contract_no)}</span>
+    <span>الإصدار: {html_escape(edition)}</span>
+    <span>صفحة {page_no} من {total_pages}</span>
+  </div>
+  {inner}
+  <div class="lq-lease-page-foot">
+    <span>توقيع مختصر للمستأجر: __________</span>
+    <span>توقيع مختصر للشركة: __________</span>
+  </div>
+</section>"""
+
+        pages = []
+        page = 1
+        pages.append(page_shell(page, f"""
+  <div class="lq-doc-head">
+    <div class="lq-doc-brand">
+      <img src="/assets/brand-logo-gold.png?v=12" alt="{html_escape(company_en)}">
+      <div>
+        <h1>{html_escape(company_ar)}</h1>
+        <h2>{html_escape(company_en)}</h2>
+        <p>{html_escape(owner_line)}<br>إدارة العقارات والضيافة · Real Estate & Hospitality Management<br>
+        س.ت: 1466316 · الرمز البريدي: 611 · {html_escape(addr)} · سلطنة عُمان<br>
+        {html_escape(email)} · هاتف: {html_escape(phones)}</p>
+      </div>
+    </div>
+    <div class="lq-doc-meta">
+      <span class="lq-doc-type">LEASE CONTRACT</span>
+      <small class="lq-doc-type-ar">عقد إيجار</small>
+      <table>
+        <tr><td>رقم العقد</td><td>{html_escape(contract_no)}</td></tr>
+        <tr><td>التاريخ</td><td>{html_escape(sanitize_doc_text(c['start_date']))}</td></tr>
+        <tr><td>الحالة</td><td>{html_escape(sanitize_doc_text(c['status']))}</td></tr>
+        <tr><td>الإصدار</td><td>{html_escape(edition)}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="lq-doc-banner" aria-hidden="true"></div>
+  <div class="lq-lease-cover">
+    <h2>عقد إيجار محمي</h2>
+    <p class="mini">{html_escape(company_ar)} · {html_escape(company_en)}</p>
+    <p>هذا العقد متعدد الصفحات ويتضمن الشروط العامة الكاملة والملاحق الإلزامية. لا يُعتد بنسخة مختصرة من الشروط.</p>
+    <div class="lq-doc-grid" style="margin-top:18px">
+      <div class="lq-doc-box"><h3>الطرف الأول</h3><p><strong>{html_escape(company_ar)}</strong><br>مدير ومشغل ومحصّل للأجرة<br>س.ت 1466316<br>{html_escape(addr)}</p></div>
+      <div class="lq-doc-box"><h3>الطرف الثاني — المستأجر</h3><p><strong>{html_escape(client_name)}</strong><br>هوية/جواز: {html_escape(client_national)}<br>هاتف: {html_escape(client_phone)}<br>بريد: {html_escape(client_email)}</p></div>
+    </div>
+  </div>
+"""))
+        page += 1
+        pages.append(page_shell(page, f"""
+  <h3 class="lq-lease-h">بيانات الأطراف والعقار</h3>
+  <div class="lq-doc-grid">
+    <div class="lq-doc-box"><h3>بيانات المستأجر · Tenant</h3><p><strong>{html_escape(client_name)}</strong><br>
+    هاتف: {html_escape(client_phone)}<br>بريد: {html_escape(client_email)}<br>
+    هوية / جواز: {html_escape(client_national)}<br>جنسية: {html_escape(tenant_nat)}</p></div>
+    <div class="lq-doc-box"><h3>وصف العقار</h3><p>
+      المبنى/الوحدة: {html_escape(prop_name)}<br>
+      التفاصيل: {html_escape(unit_details)}<br>
+      الموقع: {html_escape(prop_loc)}<br>
+      نوع الاستعمال: {html_escape(contract_type)}<br>
+      حالة التسليم: تُثبت بمحضر الاستلام والصور المؤرخة المرفقة.
+    </p></div>
+  </div>
+  <div class="lq-doc-box"><h3>إقرار المستأجر</h3><p>يقر المستأجر بصحة جميع بياناته ومستنداته، وأن الإشعارات والمدفوعات والتسليم الصادرة عبر مشاريع جودة الانطلاقة صادرة عن الجهة المخولة بإدارة العقار.</p></div>
+"""))
+        page += 1
+        pages.append(page_shell(page, f"""
+  <h3 class="lq-lease-h">البيانات المالية والمدة</h3>
+  <table class="lq-doc-table">
+    <tbody>
+      <tr><td>بداية العقد</td><td>{html_escape(sanitize_doc_text(c['start_date']))}</td><td>نهاية العقد</td><td>{html_escape(sanitize_doc_text(c['end_date']))}</td></tr>
+      <tr><td>المدة</td><td>{duration_months} شهرًا تقريبًا / {duration_days} يومًا</td><td>دورة الدفع</td><td>{html_escape(sanitize_doc_text(c['payment_cycle'] or 'شهري'))}</td></tr>
+      <tr><td>الأجرة الشهرية</td><td>{fmt_omr(c['rent_amount'])}</td><td>الإجمالي السنوي</td><td>{fmt_omr(annual)}</td></tr>
+      <tr><td>التأمين</td><td>{fmt_omr(c['deposit_amount'])}</td><td>مهلة السداد</td><td>{html_escape(sanitize_doc_text(c['grace_days'] or '5'))} يومًا</td></tr>
+      <tr><td colspan="2">المعاملة الضريبية</td><td colspan="2"><strong>{html_escape(tax_label)}</strong></td></tr>
+    </tbody>
+  </table>
+  <div class="lq-doc-box"><h3>قاعدة الدفع</h3><p>لا يُعتبر الدفع صحيحًا إلا بعد ظهوره في حساب الشركة أو إصدار سند قبض رسمي من النظام. ولا يُعتد بأي دفع نقدي دون سند رسمي.</p></div>
+"""))
+        for chunk in article_chunks:
+            page += 1
+            arts = "".join(
+                f'<article class="lq-lease-article"><h4>المادة {a["n"]} — {html_escape(a["title"])}</h4><p>{html_escape(a["body"])}</p></article>'
+                for a in chunk
+            )
+            pages.append(page_shell(page, f'<h3 class="lq-lease-h">الشروط العامة</h3>{arts}'))
+        page += 1
+        pages.append(page_shell(page, f"""
+  <h3 class="lq-lease-h">الملاحق الإلزامية</h3>
+  <p class="mini">لا يُعتبر العقد مكتملًا دون الملاحق التالية:</p>
+  <ol class="lq-lease-annex">{annex_html}</ol>
+  <div class="lq-doc-box" style="margin-top:12px"><h3>المرفقات المسجّلة</h3><ul>{attachment_items}</ul></div>
+  <h3 class="lq-lease-h" style="margin-top:18px">التوقيعات</h3>
+  <div class="lq-doc-sign lq-lease-sign">
+    <div><strong>الطرف الأول / المؤجر أو ممثله</strong><br>{html_escape(company_ar)}<br><br>التوقيع: __________<br>التاريخ: __________</div>
+    <div class="lq-doc-seal">الختم الرسمي<br>رمز التحقق<br>{html_escape(edition)}</div>
+    <div><strong>الطرف الثاني / المستأجر</strong><br>{html_escape(client_name)}<br><br>التوقيع: __________<br>أقر بأنني قرأت العقد وفهمته</div>
+  </div>
+  <div class="lq-doc-box" style="margin-top:12px"><h3>الضامن (إن وجد)</h3><p>الاسم: __________ · التوقيع: __________ · التاريخ: __________</p></div>
+  <div class="lq-doc-footer">{html_escape(company_ar)} · {html_escape(company_en)} · س.ت 1466316 · {html_escape(email)} · {html_escape(phones)}</div>
+  <div class="lq-doc-contactbar">
+    <span>☎ 25225026</span>
+    <span>WhatsApp 98203088</span>
+    <span>✉ {html_escape(email)}</span>
+    <span>{html_escape(addr)}</span>
+  </div>
+"""))
+
         html = f"""<!doctype html>
-<html lang="ar" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>{html_escape(c['contract_no'] or c['id'])} - {company_en}</title>
+<title>{html_escape(contract_no)} - {html_escape(company_en)}</title>
+<link rel="stylesheet" href="/lq-print.css?v=lease3">
 <style>
-  @page{{size:A4;margin:14mm}}
-  *{{box-sizing:border-box}}
-  body{{font-family:Tajawal,Segoe UI,Arial,sans-serif;margin:0;color:#111827;background:#fff;line-height:1.7}}
-  .sheet{{max-width:980px;margin:0 auto;padding:22px}}
-  .hero{{border-bottom:4px solid #c9a227;padding-bottom:16px;margin-bottom:18px;display:grid;grid-template-columns:110px 1fr;gap:18px;align-items:start}}
-  .hero img{{width:96px;height:96px;object-fit:contain}}
-  .hero h1{{margin:0;color:#0b1220;font-size:24px}}
-  .hero h2{{margin:4px 0 0;color:#8f631b;font-size:15px}}
-  .hero p{{margin:6px 0;color:#4b5563;font-size:13px;line-height:1.65}}
-  .badge{{display:inline-block;border:1px solid #c9a227;border-radius:999px;padding:5px 12px;color:#8f631b;margin-top:8px;font-weight:800}}
-  .grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0}}
-  .box{{border:1px solid #e5d39a;border-radius:14px;padding:14px;background:#fffdf7}}
-  .box h3{{margin:0 0 8px;color:#8f631b;font-size:13px}}
-  table{{width:100%;border-collapse:collapse;margin:16px 0;direction:ltr}}
-  th,td{{border:1px solid #e5e7eb;padding:10px;text-align:right;vertical-align:top}}
-  th{{background:#0b1220;color:#f5d76e}}
-  .terms{{white-space:pre-wrap}}
-  .dep{{display:inline-block;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800;margin-top:8px}}
-  .dep.ok{{background:#ecfdf5;color:#047857;border:1px solid #6ee7b7}}
-  .dep.no{{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}}
-  .signatures{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}}
-  .sig{{border:1px solid #d8b15b;border-radius:14px;min-height:110px;padding:12px;background:#fff}}
-  .actions{{position:sticky;top:0;background:#fff;padding:10px 0;margin-bottom:8px;text-align:left}}
-  button{{border:0;border-radius:12px;padding:10px 16px;font-weight:800;background:#0b1220;color:#f5d76e;cursor:pointer}}
-  .footer{{margin-top:18px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center}}
-  @media print{{.actions{{display:none}}.sheet{{padding:0}}}}
+  .actions{{position:sticky;top:0;background:#fff;padding:10px 0;margin-bottom:8px;text-align:left;z-index:2}}
+  .actions button{{border:0;border-radius:12px;padding:10px 16px;font-weight:800;background:#0b1220;color:#f5d76e;cursor:pointer}}
+  @media print{{.actions{{display:none!important}}}}
 </style>
 </head>
-<body>
-<div class="sheet">
-  <div class="actions"><button onclick="window.print()">طباعة / Print PDF</button></div>
-  <header class="hero">
-    <img src="/assets/brand-logo-gold.png?v=12" alt="{company_en}">
-    <div>
-      <h1>{company_ar}</h1>
-      <h2>{company_en}</h2>
-      <p>{owner_line}<br>إدارة العقارات والضيافة · Real Estate & Hospitality Management<br>
-      س.ت: 1466316 · الرمز البريدي: 611 · {addr} · سلطنة عُمان<br>
-      {email} · هاتف: {phones}</p>
-      <span class="badge">عقد إيجار · Lease Contract — {html_escape(c['contract_no'] or c['id'])}</span>
-    </div>
-  </header>
-  <section class="grid">
-    <div class="box"><h3>بيانات العميل · Client</h3><p><strong>{html_escape(client['name'] if client else '')}</strong><br>
-    هاتف: {html_escape(client['phone'] if client else '')}<br>
-    بريد: {client_email}<br>
-    هوية / سجل: {client_national}<br>
-    جنسية: {tenant_nat}</p></div>
-    <div class="box"><h3>العقار والوحدة · Property</h3><p>{html_escape(prop['name'] if prop else '')}<br>
-    {html_escape(c['unit_details'] or (prop['location'] if prop else ''))}<br>
-  الموقع: {html_escape(prop['location'] if prop else '')}</p></div>
-  </section>
-  <table>
-    <tr><th>بداية العقد</th><td>{html_escape(c['start_date'])}</td><th>نهاية العقد</th><td>{html_escape(c['end_date'])}</td></tr>
-    <tr><th>المدة</th><td>{duration_months} شهر / {duration_days} يوم</td><th>الحالة</th><td>{html_escape(c['status'])}</td></tr>
-    <tr><th>الإيجار الشهري</th><td>{fmt_omr(c['rent_amount'])}</td><th>دورة الدفع</th><td>{html_escape(c['payment_cycle'])}</td></tr>
-    <tr><th>غرامة التأخير</th><td>{fmt_omr(c['late_fee'])}</td><th>مهلة السداد</th><td>{html_escape(c['grace_days'])} يوم</td></tr>
-  </table>
-  <section class="box">
-    <h3>الشروط القانونية</h3>
-    <p class="terms">{html_escape(c['legal_terms'] or default_legal_terms())}</p>
-  </section>
-  <section class="box">
-    <h3>المرفقات</h3>
-    <ul>{attachment_html}</ul>
-  </section>
-  <section class="signatures">
-    <div class="sig"><strong>توقيع المستأجر</strong></div>
-    <div class="sig"><strong>توقيع الشركة</strong><br>{html_escape(c['company_signatory'] or company_en)}</div>
-    <div class="sig"><strong>الختم</strong></div>
-  </section>
-  <div class="footer">{company_ar} · {company_en} · C.R. 1466316 · {email} · {phones}</div>
+<body class="lq-print-body">
+<div class="actions"><button type="button" onclick="window.print()">طباعة / Print PDF</button></div>
+<div class="lq-doc invoice-paper lq-print-paper lq-doc-lease">
+{''.join(pages)}
 </div>
 </body>
 </html>"""
-        self.send_json({"ok": True, "html": html})
+        self.send_json({"ok": True, "html": html, "edition": edition, "tax_treatment": tax_label})
+
 
     def api_bank_reconciliation_preview(self, db: sqlite3.Connection, query: str) -> None:
         params = urllib.parse.parse_qs(query or "")

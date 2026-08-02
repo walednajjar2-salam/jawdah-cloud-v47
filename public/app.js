@@ -3463,7 +3463,7 @@ function printContractDocument(){
   const body = $('#contractPreview')?.innerHTML || '';
   if(!body.trim()) return toastNotice('لا يوجد عقد للمعاينة');
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><title>Print Contract</title><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>Print Contract</title><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   const w = window.open('', '_blank', 'noopener,noreferrer');
   if(!w){
     showHtmlPreview('طباعة العقد', html, `contract-${Jawdah.contractForPrint?.contract_no||Jawdah.contractForPrint?.id||'file'}.html`);
@@ -3478,16 +3478,19 @@ function downloadContractHtml(){
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
   const body = $('#contractPreview')?.innerHTML || Jawdah.contractHtmlForPrint || '';
   if(!body.trim()) return toastNotice('لا يوجد عقد للتنزيل');
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   const no = Jawdah.contractForPrint?.contract_no || Jawdah.contractForPrint?.id || 'contract';
   downloadFile(`contract-${no}.html`, html, 'text/html');
 }
 async function copyContractTerms(){
-  const terms = String(Jawdah.contractForPrint?.legal_terms || '').trim();
+  const protectedTerms = window.LQ_LEASE_PROTECTED?.protectedTermsPlainText
+    ? window.LQ_LEASE_PROTECTED.protectedTermsPlainText()
+    : '';
+  const terms = String(protectedTerms || Jawdah.contractForPrint?.legal_terms || '').trim();
   if(!terms) return toastNotice('لا توجد شروط عقد لنسخها');
   try{
     await navigator.clipboard.writeText(terms);
-    toast('تم نسخ شروط العقد');
+    toast('تم نسخ شروط العقد المحمية كاملة');
   }catch(_){
     toastNotice('تعذر النسخ التلقائي — يمكن النسخ يدويًا');
   }
@@ -3496,7 +3499,7 @@ function openContractInNewWindow(){
   const body = $('#contractPreview')?.innerHTML || Jawdah.contractHtmlForPrint || '';
   if(!body.trim()) return toastNotice('لا يوجد عقد للعرض');
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   const w = window.open('', '_blank', 'noopener,noreferrer');
   if(!w) return toastNotice('تعذر فتح نافذة جديدة');
   w.document.write(html);
@@ -3538,14 +3541,14 @@ function printInvoice(id){
 function downloadInvoice(){
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
   const body=$('#invoicePreview').innerHTML;
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   downloadFile(`invoice-${Jawdah.invoiceForPrint?.invoice_no||'file'}.html`,html,'text/html');
 }
 function openInvoiceInNewWindow(){
   const body = $('#invoicePreview')?.innerHTML || '';
   if(!body.trim()) return toastNotice('لا توجد فاتورة للعرض');
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   const w = window.open('', '_blank', 'noopener,noreferrer');
   if(!w) return toastNotice('تعذر فتح نافذة جديدة');
   w.document.write(html);
