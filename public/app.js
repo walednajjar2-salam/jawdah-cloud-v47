@@ -67,7 +67,7 @@ const NAV_SAAS_ITEMS = [
 const PORTAL_NAV_IDS = {
   realestate: new Set([
     'dashboard','estate-platform','clients','contracts','invoices','receivables',
-    'maintenance','inventory','daily-ops','reports','messages','timeline','backup','properties'
+    'maintenance','inventory','daily-ops','reports','messages','timeline','backup','properties','approvals'
   ]),
   hospitality: new Set([
     'dashboard','hospitality-platform','clients','invoices','receivables',
@@ -307,7 +307,19 @@ function canManageUsersSection(){
 }
 function estateRolePermissions(role){
   const r = String(role||'').toLowerCase();
-  if(['owner','admin'].includes(r)) return new Set(['all']);
+  if(['owner','admin','deputy'].includes(r)) return new Set(['all']);
+  if(r==='manager'){
+    return new Set([
+      'estate_properties',
+      'estate_buildings',
+      'estate_apartments',
+      'estate_rooms',
+      'estate_accessories',
+      'estate_maintenance',
+      'estate_actions_convert',
+      'estate_actions_contract_create',
+    ]);
+  }
   if(r==='operations'){
     return new Set([
       'estate_properties',
@@ -331,6 +343,15 @@ function estateRolePermissions(role){
       'estate_actions_contract_close',
       'estate_actions_month_close',
       'estate_actions_pricing_edit',
+    ]);
+  }
+  if(r==='reception'){
+    return new Set([
+      'estate_properties:read',
+      'estate_buildings:read',
+      'estate_apartments:read',
+      'estate_rooms:read',
+      'estate_actions_convert',
     ]);
   }
   if(r==='maintenance'){

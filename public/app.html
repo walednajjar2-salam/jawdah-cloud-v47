@@ -39,12 +39,14 @@
   <link rel="stylesheet" href="app.css?v=portal9">
   <link rel="stylesheet" href="lq-shell.css?v=shell30">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" defer></script>
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
   <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref10">
   <link rel="stylesheet" href="lq-emergency-clean.css?v=ec14">
   <link rel="stylesheet" href="lq-edition-terrifying.css?v=td4">
   <link rel="stylesheet" href="lq-exec-theme.css?v=day2">
+  <link rel="stylesheet" href="lq-estate-tree.css?v=et4-icons-map">
   <link rel="stylesheet" href="lq-official-atmosphere.css?v=day3">
   <link rel="stylesheet" href="lq-brand-mark.css?v=day6">
   <link rel="stylesheet" href="lq-login-locked.css?v=day3">
@@ -523,27 +525,13 @@
       </section>
 
             <section id="sec-estate-platform" class="section">
-        <div class="lq-estate-nx" id="lqEstateNxBoot">
-          <header class="lq-estate-nx-head">
+        <div class="lq-et" id="lqEstateTreeBoot">
+          <header class="lq-et-top">
             <div>
-              <h3>منصة العقارات</h3>
-              <p class="mini">بنايات ← وحدات ← عقود ← صيانة · مبدأ نزوى المطوّر</p>
+              <h2>منصة العقارات</h2>
+              <p>جاري تحميل الشجرة الوظيفية…</p>
             </div>
           </header>
-          <div class="lq-estate-nx-stats" id="lqNxStats"></div>
-          <nav class="lq-estate-nx-modules" id="lqNxModules" aria-label="وحدات العمل">
-            <button type="button" data-mod="units" class="active">الوحدات</button>
-            <button type="button" data-mod="contracts">العقود</button>
-            <button type="button" data-mod="maint">الصيانة</button>
-          </nav>
-          <div class="lq-estate-nx-filters" style="padding:0 4px 10px">
-            <label class="mini">العقار / المحفظة
-              <select id="lqNxProperty"></select>
-            </label>
-          </div>
-          <div class="lq-estate-nx-buildings" id="lqNxBuildings"></div>
-          <div class="lq-estate-nx-toolbar" id="lqNxToolbar"></div>
-          <div class="lq-estate-nx-body" id="lqNxBody"><p class="mini">جاري تحميل منصة العقارات…</p></div>
         </div>
       </section>
 <section id="sec-accounting-platform" class="section">
@@ -928,8 +916,11 @@
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="lq-i18n.js?v=day6" defer></script>
-  <script src="app.js?v=estate-approvals-100" defer></script>
+  <script src="app.js?v=estate-command-ops" defer></script>
   <script src="lq-estate-nizwa-ux.js?v=nx3-approvals100" defer></script>
+  <script src="lq-estate-tree.js?v=et5-command-ops" defer></script>
+  <link rel="stylesheet" href="lq-estate-ops.css?v=ops1">
+  <script src="lq-estate-ops.js?v=ops1" defer></script>
   <script src="lq-exec-app.js?v=day3" defer></script>
   <script src="lq-edition-terrifying.js?v=finish70" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
