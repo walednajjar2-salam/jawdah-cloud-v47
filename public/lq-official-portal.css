@@ -88,7 +88,7 @@ body.lq-official-portal .op-choice{
   border-radius:18px;
   background:var(--lq-atm-panel);
   color:var(--lq-atm-text);
-  border:1px solid rgba(184,146,63,.28);
+  border:1px solid rgba(197,165,106,.32);
   box-shadow:var(--lq-atm-shadow);
   backdrop-filter:blur(10px);
   transition:transform .28s ease, border-color .28s ease, box-shadow .28s ease;
