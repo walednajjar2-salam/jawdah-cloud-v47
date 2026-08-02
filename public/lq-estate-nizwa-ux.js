@@ -719,7 +719,7 @@
         <button type="button" class="ghost" id="nxUClose">إغلاق</button>
         ${
           String(row.status || "").toLowerCase() === "reserved" && typeof canEstateConvertReservation === "function" && canEstateConvertReservation()
-            ? `<button type="button" class="ghost" id="nxUConvert">تحويل الحجز</button>`
+            ? `<button type="button" class="ghost" id="nxUConvert">تحويل إلى مسودة عقد</button><button type="button" class="danger" id="nxUCancelRes">إلغاء الحجز</button>`
             : ""
         }
         ${
@@ -732,6 +732,21 @@
       document.getElementById("nxUSave")?.addEventListener("click", () => saveUnit(entityType, entityId));
       document.getElementById("nxUConvert")?.addEventListener("click", () => {
         if (typeof convertEstateReservation === "function") convertEstateReservation(entityType, entityId);
+      });
+      document.getElementById("nxUCancelRes")?.addEventListener("click", async () => {
+        if (!confirm("إلغاء الحجز وإعادة الوحدة إلى شاغرة؟")) return;
+        try {
+          const res = await api("estate_cancel_reservation", {
+            method: "POST",
+            body: JSON.stringify({ entity_type: entityType, entity_id: entityId, note: "Cancelled from unit drawer" }),
+          });
+          toastOk(res.message || "تم الحفظ بنجاح");
+          await loadAll();
+          openUnitDrawer(entityType, entityId, "details");
+          render();
+        } catch (e) {
+          toastBad(e);
+        }
       });
       document.getElementById("nxUNewContract")?.addEventListener("click", () => createContractForUnit(entityType, entityId, row));
       document.getElementById("nxUTenant")?.addEventListener("change", async (e) => {

@@ -5145,6 +5145,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_autofill" and method == "GET":
                     user = self.require_user(db, "estate_apartments:read")
                     return None if not user else self.api_estate_autofill(db, user, query)
+                if parts[0] == "estate_client_dossier" and method == "GET":
+                    user = self.require_user(db, "clients:read")
+                    return None if not user else self.api_estate_client_dossier(db, user, query)
+                if parts[0] == "estate_building_summary" and method == "GET":
+                    user = self.require_user(db, "estate_apartments:read")
+                    return None if not user else self.api_estate_building_summary(db, user, query)
+                if parts[0] == "estate_cancel_reservation" and method == "POST":
+                    user = self.require_user(db, "estate_actions_convert")
+                    return None if not user else self.api_estate_cancel_reservation(db, user)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -8282,6 +8291,219 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         )
             db.commit()
             return self.send_json({"ok": True, "message": "تم الحفظ بنجاح"})
+
+    def api_estate_client_dossier(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        """Single client record linked to needs/viewings/contracts/payments/maintenance."""
+        params = urllib.parse.parse_qs(query or "")
+        client_id = str((params.get("client_id") or [""])[0] or "").strip()
+        if not client_id:
+            return self.send_json({"ok": False, "error": "client_id مطلوب"}, 400)
+        client = db.execute("SELECT * FROM clients WHERE id=?", (client_id,)).fetchone()
+        if not client:
+            return self.send_json({"ok": False, "error": "العميل غير موجود"}, 404)
+        try:
+            lifecycle = lq_foundation.sync_client_lifecycle_status(db, client_id)
+            db.commit()
+        except Exception:
+            lifecycle = str(client["lifecycle_status"] or lq_foundation.CLIENT_STATUS_PROSPECT)
+        needs = rows_to_dicts(db.execute("SELECT * FROM client_needs WHERE client_id=? ORDER BY created_at DESC", (client_id,)).fetchall()) if "client_needs" in TABLES else []
+        viewings = rows_to_dicts(db.execute("SELECT * FROM client_viewings WHERE client_id=? ORDER BY viewing_at DESC", (client_id,)).fetchall()) if "client_viewings" in TABLES else []
+        followups = rows_to_dicts(db.execute("SELECT * FROM client_followups WHERE client_id=? ORDER BY followup_at DESC", (client_id,)).fetchall()) if "client_followups" in TABLES else []
+        estate_contracts = rows_to_dicts(
+            db.execute("SELECT * FROM estate_contracts WHERE client_id=? ORDER BY created_at DESC", (client_id,)).fetchall()
+        )
+        legacy_contracts = rows_to_dicts(
+            db.execute("SELECT * FROM contracts WHERE client_id=? ORDER BY start_date DESC", (client_id,)).fetchall()
+        )
+        receipts = rows_to_dicts(
+            db.execute("SELECT * FROM payment_receipts WHERE client_id=? ORDER BY receipt_date DESC", (client_id,)).fetchall()
+        )
+        reservations = []
+        for table, et in (("estate_apartments", "apartment"), ("estate_rooms", "room")):
+            for u in db.execute(
+                f"SELECT * FROM {table} WHERE booked_client_id=? OR tenant_client_id=?",
+                (client_id, client_id),
+            ).fetchall():
+                reservations.append({"entity_type": et, **dict(u)})
+        maintenance = rows_to_dicts(
+            db.execute(
+                """
+                SELECT * FROM estate_maintenance
+                WHERE apartment_id IN (SELECT id FROM estate_apartments WHERE tenant_client_id=? OR booked_client_id=?)
+                   OR room_id IN (SELECT id FROM estate_rooms WHERE tenant_client_id=? OR booked_client_id=?)
+                ORDER BY maintenance_date DESC
+                """,
+                (client_id, client_id, client_id, client_id),
+            ).fetchall()
+        ) if "estate_maintenance" in TABLES else []
+        self.send_json(
+            {
+                "ok": True,
+                "client": dict(client),
+                "autofill": lq_foundation.client_autofill(client),
+                "lifecycle_status": lifecycle,
+                "lifecycle_label": lq_foundation.CLIENT_STATUS_LABELS.get(lifecycle, "عميل"),
+                "needs": needs,
+                "viewings": viewings,
+                "followups": followups,
+                "estate_contracts": estate_contracts,
+                "legacy_contracts": legacy_contracts,
+                "units": reservations,
+                "receipts": receipts,
+                "maintenance": maintenance,
+            }
+        )
+
+    def api_estate_building_summary(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        building_id = str((params.get("building_id") or [""])[0] or "").strip()
+        if not building_id:
+            return self.send_json({"ok": False, "error": "building_id مطلوب"}, 400)
+        building = db.execute("SELECT * FROM estate_buildings WHERE id=?", (building_id,)).fetchone()
+        if not building:
+            return self.send_json({"ok": False, "error": "البناية غير موجودة"}, 404)
+        apts = rows_to_dicts(db.execute("SELECT * FROM estate_apartments WHERE building_id=?", (building_id,)).fetchall())
+        rooms = rows_to_dicts(db.execute("SELECT * FROM estate_rooms WHERE building_id=?", (building_id,)).fetchall())
+        units = [{"entity_type": "apartment", **a} for a in apts] + [{"entity_type": "room", **r} for r in rooms]
+
+        def by_status(status: str) -> List[Dict[str, Any]]:
+            return [u for u in units if str(u.get("status") or "").lower() == status]
+
+        unit_ids_apt = [a["id"] for a in apts]
+        unit_ids_room = [r["id"] for r in rooms]
+        contracts: List[Dict[str, Any]] = []
+        if unit_ids_apt or unit_ids_room:
+            q_parts = []
+            args: List[Any] = []
+            if unit_ids_apt:
+                marks = ",".join("?" for _ in unit_ids_apt)
+                q_parts.append(f"(entity_type='apartment' AND entity_id IN ({marks}))")
+                args.extend(unit_ids_apt)
+            if unit_ids_room:
+                marks = ",".join("?" for _ in unit_ids_room)
+                q_parts.append(f"(entity_type='room' AND entity_id IN ({marks}))")
+                args.extend(unit_ids_room)
+            contracts = rows_to_dicts(
+                db.execute(
+                    f"SELECT * FROM estate_contracts WHERE {' OR '.join(q_parts)} ORDER BY created_at DESC",
+                    args,
+                ).fetchall()
+            )
+        contract_ids = [c["id"] for c in contracts]
+        invoices: List[Dict[str, Any]] = []
+        if contract_ids:
+            marks = ",".join("?" for _ in contract_ids)
+            invoices = rows_to_dicts(
+                db.execute(
+                    f"SELECT * FROM estate_contract_invoices WHERE contract_id IN ({marks})",
+                    contract_ids,
+                ).fetchall()
+            )
+        collected = round(sum(float(i.get("paid_amount") or 0) for i in invoices), 3)
+        billed = round(sum(float(i.get("amount") or 0) for i in invoices), 3)
+        overdue = round(
+            sum(
+                max(0.0, float(i.get("amount") or 0) - float(i.get("paid_amount") or 0))
+                for i in invoices
+                if str(i.get("status") or "").lower() not in ("paid", "cancelled")
+                and str(i.get("due_date") or "") <= today()
+            ),
+            3,
+        )
+        maint_cost = 0.0
+        try:
+            row = db.execute(
+                "SELECT COALESCE(SUM(total_cost),0) AS c FROM estate_maintenance WHERE building_id=?",
+                (building_id,),
+            ).fetchone()
+            maint_cost = float(row["c"] if row else 0)
+        except Exception:
+            maint_cost = 0.0
+        total_units = len(units) or 1
+        occupied = len(by_status("occupied"))
+        occupancy = round((occupied / total_units) * 100, 1) if units else 0.0
+        current_clients = []
+        for u in by_status("occupied") + by_status("reserved"):
+            cid = str(u.get("tenant_client_id") or u.get("booked_client_id") or "").strip()
+            if cid and cid not in current_clients:
+                current_clients.append(cid)
+        self.send_json(
+            {
+                "ok": True,
+                "building": dict(building),
+                "units": units,
+                "counts": {
+                    "total": len(units),
+                    "occupied": occupied,
+                    "vacant": len(by_status("vacant")),
+                    "reserved": len(by_status("reserved")),
+                    "maintenance": len(by_status("maintenance")),
+                },
+                "contracts": contracts,
+                "current_client_ids": current_clients,
+                "collection": {"billed": billed, "collected": collected, "overdue": overdue},
+                "maintenance_cost": round(maint_cost, 3),
+                "occupancy_pct": occupancy,
+            }
+        )
+
+    def api_estate_cancel_reservation(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        entity_type = str(data.get("entity_type") or "").strip().lower()
+        entity_id = str(data.get("entity_id") or "").strip()
+        if entity_type not in ("apartment", "room") or not entity_id:
+            return self.send_json({"ok": False, "error": "entity_type و entity_id مطلوبان"}, 400)
+        table = estate_unit_table(entity_type)
+        row = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+        if not row:
+            return self.send_json({"ok": False, "error": "الوحدة غير موجودة"}, 404)
+        if str(row["status"] or "").strip().lower() != "reserved":
+            return self.send_json({"ok": False, "error": "يمكن إلغاء الحجز فقط للوحدات المحجوزة"}, 400)
+        # Keep occupied if another active contract exists.
+        active_row = db.execute(
+            """
+            SELECT id, contract_no, status FROM estate_contracts
+            WHERE lower(entity_type)=lower(?) AND entity_id=?
+              AND lower(status) IN ('active','approved')
+            LIMIT 1
+            """,
+            (entity_type, entity_id),
+        ).fetchone()
+        if active_row:
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "لا يمكن إلغاء الحجز لوجود عقد نشط/معتمد على الوحدة",
+                    "contract": dict(active_row),
+                },
+                409,
+            )
+        actor_name = str(user.get("name") or user.get("username") or "System")
+        set_estate_unit_status(
+            db,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            target_status="vacant",
+            actor_name=actor_name,
+            note=str(data.get("note") or "Reservation cancelled"),
+        )
+        db.execute(
+            f"""
+            UPDATE {table}
+            SET booked_client_id=NULL, booked_client_name=NULL, booked_client_phone=NULL,
+                booked_by_employee=NULL, reservation_start_date=NULL, reservation_end_date=NULL,
+                last_update=?
+            WHERE id=?
+            """,
+            (today(), entity_id),
+        )
+        db.execute(
+            "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Cancelled at ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
+            (now_iso(), entity_type, entity_id),
+        )
+        audit(db, user, "cancel_reservation", table, entity_id, "Reservation cancelled → vacant")
+        db.commit()
+        self.send_json({"ok": True, "entity_type": entity_type, "entity_id": entity_id, "status": "vacant", "message": "تم الحفظ بنجاح"})
 
     def api_estate_foundation_audit(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         integrity = lq_foundation.integrity_report(db)

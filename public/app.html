@@ -679,7 +679,7 @@
       </section>
 
       <section id="sec-clients" class="section">
-        <div class="card"><h3>إضافة عميل</h3><div class="form"><input id="cName" placeholder="اسم العميل"><input id="cPhone" placeholder="الهاتف"><input id="cEmail" placeholder="البريد"><input id="cNational" placeholder="الهوية/السجل"><label class="mini">صورة البطاقة<input id="cCardImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><img id="cCardPreview" class="hidden lq-prop-upload-preview" alt="معاينة البطاقة"><textarea id="cNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createClient()">حفظ العميل</button></div>
+        <div class="card"><h3>إضافة عميل</h3><div class="form"><input id="cName" placeholder="اسم العميل"><input id="cPhone" placeholder="الهاتف"><input id="cPhoneAlt" placeholder="هاتف إضافي"><input id="cEmail" placeholder="البريد"><input id="cNational" placeholder="الهوية/السجل"><input id="cNationality" placeholder="الجنسية"><input id="cAddress" placeholder="العنوان"><label class="mini">صورة البطاقة<input id="cCardImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><img id="cCardPreview" class="hidden lq-prop-upload-preview" alt="معاينة البطاقة"><textarea id="cNotes" placeholder="ملاحظات"></textarea></div><button class="gold-btn" onclick="createClient()">حفظ العميل</button></div>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('clients')">تصدير CSV</button><button class="ghost" onclick="exportFilteredClientsCsv()">تصدير نتائج الفلتر</button></div><div id="clientsTable"></div></div>
       </section>
 

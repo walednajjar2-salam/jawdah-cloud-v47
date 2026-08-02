@@ -3167,7 +3167,19 @@ async function createClient(){
     if(!String(cardFile.type||'').startsWith('image/')){ toastNotice('ملف بطاقة العميل يجب أن يكون صورة'); return; }
     idCardUpload = { image: await readFileAsDataUrl(cardFile), content_type: cardFile.type, name: cardFile.name };
   }
-  await saveNew('clients',{name,phone:val('cPhone'),email:val('cEmail'),national_id:val('cNational'),id_card_upload:idCardUpload,balance:0,notes:val('cNotes')});
+  await saveNew('clients',{
+    name,
+    phone:val('cPhone'),
+    phone_alt:val('cPhoneAlt'),
+    email:val('cEmail'),
+    national_id:val('cNational'),
+    nationality:val('cNationality'),
+    address:val('cAddress'),
+    id_card_upload:idCardUpload,
+    balance:0,
+    notes:val('cNotes'),
+    lifecycle_status:'prospect'
+  });
   if($('#cCardImage')) $('#cCardImage').value='';
   if($('#cCardPreview')){ $('#cCardPreview').classList.add('hidden'); $('#cCardPreview').removeAttribute('src'); }
 }
