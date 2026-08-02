@@ -829,6 +829,9 @@
             }
             if (st === "approved") acts += `<button type="button" class="gold-btn" data-c-act="activate" data-cid="${esc(c.id)}">تفعيل</button> `;
             if (st === "active") acts += `<button type="button" class="ghost" data-c-act="close" data-cid="${esc(c.id)}">إنهاء</button> `;
+            if (["approved", "active", "ended"].includes(st)) {
+              acts += `<button type="button" class="ghost" data-c-act="amend" data-cid="${esc(c.id)}">طلب تعديل</button> `;
+            }
             return `<div class="statement-row"><span><b>${esc(c.contract_no || c.id)}</b><br><small>${esc(c.start_date)} → ${esc(c.end_date)} · ${moneyVal(c.rent_amount)}</small></span><b>${esc(contractStatusAr(st))}</b></div><div class="toolbar" style="margin-bottom:10px">${acts}</div>`;
           })
           .join("") || `<p class="mini">لا عقود بعد لهذه الوحدة.</p>`;

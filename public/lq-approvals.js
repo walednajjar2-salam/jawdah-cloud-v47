@@ -21,6 +21,7 @@
         manual_invoice: "فاتورة يدوية كبيرة",
         payment: "تحصيل كبير",
         invoice: "فاتورة",
+        amendment: "طلب تعديل ملف مقفول",
       }[t] || t
     );
   }
@@ -35,6 +36,14 @@
       const i = (data.invoices || []).find((x) => x.id === row.entity_id);
       return i ? (i.invoice_no || i.id) : row.entity_id;
     }
+    if (row.entity === "estate_contracts") {
+      const c = (data.estate_contracts || []).find((x) => x.id === row.entity_id);
+      return c ? `عقد عقاري ${c.contract_no || c.id}` : row.entity_id;
+    }
+    if (row.entity === "estate_contract_invoices") {
+      const i = (data.estate_contract_invoices || []).find((x) => x.id === row.entity_id);
+      return i ? `فاتورة عقارية ${i.invoice_no || i.id}` : row.entity_id;
+    }
     return row.entity_id;
   }
 
@@ -43,12 +52,13 @@
     const m = typeof money === "function" ? money(th) : th;
     return `
       <div class="card lq-approvals-guide">
-        <h3>📋 شرح سير الاعتمادات — المرحلة 5</h3>
-        <p class="mini"><strong>ببساطة:</strong> بعض العمليات المالية لا تُنفَّذ مباشرة — تمر على المدير أو المحاسب أولاً.</p>
+        <h3>شرح سير الاعتمادات</h3>
+        <p class="mini"><strong>ببساطة:</strong> العمليات الحساسة لا تُنفَّذ مباشرة — تمر على المدير أو المحاسب أولاً.</p>
         <ol class="check-list" style="margin:12px 0">
-          <li><strong>عقد جديد:</strong> العمليات يجهّز العقد → يطلب اعتماد → المدير يوافق → يصبح العقد نشط وتُولَّد الفواتير.</li>
-          <li><strong>فاتورة كبيرة</strong> (فوق ${m}): لا تُصدر مباشرة → طلب اعتماد → بعد الموافقة تُنشأ الفاتورة.</li>
-          <li><strong>تحصيل كبير</strong> (فوق ${m}): لا يُسجَّل مباشرة → طلب اعتماد → بعد الموافقة يُسجَّل التحصيل والبنك.</li>
+          <li><strong>عقد جديد:</strong> مسودة → طلب اعتماد → اعتماد → تفعيل.</li>
+          <li><strong>فاتورة كبيرة</strong> (فوق ${m}): طلب اعتماد قبل الإنشاء.</li>
+          <li><strong>تحصيل كبير</strong> (فوق ${m}): طلب اعتماد قبل التسجيل.</li>
+          <li><strong>طلب تعديل ملف مقفول:</strong> عقد معتمد/فعّال/منتهٍ أو فاتورة مدفوعة — لا تعديل مباشر؛ إرسال طلب → مراجعة → تنفيذ → إغلاق.</li>
         </ol>
         <p class="mini linked-ok">كل خطوة تُسجَّل: من طلب، من وافق، ومتى.</p>
       </div>`;

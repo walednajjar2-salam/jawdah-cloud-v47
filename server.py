@@ -510,6 +510,20 @@ APPROVAL_DECIDE_ROLES = {
     "manual_invoice": {"admin", "owner", "accountant"},
     "invoice": {"admin", "owner", "accountant"},
     "payment": {"admin", "owner", "accountant"},
+    "amendment": {"admin", "owner", "accountant"},
+}
+
+ESTATE_CONTRACT_AMEND_FIELDS = {
+    "end_date",
+    "rent_amount",
+    "payment_cycle",
+    "notes",
+    "close_note",
+}
+ESTATE_INVOICE_AMEND_FIELDS = {
+    "amount",
+    "due_date",
+    "note",
 }
 
 
@@ -2529,8 +2543,89 @@ def pending_approvals_count(db: sqlite3.Connection) -> int:
     return int(db.execute("SELECT COUNT(*) FROM approvals WHERE lower(status)='pending'").fetchone()[0])
 
 
-def pending_approvals_count(db: sqlite3.Connection) -> int:
-    return int(db.execute("SELECT COUNT(*) FROM approvals WHERE lower(status)='pending'").fetchone()[0])
+def apply_estate_amendment(
+    db: sqlite3.Connection,
+    user: Dict[str, Any],
+    entity: str,
+    entity_id: str,
+    meta: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Apply approved amendment changes to a locked estate contract or paid invoice."""
+    changes = dict(meta.get("changes") or {})
+    if not changes:
+        raise ValueError("لا توجد قيم جديدة للتعديل")
+    entity = str(entity or "").strip()
+    entity_id = str(entity_id or "").strip()
+    if entity == "estate_contracts":
+        row = db.execute("SELECT * FROM estate_contracts WHERE id=?", (entity_id,)).fetchone()
+        if not row:
+            raise ValueError("العقد غير موجود")
+        st = str(row["status"] or "").strip().lower()
+        if st not in ("active", "ended", "approved"):
+            raise ValueError("يمكن تعديل العقود المعتمدة/الفعّالة/المنتهية فقط عبر طلب تعديل")
+        allowed = {k: changes[k] for k in changes if k in ESTATE_CONTRACT_AMEND_FIELDS}
+        if not allowed:
+            raise ValueError("لا حقول مسموحة في طلب التعديل")
+        if "rent_amount" in allowed:
+            allowed["rent_amount"] = round(float(allowed["rent_amount"] or 0), 3)
+            if allowed["rent_amount"] <= 0:
+                raise ValueError("قيمة الإيجار يجب أن تكون أكبر من صفر")
+        if "payment_cycle" in allowed:
+            cycle = str(allowed["payment_cycle"] or "").strip().lower()
+            if cycle not in ("monthly", "quarterly", "yearly", "once"):
+                raise ValueError("دورة الدفع غير صحيحة")
+            allowed["payment_cycle"] = cycle
+        if "end_date" in allowed:
+            try:
+                edt = datetime.fromisoformat(str(allowed["end_date"])).date()
+                sdt = datetime.fromisoformat(str(row["start_date"] or "")).date()
+            except Exception as exc:
+                raise ValueError("تاريخ النهاية غير صحيح") from exc
+            if edt < sdt:
+                raise ValueError("تاريخ النهاية قبل البداية")
+            allowed["end_date"] = edt.isoformat()
+        sets = ", ".join(f"{k}=?" for k in allowed)
+        db.execute(
+            f"UPDATE estate_contracts SET {sets} WHERE id=?",
+            [*[allowed[k] for k in allowed], entity_id],
+        )
+        audit(db, user, "execute_amendment", "estate_contracts", entity_id, json.dumps(allowed, ensure_ascii=False))
+        return {"entity": entity, "entity_id": entity_id, "applied": allowed}
+    if entity == "estate_contract_invoices":
+        row = db.execute("SELECT * FROM estate_contract_invoices WHERE id=?", (entity_id,)).fetchone()
+        if not row:
+            raise ValueError("الفاتورة غير موجودة")
+        paid = float(row["paid_amount"] or 0)
+        if paid <= 0 and str(row["status"] or "").strip().lower() not in ("paid", "partial"):
+            raise ValueError("طلب التعديل للفواتير المدفوعة/الجزئية فقط")
+        allowed = {k: changes[k] for k in changes if k in ESTATE_INVOICE_AMEND_FIELDS}
+        if not allowed:
+            raise ValueError("لا حقول مسموحة في طلب تعديل الفاتورة")
+        if "amount" in allowed:
+            allowed["amount"] = round(float(allowed["amount"] or 0), 3)
+            if allowed["amount"] <= 0:
+                raise ValueError("مبلغ الفاتورة يجب أن يكون أكبر من صفر")
+            if allowed["amount"] + 0.001 < paid:
+                raise ValueError("لا يمكن خفض مبلغ الفاتورة دون المبلغ المدفوع")
+            if paid >= allowed["amount"] - 0.001:
+                allowed["status"] = "Paid"
+            elif paid > 0:
+                allowed["status"] = "Partial"
+            else:
+                allowed["status"] = "Open"
+        if "due_date" in allowed:
+            try:
+                allowed["due_date"] = datetime.fromisoformat(str(allowed["due_date"])).date().isoformat()
+            except Exception as exc:
+                raise ValueError("تاريخ الاستحقاق غير صحيح") from exc
+        sets = ", ".join(f"{k}=?" for k in allowed)
+        db.execute(
+            f"UPDATE estate_contract_invoices SET {sets} WHERE id=?",
+            [*[allowed[k] for k in allowed], entity_id],
+        )
+        audit(db, user, "execute_amendment", "estate_contract_invoices", entity_id, json.dumps(allowed, ensure_ascii=False))
+        return {"entity": entity, "entity_id": entity_id, "applied": allowed}
+    raise ValueError("كيان غير مدعوم لطلب التعديل")
 
 
 def build_staff_sync_payload(db: sqlite3.Connection, user: Dict[str, Any]) -> Dict[str, Any]:
@@ -5215,6 +5310,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_cancel_reservation" and method == "POST":
                     user = self.require_user(db, "estate_actions_convert")
                     return None if not user else self.api_estate_cancel_reservation(db, user)
+                if parts[0] == "estate_amendment_request" and method == "POST":
+                    user = self.require_user(db, "approvals:request")
+                    return None if not user else self.api_estate_amendment_request(db, user)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -7816,11 +7914,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 merged.update(data)
                 data = merged
                 cur_st = str(current["status"] or "").strip().lower()
-                if cur_st in ("approved", "active"):
+                if cur_st in ("approved", "active", "ended"):
                     return self.send_json(
                         {
                             "ok": False,
-                            "error": "العقد المعتمد/الفعّال مقفول — استخدم مسار الاعتماد أو التفعيل أو طلب تعديل معتمد",
+                            "error": "العقد مقفول — استخدم «طلب تعديل» عبر مركز الاعتمادات",
                         },
                         409,
                     )
@@ -8590,6 +8688,66 @@ class JawdahHandler(BaseHTTPRequestHandler):
         audit(db, user, "cancel_reservation", table, entity_id, "Reservation cancelled → vacant")
         db.commit()
         self.send_json({"ok": True, "entity_type": entity_type, "entity_id": entity_id, "status": "vacant", "message": "تم الحفظ بنجاح"})
+
+    def api_estate_amendment_request(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        """طلب تعديل لملف مقفول: عقد معتمد/فعّال/منتهٍ أو فاتورة مدفوعة."""
+        data = self.read_json()
+        entity = str(data.get("entity") or "").strip()
+        entity_id = str(data.get("entity_id") or "").strip()
+        reason = str(data.get("reason") or data.get("notes") or "").strip()
+        changes = data.get("changes") if isinstance(data.get("changes"), dict) else {}
+        if entity not in ("estate_contracts", "estate_contract_invoices"):
+            return self.send_json({"ok": False, "error": "الكيان يجب أن يكون estate_contracts أو estate_contract_invoices"}, 400)
+        if not entity_id:
+            return self.send_json({"ok": False, "error": "entity_id مطلوب"}, 400)
+        if not reason:
+            return self.send_json({"ok": False, "error": "سبب التعديل مطلوب"}, 400)
+        if not changes:
+            return self.send_json({"ok": False, "error": "القيم الجديدة مطلوبة"}, 400)
+        before: Dict[str, Any] = {}
+        if entity == "estate_contracts":
+            row = db.execute("SELECT * FROM estate_contracts WHERE id=?", (entity_id,)).fetchone()
+            if not row:
+                return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+            st = str(row["status"] or "").strip().lower()
+            if st not in ("active", "ended", "approved"):
+                return self.send_json({"ok": False, "error": "طلب التعديل للعقود المقفلة فقط (معتمد/فعّال/منتهٍ)"}, 400)
+            allowed = {k: changes[k] for k in changes if k in ESTATE_CONTRACT_AMEND_FIELDS}
+            if not allowed:
+                return self.send_json({"ok": False, "error": f"الحقول المسموحة: {', '.join(sorted(ESTATE_CONTRACT_AMEND_FIELDS))}"}, 400)
+            before = {k: row[k] for k in allowed if k in row.keys()}
+            changes = allowed
+        else:
+            row = db.execute("SELECT * FROM estate_contract_invoices WHERE id=?", (entity_id,)).fetchone()
+            if not row:
+                return self.send_json({"ok": False, "error": "الفاتورة غير موجودة"}, 404)
+            paid = float(row["paid_amount"] or 0)
+            if paid <= 0 and str(row["status"] or "").strip().lower() not in ("paid", "partial"):
+                return self.send_json({"ok": False, "error": "طلب التعديل للفواتير المدفوعة/الجزئية فقط"}, 400)
+            allowed = {k: changes[k] for k in changes if k in ESTATE_INVOICE_AMEND_FIELDS}
+            if not allowed:
+                return self.send_json({"ok": False, "error": f"الحقول المسموحة: {', '.join(sorted(ESTATE_INVOICE_AMEND_FIELDS))}"}, 400)
+            before = {k: row[k] for k in allowed if k in row.keys()}
+            changes = allowed
+        approval_id = create_approval_request(
+            db,
+            entity,
+            entity_id,
+            "amendment",
+            user.get("name") or user.get("username") or "System",
+            reason,
+            meta={"changes": changes, "before": before, "reason": reason},
+        )
+        audit(db, user, "request_amendment", entity, entity_id, f"approval={approval_id}")
+        db.commit()
+        self.send_json(
+            {
+                "ok": True,
+                "approval_id": approval_id,
+                "status": "Pending",
+                "message": "تم إرسال طلب التعديل — بانتظار المراجعة في مركز الاعتمادات",
+            }
+        )
 
     def api_estate_foundation_audit(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         integrity = lq_foundation.integrity_report(db)
@@ -9447,6 +9605,15 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
                         bank_name=str(meta.get("bank_name") or "Main Bank"),
                     )
                     result = pay_result
+                elif request_type == "amendment":
+                    result = apply_estate_amendment(
+                        db,
+                        user,
+                        str(row["entity"] or ""),
+                        str(row["entity_id"] or ""),
+                        meta,
+                    )
+                    status = "Closed"
                 else:
                     raise ValueError(f"Unsupported approval type: {request_type}")
             except ValueError as exc:
@@ -9463,7 +9630,7 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
         )
         audit(db, user, "decide_approval", "approvals", approval_id, f"{status} {request_type}")
         db.commit()
-        self.send_json({"ok": True, "status": status, "approval_id": approval_id, "result": result})
+        self.send_json({"ok": True, "status": status, "approval_id": approval_id, "result": result, "message": "تم الحفظ بنجاح" if approved else "تم الرفض"})
 
     def api_approve_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
