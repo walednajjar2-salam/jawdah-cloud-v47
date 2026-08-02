@@ -7,7 +7,7 @@
 
   const LS = "lq_estate_tree_v1";
   const SECTIONS = [
-    { id: "home", label: "الرئيسية", perm: null },
+    { id: "home", label: "لوحة العقارات", perm: null },
     { id: "properties", label: "العقارات", perm: "estate_properties:read" },
     { id: "clients", label: "العملاء", perm: "clients" },
     { id: "reservations", label: "الحجوزات", perm: "estate_apartments:read" },
@@ -606,7 +606,13 @@
   function renderCrumb() {
     const host = document.getElementById("etCrumb");
     if (!host) return;
-    const parts = [`<button type="button" data-crumb="home">الرئيسية</button>`];
+    if (state.section === "home") {
+      host.innerHTML = "";
+      host.hidden = true;
+      return;
+    }
+    host.hidden = false;
+    const parts = [`<button type="button" data-crumb="home">لوحة العقارات</button>`];
     if (state.section !== "home" && state.section !== "search") {
       const sec = SECTIONS.find((s) => s.id === state.section);
       parts.push(`<span>/</span><button type="button" data-crumb="${esc(state.section)}">${esc(sec?.label || state.section)}</button>`);
@@ -633,82 +639,145 @@
     host.innerHTML = parts.join(" ");
   }
 
-  function renderHome() {
+  function homeHubCounts() {
     const s = portfolioStats();
-    const need = needsAttention();
-    const recent = recentOps();
-    const quick = [];
-    if (canAct("add_client")) quick.push({ label: "إضافة عميل", act: "add_client", cls: "gold-btn" });
-    if (canAct("add_building")) quick.push({ label: "إضافة مبنى", act: "add_building", cls: "gold-btn" });
-    if (canAct("add_unit")) quick.push({ label: "إضافة وحدة", act: "add_unit|apartment" });
-    if (canAct("create_reservation")) quick.push({ label: "إنشاء حجز", act: "create_reservation" });
-    if (canAct("create_contract")) quick.push({ label: "إنشاء عقد", act: "create_contract" });
-    if (canAct("pay")) quick.push({ label: "تسجيل دفعة", act: "pay" });
-    if (canAct("maint")) quick.push({ label: "طلب صيانة", act: "maint" });
-    if (canSection("approvals")) quick.push({ label: "فتح الاعتمادات", act: "approvals", cls: "gold-btn" });
+    const clients = rows("clients").length;
+    const contracts = rows("estate_contracts").length;
+    const t = todayStr();
+    const paymentsToday = rows("estate_contract_invoices").filter((i) => {
+      const day = String(i.issued_at || i.due_date || "").slice(0, 10);
+      return day === t || Number(i.paid_amount || 0) > 0;
+    }).length;
+    const openMaint = rows("estate_maintenance").filter(
+      (m) => !/closed|done|completed|ملغ/i.test(String(m.status || ""))
+    ).length;
+    const pendingMine = rows("approvals").filter((a) => String(a.status || "").toLowerCase() === "pending").length;
+    return {
+      units: s.total,
+      clients,
+      contracts,
+      payments: paymentsToday,
+      maint: openMaint,
+      approvals: pendingMine,
+      occPct: s.occPct,
+    };
+  }
+
+  function renderHome() {
+    const c = homeHubCounts();
+    const need = needsAttention().slice(0, 6);
+    const recent = recentOps().slice(0, 6);
+    const hubs = [
+      canSection("properties") && {
+        id: "properties",
+        ico: "🏢",
+        label: "العقارات",
+        value: `${fmtVal(c.units)} وحدة`,
+        hint: `إشغال ${fmtVal(c.occPct)}%`,
+      },
+      canSection("clients") && {
+        id: "clients",
+        ico: "👥",
+        label: "العملاء",
+        value: `${fmtVal(c.clients)} عميل`,
+        hint: "ملفات ومتابعات",
+      },
+      canSection("contracts") && {
+        id: "contracts",
+        ico: "📄",
+        label: "العقود",
+        value: `${fmtVal(c.contracts)} عقد`,
+        hint: "مسودة → اعتماد → تفعيل",
+      },
+      canSection("collection") && {
+        id: "collection",
+        ico: "💰",
+        label: "التحصيل",
+        value: `${fmtVal(c.payments)} دفعة`,
+        hint: "اليوم / النشطة",
+      },
+      canSection("maintenance") && {
+        id: "maintenance",
+        ico: "🛠",
+        label: "الصيانة",
+        value: `${fmtVal(c.maint)} طلبات`,
+        hint: "مفتوحة الآن",
+      },
+      canSection("approvals") && {
+        id: "approvals",
+        ico: "✅",
+        label: "الاعتمادات",
+        value: `${fmtVal(c.approvals)} بانتظارك`,
+        hint: "قسم مستقل",
+        urgent: c.approvals > 0,
+      },
+    ].filter(Boolean);
 
     return `
-      <div class="lq-et-panel">
-        <h3>الملخص العقاري</h3>
-        <p class="mini">نظرة سريعة على المحفظة — اضغط أي مؤشر للانتقال</p>
-        <div class="lq-et-kpis" style="margin-top:12px">
-          <button class="lq-et-kpi" data-kpi="buildings"><span>عدد المباني</span><strong>${fmtVal(s.buildings)}</strong></button>
-          <button class="lq-et-kpi" data-kpi="all"><span>إجمالي الوحدات</span><strong>${fmtVal(s.total)}</strong></button>
-          <button class="lq-et-kpi" data-kpi="occupied"><span>مؤجرة</span><strong>${fmtVal(s.occupied)}</strong></button>
-          <button class="lq-et-kpi" data-kpi="vacant"><span>شاغرة</span><strong>${fmtVal(s.vacant)}</strong></button>
-          <button class="lq-et-kpi" data-kpi="reserved"><span>محجوزة</span><strong>${fmtVal(s.reserved)}</strong></button>
-          <button class="lq-et-kpi" data-kpi="maintenance"><span>تحت الصيانة</span><strong>${fmtVal(s.maint)}</strong></button>
-          <button class="lq-et-kpi" data-kpi="suspended"><span>موقوفة</span><strong>${fmtVal(s.suspended)}</strong></button>
-          <button class="lq-et-kpi" data-kpi="all"><span>نسبة الإشغال</span><strong>${fmtVal(s.occPct)}%</strong></button>
+      <div class="lq-et-home">
+        <h3 class="lq-et-home-title">لوحة العقارات</h3>
+        <div class="lq-et-hub">
+          ${hubs
+            .map(
+              (h) => `<button type="button" class="lq-et-hub-card ${h.urgent ? "urgent" : ""}" data-hub="${esc(h.id)}">
+              <span class="lq-et-hub-label"><span class="lq-et-hub-ico" aria-hidden="true">${h.ico}</span>${esc(h.label)}</span>
+              <strong>${esc(h.value)}</strong>
+              <em>${esc(h.hint)}</em>
+            </button>`
+            )
+            .join("")}
         </div>
-      </div>
-      <div class="lq-et-split">
-        <div class="lq-et-panel">
-          <h3>الأوامر السريعة</h3>
-          <p class="mini">إجراءان أو ثلاثة ظاهرة — الباقي تحت «المزيد»</p>
-          ${moreMenu("home-quick", quick)}
-        </div>
-        <div class="lq-et-panel">
-          <h3>تحتاج إجراء</h3>
-          <p class="mini">تنبيهات تشغيلية — الاعتمادات في قسمها المستقل</p>
-          <div class="lq-et-list">
-            ${
-              need.length
-                ? need
-                    .map(
-                      (n, i) =>
-                        `<button type="button" class="lq-et-row" data-need="${i}" style="width:100%;cursor:pointer;font:inherit;text-align:start">
-                          <div><b class="tone-${esc(n.tone)}">${esc(n.title)}</b><small>${esc(n.detail)}</small></div>
-                        </button>`
-                    )
-                    .join("")
-                : `<div class="lq-et-empty">لا عناصر تحتاج إجراء الآن</div>`
-            }
+        <div class="lq-et-home-rule" aria-hidden="true"></div>
+        <div class="lq-et-home-cols">
+          <div class="lq-et-panel">
+            <h3>آخر التنبيهات</h3>
+            <div class="lq-et-list">
+              ${
+                need.length
+                  ? need
+                      .map(
+                        (n, i) =>
+                          `<button type="button" class="lq-et-row" data-need="${i}" style="width:100%;cursor:pointer;font:inherit;text-align:start">
+                            <div><b class="tone-${esc(n.tone)}">${esc(n.title)}</b><small>${esc(n.detail)}</small></div>
+                          </button>`
+                      )
+                      .join("")
+                  : `<div class="lq-et-empty">لا تنبيهات الآن</div>`
+              }
+            </div>
           </div>
-        </div>
-      </div>
-      <div class="lq-et-panel">
-        <h3>آخر العمليات</h3>
-        <div class="lq-et-list">
-          ${
-            recent.length
-              ? recent
-                  .map(
-                    (r, i) =>
-                      `<button type="button" class="lq-et-row" data-recent="${i}" style="width:100%;cursor:pointer;font:inherit;text-align:start">
-                        <div><b>${esc(r.title)}</b><small>${esc(r.detail)}</small></div>
-                      </button>`
-                  )
-                  .join("")
-              : `<div class="lq-et-empty">لا عمليات حديثة</div>`
-          }
+          <div class="lq-et-panel">
+            <h3>آخر العمليات</h3>
+            <div class="lq-et-list">
+              ${
+                recent.length
+                  ? recent
+                      .map(
+                        (r, i) =>
+                          `<button type="button" class="lq-et-row" data-recent="${i}" style="width:100%;cursor:pointer;font:inherit;text-align:start">
+                            <div><b>${esc(r.title)}</b><small>${esc(r.detail)}</small></div>
+                          </button>`
+                      )
+                      .join("")
+                  : `<div class="lq-et-empty">لا عمليات حديثة</div>`
+              }
+            </div>
+          </div>
         </div>
       </div>`;
   }
 
   function wireHomeLinks(root) {
-    const need = needsAttention();
-    const recent = recentOps();
+    const need = needsAttention().slice(0, 6);
+    const recent = recentOps().slice(0, 6);
+    root.querySelectorAll("[data-hub]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const id = el.getAttribute("data-hub");
+        if (id === "properties") go("properties", { clearDetail: true, sub: "buildings" });
+        else if (id === "approvals") go("approvals", { clearDetail: true, sub: "pending" });
+        else go(id, { clearDetail: true });
+      });
+    });
     root.querySelectorAll("[data-need]").forEach((el) => {
       el.addEventListener("click", () => need[Number(el.getAttribute("data-need"))]?.go?.());
     });
