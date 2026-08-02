@@ -8,6 +8,8 @@
   const LS = "lq_estate_tree_v1";
   const SECTIONS = [
     { id: "home", label: "لوحة العقارات", icon: "layout-dashboard", perm: null },
+    { id: "command", label: "مركز القيادة", icon: "gauge", perm: "command" },
+    { id: "employee", label: "لوحتي", icon: "user-round", perm: null },
     { id: "properties", label: "العقارات", icon: "building-2", perm: "estate_properties:read" },
     { id: "clients", label: "العملاء", icon: "users", perm: "clients" },
     { id: "reservations", label: "الحجوزات", icon: "calendar-check", perm: "estate_apartments:read" },
@@ -15,11 +17,15 @@
     { id: "collection", label: "التحصيل", icon: "wallet", perm: "collection" },
     { id: "overdue", label: "المتأخرات", icon: "circle-alert", perm: "collection" },
     { id: "maintenance", label: "الصيانة", icon: "wrench", perm: "estate_maintenance:read" },
+    { id: "workflows", label: "مسارات العمل", icon: "git-branch", perm: "workflows" },
     { id: "files", label: "الملفات", icon: "folder-open", perm: "files" },
+    { id: "archive", label: "الأرشيف", icon: "archive", perm: "archive" },
     { id: "approvals", label: "الاعتمادات", icon: "badge-check", perm: "approvals" },
     { id: "reports", label: "التقارير", icon: "bar-chart-3", perm: "reports" },
     { id: "alerts", label: "التنبيهات", icon: "bell", perm: null },
+    { id: "settings", label: "إعدادات العقارات", icon: "settings-2", perm: "settings" },
   ];
+  const navHistory = [];
 
   const HERITAGE_NIZWA = { lat: 22.9335, lng: 57.5318, zoom: 15 };
   let estateTreeMap = null;
@@ -110,7 +116,11 @@
     const u = uname();
     if (typeof OWNER_USERNAMES !== "undefined" && OWNER_USERNAMES.has?.(u)) return true;
     if (["owner", "admin", "deputy"].includes(r)) return true;
-    if (id === "home" || id === "alerts") return true;
+    if (id === "home" || id === "alerts" || id === "employee") return true;
+    if (id === "command") return ["owner", "admin", "deputy", "manager", "accountant", "operations"].includes(r);
+    if (id === "workflows") return ["owner", "admin", "deputy", "manager", "operations", "accountant"].includes(r);
+    if (id === "archive") return ["owner", "admin", "deputy", "manager", "accountant"].includes(r);
+    if (id === "settings") return ["owner", "admin", "deputy", "manager"].includes(r);
     if (id === "approvals") {
       return typeof canSeeApprovals === "function" ? canSeeApprovals() : ["manager", "accountant", "operations"].includes(r);
     }
@@ -172,9 +182,49 @@
         return typeof canEstatePricingEdit === "function" ? canEstatePricingEdit() : false;
       case "closed_edit":
         return ["owner", "admin", "deputy", "manager"].includes(r);
+      case "print_doc":
+      case "preview_doc":
+        return true;
+      case "edit_doc":
+        return ["owner", "admin", "deputy", "manager", "operations", "accountant"].includes(r);
+      case "delete_doc":
+        return ["owner", "admin", "deputy"].includes(r);
+      case "hide_pdf":
+        return true;
+      case "archive":
+      case "unarchive":
+        return ["owner", "admin", "deputy", "manager"].includes(r);
+      case "settings_edit":
+        return ["owner", "admin", "deputy", "manager"].includes(r);
       default:
         return false;
     }
+  }
+
+  function snapshotNav() {
+    return {
+      section: state.section,
+      sub: state.sub,
+      tab: state.tab,
+      buildingId: state.buildingId,
+      unitKey: state.unitKey,
+      clientId: state.clientId,
+      contractId: state.contractId,
+      approvalId: state.approvalId,
+      searchQ: state.searchQ,
+    };
+  }
+
+  function goBack() {
+    const prev = navHistory.pop();
+    if (!prev) {
+      go("home", { clearDetail: true, _skipHist: true });
+      return;
+    }
+    Object.assign(state, prev);
+    saveState();
+    render();
+    if (window.LQ_ESTATE_OPS && typeof LQ_ESTATE_OPS.onNav === "function") LQ_ESTATE_OPS.onNav(state);
   }
 
   function go(section, opts) {
@@ -182,6 +232,13 @@
     if (!canSection(section)) {
       if (typeof toastErr === "function") toastErr("لا تملك صلاحية هذا القسم");
       return;
+    }
+    if (!opts._skipHist && state.mounted) {
+      const snap = snapshotNav();
+      if (snap.section !== section || snap.contractId || snap.buildingId || snap.unitKey || snap.clientId) {
+        navHistory.push(snap);
+        if (navHistory.length > 40) navHistory.shift();
+      }
     }
     state.section = section;
     state.sub = opts.sub != null ? opts.sub : "";
@@ -385,12 +442,17 @@
   <header class="lq-et-top">
     <div>
       <h2>منصة العقارات</h2>
-      <p>لوحة بسيطة · ادخل لأي قسم بضغطة واحدة</p>
+      <p>مركز قيادة · لوحة موظف · مسارات عمل مترابطة</p>
     </div>
-    <form class="lq-et-search" id="etSearchForm">
-      <input id="etSearchInput" type="search" placeholder="بحث: مبنى · وحدة · عميل · عقد · حجز · دفعة · صيانة" value="${esc(state.searchQ)}" autocomplete="off">
-      <button type="submit">بحث</button>
-    </form>
+    <div class="lq-et-top-actions">
+      <button type="button" class="ghost lq-et-back-btn" id="etBackBtn" title="رجوع"><i data-lucide="arrow-right" class="lq-et-svg" aria-hidden="true"></i> رجوع</button>
+      <button type="button" class="ghost lq-et-undo-btn" id="etUndoBtn" title="التراجع عن آخر أمر"><i data-lucide="undo-2" class="lq-et-svg" aria-hidden="true"></i> تراجع</button>
+      <span id="etSaveBadge" class="lq-et-save-badge" hidden>تم الحفظ</span>
+      <form class="lq-et-search" id="etSearchForm">
+        <input id="etSearchInput" type="search" placeholder="بحث شامل: عميل · وحدة · مبنى · عقد · فاتورة · دفعة · حجز · صيانة" value="${esc(state.searchQ)}" autocomplete="off">
+        <button type="submit">بحث</button>
+      </form>
+    </div>
   </header>
   <nav class="lq-et-nav" id="etNav" aria-label="أقسام منصة العقارات"></nav>
   <div class="lq-et-crumb" id="etCrumb"></div>
@@ -414,6 +476,11 @@
       const btn = e.target.closest("[data-section]");
       if (!btn) return;
       go(btn.getAttribute("data-section"), { clearDetail: true, sub: "" });
+    });
+    document.getElementById("etBackBtn")?.addEventListener("click", () => goBack());
+    document.getElementById("etUndoBtn")?.addEventListener("click", () => {
+      if (window.LQ_ESTATE_OPS && typeof LQ_ESTATE_OPS.undoLast === "function") LQ_ESTATE_OPS.undoLast();
+      else if (typeof toast === "function") toast("لا يوجد أمر للتراجع عنه");
     });
     document.getElementById("etSearchForm")?.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -440,6 +507,17 @@
       const id = more.getAttribute("data-more");
       state.moreOpen = state.moreOpen === id ? "" : id;
       render();
+      return;
+    }
+    const docBtn = e.target.closest("[data-ops-doc]");
+    if (docBtn) {
+      const bar = docBtn.closest(".lq-ops-doc-bar");
+      if (window.LQ_ESTATE_OPS && typeof LQ_ESTATE_OPS.handleDocAction === "function") {
+        LQ_ESTATE_OPS.handleDocAction(docBtn.getAttribute("data-ops-doc"), {
+          type: bar?.getAttribute("data-doc-type"),
+          id: bar?.getAttribute("data-doc-id"),
+        });
+      }
       return;
     }
     const actEl = e.target.closest("[data-act]");
@@ -672,6 +750,9 @@
     const pendingMine = rows("approvals").filter((a) => String(a.status || "").toLowerCase() === "pending").length;
     const alerts = needsAttention().length;
     const buildings = rows("estate_buildings").length;
+    const overdue = rows("estate_contract_invoices").filter(
+      (i) => String(i.status || "").toLowerCase() !== "paid" && String(i.due_date || "") < t
+    ).length;
     return {
       units: s.total,
       buildings,
@@ -684,6 +765,7 @@
       approvals: pendingMine,
       alerts,
       occPct: s.occPct,
+      overdue,
     };
   }
 
@@ -777,6 +859,21 @@
     const need = needsAttention().slice(0, 5);
     const recent = recentOps().slice(0, 5);
     const hubs = [
+      canSection("command") && {
+        id: "command",
+        icon: "gauge",
+        label: "مركز القيادة",
+        desc: "KPIs · إشغال · إيرادات · متأخرات",
+        value: `إشغال ${fmtVal(c.occPct)}% · متأخرات ${fmtVal(c.overdue || 0)}`,
+        span: "span-2",
+      },
+      canSection("employee") && {
+        id: "employee",
+        icon: "user-round",
+        label: "لوحتي",
+        desc: "مهامك واختصارات دورك",
+        value: "شاشة الموظف",
+      },
       canSection("properties") && {
         id: "properties",
         icon: "building-2",
@@ -1503,6 +1600,21 @@
       </div>
       ${c.rejection_reason ? `<p class="mini" style="color:var(--et-bad);margin-top:8px">سبب الرفض: ${esc(c.rejection_reason)}</p>` : ""}
       ${moreMenu("contract-ops", acts)}
+      <div class="lq-ops-doc-bar" data-doc-type="estate_contract" data-doc-id="${esc(c.id)}">
+        <button type="button" class="ghost" data-ops-doc="preview">معاينة</button>
+        <button type="button" class="gold-btn" data-ops-doc="print">طباعة</button>
+        ${canAct("edit_doc") ? `<button type="button" class="ghost" data-ops-doc="edit">تعديل</button>` : ""}
+        ${canAct("delete_doc") ? `<button type="button" class="danger" data-ops-doc="delete">حذف</button>` : ""}
+        <button type="button" class="ghost" data-ops-doc="toggle-pdf">${localStorage.getItem("lq_hide_pdf") === "1" ? "إظهار PDF" : "إخفاء PDF"}</button>
+      </div>
+      <div class="lq-ops-workflow-strip">
+        <span class="${st === "draft" || st === "rejected" ? "on" : ""}">إنشاء</span>
+        <span class="${st === "approvalrequested" ? "on" : ""}">مراجعة</span>
+        <span class="${st === "approved" ? "on" : ""}">اعتماد</span>
+        <span class="${st === "active" || st === "activated" ? "on" : ""}">تفعيل</span>
+        <span class="${st === "ended" || st === "closed" ? "on" : ""}">إغلاق</span>
+        <span class="${st === "archived" ? "on" : ""}">أرشفة</span>
+      </div>
       <p class="mini" style="margin-top:12px">لا تعديل مباشر على الملفات المغلقة — استخدم طلب التعديل.</p>
     </div>`;
   }
@@ -1758,6 +1870,9 @@
   }
 
   function renderSearch() {
+    if (window.LQ_ESTATE_OPS && typeof LQ_ESTATE_OPS.renderSearch === "function") {
+      return LQ_ESTATE_OPS.renderSearch(state.searchQ, { rows, allUnits, byId, esc, fmtVal, moneyVal });
+    }
     const q = String(state.searchQ || "").trim().toLowerCase();
     if (!q) {
       return `<div class="lq-et-panel"><h3>البحث العام</h3><p class="mini">اكتب في صندوق البحث أعلاه</p></div>`;
@@ -1806,6 +1921,16 @@
     switch (state.section) {
       case "home":
         html = renderHome();
+        break;
+      case "command":
+      case "employee":
+      case "workflows":
+      case "archive":
+      case "settings":
+        html =
+          window.LQ_ESTATE_OPS && typeof LQ_ESTATE_OPS.renderSection === "function"
+            ? LQ_ESTATE_OPS.renderSection(state.section, state)
+            : `<div class="lq-et-panel"><h3>جاري تحميل ${esc(state.section)}...</h3></div>`;
         break;
       case "properties":
         html = renderProperties();
@@ -1891,7 +2016,12 @@
       host.innerHTML = "";
     }
   };
-  window.LQ_ESTATE_TREE = { go, render, canSection, canAct };
+  window.LQ_ESTATE_TREE = { go, render, canSection, canAct, goBack, state, SECTIONS, navHistory };
+  if (window.LQ_ESTATE_OPS && typeof LQ_ESTATE_OPS.attachTree === "function") {
+    try {
+      LQ_ESTATE_OPS.attachTree(window.LQ_ESTATE_TREE);
+    } catch (_) {}
+  }
 
   loadState();
   if (document.readyState === "loading") {

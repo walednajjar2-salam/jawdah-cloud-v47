@@ -497,6 +497,86 @@ WORKFLOW_POLICY_DEFAULTS: Dict[str, Any] = {
     "invoice_backdate_limit_days": 7,
     "invoice_future_limit_days": 180,
 }
+
+ESTATE_SETTINGS_DEFAULTS: Dict[str, Any] = {
+    "unit_types": ["شقة", "غرفة", "محل", "مكتب"],
+    "unit_statuses": ["شاغرة", "محجوزة", "مستأجرة", "تحت الصيانة", "موقوفة", "مؤرشفة"],
+    "contract_types": ["سكني", "تجاري", "مختلط"],
+    "payment_methods": ["نقدي", "تحويل بنكي", "بطاقة", "شيك"],
+    "approval_threshold": APPROVAL_THRESHOLD,
+    "contract_number_prefix": "EST-C",
+    "invoice_number_prefix": "EST-I",
+    "reservation_number_prefix": "EST-R",
+}
+
+
+def load_estate_settings(db: sqlite3.Connection) -> Dict[str, Any]:
+    row = db.execute("SELECT value_json FROM workflow_policies WHERE key=?", ("estate_settings",)).fetchone()
+    out = dict(ESTATE_SETTINGS_DEFAULTS)
+    if not row:
+        return out
+    try:
+        raw = json.loads(row["value_json"] if isinstance(row, sqlite3.Row) else row[0])
+        if isinstance(raw, dict):
+            out.update(raw)
+    except Exception:
+        pass
+    return out
+
+
+def save_estate_settings(db: sqlite3.Connection, user: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    current = load_estate_settings(db)
+    next_settings = dict(current)
+    for key in ESTATE_SETTINGS_DEFAULTS:
+        if key not in data:
+            continue
+        val = data[key]
+        if key.endswith("_prefix"):
+            next_settings[key] = str(val or ESTATE_SETTINGS_DEFAULTS[key]).strip()[:24] or ESTATE_SETTINGS_DEFAULTS[key]
+        elif key == "approval_threshold":
+            next_settings[key] = float(val or 0)
+        elif isinstance(ESTATE_SETTINGS_DEFAULTS[key], list):
+            if isinstance(val, str):
+                items = [x.strip() for x in re.split(r"[\n,]+", val) if x.strip()]
+            elif isinstance(val, list):
+                items = [str(x).strip() for x in val if str(x).strip()]
+            else:
+                items = list(ESTATE_SETTINGS_DEFAULTS[key])
+            next_settings[key] = items or list(ESTATE_SETTINGS_DEFAULTS[key])
+        else:
+            next_settings[key] = val
+    db.execute(
+        """
+        INSERT INTO workflow_policies(key, value_json, updated_at, updated_by)
+        VALUES(?,?,?,?)
+        ON CONFLICT(key) DO UPDATE SET
+            value_json=excluded.value_json,
+            updated_at=excluded.updated_at,
+            updated_by=excluded.updated_by
+        """,
+        (
+            "estate_settings",
+            json.dumps(next_settings, ensure_ascii=False),
+            now_iso(),
+            user.get("username") or user.get("name") or "system",
+        ),
+    )
+    # Keep approval thresholds in sync with estate settings when provided.
+    if "approval_threshold" in data:
+        thr = float(next_settings.get("approval_threshold") or APPROVAL_THRESHOLD)
+        for key in ("manual_invoice_approval_threshold", "payment_approval_threshold"):
+            db.execute(
+                """
+                INSERT INTO workflow_policies(key, value_json, updated_at, updated_by)
+                VALUES(?,?,?,?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value_json=excluded.value_json,
+                    updated_at=excluded.updated_at,
+                    updated_by=excluded.updated_by
+                """,
+                (key, json.dumps(thr, ensure_ascii=False), now_iso(), user.get("username") or "system"),
+            )
+    return next_settings
 STAFF_APP_VERSION = os.environ.get("LQ_STAFF_APP_VERSION", "70.4.0").strip()
 PRODUCTION_URL = os.environ.get("LQ_PRODUCTION_URL", "https://web-production-08d73.up.railway.app").strip()
 STAFF_DOWNLOAD_APK = os.environ.get(
@@ -4890,6 +4970,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "workflow_policies" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_update_workflow_policies(db, user)
+                if parts[0] == "estate_settings" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_estate_settings_get(db, user)
+                if parts[0] == "estate_settings" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_estate_settings_set(db, user)
+                if parts[0] == "estate_command_kpis" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_estate_command_kpis(db, user)
                 if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_backup_status()
@@ -10286,6 +10375,81 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
             }
         )
 
+    def api_estate_settings_get(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        role = str(user.get("role") or "").lower()
+        editable = role in ("owner", "admin", "deputy", "manager") or str(user.get("username") or "").lower() in FULL_ACCESS_USERNAMES
+        self.send_json({"ok": True, "settings": load_estate_settings(db), "defaults": ESTATE_SETTINGS_DEFAULTS, "editable": editable})
+
+    def api_estate_settings_set(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        role = str(user.get("role") or "").lower()
+        if role not in ("owner", "admin", "deputy", "manager") and str(user.get("username") or "").lower() not in FULL_ACCESS_USERNAMES:
+            return self.send_json({"ok": False, "error": "صلاحية تعديل إعدادات العقارات غير متاحة"}, 403)
+        data = self.read_json() or {}
+        settings = save_estate_settings(db, user, data)
+        audit(db, user, "estate_settings", "workflow_policies", "estate_settings", "Updated estate settings")
+        db.commit()
+        self.send_json({"ok": True, "settings": settings})
+
+    def api_estate_command_kpis(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        apartments = rows_to_dicts(db.execute("SELECT id, name, status, building_id, rent_price FROM estate_apartments").fetchall())
+        rooms = rows_to_dicts(db.execute("SELECT id, name, status, building_id, rent_price FROM estate_rooms").fetchall())
+        buildings = rows_to_dicts(db.execute("SELECT id, name FROM estate_buildings").fetchall())
+        contracts = rows_to_dicts(
+            db.execute("SELECT id, building_id, entity_type, entity_id, rent_amount, status, end_date FROM estate_contracts").fetchall()
+        )
+        invoices = rows_to_dicts(
+            db.execute("SELECT id, amount, paid_amount, status, due_date, contract_id FROM estate_contract_invoices").fetchall()
+        )
+        units = apartments + rooms
+        occupied = sum(1 for u in units if re.search(r"مستأجر|occupied|rented", str(u.get("status") or ""), re.I))
+        reserved = sum(1 for u in units if re.search(r"محجوز|reserved", str(u.get("status") or ""), re.I))
+        vacant = max(0, len(units) - occupied - reserved)
+        paid = sum(float(i.get("paid_amount") or 0) for i in invoices)
+        billed = sum(float(i.get("amount") or 0) for i in invoices)
+        t = today()
+        overdue = [i for i in invoices if str(i.get("status") or "").lower() != "paid" and str(i.get("due_date") or "") < t]
+        overdue_amt = sum(max(0.0, float(i.get("amount") or 0) - float(i.get("paid_amount") or 0)) for i in overdue)
+        active = [c for c in contracts if re.search(r"active|activated", str(c.get("status") or ""), re.I)]
+        by_b: Dict[str, float] = {}
+        for c in active:
+            bid = str(c.get("building_id") or "—")
+            by_b[bid] = by_b.get(bid, 0.0) + float(c.get("rent_amount") or 0)
+        bnames = {b["id"]: b.get("name") for b in buildings}
+        best_buildings = sorted(
+            [{"id": k, "name": bnames.get(k) or k, "rent": v} for k, v in by_b.items()],
+            key=lambda x: x["rent"],
+            reverse=True,
+        )[:5]
+        self.send_json(
+            {
+                "ok": True,
+                "kpis": {
+                    "units": len(units),
+                    "buildings": len(buildings),
+                    "occupied": occupied,
+                    "reserved": reserved,
+                    "vacant": vacant,
+                    "occupancy_pct": round((occupied / len(units) * 100), 1) if units else 0,
+                    "active_contracts": len(active),
+                    "billed": billed,
+                    "paid": paid,
+                    "overdue_count": len(overdue),
+                    "overdue_amount": overdue_amt,
+                    "best_buildings": best_buildings,
+                    "pending_approvals": int(
+                        db.execute("SELECT COUNT(*) FROM approvals WHERE lower(status)='pending'").fetchone()[0] or 0
+                    ),
+                    "open_maintenance": int(
+                        db.execute(
+                            "SELECT COUNT(*) FROM estate_maintenance WHERE lower(coalesce(status,'')) NOT IN ('closed','done','completed')"
+                        ).fetchone()[0]
+                        or 0
+                    ),
+                },
+                "settings": load_estate_settings(db),
+            }
+        )
+
     def api_update_workflow_policies(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
         incoming = data.get("policies")
@@ -13231,9 +13395,9 @@ ROLE_BOARD_META: Dict[str, Dict[str, Any]] = {
         "title_ar": "لوحة المالك",
         "subtitle_ar": "ملخص تنفيذي وتنبيهات تحتاج قراراً اليوم",
         "quick_actions": [
+            {"section": "estate-platform", "label": "مركز قيادة العقارات"},
             {"section": "approvals", "label": "مركز الاعتمادات"},
             {"section": "receivables", "label": "التحصيل الذكي"},
-            {"section": "messages", "label": "التنبيهات"},
             {"section": "reports", "label": "التقارير"},
         ],
     },
@@ -13241,39 +13405,69 @@ ROLE_BOARD_META: Dict[str, Dict[str, Any]] = {
         "title_ar": "لوحة الإدارة",
         "subtitle_ar": "تشغيل كامل + متابعة المخاطر",
         "quick_actions": [
-            {"section": "dashboard", "label": "لوحة التحكم"},
+            {"section": "estate-platform", "label": "منصة العقارات"},
             {"section": "approvals", "label": "الاعتمادات"},
             {"section": "users", "label": "المستخدمون"},
             {"section": "messages", "label": "التنبيهات"},
+        ],
+    },
+    "deputy": {
+        "title_ar": "لوحة نائب المدير",
+        "subtitle_ar": "اعتماد العمليات ومتابعة التحصيل والصيانة",
+        "quick_actions": [
+            {"section": "estate-platform", "label": "منصة العقارات"},
+            {"section": "approvals", "label": "الاعتمادات"},
+            {"section": "receivables", "label": "التحصيل"},
+            {"section": "maintenance", "label": "الصيانة"},
+        ],
+    },
+    "manager": {
+        "title_ar": "لوحة مدير العمليات",
+        "subtitle_ar": "حجوزات، عقود، اعتمادات يومية",
+        "quick_actions": [
+            {"section": "estate-platform", "label": "منصة العقارات"},
+            {"section": "approvals", "label": "الاعتمادات"},
+            {"section": "contracts", "label": "العقود"},
+            {"section": "maintenance", "label": "الصيانة"},
         ],
     },
     "accountant": {
         "title_ar": "لوحة المحاسب",
         "subtitle_ar": "تحصيل، اعتمادات، بنك، ومتأخرات",
         "quick_actions": [
+            {"section": "estate-platform", "label": "تحصيل العقارات"},
             {"section": "receivables", "label": "التحصيل الذكي"},
             {"section": "invoices", "label": "الفواتير"},
             {"section": "approvals", "label": "الاعتمادات"},
-            {"section": "bank-reconciliation", "label": "تسوية البنك"},
         ],
     },
     "operations": {
         "title_ar": "لوحة العمليات",
         "subtitle_ar": "عقود، إشغال، وصيانة يومية",
         "quick_actions": [
+            {"section": "estate-platform", "label": "منصة العقارات"},
             {"section": "contracts", "label": "العقود"},
             {"section": "properties", "label": "العقارات"},
             {"section": "maintenance", "label": "الصيانة"},
-            {"section": "daily-ops", "label": "العمليات اليومية"},
+        ],
+    },
+    "reception": {
+        "title_ar": "لوحة الاستقبال",
+        "subtitle_ar": "عملاء وحجوزات ومتابعة سريعة",
+        "quick_actions": [
+            {"section": "estate-platform", "label": "منصة العقارات"},
+            {"section": "clients", "label": "العملاء"},
+            {"section": "properties", "label": "الوحدات"},
+            {"section": "messages", "label": "التنبيهات"},
         ],
     },
     "maintenance": {
         "title_ar": "لوحة الصيانة",
         "subtitle_ar": "طلبات عاجلة ومخزون منخفض",
         "quick_actions": [
+            {"section": "estate-platform", "label": "صيانة العقارات"},
             {"section": "maintenance", "label": "طلبات الصيانة"},
             {"section": "inventory", "label": "المخزن"},
-            {"section": "properties", "label": "العقارات"},
             {"section": "messages", "label": "التنبيهات"},
         ],
     },
@@ -13282,6 +13476,7 @@ ROLE_BOARD_META: Dict[str, Dict[str, Any]] = {
         "subtitle_ar": "عرض مؤشرات وتنبيهات للقراءة فقط",
         "quick_actions": [
             {"section": "dashboard", "label": "لوحة التحكم"},
+            {"section": "estate-platform", "label": "منصة العقارات"},
             {"section": "reports", "label": "التقارير"},
             {"section": "messages", "label": "التنبيهات"},
         ],
