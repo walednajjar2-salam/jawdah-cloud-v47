@@ -1,0 +1,174 @@
+{
+  "men": [
+    {
+      "id": "m01",
+      "label": "رجل عماني بالدشداشة البيضاء والكمة",
+      "gender": "men",
+      "url": "/assets/avatars/m01.svg",
+      "style": "dishdasha_kumma"
+    },
+    {
+      "id": "m02",
+      "label": "رجل عماني بالدشداشة والمصر",
+      "gender": "men",
+      "url": "/assets/avatars/m02.svg",
+      "style": "dishdasha_masar"
+    },
+    {
+      "id": "m03",
+      "label": "رجل عماني شاب",
+      "gender": "men",
+      "url": "/assets/avatars/m03.svg",
+      "style": "young"
+    },
+    {
+      "id": "m04",
+      "label": "رجل عماني رسمي",
+      "gender": "men",
+      "url": "/assets/avatars/m04.svg",
+      "style": "formal"
+    },
+    {
+      "id": "m05",
+      "label": "رجل عماني إداري",
+      "gender": "men",
+      "url": "/assets/avatars/m05.svg",
+      "style": "admin"
+    },
+    {
+      "id": "m06",
+      "label": "رجل عماني بأسلوب كرتوني حديث",
+      "gender": "men",
+      "url": "/assets/avatars/m06.svg",
+      "style": "cartoon"
+    },
+    {
+      "id": "m07",
+      "label": "رجل عماني بأسلوب ثلاثي الأبعاد هادئ",
+      "gender": "men",
+      "url": "/assets/avatars/m07.svg",
+      "style": "soft3d"
+    },
+    {
+      "id": "m08",
+      "label": "رجل عماني بالمصر التقليدي",
+      "gender": "men",
+      "url": "/assets/avatars/m08.svg",
+      "style": "dishdasha_masar2"
+    },
+    {
+      "id": "m09",
+      "label": "رجل عماني شاب بالكمة",
+      "gender": "men",
+      "url": "/assets/avatars/m09.svg",
+      "style": "young2"
+    },
+    {
+      "id": "m10",
+      "label": "رجل عماني ببدلة رسمية",
+      "gender": "men",
+      "url": "/assets/avatars/m10.svg",
+      "style": "formal2"
+    },
+    {
+      "id": "m11",
+      "label": "رجل عماني إداري بالكمة",
+      "gender": "men",
+      "url": "/assets/avatars/m11.svg",
+      "style": "admin2"
+    },
+    {
+      "id": "m12",
+      "label": "رجل عماني بملامح هادئة",
+      "gender": "men",
+      "url": "/assets/avatars/m12.svg",
+      "style": "soft3d2"
+    }
+  ],
+  "women": [
+    {
+      "id": "w01",
+      "label": "امرأة عمانية بالحجاب والعباءة",
+      "gender": "women",
+      "url": "/assets/avatars/w01.svg",
+      "style": "hijab_abaya"
+    },
+    {
+      "id": "w02",
+      "label": "امرأة عمانية بملابس عمل رسمية محتشمة",
+      "gender": "women",
+      "url": "/assets/avatars/w02.svg",
+      "style": "work"
+    },
+    {
+      "id": "w03",
+      "label": "امرأة عمانية شابة",
+      "gender": "women",
+      "url": "/assets/avatars/w03.svg",
+      "style": "young"
+    },
+    {
+      "id": "w04",
+      "label": "امرأة عمانية إدارية",
+      "gender": "women",
+      "url": "/assets/avatars/w04.svg",
+      "style": "admin"
+    },
+    {
+      "id": "w05",
+      "label": "امرأة عمانية بأسلوب كرتوني حديث",
+      "gender": "women",
+      "url": "/assets/avatars/w05.svg",
+      "style": "cartoon"
+    },
+    {
+      "id": "w06",
+      "label": "امرأة عمانية بأسلوب ثلاثي الأبعاد هادئ",
+      "gender": "women",
+      "url": "/assets/avatars/w06.svg",
+      "style": "soft3d"
+    },
+    {
+      "id": "w07",
+      "label": "امرأة عمانية بالحجاب الكلاسيكي",
+      "gender": "women",
+      "url": "/assets/avatars/w07.svg",
+      "style": "hijab_abaya2"
+    },
+    {
+      "id": "w08",
+      "label": "امرأة عمانية بزي عمل أنيق",
+      "gender": "women",
+      "url": "/assets/avatars/w08.svg",
+      "style": "work2"
+    },
+    {
+      "id": "w09",
+      "label": "امرأة عمانية شابة بالحجاب",
+      "gender": "women",
+      "url": "/assets/avatars/w09.svg",
+      "style": "young2"
+    },
+    {
+      "id": "w10",
+      "label": "امرأة عمانية إدارية محترفة",
+      "gender": "women",
+      "url": "/assets/avatars/w10.svg",
+      "style": "admin2"
+    },
+    {
+      "id": "w11",
+      "label": "امرأة عمانية بأسلوب مسطح فاخر",
+      "gender": "women",
+      "url": "/assets/avatars/w11.svg",
+      "style": "cartoon2"
+    },
+    {
+      "id": "w12",
+      "label": "امرأة عمانية بملامح هادئة",
+      "gender": "women",
+      "url": "/assets/avatars/w12.svg",
+      "style": "soft3d2"
+    }
+  ]
+}

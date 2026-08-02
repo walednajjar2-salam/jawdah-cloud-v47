@@ -769,11 +769,15 @@ function syncLoginOwnerBranding(){
 function applyUserHeader(){
   if(!Jawdah.user) return;
   const name=displayUserName(Jawdah.user);
-  const role=displayUserRole(Jawdah.user);
-  const initial=(name||'ي').trim().charAt(0);
+  const role=Jawdah.user.job_title || displayUserRole(Jawdah.user);
   if($('#userName')) $('#userName').textContent=name;
   if($('#userRole')) $('#userRole').textContent=role;
-  if($('#avatar')) $('#avatar').textContent=initial;
+  if(window.LQ_AVATARS && typeof LQ_AVATARS.applyHeaderAvatar==='function'){
+    LQ_AVATARS.applyHeaderAvatar();
+  } else {
+    const initial=(name||'ي').trim().charAt(0);
+    if($('#avatar')) $('#avatar').textContent=initial;
+  }
   const greet=$('#headerGreeting');
   if(greet) greet.textContent=dashGreeting();
   const leader=$('#headerLeaderName');
@@ -1039,6 +1043,8 @@ async function loadAll(){
   ensureDashActive();
   try{
     const res=await api('bootstrap');     Jawdah.data=res.data; Jawdah.dashboard=res.dashboard; Jawdah.user=res.user;
+    if(window.LQ_AVATARS && typeof LQ_AVATARS.syncPeopleFromBootstrap==='function') LQ_AVATARS.syncPeopleFromBootstrap(res);
+    else if(Array.isArray(res.people)) Jawdah.people = res.people;
     try{
       const perm=await api('permissions/ui');
       Jawdah.uiPermissions={
@@ -1096,6 +1102,8 @@ async function syncLiveData(reason='live'){
     Jawdah.data = res.data || Jawdah.data;
     Jawdah.dashboard = res.dashboard || Jawdah.dashboard;
     Jawdah.user = res.user || Jawdah.user;
+    if(window.LQ_AVATARS && typeof LQ_AVATARS.syncPeopleFromBootstrap==='function') LQ_AVATARS.syncPeopleFromBootstrap(res);
+    else if(Array.isArray(res.people)) Jawdah.people = res.people;
     const active = resolveSection(Jawdah.activeSection || 'dashboard');
     if(active==='dashboard') renderDashboard();
     else if(active==='timeline') renderTimelinePage();
@@ -1141,11 +1149,16 @@ function startTimelineAutoRefresh(){
 function renderSidebarUser(){
   const el=$('#sidebarUser'); if(!el||!Jawdah.user) return;
   const name=displayUserName(Jawdah.user);
-  const role=displayUserRole(Jawdah.user);
-  const initial=(name||'ي').trim().charAt(0);
+  const role=Jawdah.user.job_title || displayUserRole(Jawdah.user);
+  const av = (window.LQ_AVATARS && typeof LQ_AVATARS.avatarHtml==='function')
+    ? LQ_AVATARS.avatarHtml(Jawdah.user, { size:'md', clickable:true, className:'su-avatar' })
+    : `<div class="su-avatar">${htmlEscape((name||'ي').trim().charAt(0))}</div>`;
   // Compact account card only — greeting stays in the header (do not cover nav/content).
-  el.innerHTML=`<div class="su-avatar">${initial}</div><div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div><button type="button" class="su-logout">Sign Out · خروج</button></div>`;
+  el.innerHTML=`${av}<div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div><button type="button" class="su-logout">Sign Out · خروج</button></div>`;
   el.querySelector('.su-logout').onclick=logout;
+  el.querySelector('[data-lq-av-open]')?.addEventListener('click', ()=>{
+    if(window.LQ_AVATARS) LQ_AVATARS.openSettings();
+  });
 }
 function employeeGreeting(name){
   const h = new Date().getHours();
@@ -1252,6 +1265,10 @@ function showSection(id){
     const label=SECTION_TITLES[id]||id;
     toastOk(`لا تملك صلاحية الوصول إلى: ${label}`);
     return;
+  }
+  if(id==='settings' && window.LQ_AVATARS && typeof LQ_AVATARS.openSettings==='function'){
+    // Account settings always surface the personal photo section first.
+    LQ_AVATARS.openSettings();
   }
   const resolved=resolveSection(id);
   syncPortalChoiceFromSection(resolved);
@@ -2410,10 +2427,19 @@ function renderMaintenance(){
 function renderUsers(){
   if(!Jawdah.data.users && !canManageUsersSection()){ $('#usersTable').innerHTML='<div class="card">هذا القسم مخصص لحسابات الإدارة المخولة</div>'; return; }
   if(!Jawdah.data.users){ $('#usersTable').innerHTML='<div class="card mini">جاري تحميل المستخدمين...</div>'; return; }
+  const avCell = (u)=> (window.LQ_AVATARS
+    ? `<span class="lq-av-cell">${LQ_AVATARS.avatarHtml(u,{size:'sm'})}<span>${htmlEscape(u.username||'')}</span></span>`
+    : htmlEscape(u.username||''));
+  const canMod = window.LQ_AVATARS && LQ_AVATARS.canModerate && LQ_AVATARS.canModerate();
   $('#usersTable').innerHTML=tableHtml(
-    [['المستخدم','username'],['الاسم','name'],['البريد','email'],['الدور','role',(v)=>roleName(v)],['نشط','active',(v)=>v?'<span class="badge paid">نعم</span>':'<span class="badge overdue">لا</span>'],['تغيير كلمة المرور','must_change_password',(v)=>v?'<span class="badge pending">مطلوب</span>':'<span class="badge paid">لا</span>'],['آخر دخول','last_login']],
+    [['المستخدم','username',(_,r)=>avCell(r)],['الاسم','name'],['المسمى','job_title',(v,r)=>htmlEscape(v||roleName(r.role))],['البريد','email'],['الدور','role',(v)=>roleName(v)],['نشط','active',(v)=>v?'<span class="badge paid">نعم</span>':'<span class="badge overdue">لا</span>'],['تغيير كلمة المرور','must_change_password',(v)=>v?'<span class="badge pending">مطلوب</span>':'<span class="badge paid">لا</span>'],['آخر دخول','last_login']],
     Jawdah.data.users,
-    r=>`<button class="ghost" onclick="editRecord('users','${r.id}')">تعديل</button> <button class="ghost" onclick="disableUser('${r.id}')">${Number(r.active)?'تعطيل':'تفعيل'}</button>`
+    r=>{
+      const mod = (canMod && r.avatar_type && r.avatar_type!=='initials')
+        ? ` <button class="danger" type="button" onclick="LQ_AVATARS.moderateRemove('${r.id}')">إزالة الصورة</button>`
+        : '';
+      return `<button class="ghost" onclick="editRecord('users','${r.id}')">تعديل</button> <button class="ghost" onclick="disableUser('${r.id}')">${Number(r.active)?'تعطيل':'تفعيل'}</button>${mod}`;
+    }
   );
 }
 function lqDocCard(icon, title, sub, href, file){

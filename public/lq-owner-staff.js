@@ -42,11 +42,13 @@
     });
     return staff
       .map(function (u) {
+        const card =
+          window.LQ_AVATARS && typeof LQ_AVATARS.employeeCardHtml === "function"
+            ? LQ_AVATARS.employeeCardHtml(u, { size: "md" })
+            : "<h4>" + esc(u.name || u.username) + "</h4>";
         return (
           '<article class="lq-owner-staff-card">' +
-          "<h4>" +
-          esc(u.name || u.username) +
-          "</h4>" +
+          card +
           '<p class="mini">' +
           esc(u.username) +
           " · " +
@@ -79,11 +81,18 @@
         .slice(0, 80)
         .map(function (j) {
           const files = (j.attachments || []).length;
+          const who =
+            window.LQ_AVATARS && typeof LQ_AVATARS.inlinePersonHtml === "function"
+              ? LQ_AVATARS.inlinePersonHtml(
+                  { id: j.user_id, username: j.username, name: j.user_name || j.username },
+                  { size: "sm" }
+                )
+              : esc(j.user_name || j.username);
           return (
             '<div class="lq-owner-feed-item">' +
-            '<div class="head"><b>' +
-            esc(j.user_name || j.username) +
-            "</b><span>" +
+            '<div class="head">' +
+            who +
+            "<span>" +
             esc(j.work_date) +
             " · " +
             esc((j.created_at || "").slice(11, 16)) +
@@ -112,11 +121,15 @@
       items
         .slice(0, 60)
         .map(function (a) {
+          const who =
+            window.LQ_AVATARS && typeof LQ_AVATARS.inlinePersonHtml === "function"
+              ? LQ_AVATARS.inlinePersonHtml(a.username, { size: "sm" })
+              : "<b>" + esc(a.username) + "</b>";
           return (
             '<div class="lq-owner-feed-item">' +
-            '<div class="head"><b>' +
-            esc(a.username) +
-            "</b><span>" +
+            '<div class="head">' +
+            who +
+            "<span>" +
             esc((a.created_at || "").slice(0, 16)) +
             "</span></div>" +
             "<p>" +
