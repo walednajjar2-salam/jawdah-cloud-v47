@@ -91,6 +91,7 @@
             <span>💰 ${money(c.balance)}</span>
           </div>
           <div class="lq-record-actions">
+            <button class="gold-btn" onclick="openClientDossier('${c.id}')">ملف العميل</button>
             <button class="ghost" onclick="clientStatement('${c.id}')">كشف</button>
             <button class="ghost" onclick="editRecord('clients','${c.id}')">تعديل</button>
             <button class="danger" onclick="delRecord('clients','${c.id}')">حذف</button>

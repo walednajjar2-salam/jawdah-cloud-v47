@@ -161,11 +161,11 @@ ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
     "deputy": {"all"},
-    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets"},
-    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read"},
-    "reception": {"dashboard", "properties:read", "clients", "contracts:read", "invoices:read", "hospitality_events", "hospitality_bookings:read", "reports:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "messages"},
-    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
-    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
+    "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets", "client_needs:read", "client_viewings:read", "client_followups:read", "payment_receipts:read"},
+    "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read", "client_needs", "client_viewings", "client_followups", "payment_receipts:read"},
+    "reception": {"dashboard", "properties:read", "clients", "contracts:read", "invoices:read", "hospitality_events", "hospitality_bookings:read", "reports:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "messages", "client_needs", "client_viewings", "client_followups", "payment_receipts:read"},
+    "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read", "clients:read"},
+    "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read", "client_needs:read", "client_viewings:read", "client_followups:read", "payment_receipts:read"},
 }
 ROLE_PERMISSIONS["operations"].update({"estate_actions_convert", "estate_actions_contract_create"})
 ROLE_PERMISSIONS["accountant"].update({"estate_actions_contract_close", "estate_actions_month_close", "estate_actions_pricing_edit"})
@@ -222,7 +222,7 @@ TABLES = {
     "estate_apartments": ["id", "property_id", "building_id", "name", "unit_kind", "status", "room_count", "floor_no", "area_sqm", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "unit_kind", "room_type", "status", "floor_no", "area_sqm", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_accessories": ["id", "property_id", "building_id", "apartment_id", "room_id", "name", "category", "status", "qty", "unit_cost", "supplier", "invoice_no", "responsible_name", "notes", "last_update"],
-    "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
+    "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "blocks_rental", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
     "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "approved_by", "approved_at", "activated_by", "activated_at", "closed_at", "close_note", "attachments", "notes"],
     "estate_contract_invoices": ["id", "invoice_no", "contract_id", "due_date", "amount", "paid_amount", "status", "issued_at", "note"],
     "estate_contract_settlements": ["id", "contract_id", "close_date", "total_scheduled", "total_paid", "outstanding_due", "future_cancelled", "closed_by", "note", "created_at"],
@@ -2271,6 +2271,7 @@ def init_db() -> None:
             ("vendor_name", "TEXT"),
             ("approved_by", "TEXT"),
             ("closed_at", "TEXT"),
+            ("blocks_rental", "INTEGER NOT NULL DEFAULT 0"),
         ]:
             ensure_column(db, "estate_maintenance", col, definition)
         for col, definition in [
@@ -3334,6 +3335,66 @@ def conflicting_active_estate_contract(
         ):
             return row
     return None
+
+
+def sync_estate_maintenance_unit_link(
+    db: sqlite3.Connection,
+    maint: Dict[str, Any],
+    actor_name: str,
+) -> None:
+    """When maintenance blocks rental, mark unit as maintenance; on close restore vacant/occupied."""
+    apartment_id = str(maint.get("apartment_id") or "").strip()
+    room_id = str(maint.get("room_id") or "").strip()
+    if room_id:
+        entity_type, entity_id = "room", room_id
+    elif apartment_id:
+        entity_type, entity_id = "apartment", apartment_id
+    else:
+        return
+    status = str(maint.get("status") or "").strip().lower()
+    blocks = bool(int(maint.get("blocks_rental") or 0))
+    if status in ("open", "in progress") and blocks:
+        set_estate_unit_status(
+            db,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            target_status="maintenance",
+            actor_name=actor_name,
+            note="Maintenance blocks rental/occupancy",
+        )
+        return
+    if status == "closed":
+        active = db.execute(
+            """
+            SELECT id FROM estate_contracts
+            WHERE lower(entity_type)=lower(?) AND entity_id=? AND lower(status)='active'
+            LIMIT 1
+            """,
+            (entity_type, entity_id),
+        ).fetchone()
+        # Force restore even from maintenance (set_estate_unit_status normally skips vacant from maintenance).
+        table = estate_unit_table(entity_type)
+        row = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+        if not row:
+            return
+        current = str(row["status"] or "").strip().lower()
+        target = "occupied" if active else "vacant"
+        if current == target:
+            return
+        db.execute(
+            f"UPDATE {table} SET status=?, last_update=? WHERE id=?",
+            (target, today(), entity_id),
+        )
+        log_estate_status_history(
+            db,
+            entity_type,
+            entity_id,
+            dict(row),
+            current,
+            target,
+            actor_name,
+            "Maintenance closed — unit status restored",
+        )
 
 
 def set_estate_unit_status(
@@ -7741,6 +7802,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 data["maintenance_date"] = today()
             if data["status"] == "Closed" and not str(data.get("closed_at") or "").strip():
                 data["closed_at"] = now_iso()
+            raw_blocks = data.get("blocks_rental")
+            if isinstance(raw_blocks, str):
+                data["blocks_rental"] = 1 if raw_blocks.strip().lower() in ("1", "true", "yes", "on") else 0
+            else:
+                data["blocks_rental"] = 1 if raw_blocks else 0
         if table == "estate_contracts":
             if method == "PUT" and item_id:
                 current = db.execute("SELECT * FROM estate_contracts WHERE id=?", (item_id,)).fetchone()
@@ -8142,6 +8208,22 @@ class JawdahHandler(BaseHTTPRequestHandler):
             data["end_date"] = edt.isoformat()
             data["nightly_rate"] = round(rate, 3)
             data["active"] = int(bool(data.get("active", 1)))
+        if table in ("client_needs", "client_viewings", "client_followups"):
+            if not str(data.get("client_id") or "").strip() or not exists(db, "clients", str(data.get("client_id") or "").strip()):
+                return self.send_json({"ok": False, "error": "اختر عميلاً مسجّلاً أولاً"}, 400)
+            if method == "POST":
+                data.setdefault("created_at", now_iso())
+                if table == "client_needs":
+                    data.setdefault("status", "open")
+                    data.setdefault("updated_at", now_iso())
+                if table == "client_viewings":
+                    data.setdefault("status", "scheduled")
+                    data.setdefault("created_by", actor_name)
+                if table == "client_followups":
+                    data.setdefault("status", "open")
+                    data.setdefault("created_by", actor_name)
+            if table == "client_needs" and method == "PUT":
+                data["updated_at"] = now_iso()
         cols = [c for c in TABLES[table] if c in data]
         clean = {c: data.get(c) for c in cols}
         if method == "POST":
@@ -8195,6 +8277,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     user.get("name") or user.get("username") or "System",
                     "طلب اعتماد عقد جديد من العمليات",
                 )
+            if table == "estate_maintenance":
+                sync_estate_maintenance_unit_link(db, clean, actor_name)
             db.commit()
             return self.send_json({"ok": True, "item": clean, "message": "تم الحفظ بنجاح"})
         else:
@@ -8289,6 +8373,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                             actor_name=actor_name,
                             note="Contract ended/cancelled by update",
                         )
+            if table == "estate_maintenance":
+                sync_estate_maintenance_unit_link(db, clean, actor_name)
             db.commit()
             return self.send_json({"ok": True, "message": "تم الحفظ بنجاح"})
 

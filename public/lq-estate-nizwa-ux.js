@@ -381,6 +381,38 @@
       .join("");
   }
 
+  async function renderBuildingSummary() {
+    const host = document.getElementById("lqNxBldSummary");
+    if (!host) return;
+    if (!state.buildingId) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    try {
+      const res = await api("estate_building_summary?building_id=" + encodeURIComponent(state.buildingId));
+      const c = res.counts || {};
+      const col = res.collection || {};
+      host.hidden = false;
+      host.innerHTML = `
+        <div class="status-line" style="gap:8px;flex-wrap:wrap;margin:8px 0 4px">
+          <span class="badge">إشغال ${fmtVal(res.occupancy_pct)}%</span>
+          <span class="badge">مؤجرة ${fmtVal(c.occupied)}</span>
+          <span class="badge">شاغرة ${fmtVal(c.vacant)}</span>
+          <span class="badge">محجوزة ${fmtVal(c.reserved)}</span>
+          <span class="badge">صيانة ${fmtVal(c.maintenance)}</span>
+          <span class="badge">تحصيل ${moneyVal(col.collected)} / ${moneyVal(col.billed)}</span>
+          <span class="badge overdue">متأخرات ${moneyVal(col.overdue)}</span>
+          <span class="badge">تكلفة صيانة ${moneyVal(res.maintenance_cost)}</span>
+          <span class="badge">عملاء حاليون ${fmtVal((res.current_client_ids || []).length)}</span>
+          <span class="badge">عقود ${fmtVal((res.contracts || []).length)}</span>
+        </div>`;
+    } catch (e) {
+      host.hidden = false;
+      host.innerHTML = `<span class="badge">تعذر تحميل ملخص البناية</span>`;
+    }
+  }
+
   function renderToolbar() {
     const host = document.getElementById("lqNxToolbar");
     if (!host) return;
@@ -714,7 +746,12 @@
           <label>نهاية الحجز<input id="nxUResEnd" type="date" value="${esc(row.reservation_end_date || "")}"></label>
           <label>المسؤول<input id="nxUManager" value="${esc(row.manager_name || "")}"></label>
           <label>ملاحظات<textarea id="nxUNotes" rows="3">${esc(row.notes || "")}</textarea></label>
-        </div>`;
+        </div>
+        ${
+          row.tenant_client_id || row.booked_client_id
+            ? `<div class="toolbar" style="margin-top:8px"><button type="button" class="ghost" id="nxUDossier">ملف العميل المرتبط</button></div>`
+            : ""
+        }`;
       foot.innerHTML = `
         <button type="button" class="ghost" id="nxUClose">إغلاق</button>
         ${
@@ -730,6 +767,11 @@
         <button type="button" class="gold-btn" id="nxUSave">حفظ</button>`;
       document.getElementById("nxUClose")?.addEventListener("click", closeDrawer);
       document.getElementById("nxUSave")?.addEventListener("click", () => saveUnit(entityType, entityId));
+      document.getElementById("nxUDossier")?.addEventListener("click", () => {
+        const cid = document.getElementById("nxUTenant")?.value || row.tenant_client_id || row.booked_client_id;
+        if (cid && typeof openClientDossier === "function") openClientDossier(cid);
+        else toastBad("لا يوجد عميل مرتبط");
+      });
       document.getElementById("nxUConvert")?.addEventListener("click", () => {
         if (typeof convertEstateReservation === "function") convertEstateReservation(entityType, entityId);
       });
@@ -986,24 +1028,49 @@
   }
 
   async function createMaintPrompt() {
-    const title = prompt("عنوان طلب الصيانة");
+    const units = unifyUnits(state.propertyId, state.buildingId);
+    let entityType = "";
+    let entityId = "";
+    let autofill = {};
+    if (units.length) {
+      const labels = units.map((u, i) => `${i + 1}) ${u.name} (${unitStatusAr(u.status)})`).join("\n");
+      const pick = prompt(`اختر رقم الوحدة للصيانة (أو اتركه فارغًا للبناية فقط):\n${labels}`, "1");
+      if (pick === null) return;
+      const idx = Number(pick) - 1;
+      if (pick && units[idx]) {
+        entityType = units[idx].entityType;
+        entityId = units[idx].entityId;
+        if (window.LQEstateFoundation) {
+          autofill = (await window.LQEstateFoundation.autofillUnitInto(entityType, entityId)) || {};
+        }
+      }
+    }
+    const title = prompt("عنوان طلب الصيانة", autofill.unit_name ? `صيانة ${autofill.unit_name}` : "");
     if (!title) return;
+    const blocksAns = prompt("هل تمنع الصيانة التأجير/السكن؟ (نعم/لا)", "لا");
+    if (blocksAns === null) return;
+    const blocks_rental = /^(1|yes|y|نعم|true)$/i.test(String(blocksAns || "").trim()) ? 1 : 0;
+    const payload = {
+      property_id: autofill.property_id || state.propertyId || null,
+      building_id: autofill.building_id || state.buildingId || null,
+      apartment_id: entityType === "apartment" ? entityId : autofill.apartment_id || null,
+      room_id: entityType === "room" ? entityId : null,
+      title,
+      status: "Open",
+      priority: "Medium",
+      blocks_rental,
+      maintenance_date: todayStr(),
+      responsible_name: "",
+      parts_cost: 0,
+      labor_cost: 0,
+      total_cost: 0,
+      notes: autofill.tenant_name
+        ? `مستأجر: ${autofill.tenant_name || ""} · هاتف: ${autofill.tenant_phone || ""} · ${autofill.last_maintenance_notes || ""}`
+        : autofill.last_maintenance_notes || "",
+    };
     try {
-      await api("estate_maintenance", {
-        method: "POST",
-        body: JSON.stringify({
-          property_id: state.propertyId || null,
-          building_id: state.buildingId || null,
-          title,
-          status: "Open",
-          priority: "Medium",
-          maintenance_date: todayStr(),
-          parts_cost: 0,
-          labor_cost: 0,
-          total_cost: 0,
-        }),
-      });
-      toastOk("تم تسجيل طلب الصيانة");
+      const res = await api("estate_maintenance", { method: "POST", body: JSON.stringify(payload) });
+      toastOk(res.message || "تم الحفظ بنجاح");
       await loadAll();
       state.module = "maint";
       render();
@@ -1031,6 +1098,7 @@
     renderStats(state.buildingId ? unitsBld : unitsAllProp);
     renderModules();
     renderBuildings();
+    renderBuildingSummary();
     renderToolbar();
     renderBody();
     if (state.drawer) paintDrawer();
