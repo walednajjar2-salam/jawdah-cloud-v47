@@ -99,11 +99,11 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v70.3-dock-sidebar"
-# Production baseline family: v69. Ops-complete = full 42-item requirements closure.
+APP_VERSION = "Launch-Quality-LLC-v70.4-finish-remaining"
+# Production baseline family: v70. Ops-complete = full 42-item requirements closure.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
-STABLE_TAG = "v69-ops-complete"
+STABLE_TAG = "v70.4-complete"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -488,7 +488,7 @@ WORKFLOW_POLICY_DEFAULTS: Dict[str, Any] = {
     "invoice_backdate_limit_days": 7,
     "invoice_future_limit_days": 180,
 }
-STAFF_APP_VERSION = os.environ.get("LQ_STAFF_APP_VERSION", "68.2.0").strip()
+STAFF_APP_VERSION = os.environ.get("LQ_STAFF_APP_VERSION", "70.4.0").strip()
 PRODUCTION_URL = os.environ.get("LQ_PRODUCTION_URL", "https://web-production-08d73.up.railway.app").strip()
 STAFF_DOWNLOAD_APK = os.environ.get(
     "LQ_STAFF_APK_URL",

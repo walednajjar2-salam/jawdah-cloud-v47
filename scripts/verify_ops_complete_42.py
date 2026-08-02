@@ -23,7 +23,9 @@ def main() -> int:
     fails = 0
 
     # 1) Version / env label
-    fails += not ok("APP_VERSION v69", "v69" in server.APP_VERSION, server.APP_VERSION)
+    fails += not ok("APP_VERSION v70", "v70" in server.APP_VERSION, server.APP_VERSION)
+    fails += not ok("STAFF_APP_VERSION 70.x", server.STAFF_APP_VERSION.startswith("70."), server.STAFF_APP_VERSION)
+    fails += not ok("STABLE_TAG v70", str(server.STABLE_TAG).startswith("v70"), server.STABLE_TAG)
     fails += not ok("env label present", bool(server.APP_ENV_LABEL_AR), server.APP_ENV_LABEL_AR)
     fails += not ok("official label Arabic", "رسمية" in server.APP_ENV_LABEL_AR or server.APP_ENV_MODE == "trial")
 

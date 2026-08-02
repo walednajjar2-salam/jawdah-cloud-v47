@@ -1,8 +1,9 @@
-# Launch Quality LLC v68-stable
+# Launch Quality LLC v70.4
 
 Real Estate, External Majlis Hospitality & Accounting — production backend + Arabic RTL dashboard.
 
-**Current stable release:** see [RELEASE_v68.md](RELEASE_v68.md)
+**Current release:** `Launch-Quality-LLC-v70.4-finish-remaining`  
+**Live:** https://web-production-08d73.up.railway.app/fresh
 
 ## Features
 
@@ -13,6 +14,7 @@ Real Estate, External Majlis Hospitality & Accounting — production backend + A
 - Contract renewal workflow (`POST /api/renew_contract`)
 - Financial modules: purchases, payroll, inventory, bank, smart receivables
 - Backup / CSV export / health check
+- Native staff apps: Windows (`/get-windows`) + Android (`/get-android`)
 
 ## Run locally
 
@@ -26,6 +28,8 @@ Open: http://localhost:8765
 ## Deploy on Railway
 
 See [RAILWAY.md](RAILWAY.md) or `DEPLOYMENT.txt`.
+
+Optional owner steps (Bucket / Postgres / webhook): documented in `RAILWAY.md`.
 
 ## Default users
 

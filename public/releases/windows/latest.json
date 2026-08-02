@@ -1,6 +1,6 @@
 {
   "channel": "stable",
-  "version": "68.2.0",
+  "version": "70.4.0",
   "installer_url": "https://web-production-08d73.up.railway.app/LaunchQuality.exe",
   "portable_url": "https://web-production-08d73.up.railway.app/lq-portable.zip",
   "android_apk_url": "https://web-production-08d73.up.railway.app/releases/android/Launch-Quality-Staff.apk",
@@ -8,10 +8,11 @@
   "setup_page": "https://web-production-08d73.up.railway.app/get-windows?auto=1",
   "app_url": "https://web-production-08d73.up.railway.app/app.html",
   "download_page": "https://web-production-08d73.up.railway.app/download.html",
-  "published_at": "2026-07-28T09:30:00Z",
+  "published_at": "2026-08-02T05:00:00Z",
   "release_notes": [
-    "Windows launcher rebuilt (GUI) for production URL",
-    "Android WebView APK published under /releases/android",
-    "Download hubs: /get-windows and /get-android"
+    "Aligned native app channel to v70.4",
+    "Accurate backup/offsite UI (local Volume vs optional Bucket)",
+    "Windows + Android download hubs ready",
+    "Docs and verify script aligned to finish-remaining"
   ]
 }

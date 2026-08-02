@@ -10,8 +10,8 @@ CMDLINE_ZIP="$ROOT/tools/android/cmdline-tools.zip"
 APP_URL="${LQ_APP_URL:-https://web-production-08d73.up.railway.app/app.html?field=1}"
 APP_ID="com.launchquality.staff"
 APP_NAME="جودة الانطلاقة"
-VERSION_NAME="${LQ_APP_VERSION:-68.2.0}"
-VERSION_CODE="${LQ_APP_VERSION_CODE:-6820}"
+VERSION_NAME="${LQ_APP_VERSION:-70.4.0}"
+VERSION_CODE="${LQ_APP_VERSION_CODE:-7040}"
 
 mkdir -p "$SDK_ROOT" "$OUT_DIR" "$APP_DIR" "$ROOT/tools/android"
 
@@ -203,7 +203,7 @@ EOF
 </network-security-config>
 EOF
 
-  cat > "$APP_DIR/app/src/main/java/com/launchquality/staff/MainActivity.java" <<'EOF'
+  cat > "$APP_DIR/app/src/main/java/com/launchquality/staff/MainActivity.java" <<EOF
 package com.launchquality.staff;
 
 import android.annotation.SuppressLint;
@@ -248,7 +248,7 @@ public class MainActivity extends AppCompatActivity {
     settings.setAllowFileAccess(false);
     settings.setAllowContentAccess(true);
     settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-    settings.setUserAgentString(settings.getUserAgentString() + " LaunchQualityStaff/68.2");
+    settings.setUserAgentString(settings.getUserAgentString() + " LaunchQualityStaff/${VERSION_NAME}");
 
     webView.setWebChromeClient(new WebChromeClient());
     webView.setWebViewClient(new WebViewClient() {

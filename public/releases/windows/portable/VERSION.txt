@@ -1,1 +1,5 @@
-68.2.0
+70.4.0
+Launch Quality Windows Portable
+Aligned with Launch-Quality-LLC-v70.4-finish-remaining
+Channel: stable
+Build: 2026-08-02
