@@ -10,20 +10,20 @@ body.lq-official-portal{
 
 body.lq-official-portal .op-stage{
   position:relative;z-index:1;
-  width:min(1140px,100%);
+  width:min(1180px,100%);
   margin:0 auto;
-  padding:clamp(16px,3vh,34px) 22px 26px;
+  padding:clamp(10px,2vh,22px) 18px 16px;
   display:flex;
   flex-direction:column;
   align-items:stretch;
-  gap:clamp(14px,2.4vh,24px);
+  gap:clamp(10px,1.6vh,16px);
   min-height:100vh;
   box-sizing:border-box;
 }
 
 body.lq-official-portal .op-top{
   display:flex;justify-content:flex-end;align-items:center;
-  min-height:44px;
+  min-height:38px;
   animation:opRise .7s ease both;
 }
 body.lq-official-portal .lq-lang-switch{
@@ -49,54 +49,68 @@ body.lq-official-portal .op-brand{
   animation:opRise .85s .06s ease both;
 }
 body.lq-official-portal .op-brand .lq-brand-mark,
-body.lq-official-portal .op-brand .lq-brand-mark--hero{
-  margin:0 auto 6px;
+body.lq-official-portal .op-brand .lq-brand-mark--portal{
+  margin:0 auto 2px;
+  /* Compact enough so all 6 platforms fit in one viewport */
+  --bm-size:min(140px,20vh) !important;
+  width:var(--bm-size) !important;
+  height:var(--bm-size) !important;
 }
 body.lq-official-portal .op-brand-name{
   margin:0;
   font-family:var(--lq-font-display);
   font-weight:800;
-  font-size:clamp(2rem,4.8vw,2.85rem);
+  font-size:clamp(1.7rem,3.6vw,2.35rem);
   letter-spacing:.01em;
   line-height:1.15;
   color:var(--lq-atm-ink);
   text-shadow:0 2px 16px rgba(255,255,255,.55);
 }
 body.lq-official-portal .op-brand-ar{
-  margin:6px 0 0;
-  font-size:clamp(1.12rem,2.4vw,1.4rem);
+  margin:4px 0 0;
+  font-size:clamp(1rem,2vw,1.25rem);
   font-weight:800;
   color:var(--lq-atm-gold-deep);
   letter-spacing:.02em;
 }
 body.lq-official-portal .op-support{
-  margin:10px auto 0;
+  margin:6px auto 0;
   max-width:36rem;
-  font-size:.98rem;
-  line-height:1.7;
+  font-size:.9rem;
+  line-height:1.55;
   color:var(--lq-atm-text);
   font-weight:700;
   text-shadow:0 1px 10px rgba(255,255,255,.45);
 }
+body.lq-official-portal .op-count{
+  margin:8px auto 0;
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:5px 12px;border-radius:999px;
+  background:rgba(15,42,74,.08);
+  border:1px solid rgba(197,165,106,.45);
+  color:var(--lq-atm-ink);font-size:.78rem;font-weight:800;
+}
 body.lq-official-portal .op-rule{
-  width:88px;height:3px;margin:14px auto 0;border:0;border-radius:99px;
+  width:72px;height:3px;margin:8px auto 0;border:0;border-radius:99px;
   background:linear-gradient(90deg,transparent,var(--lq-atm-gold),transparent);
 }
 
 body.lq-official-portal .op-choices{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:16px;
+  gap:12px;
   width:100%;
   align-items:stretch;
+  flex:1;
+  content-visibility:visible;
   animation:opRise 1s .12s ease both;
 }
 body.lq-official-portal .op-choice{
   appearance:none;cursor:pointer;text-align:right;font:inherit;color:inherit;
   position:relative;
-  display:flex;flex-direction:column;align-items:stretch;gap:10px;
-  padding:20px 18px 18px;
-  border-radius:20px;
+  display:flex;flex-direction:column;align-items:stretch;gap:8px;
+  padding:14px 14px 12px;
+  border-radius:18px;
   background:rgba(255,255,255,.95);
   color:var(--lq-atm-text);
   border:2.5px solid rgba(15,42,74,.16);
@@ -106,13 +120,13 @@ body.lq-official-portal .op-choice{
     0 1px 0 rgba(255,255,255,.92) inset,
     0 -1px 0 rgba(15,42,74,.05) inset,
     0 10px 18px rgba(15,42,74,.07),
-    0 24px 48px rgba(15,42,74,.14),
+    0 20px 40px rgba(15,42,74,.12),
     0 2px 0 rgba(197,165,106,.3);
   backdrop-filter:blur(12px);
   transition:transform .28s ease, border-color .28s ease, box-shadow .28s ease;
-  min-height:210px;
+  min-height:0;
   box-sizing:border-box;
-  transform:perspective(1000px) rotateX(.8deg);
+  transform:perspective(1000px) rotateX(.6deg);
 }
 body.lq-official-portal .op-choice::before{
   content:"";
@@ -131,7 +145,7 @@ body.lq-official-portal .op-choice:focus-visible{
   outline-offset:-5px;
 }
 body.lq-official-portal .op-mark{
-  width:60px;height:60px;border-radius:15px;
+  width:48px;height:48px;border-radius:13px;
   display:grid;place-items:center;overflow:hidden;
   background:linear-gradient(160deg,#18354f,#0f2740);
   border:2px solid rgba(197,165,106,.45);
@@ -147,19 +161,19 @@ body.lq-official-portal .op-mark span{
 }
 body.lq-official-portal .op-choice h2{
   margin:0;position:relative;z-index:1;
-  font-size:1.22rem;font-weight:800;color:var(--lq-atm-ink);
+  font-size:1.08rem;font-weight:800;color:var(--lq-atm-ink);
   text-align:right;
 }
 body.lq-official-portal .op-choice p{
   margin:0;position:relative;z-index:1;flex:1;
-  color:var(--lq-atm-muted);font-size:.9rem;line-height:1.65;font-weight:600;
+  color:var(--lq-atm-muted);font-size:.82rem;line-height:1.5;font-weight:600;
   text-align:right;
 }
 body.lq-official-portal .op-enter{
   position:relative;z-index:1;
   display:inline-flex;align-items:center;justify-content:center;
   align-self:stretch;
-  min-height:46px;padding:10px 14px;border-radius:13px;
+  min-height:40px;padding:8px 12px;border-radius:12px;
   background:linear-gradient(145deg,var(--lq-atm-gold-bright),var(--lq-atm-gold-deep));
   color:#1a1408;font-weight:800;font-size:.95rem;
   border:2px solid rgba(154,122,63,.4);
@@ -167,8 +181,8 @@ body.lq-official-portal .op-enter{
   text-align:center;
 }
 
-body.lq-official-portal .finance-only{display:none}
-body.lq-official-portal.show-finance .finance-only{display:flex}
+/* Show ALL platforms completely — accounting no longer hidden */
+body.lq-official-portal .finance-only{display:flex !important}
 
 body.lq-official-portal .op-foot{
   margin-top:auto;
@@ -197,4 +211,36 @@ body.lq-official-portal .op-foot{
   body.lq-official-portal .op-choices,
   body.lq-official-portal .op-foot{animation:none!important}
   body.lq-official-portal .op-choice{transition:none;transform:none}
+  body.lq-official-portal .lq-brand-mark--portal img{animation:none!important}
+}
+
+/* Fit all 6 platforms in one viewport on typical laptop heights */
+@media (max-height:900px){
+  body.lq-official-portal .op-stage{padding:6px 14px 8px;gap:6px;min-height:100dvh}
+  body.lq-official-portal .op-top{min-height:32px}
+  body.lq-official-portal .op-brand .lq-brand-mark,
+  body.lq-official-portal .op-brand .lq-brand-mark--portal{
+    --bm-size:min(108px,16vh) !important;
+  }
+  body.lq-official-portal .op-brand-name{font-size:clamp(1.25rem,2.6vw,1.7rem)}
+  body.lq-official-portal .op-brand-ar{margin-top:2px;font-size:.9rem}
+  body.lq-official-portal .op-support{margin-top:3px;font-size:.78rem;line-height:1.35}
+  body.lq-official-portal .op-count{margin-top:4px;padding:3px 10px;font-size:.7rem}
+  body.lq-official-portal .op-rule{margin-top:4px;height:2px}
+  body.lq-official-portal .op-choices{gap:8px}
+  body.lq-official-portal .op-choice{padding:9px 11px 9px;gap:5px;border-radius:14px}
+  body.lq-official-portal .op-mark{width:36px;height:36px;border-radius:10px}
+  body.lq-official-portal .op-mark span{font-size:1.15rem}
+  body.lq-official-portal .op-choice h2{font-size:.95rem}
+  body.lq-official-portal .op-choice p{font-size:.72rem;line-height:1.35}
+  body.lq-official-portal .op-enter{min-height:32px;padding:5px 10px;font-size:.84rem;border-radius:10px}
+  body.lq-official-portal .op-foot{font-size:.72rem}
+}
+@media (max-height:720px){
+  body.lq-official-portal .op-brand-ar,
+  body.lq-official-portal .op-support{display:none}
+  body.lq-official-portal .op-brand .lq-brand-mark,
+  body.lq-official-portal .op-brand .lq-brand-mark--portal{
+    --bm-size:min(84px,12vh) !important;
+  }
 }
