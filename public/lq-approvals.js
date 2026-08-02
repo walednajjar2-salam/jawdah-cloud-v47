@@ -5,8 +5,9 @@
     Number((window.Jawdah && Jawdah.dashboard && Jawdah.dashboard.kpis && Jawdah.dashboard.kpis.approval_threshold) || 3000);
 
   function canDecide() {
+    if (typeof canDecideApprovals === "function") return canDecideApprovals();
     const r = window.Jawdah && Jawdah.user && Jawdah.user.role;
-    return r === "admin" || r === "owner" || r === "accountant";
+    return r === "admin" || r === "owner" || r === "deputy" || r === "manager" || r === "accountant";
   }
 
   function canRequest() {
@@ -17,10 +18,13 @@
   function typeLabel(t) {
     return (
       {
-        contract: "اعتماد عقد",
+        contract: "اعتماد عقد عقاري",
         manual_invoice: "فاتورة يدوية كبيرة",
         payment: "تحصيل كبير",
         invoice: "فاتورة",
+        estate_month_close: "إقفال شهر عقاري",
+        estate_convert: "تحويل حجز عقاري",
+        estate_pricing: "تعديل تسعير عقاري",
       }[t] || t
     );
   }
@@ -30,6 +34,11 @@
     if (row.entity === "contracts") {
       const c = (data.contracts || []).find((x) => x.id === row.entity_id);
       return c ? (c.contract_no || c.id) : row.entity_id;
+    }
+    if (row.entity === "estate_contracts") {
+      const c = (data.estate_contracts || []).find((x) => x.id === row.entity_id);
+      const no = c ? (c.contract_no || c.id) : row.entity_id;
+      return `عقد عقاري ${no}`;
     }
     if (row.entity === "invoices") {
       const i = (data.invoices || []).find((x) => x.id === row.entity_id);
@@ -46,11 +55,11 @@
         <h3>📋 شرح سير الاعتمادات — المرحلة 5</h3>
         <p class="mini"><strong>ببساطة:</strong> بعض العمليات المالية لا تُنفَّذ مباشرة — تمر على المدير أو المحاسب أولاً.</p>
         <ol class="check-list" style="margin:12px 0">
-          <li><strong>عقد جديد:</strong> العمليات يجهّز العقد → يطلب اعتماد → المدير يوافق → يصبح العقد نشط وتُولَّد الفواتير.</li>
+          <li><strong>عقد عقاري (إلزامي 100٪):</strong> مسودة → طلب اعتماد → اعتماد/رفض → تفعيل → إصدار الفواتير. الإشغال لا يتم إلا بعد التفعيل.</li>
           <li><strong>فاتورة كبيرة</strong> (فوق ${m}): لا تُصدر مباشرة → طلب اعتماد → بعد الموافقة تُنشأ الفاتورة.</li>
           <li><strong>تحصيل كبير</strong> (فوق ${m}): لا يُسجَّل مباشرة → طلب اعتماد → بعد الموافقة يُسجَّل التحصيل والبنك.</li>
         </ol>
-        <p class="mini linked-ok">كل خطوة تُسجَّل: من طلب، من وافق، ومتى.</p>
+        <p class="mini linked-ok">كل خطوة تُسجَّل: من طلب، من وافق/رفض، ومتى — مع سبب الرفض إن وُجد.</p>
       </div>`;
   }
 
@@ -88,12 +97,23 @@
     if (!approvalId) return;
     const word = approve ? "الموافقة" : "الرفض";
     if (!confirm(`تأكيد ${word} على هذا الطلب؟`)) return;
+    let notes = "";
+    if (!approve) {
+      const reason = prompt("سبب الرفض (إلزامي):", "");
+      if (reason === null) return;
+      notes = String(reason || "").trim();
+      if (notes.length < 3) {
+        if (typeof toastErr === "function") toastErr("سبب الرفض مطلوب");
+        return;
+      }
+    }
     try {
       await api("decide_approval", {
         method: "POST",
         body: JSON.stringify({
           approval_id: approvalId,
           decision: approve ? "approve" : "reject",
+          notes,
         }),
       });
       if (typeof toast === "function") toast(approve ? "تمت الموافقة" : "تم الرفض");

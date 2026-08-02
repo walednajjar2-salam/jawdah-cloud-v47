@@ -67,7 +67,7 @@ const NAV_SAAS_ITEMS = [
 const PORTAL_NAV_IDS = {
   realestate: new Set([
     'dashboard','estate-platform','clients','contracts','invoices','receivables',
-    'maintenance','inventory','daily-ops','reports','messages','timeline','backup','properties'
+    'maintenance','inventory','daily-ops','reports','messages','timeline','backup','properties','approvals'
   ]),
   hospitality: new Set([
     'dashboard','hospitality-platform','clients','invoices','receivables',
@@ -128,17 +128,18 @@ function isRestrictedAdminUser(){
 function canSeeApprovals(){
   if(!Jawdah.user) return false;
   if(isRestrictedAdminUser()) return false;
-  return ['admin','owner','accountant','operations'].includes(Jawdah.user.role);
+  return ['admin','owner','deputy','manager','accountant','operations'].includes(Jawdah.user.role);
 }
 function canDecideApprovals(){
   if(!Jawdah.user) return false;
   if(isRestrictedAdminUser()) return false;
-  return ['owner','accountant'].includes(Jawdah.user.role);
+  /* Match server APPROVAL_DECIDE_ROLES.contract (+ deputy/manager) */
+  return ['owner','admin','deputy','manager'].includes(Jawdah.user.role);
 }
 function canActivateContracts(){
   if(!Jawdah.user) return false;
   if(isRestrictedAdminUser()) return false;
-  return isPrimaryOwnerUser() || Jawdah.user.role==='owner';
+  return isPrimaryOwnerUser() || ['owner','admin','deputy'].includes(Jawdah.user.role);
 }
 function canSeeInventory(){
   if(!Jawdah.user) return false;
@@ -306,7 +307,19 @@ function canManageUsersSection(){
 }
 function estateRolePermissions(role){
   const r = String(role||'').toLowerCase();
-  if(['owner','admin'].includes(r)) return new Set(['all']);
+  if(['owner','admin','deputy'].includes(r)) return new Set(['all']);
+  if(r==='manager'){
+    return new Set([
+      'estate_properties',
+      'estate_buildings',
+      'estate_apartments',
+      'estate_rooms',
+      'estate_accessories',
+      'estate_maintenance',
+      'estate_actions_convert',
+      'estate_actions_contract_create',
+    ]);
+  }
   if(r==='operations'){
     return new Set([
       'estate_properties',
@@ -330,6 +343,15 @@ function estateRolePermissions(role){
       'estate_actions_contract_close',
       'estate_actions_month_close',
       'estate_actions_pricing_edit',
+    ]);
+  }
+  if(r==='reception'){
+    return new Set([
+      'estate_properties:read',
+      'estate_buildings:read',
+      'estate_apartments:read',
+      'estate_rooms:read',
+      'estate_actions_convert',
     ]);
   }
   if(r==='maintenance'){
@@ -573,9 +595,25 @@ function syncOpsBar(){
 }
 const STATUS_CLASS = {
   'شاغرة': 'vacant', 'محجوزة': 'pending', 'مستأجرة': 'rented', 'صيانة': 'maintenance',
-  vacant: 'vacant', rented: 'rented', maintenance: 'maintenance', pending: 'pending',
+  vacant: 'vacant', rented: 'rented', occupied: 'rented', maintenance: 'maintenance', pending: 'pending',
   partial: 'partial', paid: 'paid', active: 'active', overdue: 'overdue', open: 'open',
-  income: 'paid', expense: 'overdue', draft: 'draft', renewed: 'renewed', expired: 'expired'
+  income: 'paid', expense: 'overdue', draft: 'draft', renewed: 'renewed', expired: 'expired',
+  approvalrequested: 'pending', approved: 'paid', rejected: 'overdue', cancelled: 'overdue', ended: 'expired',
+  'بانتظار الاعتماد': 'pending', 'معتمد': 'paid', 'مرفوض': 'overdue', 'مسودة': 'draft', 'نشط': 'active'
+};
+const STATUS_LABEL_AR = {
+  Draft: 'مسودة', draft: 'مسودة',
+  ApprovalRequested: 'بانتظار الاعتماد', approvalrequested: 'بانتظار الاعتماد',
+  Approved: 'معتمد', approved: 'معتمد',
+  Active: 'نشط', active: 'نشط',
+  Rejected: 'مرفوض', rejected: 'مرفوض',
+  Cancelled: 'ملغى', cancelled: 'ملغى', canceled: 'ملغى',
+  Ended: 'منتهٍ', ended: 'منتهٍ',
+  Closed: 'مغلق', closed: 'مغلق',
+  Pending: 'معلّق', pending: 'معلّق',
+  Paid: 'مدفوع', paid: 'مدفوع',
+  Partial: 'جزئي', partial: 'جزئي',
+  Overdue: 'متأخر', overdue: 'متأخر'
 };
 function propertyLabel(p){
   if(!p || !p.id) return '';
@@ -633,15 +671,17 @@ function bindImagePreview(inputId, previewId){
 function statusBadge(v){
   const raw = String(v ?? '');
   const lower = raw.toLowerCase();
-  let cls = STATUS_CLASS[raw] || STATUS_CLASS[lower];
+  const label = STATUS_LABEL_AR[raw] || STATUS_LABEL_AR[lower] || raw;
+  let cls = STATUS_CLASS[raw] || STATUS_CLASS[lower] || STATUS_CLASS[label];
   if(!cls){
-    if(raw.includes('مستأ') || lower.includes('rent') || lower.includes('lease')) cls = 'rented';
+    if(raw.includes('مستأ') || lower.includes('rent') || lower.includes('lease') || lower.includes('occup')) cls = 'rented';
     else if(raw.includes('شاغ') || lower.includes('vacant')) cls = 'vacant';
     else if(raw.includes('صيان') || lower.includes('maint')) cls = 'maintenance';
-    else if(raw.includes('محج') || lower.includes('pend') || lower.includes('reserv')) cls = 'pending';
+    else if(raw.includes('مرفوض') || lower.includes('reject') || lower.includes('cancel')) cls = 'overdue';
+    else if(raw.includes('محج') || lower.includes('pend') || lower.includes('reserv') || lower.includes('approval')) cls = 'pending';
     else cls = lower.replace(/\s+/g, '-');
   }
-  return `<span class="badge ${cls}">${raw}</span>`;
+  return `<span class="badge ${cls}">${htmlEscape(label)}</span>`;
 }
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -3289,7 +3329,7 @@ window.disableUser = disableUser;
 function escapeHtml(v){ return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function editOptions(field, row, table=''){
   const opts = {
-    status: ['Rented','Vacant','Maintenance','Active','Approved','ApprovalRequested','Closed','Renewed','Expired','Draft','Open','In Progress','Completed','Pending','شاغرة','محجوزة','مستأجرة','تحت الصيانة','موقوفة'],
+    status: ['Rented','Vacant','Maintenance','Active','Approved','ApprovalRequested','Rejected','Closed','Renewed','Expired','Draft','Open','In Progress','Completed','Pending','شاغرة','محجوزة','مستأجرة','تحت الصيانة','موقوفة','مسودة','بانتظار الاعتماد','معتمد','مرفوض','نشط'],
     type: ['Villa','Apartment','Office','Compound','income','expense'],
     role: ['owner','admin','deputy','accountant','operations','reception','maintenance','viewer'],
     priority: ['Low','Medium','High','Urgent'],
@@ -5519,7 +5559,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       r=>{
         const st = String(r.status||'').toLowerCase();
         const convertBtn = st==='reserved' && canEstateConvertReservation()
-          ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مؤجرة</button> `
+          ? `<button class="gold-btn" onclick="openEstateContractFlow('apartment','${r.id}')">مسودة عقد (اعتماد)</button> `
           : '';
         const contractBtn = !['maintenance','suspended'].includes(st) && canEstateCreateContract()
           ? `<button class="gold-btn" onclick="openEstateContractFlow('apartment','${r.id}')">إنشاء عقد (مسودة)</button> `
@@ -5534,7 +5574,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       r=>{
         const st = String(r.status||'').toLowerCase();
         const convertBtn = st==='reserved' && canEstateConvertReservation()
-          ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مؤجرة</button> `
+          ? `<button class="gold-btn" onclick="openEstateContractFlow('room','${r.id}')">مسودة عقد (اعتماد)</button> `
           : '';
         const contractBtn = !['maintenance','suspended'].includes(st) && canEstateCreateContract()
           ? `<button class="gold-btn" onclick="openEstateContractFlow('room','${r.id}')">إنشاء عقد (مسودة)</button> `
@@ -5570,11 +5610,15 @@ window.printHospitalityFolio = printHospitalityFolio;
       contracts,
       r=>{
         const st = String(r.status||'').toLowerCase();
-        const requestBtn = st==='draft' ? `<button class="gold-btn" onclick="requestEstateContractApproval('${r.id}')">طلب اعتماد</button> ` : '';
+        const requestBtn = (st==='draft' || st==='rejected') ? `<button class="gold-btn" onclick="requestEstateContractApproval('${r.id}')">طلب اعتماد</button> ` : '';
         const approveBtn = st==='approvalrequested' && canDecideApprovals() ? `<button class="gold-btn" onclick="approveEstateContract('${r.id}')">اعتماد</button> ` : '';
-        const activateBtn = st==='approved' ? `<button class="gold-btn" onclick="activateEstateContract('${r.id}')">تفعيل</button> ` : '';
+        const rejectBtn = st==='approvalrequested' && canDecideApprovals() ? `<button class="danger" onclick="rejectEstateContract('${r.id}')">رفض</button> ` : '';
+        const activateBtn = st==='approved' && canActivateContracts() ? `<button class="gold-btn" onclick="activateEstateContract('${r.id}')">تفعيل</button> ` : '';
         const closeBtn = st==='active' ? `<button class="ghost" onclick="closeEstateContractById('${r.id}')">إنهاء</button> ` : '';
-        return `${requestBtn}${approveBtn}${activateBtn}${closeBtn}<button class="ghost" onclick="editRecord('estate_contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('estate_contracts','${r.id}')">حذف</button>`;
+        const editBtn = (st==='draft' || st==='rejected') ? `<button class="ghost" onclick="editRecord('estate_contracts','${r.id}')">تعديل</button> ` : '';
+        const delBtn = (st==='draft' || st==='rejected' || st==='cancelled') ? `<button class="danger" onclick="delRecord('estate_contracts','${r.id}')">حذف</button>` : '';
+        const reason = st==='rejected' && r.rejection_reason ? `<div class="mini" style="color:#b91c1c">سبب الرفض: ${htmlEscape(r.rejection_reason)}</div>` : '';
+        return `${reason}${requestBtn}${approveBtn}${rejectBtn}${activateBtn}${closeBtn}${editBtn}${delBtn}`;
       }
     );
     const ciTable = $('#estateContractInvoicesTable');
@@ -6034,19 +6078,9 @@ window.printHospitalityFolio = printHospitalityFolio;
     clearEstateForm(['exName','exCategory','exQty','exUnitCost','exSupplier','exInvoiceNo','exResponsible','exNotes']);
   };
   window.convertEstateReservation = async function(entityType, entityId){
-    try{
-      if(!canEstateConvertReservation()) return toastErr('لا تملك صلاحية تحويل الحجز');
-      const t = entityType==='room' ? 'غرفة' : 'شقة';
-      const note = prompt(`ملاحظة التحويل (${t}) — اختياري`, 'تم التحويل إلى تأجير فعلي');
-      if(note===null) return;
-      await api('estate_convert_reservation',{
-        method:'POST',
-        body:JSON.stringify({ entity_type: entityType, entity_id: entityId, note: String(note||'').trim() })
-      });
-      toast('تم التحويل إلى مؤجرة وإغلاق فاتورة الحجز المفتوحة');
-      await loadAll();
-      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
-    }catch(e){ toastErr(e); }
+    /* Approvals-only 100%: no direct reserved→occupied; open contract draft flow */
+    toast('المنصة بالاعتمادات 100٪ — أنشئ مسودة عقد ثم اطلب الاعتماد وفعّل');
+    return openEstateContractFlow(entityType, entityId);
   };
   window.openEstateContractFlow = function(entityType, entityId){
     if(!canEstateCreateContract()) return toastErr('لا تملك صلاحية إنشاء عقود الإيجار');
@@ -6101,15 +6135,29 @@ window.printHospitalityFolio = printHospitalityFolio;
   };
   window.approveEstateContract = async function(contractId){
     try{
+      if(!canDecideApprovals()) return toastErr('لا تملك صلاحية اعتماد العقود');
       if(!confirm('تأكيد اعتماد العقد؟')) return;
       await api('estate_contract_approve',{ method:'POST', body:JSON.stringify({ contract_id: contractId }) });
-      toast('تم اعتماد العقد');
+      toast('تم اعتماد العقد — يمكن التفعيل الآن');
+      await loadAll();
+      if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
+    }catch(e){ toastErr(e); }
+  };
+  window.rejectEstateContract = async function(contractId){
+    try{
+      if(!canDecideApprovals()) return toastErr('لا تملك صلاحية رفض الاعتماد');
+      const reason = prompt('سبب رفض الاعتماد (إلزامي):','');
+      if(reason===null) return;
+      if(String(reason||'').trim().length < 3) return toastErr('سبب الرفض مطلوب');
+      await api('estate_contract_reject',{ method:'POST', body:JSON.stringify({ contract_id: contractId, reason: String(reason||'').trim() }) });
+      toast('تم رفض الاعتماد — يمكن إعادة الطلب بعد التعديل');
       await loadAll();
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }
   };
   window.activateEstateContract = async function(contractId){
     try{
+      if(!canActivateContracts()) return toastErr('تفعيل العقد محصور بالإدارة بعد الاعتماد');
       if(!confirm('تفعيل العقد سيحوّل حالة الوحدة إلى مؤجرة ويولّد جدول الفواتير. متابعة؟')) return;
       await api('estate_contract_activate',{ method:'POST', body:JSON.stringify({ contract_id: contractId }) });
       toast('تم تفعيل العقد وإصدار الفواتير');

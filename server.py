@@ -160,6 +160,14 @@ ROLE_PERMISSIONS = {
     "owner": {"all"},
     "admin": {"all"},
     "deputy": {"all"},
+    # Operations manager — can decide estate contract approvals (Nizwa parity)
+    "manager": {
+        "dashboard", "properties", "clients", "contracts", "invoices", "accounts:read",
+        "approvals", "reports:read", "branches:read", "maintenance:read",
+        "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms",
+        "estate_accessories", "estate_maintenance", "estate_actions_convert",
+        "estate_actions_contract_create", "accounting_budgets:read",
+    },
     "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets"},
     "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read"},
     "reception": {"dashboard", "properties:read", "clients", "contracts:read", "invoices:read", "hospitality_events", "hospitality_bookings:read", "reports:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "messages"},
@@ -173,6 +181,7 @@ ROLE_LABELS_AR = {
     "owner": "المدير العام",
     "admin": "مدير النظام",
     "deputy": "نائب المدير",
+    "manager": "مدير العمليات",
     "accountant": "محاسب",
     "operations": "مسؤول العقارات",
     "reception": "استقبال",
@@ -218,7 +227,7 @@ TABLES = {
     "estate_rooms": ["id", "property_id", "building_id", "apartment_id", "name", "unit_kind", "room_type", "status", "floor_no", "area_sqm", "rent_price", "booking_deposit", "prepaid_amount", "reservation_start_date", "reservation_end_date", "booked_client_name", "booked_client_phone", "booked_client_id", "booked_by_employee", "maintenance_notes", "maintenance_cost", "attachments", "manager_name", "tenant_client_id", "tenant_phone", "notes", "image", "last_update"],
     "estate_accessories": ["id", "property_id", "building_id", "apartment_id", "room_id", "name", "category", "status", "qty", "unit_cost", "supplier", "invoice_no", "responsible_name", "notes", "last_update"],
     "estate_maintenance": ["id", "property_id", "building_id", "apartment_id", "room_id", "title", "status", "priority", "responsible_name", "assigned_team", "parts_details", "parts_cost", "labor_cost", "invoice_no", "invoice_date", "vendor_name", "total_cost", "approved_by", "maintenance_date", "next_followup_date", "closed_at", "notes"],
-    "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "approved_by", "approved_at", "activated_by", "activated_at", "closed_at", "close_note", "attachments", "notes"],
+    "estate_contracts": ["id", "contract_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "status", "created_by", "created_at", "approved_by", "approved_at", "activated_by", "activated_at", "closed_at", "close_note", "rejection_reason", "rejected_by", "rejected_at", "attachments", "notes"],
     "estate_contract_invoices": ["id", "invoice_no", "contract_id", "due_date", "amount", "paid_amount", "status", "issued_at", "note"],
     "estate_contract_settlements": ["id", "contract_id", "close_date", "total_scheduled", "total_paid", "outstanding_due", "future_cancelled", "closed_by", "note", "created_at"],
     "estate_month_closes": ["id", "month_key", "status", "total_invoiced", "total_collected", "outstanding_due", "closed_by", "closed_at", "note"],
@@ -233,7 +242,7 @@ PRIMARY_OWNER_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub
 DAILY_OPS_MANAGER_USERNAMES = {"razan", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
 RESTRICTED_ADMIN_USERNAMES = {"ahmed", "ahmed.najjar", "ahmed.alnajjar"}
 
-WRITE_ROLES = {"owner", "admin", "deputy", "accountant", "operations", "reception", "maintenance"}
+WRITE_ROLES = {"owner", "admin", "deputy", "manager", "accountant", "operations", "reception", "maintenance"}
 
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
@@ -488,6 +497,86 @@ WORKFLOW_POLICY_DEFAULTS: Dict[str, Any] = {
     "invoice_backdate_limit_days": 7,
     "invoice_future_limit_days": 180,
 }
+
+ESTATE_SETTINGS_DEFAULTS: Dict[str, Any] = {
+    "unit_types": ["شقة", "غرفة", "محل", "مكتب"],
+    "unit_statuses": ["شاغرة", "محجوزة", "مستأجرة", "تحت الصيانة", "موقوفة", "مؤرشفة"],
+    "contract_types": ["سكني", "تجاري", "مختلط"],
+    "payment_methods": ["نقدي", "تحويل بنكي", "بطاقة", "شيك"],
+    "approval_threshold": APPROVAL_THRESHOLD,
+    "contract_number_prefix": "EST-C",
+    "invoice_number_prefix": "EST-I",
+    "reservation_number_prefix": "EST-R",
+}
+
+
+def load_estate_settings(db: sqlite3.Connection) -> Dict[str, Any]:
+    row = db.execute("SELECT value_json FROM workflow_policies WHERE key=?", ("estate_settings",)).fetchone()
+    out = dict(ESTATE_SETTINGS_DEFAULTS)
+    if not row:
+        return out
+    try:
+        raw = json.loads(row["value_json"] if isinstance(row, sqlite3.Row) else row[0])
+        if isinstance(raw, dict):
+            out.update(raw)
+    except Exception:
+        pass
+    return out
+
+
+def save_estate_settings(db: sqlite3.Connection, user: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    current = load_estate_settings(db)
+    next_settings = dict(current)
+    for key in ESTATE_SETTINGS_DEFAULTS:
+        if key not in data:
+            continue
+        val = data[key]
+        if key.endswith("_prefix"):
+            next_settings[key] = str(val or ESTATE_SETTINGS_DEFAULTS[key]).strip()[:24] or ESTATE_SETTINGS_DEFAULTS[key]
+        elif key == "approval_threshold":
+            next_settings[key] = float(val or 0)
+        elif isinstance(ESTATE_SETTINGS_DEFAULTS[key], list):
+            if isinstance(val, str):
+                items = [x.strip() for x in re.split(r"[\n,]+", val) if x.strip()]
+            elif isinstance(val, list):
+                items = [str(x).strip() for x in val if str(x).strip()]
+            else:
+                items = list(ESTATE_SETTINGS_DEFAULTS[key])
+            next_settings[key] = items or list(ESTATE_SETTINGS_DEFAULTS[key])
+        else:
+            next_settings[key] = val
+    db.execute(
+        """
+        INSERT INTO workflow_policies(key, value_json, updated_at, updated_by)
+        VALUES(?,?,?,?)
+        ON CONFLICT(key) DO UPDATE SET
+            value_json=excluded.value_json,
+            updated_at=excluded.updated_at,
+            updated_by=excluded.updated_by
+        """,
+        (
+            "estate_settings",
+            json.dumps(next_settings, ensure_ascii=False),
+            now_iso(),
+            user.get("username") or user.get("name") or "system",
+        ),
+    )
+    # Keep approval thresholds in sync with estate settings when provided.
+    if "approval_threshold" in data:
+        thr = float(next_settings.get("approval_threshold") or APPROVAL_THRESHOLD)
+        for key in ("manual_invoice_approval_threshold", "payment_approval_threshold"):
+            db.execute(
+                """
+                INSERT INTO workflow_policies(key, value_json, updated_at, updated_by)
+                VALUES(?,?,?,?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value_json=excluded.value_json,
+                    updated_at=excluded.updated_at,
+                    updated_by=excluded.updated_by
+                """,
+                (key, json.dumps(thr, ensure_ascii=False), now_iso(), user.get("username") or "system"),
+            )
+    return next_settings
 STAFF_APP_VERSION = os.environ.get("LQ_STAFF_APP_VERSION", "70.4.0").strip()
 PRODUCTION_URL = os.environ.get("LQ_PRODUCTION_URL", "https://web-production-08d73.up.railway.app").strip()
 STAFF_DOWNLOAD_APK = os.environ.get(
@@ -501,10 +590,14 @@ STAFF_DOWNLOAD_ZIP = os.environ.get(
 LQ_DATABASE_URL = (os.environ.get("LQ_DATABASE_URL") or os.environ.get("DATABASE_URL") or "").strip()
 
 APPROVAL_DECIDE_ROLES = {
-    "contract": {"admin", "owner"},
+    # Estate + legacy contracts: owner/admin/deputy/manager (parity with Nizwa)
+    "contract": {"admin", "owner", "deputy", "manager"},
     "manual_invoice": {"admin", "owner", "accountant"},
     "invoice": {"admin", "owner", "accountant"},
     "payment": {"admin", "owner", "accountant"},
+    "estate_month_close": {"admin", "owner", "deputy"},
+    "estate_convert": {"admin", "owner", "deputy", "manager"},
+    "estate_pricing": {"admin", "owner", "deputy"},
 }
 
 
@@ -2202,6 +2295,9 @@ def init_db() -> None:
             ("activated_at", "TEXT"),
             ("closed_at", "TEXT"),
             ("close_note", "TEXT"),
+            ("rejection_reason", "TEXT"),
+            ("rejected_by", "TEXT"),
+            ("rejected_at", "TEXT"),
             ("attachments", "TEXT"),
             ("notes", "TEXT"),
         ]:
@@ -4874,6 +4970,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "workflow_policies" and method == "POST":
                     user = self.require_user(db, "admin")
                     return None if not user else self.api_update_workflow_policies(db, user)
+                if parts[0] == "estate_settings" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_estate_settings_get(db, user)
+                if parts[0] == "estate_settings" and method == "POST":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_estate_settings_set(db, user)
+                if parts[0] == "estate_command_kpis" and method == "GET":
+                    user = self.require_user(db, "dashboard")
+                    return None if not user else self.api_estate_command_kpis(db, user)
                 if parts[0] == "backup" and len(parts) >= 2 and parts[1] == "status" and method == "GET":
                     user = self.require_user(db, "backup:export")
                     return None if not user else self.api_backup_status()
@@ -5013,6 +5118,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_contract_approve" and method == "POST":
                     user = self.require_user(db, "approvals")
                     return None if not user else self.api_estate_contract_approve(db, user)
+                if parts[0] == "estate_contract_reject" and method == "POST":
+                    user = self.require_user(db, "approvals")
+                    return None if not user else self.api_estate_contract_reject(db, user)
                 if parts[0] == "estate_contract_activate" and method == "POST":
                     user = self.require_user(db, "estate_actions_contract_create")
                     return None if not user else self.api_estate_contract_activate(db, user)
@@ -6226,57 +6334,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": False, "error": "تعذر حفظ الصورة", "detail": str(exc)}, 500)
 
     def api_estate_convert_reservation(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        """Blocked: occupancy is approvals-only via draft → approve → activate."""
         data = self.read_json()
         entity_type = str(data.get("entity_type") or "").strip().lower()
         entity_id = str(data.get("entity_id") or "").strip()
-        tenant_client_id = str(data.get("tenant_client_id") or "").strip() or None
-        note = str(data.get("note") or "Converted from reserved to occupied").strip()
-        if entity_type not in ("apartment", "room"):
-            return self.send_json({"ok": False, "error": "entity_type must be apartment or room"}, 400)
-        if not entity_id:
-            return self.send_json({"ok": False, "error": "entity_id مطلوب"}, 400)
-        table = "estate_apartments" if entity_type == "apartment" else "estate_rooms"
-        row = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
-        if not row:
-            return self.send_json({"ok": False, "error": "العنصر غير موجود"}, 404)
-        current_status = str(row["status"] or "").strip().lower()
-        if current_status != "reserved":
-            return self.send_json({"ok": False, "error": "يمكن التحويل فقط من حالة محجوزة"}, 400)
-        if not tenant_client_id:
-            tenant_client_id = str(row["booked_client_id"] or "").strip() or None
-        if tenant_client_id and not exists(db, "clients", tenant_client_id):
-            return self.send_json({"ok": False, "error": "العميل المحدد غير موجود"}, 400)
-        tenant_phone = str(row["tenant_phone"] or "").strip() or str(row["booked_client_phone"] or "").strip() or None
-        db.execute(
-            f"""
-            UPDATE {table}
-            SET status='occupied',
-                tenant_client_id=?,
-                tenant_phone=?,
-                reservation_start_date=NULL,
-                reservation_end_date=NULL,
-                last_update=?
-            WHERE id=?
-            """,
-            (tenant_client_id, tenant_phone, today(), entity_id),
+        return self.send_json(
+            {
+                "ok": False,
+                "error": "المنصة بالاعتمادات 100٪: لا تحويل مباشر إلى مؤجرة. أنشئ مسودة عقد ثم اطلب الاعتماد وفعّل العقد — الإشغال يتم فقط عبر التفعيل.",
+                "hint": "estate_convert_to_contract",
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+            },
+            400,
         )
-        log_estate_status_history(
-            db,
-            entity_type,
-            entity_id,
-            dict(row),
-            "reserved",
-            "occupied",
-            str(user.get("name") or user.get("username") or "System"),
-            note,
-        )
-        db.execute(
-            "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed by conversion to occupied at ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
-            (now_iso(), entity_type, entity_id),
-        )
-        audit(db, user, "convert_reservation", table, entity_id, note)
-        db.commit()
-        self.send_json({"ok": True, "entity_type": entity_type, "entity_id": entity_id, "status": "occupied"})
 
     def api_estate_convert_to_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -6369,8 +6440,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         st = str(row["status"] or "").strip().lower()
         if st in ("approved", "active"):
             return self.send_json({"ok": False, "error": "العقد معتمد/مفعّل مسبقاً"}, 400)
-        if st != "draft":
-            return self.send_json({"ok": False, "error": "يمكن إرسال طلب الاعتماد من حالة مسودة فقط"}, 400)
+        if st not in ("draft", "rejected"):
+            return self.send_json({"ok": False, "error": "يمكن إرسال طلب الاعتماد من حالة مسودة أو مرفوض فقط"}, 400)
         approval_id = create_approval_request(
             db,
             "estate_contracts",
@@ -6379,33 +6450,39 @@ class JawdahHandler(BaseHTTPRequestHandler):
             user.get("name") or user.get("username") or "System",
             notes,
         )
-        db.execute("UPDATE estate_contracts SET status=? WHERE id=?", ("ApprovalRequested", contract_id))
+        db.execute(
+            """
+            UPDATE estate_contracts
+            SET status=?, rejection_reason=NULL, rejected_by=NULL, rejected_at=NULL
+            WHERE id=?
+            """,
+            ("ApprovalRequested", contract_id),
+        )
         audit(db, user, "request_approval", "estate_contracts", contract_id, f"estate approval {approval_id}")
         db.commit()
         self.send_json({"ok": True, "approval_id": approval_id, "status": "ApprovalRequested"})
 
-    def api_estate_contract_approve(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
-        data = self.read_json()
-        contract_id = str(data.get("contract_id") or "").strip()
-        if not contract_id:
-            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+    def _estate_contract_approve_core(self, db: sqlite3.Connection, user: Dict[str, Any], contract_id: str) -> None:
+        """Shared approve logic for dedicated API and Approvals Center."""
         if not can_decide_approval(user, "contract"):
-            return self.send_json({"ok": False, "error": "لا تملك صلاحية اعتماد العقد"}, 403)
+            raise ValueError("لا تملك صلاحية اعتماد العقد")
         row = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
         if not row:
-            return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
+            raise ValueError("العقد غير موجود")
         st = str(row["status"] or "").strip().lower()
         if st == "active":
-            return self.send_json({"ok": False, "error": "العقد مفعّل مسبقاً"}, 400)
+            raise ValueError("العقد مفعّل مسبقاً")
+        if st == "approved":
+            return
         if st != "approvalrequested":
-            return self.send_json({"ok": False, "error": "لا يمكن اعتماد العقد إلا بعد طلب اعتماد"}, 400)
+            raise ValueError("لا يمكن اعتماد العقد إلا بعد طلب اعتماد")
         try:
             sdt = datetime.fromisoformat(str(row["start_date"] or "")).date()
             edt = datetime.fromisoformat(str(row["end_date"] or "")).date()
-        except Exception:
-            return self.send_json({"ok": False, "error": "تواريخ العقد غير صحيحة"}, 400)
+        except Exception as exc:
+            raise ValueError("تواريخ العقد غير صحيحة") from exc
         if edt < sdt:
-            return self.send_json({"ok": False, "error": "تاريخ نهاية العقد يجب أن يكون بعد البداية"}, 400)
+            raise ValueError("تاريخ نهاية العقد يجب أن يكون بعد البداية")
         conflict = conflicting_active_estate_contract(
             db,
             str(row["entity_type"] or "").strip().lower(),
@@ -6415,16 +6492,19 @@ class JawdahHandler(BaseHTTPRequestHandler):
             contract_id,
         )
         if conflict:
-            return self.send_json(
-                {
-                    "ok": False,
-                    "error": f"يوجد عقد متعارض {conflict.get('contract_no') or conflict.get('id')} للفترة {conflict.get('start_date')} - {conflict.get('end_date')}",
-                },
-                400,
+            raise ValueError(
+                f"يوجد عقد متعارض {conflict.get('contract_no') or conflict.get('id')} للفترة {conflict.get('start_date')} - {conflict.get('end_date')}"
             )
+        who = user.get("name") or user.get("username")
+        when = now_iso()
         db.execute(
-            "UPDATE estate_contracts SET status=?, approved_by=?, approved_at=? WHERE id=?",
-            ("Approved", user.get("name") or user.get("username"), now_iso(), contract_id),
+            """
+            UPDATE estate_contracts
+            SET status=?, approved_by=?, approved_at=?,
+                rejection_reason=NULL, rejected_by=NULL, rejected_at=NULL
+            WHERE id=?
+            """,
+            ("Approved", who, when, contract_id),
         )
         db.execute(
             """
@@ -6432,17 +6512,82 @@ class JawdahHandler(BaseHTTPRequestHandler):
             SET status='Approved', approved_by=?, approved_at=?
             WHERE entity='estate_contracts' AND entity_id=? AND request_type='contract' AND lower(status)='pending'
             """,
-            (user.get("name") or user.get("username"), now_iso(), contract_id),
+            (who, when, contract_id),
         )
         audit(db, user, "approve", "estate_contracts", contract_id, "Estate contract approved")
+
+    def _estate_contract_reject_core(
+        self, db: sqlite3.Connection, user: Dict[str, Any], contract_id: str, reason: str
+    ) -> None:
+        if not can_decide_approval(user, "contract"):
+            raise ValueError("لا تملك صلاحية رفض الاعتماد")
+        reason = str(reason or "").strip()
+        if len(reason) < 3:
+            raise ValueError("سبب الرفض مطلوب")
+        row = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
+        if not row:
+            raise ValueError("العقد غير موجود")
+        st = str(row["status"] or "").strip().lower()
+        if st != "approvalrequested":
+            raise ValueError("لا يمكن رفض العقد إلا وهو بانتظار الاعتماد")
+        who = user.get("name") or user.get("username")
+        when = now_iso()
+        db.execute(
+            """
+            UPDATE estate_contracts
+            SET status=?, rejection_reason=?, rejected_by=?, rejected_at=?
+            WHERE id=?
+            """,
+            ("Rejected", reason, who, when, contract_id),
+        )
+        db.execute(
+            """
+            UPDATE approvals
+            SET status='Rejected', approved_by=?, approved_at=?, notes=?
+            WHERE entity='estate_contracts' AND entity_id=? AND request_type='contract' AND lower(status)='pending'
+            """,
+            (who, when, reason, contract_id),
+        )
+        audit(db, user, "reject", "estate_contracts", contract_id, f"Estate contract rejected: {reason}")
+
+    def api_estate_contract_approve(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        try:
+            self._estate_contract_approve_core(db, user, contract_id)
+        except ValueError as exc:
+            code = 403 if "صلاحية" in str(exc) else 400
+            return self.send_json({"ok": False, "error": str(exc)}, code)
         db.commit()
         self.send_json({"ok": True, "status": "Approved"})
+
+    def api_estate_contract_reject(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        contract_id = str(data.get("contract_id") or "").strip()
+        reason = str(data.get("reason") or data.get("notes") or "").strip()
+        if not contract_id:
+            return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        try:
+            self._estate_contract_reject_core(db, user, contract_id, reason)
+        except ValueError as exc:
+            code = 403 if "صلاحية" in str(exc) else 400
+            return self.send_json({"ok": False, "error": str(exc)}, code)
+        db.commit()
+        self.send_json({"ok": True, "status": "Rejected"})
 
     def api_estate_contract_activate(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
         contract_id = str(data.get("contract_id") or "").strip()
         if not contract_id:
             return self.send_json({"ok": False, "error": "contract_id مطلوب"}, 400)
+        role = str(user.get("role") or "").lower()
+        uname = str(user.get("username") or "").strip().lower()
+        if uname in RESTRICTED_ADMIN_USERNAMES:
+            return self.send_json({"ok": False, "error": "تفعيل العقد يتطلب إذن المالك"}, 403)
+        if role not in ("owner", "admin", "deputy") and "all" not in ROLE_PERMISSIONS.get(role, set()):
+            return self.send_json({"ok": False, "error": "تفعيل العقد محصور بالإدارة/المالك بعد الاعتماد"}, 403)
         contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (contract_id,)).fetchone()
         if not contract:
             return self.send_json({"ok": False, "error": "العقد غير موجود"}, 404)
@@ -6785,8 +6930,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 400,
             )
         role = str(user.get("role") or "").strip().lower()
-        if overdue_open and force and role not in ("owner", "admin"):
-            return self.send_json({"ok": False, "error": "force لإقفال الشهر مسموح فقط للمالك/الإدارة"}, 403)
+        if not can_decide_approval(user, "estate_month_close"):
+            return self.send_json({"ok": False, "error": "إقفال الشهر العقاري يتطلب اعتماد الإدارة (مالك/نائب/إدارة)"}, 403)
+        if overdue_open and force and role not in ("owner", "admin", "deputy"):
+            return self.send_json({"ok": False, "error": "force لإقفال الشهر مسموح فقط للمالك/الإدارة/النائب"}, 403)
         exists_close = db.execute("SELECT id FROM estate_month_closes WHERE month_key=?", (month_key,)).fetchone()
         closed_by = str(user.get("name") or user.get("username") or "System")
         if exists_close:
@@ -6969,6 +7116,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 row = db.execute(f"SELECT image FROM {table} WHERE id=?", (item_id,)).fetchone()
                 if row:
                     delete_upload_file(str(row["image"] or ""), "estate_images")
+            if table == "estate_contracts":
+                crow = db.execute("SELECT status, contract_no FROM estate_contracts WHERE id=?", (item_id,)).fetchone()
+                if crow:
+                    cst = str(crow["status"] or "").strip().lower()
+                    if cst in ("approvalrequested", "approved", "active"):
+                        return self.send_json(
+                            {
+                                "ok": False,
+                                "error": f"لا يمكن حذف العقد {crow['contract_no'] or item_id} أثناء مسار الاعتماد أو بعد التفعيل",
+                            },
+                            400,
+                        )
             reason = protected_delete_reason(db, table, item_id)
             if reason:
                 return self.send_json({"ok": False, "error": reason}, 400)
@@ -7309,6 +7468,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
             status_norm = status_map.get(raw_status)
             if not status_norm:
                 return self.send_json({"ok": False, "error": "حالة الشقة غير معتمدة. المسموح: شاغرة/محجوزة/مؤجرة/تحت الصيانة/موقوفة"}, 400)
+            # Occupancy is approvals-only: reserved/vacant → occupied only via contract activate
+            if status_norm == "occupied":
+                prev = str(estate_prev_status or "").strip().lower()
+                if method == "POST" or prev != "occupied":
+                    return self.send_json(
+                        {
+                            "ok": False,
+                            "error": "المنصة بالاعتمادات 100٪: تحويل الوحدة إلى مؤجرة يتم فقط عبر تفعيل عقد معتمد",
+                        },
+                        400,
+                    )
             data["status"] = status_norm
             data["property_id"] = prop_id
             data["building_id"] = bld_id
@@ -7405,6 +7575,16 @@ class JawdahHandler(BaseHTTPRequestHandler):
             status_norm = status_map.get(raw_status)
             if not status_norm:
                 return self.send_json({"ok": False, "error": "حالة الغرفة غير معتمدة. المسموح: شاغرة/محجوزة/مؤجرة/تحت الصيانة/موقوفة"}, 400)
+            if status_norm == "occupied":
+                prev = str(estate_prev_status or "").strip().lower()
+                if method == "POST" or prev != "occupied":
+                    return self.send_json(
+                        {
+                            "ok": False,
+                            "error": "المنصة بالاعتمادات 100٪: تحويل الوحدة إلى مؤجرة يتم فقط عبر تفعيل عقد معتمد",
+                        },
+                        400,
+                    )
             data["status"] = status_norm
             data["property_id"] = prop_id
             data["building_id"] = bld_id
@@ -7634,12 +7814,36 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "cancelled": "Cancelled",
                 "canceled": "Cancelled",
                 "ملغى": "Cancelled",
+                "rejected": "Rejected",
+                "مرفوض": "Rejected",
             }
             normalized_status = status_map.get(raw_status)
             if not normalized_status:
                 return self.send_json({"ok": False, "error": "حالة العقد غير معتمدة"}, 400)
-            if normalized_status == "Active":
-                return self.send_json({"ok": False, "error": "تفعيل العقد يتم فقط عبر إجراء «تفعيل العقد» بعد الاعتماد"}, 400)
+            # Approvals-only statuses cannot be set via CRUD — use dedicated workflow APIs
+            locked_statuses = {"ApprovalRequested", "Approved", "Active", "Rejected"}
+            if normalized_status in locked_statuses:
+                return self.send_json(
+                    {
+                        "ok": False,
+                        "error": "دورة الاعتماد إلزامية 100٪: استخدم طلب اعتماد / اعتماد / رفض / تفعيل — لا تغيير الحالة يدوياً",
+                    },
+                    400,
+                )
+            if method == "PUT" and item_id:
+                cur = db.execute("SELECT status FROM estate_contracts WHERE id=?", (item_id,)).fetchone()
+                if cur:
+                    cur_st = str(cur["status"] or "").strip()
+                    if cur_st in ("ApprovalRequested", "Approved", "Active") and normalized_status == "Draft":
+                        return self.send_json(
+                            {"ok": False, "error": "لا يمكن إعادة العقد إلى مسودة أثناء/بعد مسار الاعتماد"},
+                            400,
+                        )
+                    if cur_st == "Active" and normalized_status in ("Cancelled", "Ended"):
+                        return self.send_json(
+                            {"ok": False, "error": "إنهاء العقد النشط يتم فقط عبر إجراء «إنهاء العقد»"},
+                            400,
+                        )
             data["status"] = normalized_status
         if table == "estate_contract_invoices":
             return self.send_json({"ok": False, "error": "فواتير العقود تُدار عبر محرك الجدولة والتحصيل فقط"}, 403)
@@ -8806,10 +9010,15 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
         approved_at = now_iso()
         _, meta = approval_notes_unpack(row["notes"])
         result: Dict[str, Any] = {}
+        entity_name = str(row["entity"] or "").strip()
+        entity_id = str(row["entity_id"] or "").strip()
         if approved:
             try:
-                if request_type == "contract":
-                    created = execute_contract_approval(db, user, row["entity_id"])
+                if request_type == "contract" and entity_name == "estate_contracts":
+                    self._estate_contract_approve_core(db, user, entity_id)
+                    result = {"estate_contract_id": entity_id, "status": "Approved"}
+                elif request_type == "contract":
+                    created = execute_contract_approval(db, user, entity_id)
                     result = {"created_invoices": created}
                 elif request_type == "manual_invoice":
                     contract_id = meta.get("contract_id") or row["entity_id"]
@@ -8850,16 +9059,32 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
                     raise ValueError(f"Unsupported approval type: {request_type}")
             except ValueError as exc:
                 return self.send_json({"ok": False, "error": str(exc)}, 400)
-        db.execute(
-            "UPDATE approvals SET status=?, approved_by=?, approved_at=?, notes=? WHERE id=?",
-            (
-                status,
-                approved_by,
-                approved_at,
-                approval_notes_pack(note or row["notes"], meta) if meta else (note or row["notes"]),
-                approval_id,
-            ),
-        )
+        else:
+            # Reject path — apply entity-side status for estate contracts
+            try:
+                if request_type == "contract" and entity_name == "estate_contracts":
+                    self._estate_contract_reject_core(db, user, entity_id, note or "رفض من مركز الاعتمادات")
+                    result = {"estate_contract_id": entity_id, "status": "Rejected"}
+                elif request_type == "contract" and entity_name == "contracts":
+                    db.execute(
+                        "UPDATE contracts SET status=? WHERE id=?",
+                        ("Cancelled", entity_id),
+                    )
+                    result = {"contract_id": entity_id, "status": "Cancelled"}
+            except ValueError as exc:
+                return self.send_json({"ok": False, "error": str(exc)}, 400)
+        # Estate reject already updated approvals row; avoid double-write conflicts
+        if not (not approved and request_type == "contract" and entity_name == "estate_contracts"):
+            db.execute(
+                "UPDATE approvals SET status=?, approved_by=?, approved_at=?, notes=? WHERE id=?",
+                (
+                    status,
+                    approved_by,
+                    approved_at,
+                    approval_notes_pack(note or row["notes"], meta) if meta else (note or row["notes"]),
+                    approval_id,
+                ),
+            )
         audit(db, user, "decide_approval", "approvals", approval_id, f"{status} {request_type}")
         db.commit()
         self.send_json({"ok": True, "status": status, "approval_id": approval_id, "result": result})
@@ -10147,6 +10372,81 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
                 "policies": policies,
                 "defaults": WORKFLOW_POLICY_DEFAULTS,
                 "editable": str(user.get("role") or "").strip().lower() in ("owner", "admin"),
+            }
+        )
+
+    def api_estate_settings_get(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        role = str(user.get("role") or "").lower()
+        editable = role in ("owner", "admin", "deputy", "manager") or str(user.get("username") or "").lower() in FULL_ACCESS_USERNAMES
+        self.send_json({"ok": True, "settings": load_estate_settings(db), "defaults": ESTATE_SETTINGS_DEFAULTS, "editable": editable})
+
+    def api_estate_settings_set(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        role = str(user.get("role") or "").lower()
+        if role not in ("owner", "admin", "deputy", "manager") and str(user.get("username") or "").lower() not in FULL_ACCESS_USERNAMES:
+            return self.send_json({"ok": False, "error": "صلاحية تعديل إعدادات العقارات غير متاحة"}, 403)
+        data = self.read_json() or {}
+        settings = save_estate_settings(db, user, data)
+        audit(db, user, "estate_settings", "workflow_policies", "estate_settings", "Updated estate settings")
+        db.commit()
+        self.send_json({"ok": True, "settings": settings})
+
+    def api_estate_command_kpis(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        apartments = rows_to_dicts(db.execute("SELECT id, name, status, building_id, rent_price FROM estate_apartments").fetchall())
+        rooms = rows_to_dicts(db.execute("SELECT id, name, status, building_id, rent_price FROM estate_rooms").fetchall())
+        buildings = rows_to_dicts(db.execute("SELECT id, name FROM estate_buildings").fetchall())
+        contracts = rows_to_dicts(
+            db.execute("SELECT id, building_id, entity_type, entity_id, rent_amount, status, end_date FROM estate_contracts").fetchall()
+        )
+        invoices = rows_to_dicts(
+            db.execute("SELECT id, amount, paid_amount, status, due_date, contract_id FROM estate_contract_invoices").fetchall()
+        )
+        units = apartments + rooms
+        occupied = sum(1 for u in units if re.search(r"مستأجر|occupied|rented", str(u.get("status") or ""), re.I))
+        reserved = sum(1 for u in units if re.search(r"محجوز|reserved", str(u.get("status") or ""), re.I))
+        vacant = max(0, len(units) - occupied - reserved)
+        paid = sum(float(i.get("paid_amount") or 0) for i in invoices)
+        billed = sum(float(i.get("amount") or 0) for i in invoices)
+        t = today()
+        overdue = [i for i in invoices if str(i.get("status") or "").lower() != "paid" and str(i.get("due_date") or "") < t]
+        overdue_amt = sum(max(0.0, float(i.get("amount") or 0) - float(i.get("paid_amount") or 0)) for i in overdue)
+        active = [c for c in contracts if re.search(r"active|activated", str(c.get("status") or ""), re.I)]
+        by_b: Dict[str, float] = {}
+        for c in active:
+            bid = str(c.get("building_id") or "—")
+            by_b[bid] = by_b.get(bid, 0.0) + float(c.get("rent_amount") or 0)
+        bnames = {b["id"]: b.get("name") for b in buildings}
+        best_buildings = sorted(
+            [{"id": k, "name": bnames.get(k) or k, "rent": v} for k, v in by_b.items()],
+            key=lambda x: x["rent"],
+            reverse=True,
+        )[:5]
+        self.send_json(
+            {
+                "ok": True,
+                "kpis": {
+                    "units": len(units),
+                    "buildings": len(buildings),
+                    "occupied": occupied,
+                    "reserved": reserved,
+                    "vacant": vacant,
+                    "occupancy_pct": round((occupied / len(units) * 100), 1) if units else 0,
+                    "active_contracts": len(active),
+                    "billed": billed,
+                    "paid": paid,
+                    "overdue_count": len(overdue),
+                    "overdue_amount": overdue_amt,
+                    "best_buildings": best_buildings,
+                    "pending_approvals": int(
+                        db.execute("SELECT COUNT(*) FROM approvals WHERE lower(status)='pending'").fetchone()[0] or 0
+                    ),
+                    "open_maintenance": int(
+                        db.execute(
+                            "SELECT COUNT(*) FROM estate_maintenance WHERE lower(coalesce(status,'')) NOT IN ('closed','done','completed')"
+                        ).fetchone()[0]
+                        or 0
+                    ),
+                },
+                "settings": load_estate_settings(db),
             }
         )
 
@@ -13095,9 +13395,9 @@ ROLE_BOARD_META: Dict[str, Dict[str, Any]] = {
         "title_ar": "لوحة المالك",
         "subtitle_ar": "ملخص تنفيذي وتنبيهات تحتاج قراراً اليوم",
         "quick_actions": [
+            {"section": "estate-platform", "label": "مركز قيادة العقارات"},
             {"section": "approvals", "label": "مركز الاعتمادات"},
             {"section": "receivables", "label": "التحصيل الذكي"},
-            {"section": "messages", "label": "التنبيهات"},
             {"section": "reports", "label": "التقارير"},
         ],
     },
@@ -13105,39 +13405,69 @@ ROLE_BOARD_META: Dict[str, Dict[str, Any]] = {
         "title_ar": "لوحة الإدارة",
         "subtitle_ar": "تشغيل كامل + متابعة المخاطر",
         "quick_actions": [
-            {"section": "dashboard", "label": "لوحة التحكم"},
+            {"section": "estate-platform", "label": "منصة العقارات"},
             {"section": "approvals", "label": "الاعتمادات"},
             {"section": "users", "label": "المستخدمون"},
             {"section": "messages", "label": "التنبيهات"},
+        ],
+    },
+    "deputy": {
+        "title_ar": "لوحة نائب المدير",
+        "subtitle_ar": "اعتماد العمليات ومتابعة التحصيل والصيانة",
+        "quick_actions": [
+            {"section": "estate-platform", "label": "منصة العقارات"},
+            {"section": "approvals", "label": "الاعتمادات"},
+            {"section": "receivables", "label": "التحصيل"},
+            {"section": "maintenance", "label": "الصيانة"},
+        ],
+    },
+    "manager": {
+        "title_ar": "لوحة مدير العمليات",
+        "subtitle_ar": "حجوزات، عقود، اعتمادات يومية",
+        "quick_actions": [
+            {"section": "estate-platform", "label": "منصة العقارات"},
+            {"section": "approvals", "label": "الاعتمادات"},
+            {"section": "contracts", "label": "العقود"},
+            {"section": "maintenance", "label": "الصيانة"},
         ],
     },
     "accountant": {
         "title_ar": "لوحة المحاسب",
         "subtitle_ar": "تحصيل، اعتمادات، بنك، ومتأخرات",
         "quick_actions": [
+            {"section": "estate-platform", "label": "تحصيل العقارات"},
             {"section": "receivables", "label": "التحصيل الذكي"},
             {"section": "invoices", "label": "الفواتير"},
             {"section": "approvals", "label": "الاعتمادات"},
-            {"section": "bank-reconciliation", "label": "تسوية البنك"},
         ],
     },
     "operations": {
         "title_ar": "لوحة العمليات",
         "subtitle_ar": "عقود، إشغال، وصيانة يومية",
         "quick_actions": [
+            {"section": "estate-platform", "label": "منصة العقارات"},
             {"section": "contracts", "label": "العقود"},
             {"section": "properties", "label": "العقارات"},
             {"section": "maintenance", "label": "الصيانة"},
-            {"section": "daily-ops", "label": "العمليات اليومية"},
+        ],
+    },
+    "reception": {
+        "title_ar": "لوحة الاستقبال",
+        "subtitle_ar": "عملاء وحجوزات ومتابعة سريعة",
+        "quick_actions": [
+            {"section": "estate-platform", "label": "منصة العقارات"},
+            {"section": "clients", "label": "العملاء"},
+            {"section": "properties", "label": "الوحدات"},
+            {"section": "messages", "label": "التنبيهات"},
         ],
     },
     "maintenance": {
         "title_ar": "لوحة الصيانة",
         "subtitle_ar": "طلبات عاجلة ومخزون منخفض",
         "quick_actions": [
+            {"section": "estate-platform", "label": "صيانة العقارات"},
             {"section": "maintenance", "label": "طلبات الصيانة"},
             {"section": "inventory", "label": "المخزن"},
-            {"section": "properties", "label": "العقارات"},
             {"section": "messages", "label": "التنبيهات"},
         ],
     },
@@ -13146,6 +13476,7 @@ ROLE_BOARD_META: Dict[str, Dict[str, Any]] = {
         "subtitle_ar": "عرض مؤشرات وتنبيهات للقراءة فقط",
         "quick_actions": [
             {"section": "dashboard", "label": "لوحة التحكم"},
+            {"section": "estate-platform", "label": "منصة العقارات"},
             {"section": "reports", "label": "التقارير"},
             {"section": "messages", "label": "التنبيهات"},
         ],
