@@ -4870,3 +4870,41 @@ html body.app-body .tabs .tab > *{
   }
 }
 
+
+/* ===== nizwa-clean1: remove transparent watermark writings ===== */
+body.theme-realestate,
+body.app-body.theme-realestate,
+html body.app-body{
+  background:#eef2f6 !important;
+  background-image:none !important;
+}
+body.app-body.section-dashboard .content.dashboard-page.brand-realestate,
+body.app-body .content.brand-realestate,
+.content.brand-realestate,
+.content.dashboard-page.brand-realestate,
+.content.brand-gold,
+body.app-body.section-dashboard .content.dashboard-page{
+  background:#f7f8fa !important;
+  background-image:none !important;
+}
+.content::before,
+.content.brand-realestate::before,
+.content.brand-gold::before,
+body.app-body.section-dashboard .content.dashboard-page.brand-realestate::before,
+.login-gold-watermark,
+.login-panel:before{
+  content:none !important;
+  display:none !important;
+  opacity:0 !important;
+  background:none !important;
+  background-image:none !important;
+}
+/* Solid surfaces — no see-through to old watermark art */
+body.app-body .content .card,
+body.app-body .content .data-table th,
+body.app-body .content .data-table td,
+body.app-body .content .kpi,
+body.app-body .content .panel{
+  background:#fff !important;
+  backdrop-filter:none !important;
+}
