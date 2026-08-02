@@ -77,24 +77,20 @@ body.login-ultra #loginScreen .login-cinema-photo-layer{
   width:auto !important;
   visibility:visible !important;
   background:
-    linear-gradient(115deg,rgba(8,18,30,.88) 0%,rgba(12,28,44,.72) 42%,rgba(18,36,52,.55) 100%),
-    radial-gradient(ellipse 80% 60% at 80% 20%,rgba(201,169,110,.22),transparent 55%),
-    url("/assets/login-portal-bg.png") center/cover no-repeat !important;
+    var(--lq-atm-overlay, linear-gradient(115deg,rgba(8,18,30,.88) 0%,rgba(12,28,44,.72) 42%,rgba(18,36,52,.55) 100%)),
+    var(--lq-atm-gold, radial-gradient(ellipse 80% 60% at 80% 20%,rgba(201,169,110,.22),transparent 55%)),
+    var(--lq-atm-photo, url("/assets/login-portal-bg.png")) center/cover no-repeat !important;
   background-attachment:scroll !important;
   filter:none !important;
   transform:scale(1.03);
-  animation:lqLoginBgDrift 18s ease-in-out infinite alternate;
+  animation:lqAtmDrift 18s ease-in-out infinite alternate;
 }
 body.login-ultra #loginScreen .login-cinema-photo-layer::after{
   content:"" !important;
   position:absolute !important;
   inset:0 !important;
-  background:linear-gradient(180deg,transparent 55%,rgba(8,16,28,.55) 100%) !important;
+  background:var(--lq-atm-bottom, linear-gradient(180deg,transparent 55%,rgba(8,16,28,.55) 100%)) !important;
   pointer-events:none !important;
-}
-@keyframes lqLoginBgDrift{
-  from{transform:scale(1.03) translate3d(0,0,0)}
-  to{transform:scale(1.06) translate3d(-1.2%,.8%,0)}
 }
 
 /* Hide clutter — first viewport stays one composition */
@@ -582,7 +578,6 @@ body.login-ultra #loginScreen input.ev-otp-input{
 
 @media (prefers-reduced-motion:reduce){
   body.login-ultra #loginScreen .login-cinema-photo-layer,
-  body.login-ultra #loginScreen .login-logo-img,
   body.login-ultra #loginScreen .login-shell,
   body.login-ultra #loginScreen .login-stage{animation:none !important}
 }
