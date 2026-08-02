@@ -40,56 +40,7 @@ body.lq-exec{
   min-height:40px;font:inherit;
 }
 
-/* ===== Login executive split ===== */
-body.lq-exec.login-ultra #loginScreen{
-  background:linear-gradient(180deg,#f7faff,#eef3fb)!important;
-}
-body.lq-exec.login-ultra #loginScreen .login-split,
-body.lq-exec.login-ultra #loginScreen .login-cinema,
-body.lq-exec.login-ultra #loginScreen .login-layout{
-  display:grid!important;
-  grid-template-columns:1.05fr .95fr!important;
-  min-height:100vh!important;
-  gap:0!important;
-}
-@media (max-width:900px){
-  body.lq-exec.login-ultra #loginScreen .login-split,
-  body.lq-exec.login-ultra #loginScreen .login-cinema,
-  body.lq-exec.login-ultra #loginScreen .login-layout{
-    grid-template-columns:1fr!important;
-  }
-}
-body.lq-exec #loginScreen .login-glass-card,
-body.lq-exec #loginScreen .ev-auth-card,
-body.lq-exec #loginScreen .login-card--floating{
-  background:#fff!important;
-  border:1px solid var(--lq-line)!important;
-  border-radius:22px!important;
-  box-shadow:var(--lq-shadow)!important;
-  padding:28px 26px!important;
-  max-width:420px;
-  margin-inline:auto;
-}
-body.lq-exec #loginScreen .login-card-title{
-  font-family:var(--lq-serif)!important;
-  font-size:2rem!important;
-  color:var(--lq-text)!important;
-  font-weight:700!important;
-}
-body.lq-exec #loginScreen .login-card-sub{color:var(--lq-muted)!important}
-body.lq-exec #loginScreen #loginUser,
-body.lq-exec #loginScreen #loginPass{
-  background:#fff!important;border:1px solid #d7e1f0!important;
-  border-radius:12px!important;min-height:48px!important;
-  color:var(--lq-text)!important;font-size:16px!important;
-}
-body.lq-exec #loginScreen #loginBtn,
-body.lq-exec #loginScreen .login-submit{
-  background:linear-gradient(145deg,#3d81ff,#2f6fec)!important;
-  color:#fff!important;border:0!important;border-radius:12px!important;
-  min-height:48px!important;font-weight:800!important;
-  box-shadow:0 10px 22px rgba(47,111,236,.28)!important;
-}
+/* Login visuals owned by lq-login-locked.css (official redesign) */
 body.lq-exec #loginScreen .login-topbar-lang,
 body.lq-exec #loginLangMount{margin:0 0 14px}
 

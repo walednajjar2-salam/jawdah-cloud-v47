@@ -32,10 +32,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/app-icon-192.png">
   <title>Launch Quality LLC · التطوير المؤسسي</title>
-  <!-- LOGIN UI LOCKED 2026-07-23: use lq-login-locked.css only -->
+  <!-- OFFICIAL LOGIN UI 2026-08-02: lq-login-locked.css (owner-approved redesign) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Cormorant+Garamond:wght@600;700&family=Noto+Sans+Bengali:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css?v=portal9">
   <link rel="stylesheet" href="lq-shell.css?v=shell30">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
@@ -44,8 +44,8 @@
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref10">
   <link rel="stylesheet" href="lq-emergency-clean.css?v=ec14">
   <link rel="stylesheet" href="lq-edition-terrifying.css?v=td3">
-  <link rel="stylesheet" href="lq-login-locked.css?v=locked11-otp-row">
   <link rel="stylesheet" href="lq-exec-theme.css?v=official2">
+  <link rel="stylesheet" href="lq-login-locked.css?v=official-login3">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme lq-edition-terrifying lq-exec" data-edition="terrifying-dev">
   <style>
@@ -109,32 +109,8 @@
 
     #lqBrandWatermark{display:none!important;opacity:0!important;visibility:hidden!important}
     #lqBrandWatermark img{display:none!important;opacity:0!important}
-    /* locked with lq-login-locked.css — solid card + dark text (no transparent writing) */
-    body.login-ultra #loginScreen .login-glass-card,
-    body.login-ultra #loginScreen .ev-auth-card{
-      background:#ffffff!important;
-      border:1px solid rgba(30,40,60,.18)!important;
-      box-shadow:0 18px 50px rgba(0,0,0,.28)!important;
-      backdrop-filter:none!important;
-      -webkit-backdrop-filter:none!important;
-      color:#0a0a0a!important;
-    }
-    body.login-ultra #loginScreen .login-card-title,
-    body.login-ultra #loginScreen .login-card-sub,
-    body.login-ultra #loginScreen .login-field-label,
-    body.login-ultra #loginScreen .login-inline-tools,
-    body.login-ultra #loginScreen #loginUser,
-    body.login-ultra #loginScreen #loginPass{
-      color:#0a0a0a!important;
-      -webkit-text-fill-color:#0a0a0a!important;
-      opacity:1!important;
-    }
-    body.login-ultra #loginScreen #loginUser,
-    body.login-ultra #loginScreen #loginPass{
-      background:#ffffff!important;
-      caret-color:#0a0a0a!important;
-    }
-    #lqBootMsg{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:#040814;color:#fff1b8;font:600 16px Tajawal,sans-serif;text-align:center;padding:24px}
+    /* Login visuals owned by lq-login-locked.css (official redesign) */
+    #lqBootMsg{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:#0b1a28;color:#f3efe6;font:600 16px Cairo,Tajawal,sans-serif;text-align:center;padding:24px}
     #lqBootMsg.show{display:grid}
   </style>
   <div id="lqBootMsg" role="status">جاري تحميل النظام…</div>
@@ -218,6 +194,12 @@
         <div class="login-logo-wrap login-logo-wrap--float">
           <img src="assets/brand-logo-gold.png?v=17" alt="مشاريع جودة الانطلاقة" class="login-logo-img login-logo-img--float" width="739" height="682" decoding="async">
         </div>
+        <div class="login-brand-copy">
+          <h1 class="login-brand-name">Launch Quality</h1>
+          <p class="login-brand-ar">جودة الانطلاقة</p>
+          <p class="login-brand-support">منصة رسمية لإدارة العقارات والضيافة</p>
+          <hr class="login-brand-rule">
+        </div>
       </div>
 
       <!-- real-only: no fake analytics on login -->
@@ -229,40 +211,30 @@
           <section class="login-glass-card ev-auth-card login-card--floating" aria-label="تسجيل الدخول">
             <div class="login-card-head">
               <div>
-                <span class="login-secure-badge" dir="ltr">Enterprise Security · SOC 2 Ready</span>
-                <h2 class="login-card-title">Welcome Back</h2>
-                <p class="login-card-sub">تسجيل الدخول · بوابة الموظفين</p>
-              </div>
-              <div class="login-card-brand">
-                <span class="login-card-brand-ar" dir="ltr" lang="ar">جودة الانطلاقة ش.م.م</span>
-                <span class="login-card-brand-en" dir="ltr" lang="en">Launch Quality LLC</span>
+                <h2 class="login-card-title">تسجيل الدخول</h2>
+                <p class="login-card-sub">بوابة الموظفين · الحساب المعتمد فقط</p>
               </div>
             </div>
             <div id="authPanePassword" class="ev-auth-pane login-form" role="tabpanel">
               <label class="login-field">
-                <span class="login-field-label" dir="ltr">Username</span>
+                <span class="login-field-label">اسم المستخدم</span>
                 <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
               </label>
               <label class="login-field">
-                <span class="login-field-label" dir="ltr">Password</span>
+                <span class="login-field-label">كلمة المرور</span>
                 <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
-                <button type="button" id="loginPassToggle" class="login-pass-toggle" aria-label="إظهار أو إخفاء كلمة المرور">👁️</button>
+                <button type="button" id="loginPassToggle" class="login-pass-toggle" aria-label="إظهار أو إخفاء كلمة المرور">إظهار</button>
               </label>
-              <div id="capsHint" class="login-caps-hint hidden">⚠️ يبدو أن زر Caps Lock مفعّل</div>
+              <div id="capsHint" class="login-caps-hint hidden">يبدو أن زر Caps Lock مفعّل</div>
               <div class="login-inline-tools">
                 <label class="login-remember-check"><input id="loginRemember" type="checkbox"> تذكرني على هذا الجهاز</label>
                 <button type="button" class="ghost login-help-btn" onclick="window.open('tel:+96871924089','_self')">الدعم الفني</button>
               </div>
-              <button id="loginBtn" class="gold-btn login-submit" type="button">Sign In · تسجيل الدخول</button>
-              <div class="login-windows-cta" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center">
-                <a class="ghost" href="/get-windows?auto=1" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px">
-                  <img src="/releases/windows/portable/AppIcon-192.png" alt="" width="28" height="28" style="border-radius:8px;border:1px solid rgba(216,177,91,.5)">
-                  🏛️ تحميل ويندوز
-                </a>
-                <a class="ghost" href="/get-android" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px">
-                  📱 تحميل أندرويد
-                </a>
-                <a class="ghost" href="/download.html" style="text-decoration:none">كل التحميلات</a>
+              <button id="loginBtn" class="gold-btn login-submit" type="button">دخول</button>
+              <div class="login-quiet-links">
+                <a href="/get-windows?auto=1">ويندوز</a>
+                <a href="/get-android">أندرويد</a>
+                <a href="/download.html">التحميلات</a>
               </div>
             </div>
             <div id="authPaneFace" class="ev-auth-pane ev-auth-alt hidden" role="tabpanel">

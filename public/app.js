@@ -4050,7 +4050,7 @@ function initLoginUx(){
     toggle.onclick = ()=> {
       const show = pass.type === 'password';
       pass.type = show ? 'text' : 'password';
-      toggle.textContent = show ? '🙈' : '👁️';
+      toggle.textContent = show ? 'إخفاء' : 'إظهار';
     };
   }
   if(pass && caps){
