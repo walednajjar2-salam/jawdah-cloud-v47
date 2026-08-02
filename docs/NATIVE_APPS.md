@@ -18,12 +18,13 @@ cp ../../public/releases/windows/portable/LaunchQuality.exe ../../public/release
 - Page: `/get-android`
 - APK: `/releases/android/Launch-Quality-Staff.apk`
 - Package id: `com.launchquality.staff`
+- Channel version: `70.4.0` (versionCode `7040`)
 - Opens production field URL inside a native WebView
 
 Build APK:
 
 ```bash
-./scripts/build_android_webview_apk.sh
+LQ_APP_VERSION=70.4.0 LQ_APP_VERSION_CODE=7040 ./scripts/build_android_webview_apk.sh
 ```
 
 Requires network on first run (Android SDK + Gradle). SDK stays under `tools/android/sdk/` (gitignored).

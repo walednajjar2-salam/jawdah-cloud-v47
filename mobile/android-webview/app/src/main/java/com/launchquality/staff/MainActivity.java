@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     settings.setAllowFileAccess(false);
     settings.setAllowContentAccess(true);
     settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-    settings.setUserAgentString(settings.getUserAgentString() + " LaunchQualityStaff/68.2");
+    settings.setUserAgentString(settings.getUserAgentString() + " LaunchQualityStaff/70.4.0");
 
     webView.setWebChromeClient(new WebChromeClient());
     webView.setWebViewClient(new WebViewClient() {

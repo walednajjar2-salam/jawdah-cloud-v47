@@ -56,7 +56,7 @@
       "<strong>" +
       EDITION.labelAr +
       "</strong>" +
-      '<small dir="ltr">v69-ops</small>';
+      '<small dir="ltr">v70.4</small>';
     var mode = document.documentElement.getAttribute("data-lq-env-mode") || "official";
     badge.classList.toggle("lq-env-trial", mode === "trial" || mode === "demo");
     badge.classList.toggle("lq-env-official", mode === "official" || mode === "production");

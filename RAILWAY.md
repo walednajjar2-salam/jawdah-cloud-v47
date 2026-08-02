@@ -1,6 +1,6 @@
 # Launch Quality LLC — Railway Deploy (Live)
 
-> دليل النشر الحي — جاهزية المنصة **100%** على الإنتاج.
+> دليل النشر الحي — جاهزية المنصة على الإنتاج.
 
 ## Live production
 
@@ -9,12 +9,13 @@
 | 🌐 **الموقع** | https://web-production-08d73.up.railway.app |
 | 🔄 **تحديث كاش** | https://web-production-08d73.up.railway.app/fresh |
 | 🪟 **تطبيق ويندوز** | https://web-production-08d73.up.railway.app/get-windows |
+| 📱 **تطبيق أندرويد** | https://web-production-08d73.up.railway.app/get-android |
 | 🗺️ **خريطة نزوى** | https://www.openstreetmap.org/?mlat=22.9333&mlon=57.5333#map=13/22.9333/57.5333 |
 | 📸 **شعار** | https://web-production-08d73.up.railway.app/assets/brand-logo-gold.png |
 | 📸 **خلفية الدخول** | https://web-production-08d73.up.railway.app/assets/login-portal-bg.png |
 | 📸 **أيقونة** | https://web-production-08d73.up.railway.app/assets/app-icon-512.png |
 
-الإصدار الحالي: **`Launch-Quality-LLC-v68.2-native-apps`** (مثبّت + تطبيقات ويندوز/أندرويد)
+الإصدار الحالي: **`Launch-Quality-LLC-v70.4-finish-remaining`**
 
 ## Health check
 
@@ -29,9 +30,11 @@ GET https://web-production-08d73.up.railway.app/api/health
   "ok": true,
   "status": "healthy",
   "service": "production",
-  "version": "Launch-Quality-LLC-v68.2-native-apps",
+  "version": "Launch-Quality-LLC-v70.4-finish-remaining",
   "platform_ready": true,
   "database_engine": "sqlite",
+  "stable": true,
+  "stable_tag": "v70.4-complete",
   "offsite": { "enabled": true, "mode": "local-volume" }
 }
 ```
@@ -45,7 +48,7 @@ GET /api/platform_readiness
 
 ## Quick deploy
 
-1. ادفع المستودع إلى GitHub.
+1. ادفع المستودع إلى GitHub (`main`).
 2. Railway → **New Project** → **Deploy from GitHub repo**.
 3. Variables:
 
@@ -68,20 +71,27 @@ GET /api/platform_readiness
 - **Off-site محلي** = مرآة نسخ في `/app/data/offsite-mirror`
 - **MFA** عبر تطبيق المصادقة (**TOTP**) بدون SMTP
 - **أجهزة موثوقة** + تدوير كلمات المرور
+- **تطبيقات ويندوز/أندرويد** من `/get-windows` و `/get-android`
 
-## اختياري (يُفعّل تلقائياً عند الربط)
+## قائمة المالك على Railway (اختياري — لا يُنجز من الكود وحده)
 
-### Railway Bucket (نسخ سحابي إضافي)
-1. Create → Bucket  
-2. خدمة web → Variables → Variable References → **AWS SDK**  
-3. Redeploy  
+### 1) Railway Bucket (نسخ سحابي إضافي)
+1. Create → **Bucket**
+2. خدمة web → Variables → **Variable References** → **AWS SDK**
+3. Redeploy
+4. تحقق من `/api/health` → `object_storage.cloud_ready: true`
 
-### PostgreSQL (ظلّي للتحقق فقط)
-- أضف `DATABASE_URL` أو `LQ_DATABASE_URL`  
-- الواجهة: التوسع المؤسسي → فحص / نسخ ظلّي / تحقق  
+### 2) PostgreSQL (ظلّي للتحقق فقط — الأساس يبقى SQLite)
+1. أضف Postgres plugin أو ضع `DATABASE_URL` / `LQ_DATABASE_URL`
+2. Redeploy
+3. الواجهة: التوسع المؤسسي → فحص / نسخ ظلّي / تحقق
 
-### SMTP (بريد OTP إضافي)
-- `LQ_SMTP_HOST` / `LQ_SMTP_PORT` / `LQ_SMTP_USER` / `LQ_SMTP_PASS`
+### 3) Webhook خارجي (اختياري فوق المرآة المحلية)
+- `LQ_OFFSITE_BACKUP_URL` (+ اختياري `LQ_OFFSITE_BACKUP_TOKEN`)
+
+### 4) SMTP / OpenAI / VAT (اختياري)
+- SMTP: `LQ_SMTP_HOST` / `LQ_SMTP_PORT` / `LQ_SMTP_USER` / `LQ_SMTP_PASS`
+- لا تُعاد كلمات مرور المستخدمين الحاليين عند النشر
 
 ## حسابات الفريق
 
@@ -96,10 +106,11 @@ GET /api/platform_readiness
 | فقدان بيانات | تأكد Volume على `/app/data` |
 | كاش قديم | افتح `/fresh` |
 | MFA | استخدم Google Authenticator بعد أول تحدي TOTP |
+| تخزين يظهر محلي | Bucket غير مربوط — راجع قائمة المالك أعلاه |
 
 ## UI live checklist
 
 - ✅ روابط الموقع والخريطة والصور أعلاه حية
-- ✅ أيقونات حقول الدخول والبحث
 - ✅ منصات: عقارات / ضيافة / محاسبة بعد الدخول
 - ✅ تطبيق ويندوز من `/get-windows`
+- ✅ تطبيق أندرويد من `/get-android`

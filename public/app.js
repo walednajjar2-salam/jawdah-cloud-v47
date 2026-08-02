@@ -2392,14 +2392,18 @@ function renderBackup(){
   html += lqDocCard('🧾','فاتورة رسمية','Tax Invoice Template','/documents/lq-invoice-template.docx','lq-invoice-template.docx');
   html += lqDocCard('✉️','خطاب رسمي','Official Letterhead','/documents/lq-official-letter.docx','lq-official-letter.docx');
   html += `</div>`;
-  html += `<div class="card" style="margin-top:16px"><h4>☁️ نسخ خارج Railway (Off-site)</h4><p class="mini">1) أنشئ webhook على <a href="https://webhook.site" target="_blank" rel="noopener">webhook.site</a> · 2) أضف على Railway: <code>LQ_OFFSITE_BACKUP_URL</code> · 3) اضغط «نسخ احتياطي الآن»</p></div>`;
-  html += `<div class="card" style="margin-top:12px"><h4>🗄️ التخزين السحابي + النسخ الخارجي</h4><p class="mini">Railway → <b>Create → Bucket</b> ثم Variables → Variable References (AWS SDK). بعدها يشتغل التخزين والنسخ الخارجي تلقائياً. من التوسع المؤسسي: فحص + مزامنة.</p></div>`;
+  html += `<div class="card" style="margin-top:16px"><h4>☁️ النسخ الاحتياطي الخارجي</h4><p class="mini">الوضع الحالي: نسخة مرآة على Volume الدائم تلقائياً. اختياري إضافي: Railway Bucket (سحابي منفصل) أو webhook عبر <code>LQ_OFFSITE_BACKUP_URL</code>.</p></div>`;
+  html += `<div class="card" style="margin-top:12px"><h4>🗄️ التخزين السحابي (اختياري)</h4><p class="mini">التخزين المحلي على Volume جاهز للإنتاج. لتفعيل Bucket سحابي: Railway → <b>Create → Bucket</b> → Variable References (AWS SDK) → إعادة نشر. ثم من التوسع المؤسسي: فحص + مزامنة.</p></div>`;
   api('backup/status').then(st=>{
     if(st.auto_backup?.enabled){
       html += `<p class="mini" style="margin-top:12px">نسخ احتياطي تلقائي: كل ${fmt(st.auto_backup.interval_hours)} ساعة — آخر نسخة: ${st.auto_backup.last_backup||'لم تُنشأ بعد'} — يحتفظ بـ ${fmt(st.auto_backup.retention)} نسخة</p>`;
-      html += `<p class="mini">Off-site: ${st.offsite?.enabled?'مفعّل':'فعّل LQ_OFFSITE_BACKUP_URL'} — آخر دفع: ${st.offsite?.last_push||'—'}</p>`;
+      const off=st.offsite||{};
+      const offMode=off.mode||(off.enabled?'local-volume':'off');
+      html += `<p class="mini">Off-site: ${off.enabled?'✅ مفعّل':'غير مفعّل'} · الوضع ${htmlEscape(String(offMode))} — آخر دفع: ${off.last_push||'—'}</p>`;
       const os=st.object_storage||st.storage?.object_storage||{};
-      html += `<p class="mini">تخزين سحابي: ${os.ready?'✅ جاهز':(os.configured?'معطّل/غير جاهز':'محلي فقط')} — آخر خطأ: ${os.last_error||'—'}</p>`;
+      const cloudReady=!!(os.cloud_ready || (os.configured && os.enabled && os.mode && String(os.mode).indexOf('local')<0 && os.ready));
+      const cloudLabel=cloudReady?'✅ سحابي جاهز':(os.configured?'معطّل/غير جاهز':'محلي دائم (Volume) — Bucket اختياري');
+      html += `<p class="mini">تخزين: ${cloudLabel} — الوضع: ${htmlEscape(String(os.mode||'local-durable'))} — آخر خطأ: ${os.last_error||'—'}</p>`;
       if(st.storage){
         html += `<p class="mini">Storage: متاح ${fmt(st.storage.free_gb)}GB من ${fmt(st.storage.total_gb)}GB ${st.storage.warning?'⚠️ منخفض':'✅'}</p>`;
       }
