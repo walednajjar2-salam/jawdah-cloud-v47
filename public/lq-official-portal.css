@@ -158,10 +158,25 @@ body.lq-official-portal .op-mark{
   align-self:flex-start;
 }
 body.lq-official-portal .op-mark img{width:78%;height:78%;object-fit:contain}
-body.lq-official-portal .op-mark.op-mark-photo img{width:100%;height:100%;object-fit:cover}
+/* Full-bleed photo strip for each platform */
+body.lq-official-portal .op-mark.op-mark-photo{
+  width:100%;
+  height:72px;
+  border-radius:10px;
+  align-self:stretch;
+  border:1px solid rgba(15,42,74,.12);
+  box-shadow:0 4px 12px rgba(15,42,74,.1);
+}
+body.lq-official-portal .op-mark.op-mark-photo img{
+  width:100%;height:100%;object-fit:cover;
+  filter:saturate(1.05) contrast(1.02);
+}
 body.lq-official-portal .op-mark span{
   font-family:var(--lq-font-ar);
   font-size:1.05rem;font-weight:800;color:var(--lq-atm-gold-bright);line-height:1;
+}
+@media (max-height:820px){
+  body.lq-official-portal .op-mark.op-mark-photo{height:58px}
 }
 body.lq-official-portal .op-choice h2{
   margin:0;position:relative;z-index:1;
