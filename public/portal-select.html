@@ -3,102 +3,78 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>اختيار القسم | جودة الانطلاقة</title>
+  <title>جودة الانطلاقة | اختيار المنصة</title>
+  <link rel="icon" href="/assets/app-icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+Bengali:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="lq-exec-theme.css?v=exec1">
-  <style>
-    body{
-      margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;
-      background:linear-gradient(180deg,#f7faff 0%,#ebf2fc 100%);
-      font-family:var(--lq-font);color:var(--lq-text);
-    }
-    .shell{
-      width:min(1100px,100%);background:#fff;border:1px solid var(--lq-line);
-      border-radius:22px;box-shadow:var(--lq-shadow);padding:28px;
-    }
-    .head{text-align:center;margin-bottom:22px}
-    .head h1{margin:0 0 8px;font-family:var(--lq-serif);font-size:clamp(1.6rem,3vw,2.1rem);color:var(--lq-brand-dark)}
-    .head p{margin:0;color:var(--lq-muted)}
-    .top{display:flex;justify-content:flex-end;margin-bottom:10px}
-    .choices{
-      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:10px;
-    }
-    .card{
-      border:1px solid var(--lq-line);border-radius:18px;background:#fff;padding:18px;
-      text-align:center;box-shadow:var(--lq-shadow-sm);display:flex;flex-direction:column;gap:8px;
-    }
-    .circle{
-      width:120px;height:120px;margin:0 auto 8px;border-radius:50%;
-      border:4px solid #c7d8f4;overflow:hidden;display:grid;place-items:center;
-      background:radial-gradient(circle at 35% 30%,#fff 0%,#e8f1ff 55%,#d9e8ff 100%);
-      font-size:42px;
-    }
-    .circle img{width:100%;height:100%;object-fit:cover}
-    .card h3{margin:0;font-size:1.2rem;color:var(--lq-brand-dark)}
-    .card p{margin:0 0 8px;color:var(--lq-muted);font-size:.9rem;line-height:1.55;flex:1}
-    .btn{
-      border:0;border-radius:12px;padding:12px 14px;background:linear-gradient(145deg,#3d81ff,#2f6fec);
-      color:#fff;font-weight:800;cursor:pointer;min-height:46px;font:inherit;
-    }
-    .btn:hover{filter:brightness(1.04)}
-    .btn:focus-visible{outline:3px solid #9db9ff;outline-offset:2px}
-    .foot{text-align:center;margin-top:18px;color:#70839c;font-size:.85rem}
-    .finance-only{display:none}
-    body.show-finance .finance-only{display:flex}
-    @media (max-width:1100px){.choices{grid-template-columns:1fr 1fr}}
-    @media (max-width:640px){.choices{grid-template-columns:1fr}}
-  </style>
+  <link rel="stylesheet" href="lq-exec-theme.css?v=day2">
+  <link rel="stylesheet" href="lq-official-atmosphere.css?v=day3">
+  <link rel="stylesheet" href="lq-brand-mark.css?v=day6">
+  <link rel="stylesheet" href="lq-official-portal.css?v=day8b">
+  <link rel="stylesheet" href="lq-arabic-type.css?v=day6">
 </head>
-<body class="lq-exec">
-  <main class="shell">
-    <div class="top" id="langMount"></div>
-    <header class="head">
-      <h1 data-i18n="choosePlatform">اختر قسم العمل</h1>
-      <p data-i18n="choosePlatformSub">بعد تسجيل الدخول، اختر المسار المناسب لصلاحياتك</p>
+<body class="lq-exec lq-official-portal show-finance">
+  <div class="op-bg lq-atm-bg" aria-hidden="true"></div>
+  <main class="op-stage">
+    <div class="op-top" id="langMount"></div>
+
+    <header class="op-brand">
+      <div class="lq-brand-mark lq-brand-mark--portal" aria-hidden="false">
+        <img src="/assets/brand-mark-gold.png?v=day6" alt="جودة الانطلاقة" width="655" height="411" fetchpriority="high">
+      </div>
+      <h1 class="op-brand-name">Launch Quality</h1>
+      <p class="op-brand-ar">جودة الانطلاقة</p>
+      <p class="op-support" data-i18n="choosePlatformSub">ست منصات متكاملة — اختر مسار عملك</p>
     </header>
-    <section class="choices" id="portalChoices">
-      <article class="card" data-portal="nizwaestate">
-        <div class="circle" aria-hidden="true"><img src="/quick-estate/assets/logo_real_estate_transparent.png?v=nizwa3" alt=""></div>
-        <h3 data-i18n="nizwaestate">عقارات نزوى</h3>
-        <p data-i18n="nizwaestateDesc">وحدات وعقود نزوى من My program — منصة مستقلة بعد الدخول</p>
-        <button class="btn" type="button" data-enter="nizwaestate"><span data-i18n="enter">دخول</span></button>
-      </article>
-      <article class="card" data-portal="realestate">
-        <div class="circle" aria-hidden="true"><img src="/assets/login-portal-bg.png" alt=""></div>
-        <h3 data-i18n="realestate">العقارات</h3>
+
+    <section class="op-choices" id="portalChoices" aria-label="أقسام العمل">
+      <button class="op-choice" type="button" data-enter="nizwaestate" data-portal="nizwaestate">
+        <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/portals/nizwa.jpg?v=day7" alt=""></div>
+        <h2 data-i18n="nizwaestate">عقارات نزوى</h2>
+        <p data-i18n="nizwaestateDesc">وحدات وعقود نزوى — منصة مستقلة بعد الدخول</p>
+        <span class="op-enter" data-i18n="enter">دخول</span>
+      </button>
+
+      <button class="op-choice" type="button" data-enter="realestate" data-portal="realestate">
+        <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/portals/realestate.jpg?v=day7" alt=""></div>
+        <h2 data-i18n="realestate">العقارات</h2>
         <p data-i18n="realestateDesc">الوحدات، العملاء، العقود، الفواتير، والصيانة</p>
-        <button class="btn" type="button" data-enter="realestate"><span data-i18n="enter">دخول</span></button>
-      </article>
-      <article class="card" data-portal="hospitality">
-        <div class="circle" aria-hidden="true">🏨</div>
-        <h3 data-i18n="hospitality">الضيافة</h3>
+        <span class="op-enter" data-i18n="enter">دخول</span>
+      </button>
+
+      <button class="op-choice" type="button" data-enter="hospitality" data-portal="hospitality">
+        <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/portals/hospitality.jpg?v=day7" alt=""></div>
+        <h2 data-i18n="hospitality">الضيافة</h2>
         <p data-i18n="hospitalityDesc">المجالس، الحجوزات، الخدمات، والمخزن</p>
-        <button class="btn" type="button" data-enter="hospitality"><span data-i18n="enter">دخول</span></button>
-      </article>
-      <article class="card" data-portal="products">
-        <div class="circle" aria-hidden="true">📦</div>
-        <h3 data-i18n="products">منتجاتنا</h3>
+        <span class="op-enter" data-i18n="enter">دخول</span>
+      </button>
+
+      <button class="op-choice" type="button" data-enter="products" data-portal="products">
+        <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/portals/products.jpg?v=day7" alt=""></div>
+        <h2 data-i18n="products">منتجاتنا</h2>
         <p data-i18n="productsDesc">المنتجات، الأسعار، المخزون، والمبيعات</p>
-        <button class="btn" type="button" data-enter="products"><span data-i18n="enter">دخول</span></button>
-      </article>
-      <article class="card" data-portal="overview">
-        <div class="circle" aria-hidden="true">📊</div>
-        <h3 data-i18n="overview">نظرة شاملة</h3>
+        <span class="op-enter" data-i18n="enter">دخول</span>
+      </button>
+
+      <button class="op-choice" type="button" data-enter="overview" data-portal="overview">
+        <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/portals/overview.jpg?v=day7" alt=""></div>
+        <h2 data-i18n="overview">نظرة شاملة</h2>
         <p data-i18n="overviewDesc">مؤشرات العقارات والضيافة للإدارة</p>
-        <button class="btn" type="button" data-enter="overview"><span data-i18n="enter">دخول</span></button>
-      </article>
-      <article class="card finance-only" data-portal="accounting">
-        <div class="circle" aria-hidden="true">💼</div>
-        <h3 data-i18n="accounting">المحاسبة</h3>
+        <span class="op-enter" data-i18n="enter">دخول</span>
+      </button>
+
+      <button class="op-choice" type="button" data-enter="accounting" data-portal="accounting">
+        <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/portals/accounting.jpg?v=day7" alt=""></div>
+        <h2 data-i18n="accounting">المحاسبة</h2>
         <p data-i18n="accountingDesc">الفواتير، التحصيل، القيود، والتقارير المالية</p>
-        <button class="btn" type="button" data-enter="accounting"><span data-i18n="enter">دخول</span></button>
-      </article>
+        <span class="op-enter" data-i18n="enter">دخول</span>
+      </button>
     </section>
-    <div class="foot">Launch Quality LLC · جودة الانطلاقة</div>
+
+    <footer class="op-foot">Launch Quality LLC · مشاريع جودة الانطلاقة للخدمات</footer>
   </main>
-  <script src="lq-i18n.js?v=nizwa3"></script>
+
+  <script src="lq-i18n.js?v=day6"></script>
   <script>
     function readToken() {
       try {
@@ -143,7 +119,7 @@
         location.replace(qUrl);
         return;
       }
-      let url = "/app.html?fresh=20260731v70exec&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
+      let url = "/app.html?fresh=20260802v706day3&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
       if (token) url += "&token=" + encodeURIComponent(token);
       location.replace(url);
     }

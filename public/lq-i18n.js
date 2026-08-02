@@ -10,17 +10,18 @@
   const DICT = {
     ar: {
       appName: "جودة الانطلاقة",
-      welcomeBack: "مرحباً بعودتك",
-      signInContinue: "سجّل الدخول للمتابعة إلى حسابك",
+      welcomeBack: "مرحباً بك",
+      signInContinue: "سجّل الدخول للوصول إلى حسابك",
       username: "اسم المستخدم",
       password: "كلمة المرور",
-      rememberMe: "تذكرني",
+      rememberMe: "تذكرني على هذا الجهاز",
       forgotPassword: "نسيت كلمة المرور؟",
-      signIn: "تسجيل الدخول",
+      signIn: "دخول",
+      support: "الدعم الفني",
       continueGoogle: "المتابعة عبر Google",
       contactSupport: "ليس لديك حساب؟ تواصل مع الدعم",
       choosePlatform: "اختر قسم العمل",
-      choosePlatformSub: "بعد تسجيل الدخول، اختر المسار المناسب لصلاحياتك",
+      choosePlatformSub: "ست منصات متكاملة — اختر مسار عملك",
       realestate: "العقارات",
       realestateDesc: "الوحدات، العملاء، العقود، الفواتير، والصيانة",
       nizwaestate: "عقارات نزوى",
@@ -66,17 +67,18 @@
     },
     en: {
       appName: "Launch Quality",
-      welcomeBack: "Welcome back",
-      signInContinue: "Sign in to continue to your account",
+      welcomeBack: "Welcome",
+      signInContinue: "Sign in to access your account",
       username: "Username",
       password: "Password",
-      rememberMe: "Remember me",
+      rememberMe: "Remember me on this device",
       forgotPassword: "Forgot password?",
       signIn: "Sign in",
+      support: "Support",
       continueGoogle: "Continue with Google",
       contactSupport: "Don't have an account? Contact support",
       choosePlatform: "Choose your workspace",
-      choosePlatformSub: "Select the section that matches your role",
+      choosePlatformSub: "Six integrated platforms — choose your path",
       realestate: "Real Estate",
       realestateDesc: "Units, clients, contracts, invoices, and maintenance",
       nizwaestate: "Nizwa Real Estate",
@@ -129,6 +131,7 @@
       rememberMe: "मुझे याद रखें",
       forgotPassword: "पासवर्ड भूल गए?",
       signIn: "साइन इन",
+      support: "सहायता",
       continueGoogle: "Google से जारी रखें",
       contactSupport: "खाता नहीं है? सहायता से संपर्क करें",
       choosePlatform: "कार्यक्षेत्र चुनें",
@@ -185,6 +188,7 @@
       rememberMe: "মনে রাখুন",
       forgotPassword: "পাসওয়ার্ড ভুলে গেছেন?",
       signIn: "সাইন ইন",
+      support: "সহায়তা",
       continueGoogle: "Google দিয়ে চালিয়ে যান",
       contactSupport: "অ্যাকাউন্ট নেই? সহায়তায় যোগাযোগ করুন",
       choosePlatform: "কর্মক্ষেত্র বেছে নিন",
@@ -241,6 +245,7 @@
       rememberMe: "مجھے یاد رکھیں",
       forgotPassword: "پاس ورڈ بھول گئے؟",
       signIn: "سائن ان",
+      support: "سپورٹ",
       continueGoogle: "Google کے ساتھ جاری رکھیں",
       contactSupport: "اکاؤنٹ نہیں ہے؟ سپورٹ سے رابطہ کریں",
       choosePlatform: "کام کا شعبہ منتخب کریں",
@@ -315,11 +320,16 @@
     return s;
   }
 
+  const LOCALES = { ar: "ar-OM", en: "en-OM", hi: "hi-IN", bn: "bn-BD", ur: "ur-PK" };
+  /* Digits appropriate to each language script */
+  const NUM_SYS = { ar: "arab", en: "latn", hi: "latn", bn: "beng", ur: "arab" };
+
   function applyDocument() {
     const html = document.documentElement;
     html.lang = lang;
     html.dir = RTL.has(lang) ? "rtl" : "ltr";
     document.body?.setAttribute("data-lq-lang", lang);
+    html.setAttribute("data-lq-num", NUM_SYS[lang] || "latn");
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");
       if (!key) return;
@@ -333,7 +343,7 @@
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
       el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
     });
-    document.dispatchEvent(new CustomEvent("lq:langchange", { detail: { lang, dir: html.dir } }));
+    document.dispatchEvent(new CustomEvent("lq:langchange", { detail: { lang, dir: html.dir, num: NUM_SYS[lang] || "latn" } }));
   }
 
   function setLang(next) {
@@ -345,27 +355,39 @@
     return lang;
   }
 
-  function formatMoney(n, currency) {
-    const locales = { ar: "ar-OM", en: "en-OM", hi: "hi-IN", bn: "bn-BD", ur: "ur-PK" };
+  function formatNumber(n, opts) {
     try {
-      return new Intl.NumberFormat(locales[lang] || "en-OM", {
+      return new Intl.NumberFormat(LOCALES[lang] || "en-OM", {
+        numberingSystem: NUM_SYS[lang] || "latn",
+        maximumFractionDigits: 3,
+        ...(opts || {}),
+      }).format(Number(n || 0));
+    } catch (_) {
+      return String(Number(n || 0));
+    }
+  }
+
+  function formatMoney(n, currency) {
+    try {
+      return new Intl.NumberFormat(LOCALES[lang] || "en-OM", {
         style: "currency",
         currency: currency || "OMR",
+        numberingSystem: NUM_SYS[lang] || "latn",
         maximumFractionDigits: 3,
       }).format(Number(n || 0));
     } catch (_) {
-      return "OMR " + Number(n || 0).toFixed(3);
+      return "OMR " + formatNumber(n);
     }
   }
 
   function formatDate(iso) {
     if (!iso) return "—";
-    const locales = { ar: "ar-OM", en: "en-GB", hi: "hi-IN", bn: "bn-BD", ur: "ur-PK" };
     try {
-      return new Intl.DateTimeFormat(locales[lang] || "en-GB", {
+      return new Intl.DateTimeFormat(LOCALES[lang] || "en-GB", {
         year: "numeric",
         month: "short",
         day: "numeric",
+        numberingSystem: NUM_SYS[lang] || "latn",
       }).format(new Date(String(iso).slice(0, 10) + "T00:00:00"));
     } catch (_) {
       return String(iso).slice(0, 10);
@@ -399,11 +421,13 @@
     getLang: () => lang,
     isRtl: () => RTL.has(lang),
     applyDocument,
+    formatNumber,
     formatMoney,
     formatDate,
     langSwitcherHtml,
     bindSwitcher,
     DICT,
+    NUM_SYS,
   };
 
   if (document.readyState === "loading") {
