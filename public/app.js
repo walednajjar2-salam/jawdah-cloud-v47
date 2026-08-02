@@ -3264,7 +3264,7 @@ async function applyUserPermissionTemplate(){
   if(statusBox) statusBox.innerHTML = `<span class="badge paid">تم تطبيق الضبط</span><span class="badge">محدث: ${fmt(updated)}</span><span class="badge">بدون تغيير: ${fmt(skipped)}</span>`;
   toast('تم ضبط الصلاحيات بنجاح');
 }
-async function saveNew(table,row){ try{ await api(table,{method:'POST',body:JSON.stringify(row)}); toast('تم الحفظ'); await loadAll(); }catch(e){toastErr(e)} }
+async function saveNew(table,row){ try{ const res=await api(table,{method:'POST',body:JSON.stringify(row)}); toast(res.message||'تم الحفظ بنجاح'); await loadAll(); }catch(e){toastErr(e)} }
 function val(id){ return ($('#'+id)?.value||'').trim(); } function num(id){ return Number(val(id)||0); }
 async function delRecord(table,id){
   if(table==='users'){
@@ -3363,9 +3363,9 @@ async function submitEditRecord(table,id){
     ){
       return toastErr('لا تملك صلاحية تعديل التسعير العقاري');
     }
-    await api(`${table}/${id}`, {method:'PUT', body:JSON.stringify(data)});
+    const res=await api(`${table}/${id}`, {method:'PUT', body:JSON.stringify(data)});
     closeModal('genericModal');
-    toast('تم حفظ التعديل');
+    toast(res.message||'تم الحفظ بنجاح');
     await loadAll();
   }catch(e){ toastErr(e); }
 }
@@ -5519,7 +5519,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       r=>{
         const st = String(r.status||'').toLowerCase();
         const convertBtn = st==='reserved' && canEstateConvertReservation()
-          ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مؤجرة</button> `
+          ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مسودة عقد</button> `
           : '';
         const contractBtn = !['maintenance','suspended'].includes(st) && canEstateCreateContract()
           ? `<button class="gold-btn" onclick="openEstateContractFlow('apartment','${r.id}')">إنشاء عقد (مسودة)</button> `
@@ -5534,7 +5534,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       r=>{
         const st = String(r.status||'').toLowerCase();
         const convertBtn = st==='reserved' && canEstateConvertReservation()
-          ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مؤجرة</button> `
+          ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مسودة عقد</button> `
           : '';
         const contractBtn = !['maintenance','suspended'].includes(st) && canEstateCreateContract()
           ? `<button class="gold-btn" onclick="openEstateContractFlow('room','${r.id}')">إنشاء عقد (مسودة)</button> `
@@ -6037,13 +6037,13 @@ window.printHospitalityFolio = printHospitalityFolio;
     try{
       if(!canEstateConvertReservation()) return toastErr('لا تملك صلاحية تحويل الحجز');
       const t = entityType==='room' ? 'غرفة' : 'شقة';
-      const note = prompt(`ملاحظة التحويل (${t}) — اختياري`, 'تم التحويل إلى تأجير فعلي');
+      const note = prompt(`ملاحظة التحويل إلى مسودة عقد (${t}) — اختياري`, 'تحويل حجز إلى مسودة عقد');
       if(note===null) return;
-      await api('estate_convert_reservation',{
+      const res = await api('estate_convert_reservation',{
         method:'POST',
         body:JSON.stringify({ entity_type: entityType, entity_id: entityId, note: String(note||'').trim() })
       });
-      toast('تم التحويل إلى مؤجرة وإغلاق فاتورة الحجز المفتوحة');
+      toast(res.message || 'تم الحفظ بنجاح — أُنشئت مسودة عقد من الحجز (الشغل يحدث بعد اعتماد وتفعيل العقد)');
       await loadAll();
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }

@@ -39,6 +39,7 @@ import lq_postgres
 import lq_business_catalog
 import lq_quick_estate
 from lq_expand.openapi import build_openapi_spec
+from lq_expand import estate_foundation as lq_foundation
 from lq_expand.security import (
     device_trust_days,
     generate_totp_secret,
@@ -183,10 +184,14 @@ ROLE_LABELS_AR = {
 TABLES = {
     "branches": ["id", "code", "name", "city", "address", "manager", "active", "notes", "created_at"],
     "properties": ["id", "name", "type", "status", "price", "location", "building_no", "apartment_no", "room_no", "latitude", "longitude", "image", "last_update", "notes", "branch_id"],
-    "clients": ["id", "name", "phone", "email", "national_id", "id_card_image", "balance", "notes"],
+    "clients": ["id", "name", "phone", "phone_alt", "email", "national_id", "nationality", "address", "id_card_image", "balance", "notes", "lifecycle_status"],
+    "client_needs": ["id", "client_id", "need_type", "budget_min", "budget_max", "rooms", "location_pref", "status", "notes", "created_at", "updated_at"],
+    "client_viewings": ["id", "client_id", "property_id", "building_id", "entity_type", "entity_id", "viewing_at", "status", "notes", "created_by", "created_at"],
+    "client_followups": ["id", "client_id", "followup_at", "channel", "subject", "status", "notes", "created_by", "created_at"],
+    "payment_receipts": ["id", "receipt_no", "payment_id", "invoice_id", "estate_invoice_id", "contract_id", "client_id", "amount", "method", "receipt_date", "note", "created_by", "created_at"],
     "contracts": ["id", "contract_no", "contract_type", "property_id", "client_id", "tenant_nationality", "tenant_id_no", "unit_details", "start_date", "end_date", "rent_amount", "deposit_amount", "deposit_received", "deposit_received_at", "deposit_received_amount", "late_fee", "grace_days", "renewal_notice_days", "status", "payment_cycle", "legal_terms", "company_signatory", "approved_at", "ended_at", "attachments", "notes"],
     "invoices": ["id", "invoice_no", "contract_id", "client_id", "property_id", "issue_date", "due_date", "description", "invoice_type", "subtotal", "vat_rate", "vat_amount", "grand_total", "amount", "paid_amount", "status", "is_void", "void_reason", "voided_at", "sequence_year", "sequence_no", "reissued_from"],
-    "payments": ["id", "invoice_id", "client_id", "property_id", "contract_id", "payment_date", "amount", "method", "note", "payment_proof_image"],
+    "payments": ["id", "invoice_id", "client_id", "property_id", "contract_id", "estate_invoice_id", "estate_contract_id", "payment_date", "amount", "method", "note", "payment_proof_image"],
     "accounts": ["id", "entry_date", "type", "category", "description", "client_id", "property_id", "invoice_id", "amount"],
     "purchase_invoices": ["id", "purchase_no", "supplier", "invoice_date", "due_date", "category", "description", "amount", "paid_amount", "status", "property_id", "account_id"],
     "revenues": ["id", "revenue_no", "revenue_date", "source", "category", "description", "amount", "client_id", "property_id", "account_id"],
@@ -2088,8 +2093,85 @@ def init_db() -> None:
         except Exception as exc:
             print(f"[nizwa-estate-copy] skipped: {exc}")
         ensure_column(db, "clients", "id_card_image", "TEXT")
+        for col, definition in [
+            ("phone_alt", "TEXT"),
+            ("nationality", "TEXT"),
+            ("address", "TEXT"),
+            ("lifecycle_status", "TEXT DEFAULT 'prospect'"),
+        ]:
+            ensure_column(db, "clients", col, definition)
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS client_needs (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                need_type TEXT,
+                budget_min REAL DEFAULT 0,
+                budget_max REAL DEFAULT 0,
+                rooms TEXT,
+                location_pref TEXT,
+                status TEXT DEFAULT 'open',
+                notes TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS client_viewings (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                property_id TEXT,
+                building_id TEXT,
+                entity_type TEXT,
+                entity_id TEXT,
+                viewing_at TEXT,
+                status TEXT DEFAULT 'scheduled',
+                notes TEXT,
+                created_by TEXT,
+                created_at TEXT
+            );
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS client_followups (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                followup_at TEXT,
+                channel TEXT,
+                subject TEXT,
+                status TEXT DEFAULT 'open',
+                notes TEXT,
+                created_by TEXT,
+                created_at TEXT
+            );
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS payment_receipts (
+                id TEXT PRIMARY KEY,
+                receipt_no TEXT,
+                payment_id TEXT,
+                invoice_id TEXT,
+                estate_invoice_id TEXT,
+                contract_id TEXT,
+                client_id TEXT,
+                amount REAL NOT NULL DEFAULT 0,
+                method TEXT,
+                receipt_date TEXT,
+                note TEXT,
+                created_by TEXT,
+                created_at TEXT
+            );
+            """
+        )
         ensure_column(db, "payments", "payment_proof_image", "TEXT")
         ensure_column(db, "payments", "received_by", "TEXT")
+        ensure_column(db, "payments", "estate_invoice_id", "TEXT")
+        ensure_column(db, "payments", "estate_contract_id", "TEXT")
         for col, definition in [
             ("matched_invoice_id", "TEXT"),
             ("matched_payment_id", "TEXT"),
@@ -3072,6 +3154,17 @@ def next_estate_contract_invoice_no(db: sqlite3.Connection) -> str:
     prefix = f"ECI-{year}-"
     row = db.execute(
         "SELECT MAX(CAST(substr(invoice_no, -4) AS INTEGER)) FROM estate_contract_invoices WHERE invoice_no LIKE ?",
+        (prefix + "%",),
+    ).fetchone()[0]
+    seq = int(row or 0) + 1
+    return f"{prefix}{seq:04d}"
+
+
+def next_receipt_no(db: sqlite3.Connection) -> str:
+    year = date.today().year
+    prefix = f"RCP-{year}-"
+    row = db.execute(
+        "SELECT MAX(CAST(substr(receipt_no, -4) AS INTEGER)) FROM payment_receipts WHERE receipt_no LIKE ?",
         (prefix + "%",),
     ).fetchone()[0]
     seq = int(row or 0) + 1
@@ -4314,6 +4407,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def read_json(self) -> Dict[str, Any]:
+        # Internal handlers may inject a payload without re-reading the HTTP body.
+        override = getattr(self, "_json_override", None)
+        if override is not None:
+            self._json_override = None
+            return override if isinstance(override, dict) else {}
         length = int(self.headers.get("Content-Length", "0") or "0")
         if length <= 0:
             return {}
@@ -5038,6 +5136,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     if str(user.get("role") or "").lower() not in ("owner", "admin"):
                         return self.send_json({"ok": False, "error": "نسخ بيانات نزوى متاح للمالك/الإدارة فقط"}, 403)
                     return self.api_estate_copy_from_nizwa(db, user)
+                if parts[0] == "estate_foundation_audit" and method == "GET":
+                    user = self.require_user(db, "estate_apartments:read")
+                    return None if not user else self.api_estate_foundation_audit(db, user)
+                if parts[0] == "estate_integrity" and method == "GET":
+                    user = self.require_user(db, "estate_apartments:read")
+                    return None if not user else self.api_estate_integrity(db, user)
+                if parts[0] == "estate_autofill" and method == "GET":
+                    user = self.require_user(db, "estate_apartments:read")
+                    return None if not user else self.api_estate_autofill(db, user, query)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -6226,11 +6333,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": False, "error": "تعذر حفظ الصورة", "detail": str(exc)}, 500)
 
     def api_estate_convert_reservation(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        """Reservation → contract draft only. Occupancy happens on contract activation."""
         data = self.read_json()
         entity_type = str(data.get("entity_type") or "").strip().lower()
         entity_id = str(data.get("entity_id") or "").strip()
-        tenant_client_id = str(data.get("tenant_client_id") or "").strip() or None
-        note = str(data.get("note") or "Converted from reserved to occupied").strip()
         if entity_type not in ("apartment", "room"):
             return self.send_json({"ok": False, "error": "entity_type must be apartment or room"}, 400)
         if not entity_id:
@@ -6242,41 +6348,30 @@ class JawdahHandler(BaseHTTPRequestHandler):
         current_status = str(row["status"] or "").strip().lower()
         if current_status != "reserved":
             return self.send_json({"ok": False, "error": "يمكن التحويل فقط من حالة محجوزة"}, 400)
-        if not tenant_client_id:
-            tenant_client_id = str(row["booked_client_id"] or "").strip() or None
-        if tenant_client_id and not exists(db, "clients", tenant_client_id):
-            return self.send_json({"ok": False, "error": "العميل المحدد غير موجود"}, 400)
-        tenant_phone = str(row["tenant_phone"] or "").strip() or str(row["booked_client_phone"] or "").strip() or None
-        db.execute(
-            f"""
-            UPDATE {table}
-            SET status='occupied',
-                tenant_client_id=?,
-                tenant_phone=?,
-                reservation_start_date=NULL,
-                reservation_end_date=NULL,
-                last_update=?
-            WHERE id=?
-            """,
-            (tenant_client_id, tenant_phone, today(), entity_id),
-        )
-        log_estate_status_history(
-            db,
-            entity_type,
-            entity_id,
-            dict(row),
-            "reserved",
-            "occupied",
-            str(user.get("name") or user.get("username") or "System"),
-            note,
-        )
-        db.execute(
-            "UPDATE estate_reservation_invoices SET status='Closed', note=COALESCE(note,'') || ' | Closed by conversion to occupied at ' || ? WHERE entity_type=? AND entity_id=? AND lower(status)='open'",
-            (now_iso(), entity_type, entity_id),
-        )
-        audit(db, user, "convert_reservation", table, entity_id, note)
-        db.commit()
-        self.send_json({"ok": True, "entity_type": entity_type, "entity_id": entity_id, "status": "occupied"})
+        tenant_client_id = str(data.get("tenant_client_id") or row["booked_client_id"] or "").strip()
+        if not tenant_client_id or not exists(db, "clients", tenant_client_id):
+            return self.send_json(
+                {
+                    "ok": False,
+                    "error": "تحويل الحجز إلى عقد يتطلب ربط عميل مسجّل (booked_client_id). لا يُسمح بشغل الوحدة دون عقد.",
+                    "use_api": "estate_convert_to_contract",
+                },
+                400,
+            )
+        # Delegate to contract draft creation — never occupy without activation.
+        data = {
+            **data,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "tenant_client_id": tenant_client_id,
+            "start_date": data.get("start_date") or row["reservation_start_date"] or today(),
+            "end_date": data.get("end_date") or row["reservation_end_date"],
+            "rent_amount": data.get("rent_amount") or row["rent_price"],
+            "notes": str(data.get("note") or data.get("notes") or "Converted from reservation to contract draft"),
+        }
+        # Re-enter convert_to_contract by temporarily swapping body reader
+        self._json_override = data
+        return self.api_estate_convert_to_contract(db, user)
 
     def api_estate_convert_to_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -6301,6 +6396,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return self.send_json({"ok": False, "error": "حدد العميل/المستأجر قبل إنشاء العقد"}, 400)
         if not exists(db, "clients", tenant_client_id):
             return self.send_json({"ok": False, "error": "العميل المحدد غير موجود"}, 400)
+        if status_now == "reserved":
+            booked_for = str(row["booked_client_id"] or "").strip()
+            if booked_for and booked_for != tenant_client_id:
+                return self.send_json(
+                    {"ok": False, "error": "الوحدة محجوزة لعميل آخر — لا يُنشأ عقد إلا لنفس العميل المحجوز"},
+                    409,
+                )
         c_row = db.execute("SELECT name, phone FROM clients WHERE id=?", (tenant_client_id,)).fetchone()
         tenant_phone = str(data.get("tenant_phone") or "").strip() or str(row["tenant_phone"] or "").strip() or str(c_row["phone"] if c_row else "") or None
 
@@ -6353,7 +6455,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "contract": contract_row,
                 "entity_id": entity_id,
                 "entity_type": entity_type,
-                "message": "تم إنشاء العقد كمسودة. أرسل طلب اعتماد ثم فعّل العقد لإصدار الفواتير.",
+                "message": "تم الحفظ بنجاح — تم إنشاء العقد كمسودة. أرسل طلب اعتماد ثم فعّل العقد لإصدار الفواتير.",
             }
         )
 
@@ -6494,6 +6596,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
             SET status='occupied',
                 tenant_client_id=?,
                 tenant_phone=?,
+                booked_client_id=NULL,
+                booked_client_name=NULL,
+                booked_client_phone=NULL,
+                booked_by_employee=NULL,
                 reservation_start_date=NULL,
                 reservation_end_date=NULL,
                 last_update=?
@@ -6515,9 +6621,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
             actor_name,
             "Contract activated",
         )
+        try:
+            lq_foundation.sync_client_lifecycle_status(db, str(contract["client_id"] or ""))
+        except Exception:
+            pass
         audit(db, user, "activate", "estate_contracts", contract_id, f"Activated and generated {schedule_result.get('created', 0)} invoices")
         db.commit()
-        self.send_json({"ok": True, "status": "Active", "result": schedule_result})
+        self.send_json(
+            {
+                "ok": True,
+                "status": "Active",
+                "result": schedule_result,
+                "message": "تم الحفظ بنجاح",
+            }
+        )
 
     def api_estate_contract_generate_schedule(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -6575,6 +6692,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
         contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (row["contract_id"],)).fetchone()
         client_id = contract["client_id"] if contract else None
         estate_property_ref = contract["property_id"] if contract else None
+        method_name = str(data.get("method") or "Cash").strip() or "Cash"
+        note = str(data.get("note") or "").strip()
+        payment_id = uid("PAY")
+        receipt_no = next_receipt_no(db)
+        receipt = {
+            "id": uid("RCP"),
+            "receipt_no": receipt_no,
+            "payment_id": payment_id,
+            "invoice_id": None,
+            "estate_invoice_id": invoice_id,
+            "contract_id": row["contract_id"],
+            "client_id": client_id,
+            "amount": amount,
+            "method": method_name,
+            "receipt_date": payment_date,
+            "note": note or f"سند قبض لفاتورة {row['invoice_no']}",
+            "created_by": str(user.get("name") or user.get("username") or "System"),
+            "created_at": now_iso(),
+        }
+        # Durable estate payment ledger (avoids legacy payments FK to invoices/contracts).
+        insert(db, "payment_receipts", receipt)
         insert(
             db,
             "accounts",
@@ -6583,7 +6721,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "entry_date": payment_date,
                 "type": "income",
                 "category": "Estate Contract Collection",
-                "description": f"Collection {row['invoice_no']} (estate:{estate_property_ref or '-'})",
+                "description": f"Collection {row['invoice_no']} / {receipt_no} (estate:{estate_property_ref or '-'})",
                 "client_id": client_id,
                 # accounts.property_id references legacy properties table, not estate_properties
                 "property_id": None,
@@ -6591,9 +6729,20 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "amount": amount,
             },
         )
-        audit(db, user, "pay", "estate_contract_invoices", invoice_id, f"Collected {amount} for {row['invoice_no']} on {payment_date}")
+        audit(db, user, "pay", "estate_contract_invoices", invoice_id, f"Collected {amount} for {row['invoice_no']} on {payment_date}; receipt={receipt_no}")
         db.commit()
-        self.send_json({"ok": True, "invoice_id": invoice_id, "paid_amount": new_paid, "status": new_status, "payment_date": payment_date})
+        self.send_json(
+            {
+                "ok": True,
+                "invoice_id": invoice_id,
+                "paid_amount": new_paid,
+                "status": new_status,
+                "payment_date": payment_date,
+                "payment_id": payment_id,
+                "receipt": receipt,
+                "message": "تم الحفظ بنجاح",
+            }
+        )
 
     def api_estate_contract_close(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -6708,6 +6857,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
         )
         entity_type = str(contract["entity_type"] or "").strip().lower()
         entity_id = str(contract["entity_id"] or "").strip()
+        unit_next = str(data.get("unit_next") or data.get("unit_next_status") or "vacant").strip().lower()
+        if unit_next not in ("vacant", "maintenance"):
+            unit_next = "vacant"
         active_after = db.execute(
             "SELECT id FROM estate_contracts WHERE lower(entity_type)=lower(?) AND entity_id=? AND lower(status)='active' AND id<>?",
             (entity_type, entity_id, contract_id),
@@ -6717,12 +6869,26 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 db,
                 entity_type=entity_type,
                 entity_id=entity_id,
-                target_status="vacant",
+                target_status=unit_next,
                 actor_name=str(user.get("name") or user.get("username") or "System"),
                 note=f"Contract {close_status}",
             )
+        try:
+            lq_foundation.sync_client_lifecycle_status(db, str(contract["client_id"] or ""))
+        except Exception:
+            pass
         db.commit()
-        self.send_json({"ok": True, "contract_id": contract_id, "status": close_status.capitalize(), "settlement": settlement, "preview": preview})
+        self.send_json(
+            {
+                "ok": True,
+                "contract_id": contract_id,
+                "status": close_status.capitalize(),
+                "settlement": settlement,
+                "preview": preview,
+                "unit_next": unit_next,
+                "message": "تم الحفظ بنجاح",
+            }
+        )
 
     def api_estate_month_close(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()
@@ -7345,14 +7511,22 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return self.send_json({"ok": False, "error": "تواريخ الحجز غير صحيحة"}, 400)
                 if edt < sdt:
                     return self.send_json({"ok": False, "error": "تاريخ نهاية الحجز يجب أن يكون بعد البداية"}, 400)
-                booked_name = str(data.get("booked_client_name") or "").strip()
-                booked_phone = str(data.get("booked_client_phone") or "").strip()
-                booked_employee = str(data.get("booked_by_employee") or "").strip()
+                booked_client_id = str(data.get("booked_client_id") or data.get("tenant_client_id") or "").strip()
+                if not booked_client_id or not exists(db, "clients", booked_client_id):
+                    return self.send_json(
+                        {"ok": False, "error": "الحجز يتطلب اختيار عميل مسجّل من قائمة العملاء (booked_client_id)"},
+                        400,
+                    )
+                c_booked = db.execute("SELECT name, phone FROM clients WHERE id=?", (booked_client_id,)).fetchone()
+                booked_name = str(data.get("booked_client_name") or "").strip() or str(c_booked["name"] if c_booked else "").strip()
+                booked_phone = str(data.get("booked_client_phone") or "").strip() or str(c_booked["phone"] if c_booked else "").strip()
+                booked_employee = str(data.get("booked_by_employee") or "").strip() or str(actor_name or "").strip()
                 if not booked_name or not booked_phone or not booked_employee:
                     return self.send_json({"ok": False, "error": "حالة محجوزة تتطلب اسم العميل وهاتفه واسم الموظف الذي حجز"}, 400)
-                booked_client_id = str(data.get("booked_client_id") or "").strip()
-                if booked_client_id and not exists(db, "clients", booked_client_id):
-                    return self.send_json({"ok": False, "error": "معرف العميل المحجوز له غير موجود"}, 400)
+                data["booked_client_id"] = booked_client_id
+                data["booked_client_name"] = booked_name
+                data["booked_client_phone"] = booked_phone
+                data["booked_by_employee"] = booked_employee
                 estate_reserved_transition = method == "POST" or estate_prev_status.lower() != "reserved"
             if status_norm == "maintenance":
                 if not str(data.get("maintenance_notes") or "").strip():
@@ -7422,9 +7596,6 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if data["rent_price"] < 0 or data["booking_deposit"] < 0 or data["prepaid_amount"] < 0 or data["maintenance_cost"] < 0:
                 return self.send_json({"ok": False, "error": "قيم الأسعار/التأمين/المقدم/الصيانة غير صحيحة"}, 400)
             if status_norm == "reserved":
-                booked_name = str(data.get("booked_client_name") or "").strip()
-                booked_phone = str(data.get("booked_client_phone") or "").strip()
-                booked_employee = str(data.get("booked_by_employee") or "").strip()
                 start_date = str(data.get("reservation_start_date") or "").strip()
                 end_date = str(data.get("reservation_end_date") or "").strip()
                 if not start_date or not end_date:
@@ -7436,11 +7607,22 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return self.send_json({"ok": False, "error": "تواريخ حجز الغرفة غير صحيحة"}, 400)
                 if edt < sdt:
                     return self.send_json({"ok": False, "error": "نهاية الحجز يجب أن تكون بعد بدايته"}, 400)
+                booked_client_id = str(data.get("booked_client_id") or data.get("tenant_client_id") or "").strip()
+                if not booked_client_id or not exists(db, "clients", booked_client_id):
+                    return self.send_json(
+                        {"ok": False, "error": "حجز الغرفة يتطلب اختيار عميل مسجّل من قائمة العملاء (booked_client_id)"},
+                        400,
+                    )
+                c_booked = db.execute("SELECT name, phone FROM clients WHERE id=?", (booked_client_id,)).fetchone()
+                booked_name = str(data.get("booked_client_name") or "").strip() or str(c_booked["name"] if c_booked else "").strip()
+                booked_phone = str(data.get("booked_client_phone") or "").strip() or str(c_booked["phone"] if c_booked else "").strip()
+                booked_employee = str(data.get("booked_by_employee") or "").strip() or str(actor_name or "").strip()
                 if data["booking_deposit"] <= 0 or not booked_name or not booked_phone or not booked_employee:
                     return self.send_json({"ok": False, "error": "الغرفة المحجوزة تتطلب التأمين + بيانات العميل + الموظف الحاجز"}, 400)
-                booked_client_id = str(data.get("booked_client_id") or "").strip()
-                if booked_client_id and not exists(db, "clients", booked_client_id):
-                    return self.send_json({"ok": False, "error": "معرف العميل المحجوز له غير موجود"}, 400)
+                data["booked_client_id"] = booked_client_id
+                data["booked_client_name"] = booked_name
+                data["booked_client_phone"] = booked_phone
+                data["booked_by_employee"] = booked_employee
                 estate_reserved_transition = method == "POST" or estate_prev_status.lower() != "reserved"
             if status_norm == "maintenance":
                 if not str(data.get("maintenance_notes") or "").strip():
@@ -7558,11 +7740,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 merged = dict(current)
                 merged.update(data)
                 data = merged
-                if str(current["status"] or "").strip().lower() in ("approved", "active"):
-                    locked = {"entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "start_date", "end_date", "rent_amount", "payment_cycle", "contract_no"}
-                    changed_locked = [k for k in locked if str(current[k] or "") != str(data.get(k) or "")]
-                    if changed_locked and user.get("role") not in ("owner", "admin"):
-                        return self.send_json({"ok": False, "error": "لا يمكن تعديل بيانات العقد الأساسية بعد الاعتماد إلا للمالك/الإدارة"}, 403)
+                cur_st = str(current["status"] or "").strip().lower()
+                if cur_st in ("approved", "active"):
+                    return self.send_json(
+                        {
+                            "ok": False,
+                            "error": "العقد المعتمد/الفعّال مقفول — استخدم مسار الاعتماد أو التفعيل أو طلب تعديل معتمد",
+                        },
+                        409,
+                    )
             if method == "POST":
                 required = ["entity_type", "entity_id", "client_id", "start_date", "end_date", "rent_amount"]
                 missing = [k for k in required if not str(data.get(k) or "").strip()]
@@ -7640,6 +7826,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": False, "error": "حالة العقد غير معتمدة"}, 400)
             if normalized_status == "Active":
                 return self.send_json({"ok": False, "error": "تفعيل العقد يتم فقط عبر إجراء «تفعيل العقد» بعد الاعتماد"}, 400)
+            if normalized_status == "Approved":
+                return self.send_json({"ok": False, "error": "اعتماد العقد يتم فقط عبر مسار الاعتماد الرسمي — لا عبر التعديل المباشر"}, 400)
             data["status"] = normalized_status
         if table == "estate_contract_invoices":
             return self.send_json({"ok": False, "error": "فواتير العقود تُدار عبر محرك الجدولة والتحصيل فقط"}, 403)
@@ -7999,7 +8187,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     "طلب اعتماد عقد جديد من العمليات",
                 )
             db.commit()
-            return self.send_json({"ok": True, "item": clean})
+            return self.send_json({"ok": True, "item": clean, "message": "تم الحفظ بنجاح"})
         else:
             if not item_id:
                 return self.send_json({"ok": False, "error": "Missing id"}, 400)
@@ -8093,7 +8281,112 @@ class JawdahHandler(BaseHTTPRequestHandler):
                             note="Contract ended/cancelled by update",
                         )
             db.commit()
-            return self.send_json({"ok": True})
+            return self.send_json({"ok": True, "message": "تم الحفظ بنجاح"})
+
+    def api_estate_foundation_audit(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        integrity = lq_foundation.integrity_report(db)
+        self.send_json(
+            {
+                "ok": True,
+                "audit": lq_foundation.PHASE1_AUDIT,
+                "integrity": integrity,
+                "publish_blocked": True,
+                "message": "النشر موقوف حتى اكتمال الربط والاختبارات والنسخ الاحتياطي",
+            }
+        )
+
+    def api_estate_integrity(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        report = lq_foundation.integrity_report(db)
+        self.send_json({"ok": True, "report": report, "publish_ready": bool(report.get("publish_ready"))})
+
+    def api_estate_autofill(self, db: sqlite3.Connection, user: Dict[str, Any], query: str) -> None:
+        params = urllib.parse.parse_qs(query or "")
+        kind = str((params.get("kind") or ["client"])[0] or "client").strip().lower()
+        if kind == "client":
+            client_id = str((params.get("client_id") or [""])[0] or "").strip()
+            if not client_id:
+                return self.send_json({"ok": False, "error": "client_id مطلوب"}, 400)
+            row = db.execute("SELECT * FROM clients WHERE id=?", (client_id,)).fetchone()
+            if not row:
+                return self.send_json({"ok": False, "error": "العميل غير موجود"}, 404)
+            return self.send_json({"ok": True, "kind": "client", "autofill": lq_foundation.client_autofill(row)})
+        if kind in ("unit", "apartment", "room"):
+            entity_type = str((params.get("entity_type") or [kind if kind in ("apartment", "room") else "apartment"])[0] or "apartment").strip().lower()
+            entity_id = str((params.get("entity_id") or [""])[0] or "").strip()
+            if entity_type not in ("apartment", "room") or not entity_id:
+                return self.send_json({"ok": False, "error": "entity_type و entity_id مطلوبان"}, 400)
+            table = "estate_apartments" if entity_type == "apartment" else "estate_rooms"
+            unit = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+            if not unit:
+                return self.send_json({"ok": False, "error": "الوحدة غير موجودة"}, 404)
+            building = db.execute("SELECT * FROM estate_buildings WHERE id=?", (unit["building_id"],)).fetchone() if unit["building_id"] else None
+            prop = db.execute("SELECT * FROM estate_properties WHERE id=?", (unit["property_id"],)).fetchone() if unit["property_id"] else None
+            payload = lq_foundation.unit_autofill(unit, building, prop)
+            payload["entity_type"] = entity_type
+            return self.send_json({"ok": True, "kind": "unit", "autofill": payload})
+        if kind == "contract":
+            client_id = str((params.get("client_id") or [""])[0] or "").strip()
+            entity_type = str((params.get("entity_type") or ["apartment"])[0] or "apartment").strip().lower()
+            entity_id = str((params.get("entity_id") or [""])[0] or "").strip()
+            if not client_id or not entity_id:
+                return self.send_json({"ok": False, "error": "client_id و entity_id مطلوبان"}, 400)
+            client = db.execute("SELECT * FROM clients WHERE id=?", (client_id,)).fetchone()
+            table = "estate_apartments" if entity_type == "apartment" else "estate_rooms"
+            unit = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+            if not client or not unit:
+                return self.send_json({"ok": False, "error": "العميل أو الوحدة غير موجود"}, 404)
+            building = db.execute("SELECT * FROM estate_buildings WHERE id=?", (unit["building_id"],)).fetchone() if unit["building_id"] else None
+            prop = db.execute("SELECT * FROM estate_properties WHERE id=?", (unit["property_id"],)).fetchone() if unit["property_id"] else None
+            extras = {
+                "rent_amount": float(unit["rent_price"] or 0),
+                "start_date": unit["reservation_start_date"] or today(),
+                "end_date": unit["reservation_end_date"] or "",
+                "payment_cycle": "monthly",
+            }
+            return self.send_json(
+                {
+                    "ok": True,
+                    "kind": "contract",
+                    "autofill": lq_foundation.contract_autofill(client, unit, building, prop, extras),
+                }
+            )
+        if kind == "payment":
+            invoice_id = str((params.get("invoice_id") or [""])[0] or "").strip()
+            if not invoice_id:
+                return self.send_json({"ok": False, "error": "invoice_id مطلوب"}, 400)
+            inv = db.execute("SELECT * FROM estate_contract_invoices WHERE id=?", (invoice_id,)).fetchone()
+            if not inv:
+                return self.send_json({"ok": False, "error": "الفاتورة غير موجودة"}, 404)
+            contract = db.execute("SELECT * FROM estate_contracts WHERE id=?", (inv["contract_id"],)).fetchone()
+            client = None
+            if contract and contract["client_id"]:
+                client = db.execute("SELECT * FROM clients WHERE id=?", (contract["client_id"],)).fetchone()
+            next_rcp = next_receipt_no(db)
+            payload = lq_foundation.payment_autofill(inv, contract, client)
+            payload["next_receipt_no"] = next_rcp
+            return self.send_json({"ok": True, "kind": "payment", "autofill": payload})
+        if kind == "maintenance":
+            entity_type = str((params.get("entity_type") or ["apartment"])[0] or "apartment").strip().lower()
+            entity_id = str((params.get("entity_id") or [""])[0] or "").strip()
+            if entity_type not in ("apartment", "room") or not entity_id:
+                return self.send_json({"ok": False, "error": "entity_type و entity_id مطلوبان"}, 400)
+            table = "estate_apartments" if entity_type == "apartment" else "estate_rooms"
+            unit = db.execute(f"SELECT * FROM {table} WHERE id=?", (entity_id,)).fetchone()
+            if not unit:
+                return self.send_json({"ok": False, "error": "الوحدة غير موجودة"}, 404)
+            client = None
+            cid = str(unit["tenant_client_id"] or unit["booked_client_id"] or "").strip()
+            if cid:
+                client = db.execute("SELECT * FROM clients WHERE id=?", (cid,)).fetchone()
+            building = db.execute("SELECT * FROM estate_buildings WHERE id=?", (unit["building_id"],)).fetchone() if unit["building_id"] else None
+            return self.send_json(
+                {
+                    "ok": True,
+                    "kind": "maintenance",
+                    "autofill": lq_foundation.maintenance_autofill(unit, client, building),
+                }
+            )
+        return self.send_json({"ok": False, "error": "kind غير معروف — استخدم client|unit|contract|payment|maintenance"}, 400)
 
     def api_invoice_from_contract(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = self.read_json()

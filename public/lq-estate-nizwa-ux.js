@@ -705,8 +705,13 @@
           <label>عربون الحجز<input id="nxUDeposit" type="number" min="0" step="0.001" value="${esc(row.booking_deposit || 0)}"></label>
           <label>الطابق<input id="nxUFloor" type="number" value="${esc(row.floor_no ?? "")}"></label>
           <label>المساحة م²<input id="nxUArea" type="number" min="0" step="0.01" value="${esc(row.area_sqm || 0)}"></label>
-          <label>المستأجر (عملاء النظام)<select id="nxUTenant">${clientOptions(row.tenant_client_id || row.booked_client_id)}</select></label>
-          <label>هاتف المستأجر<input id="nxUPhone" value="${esc(row.tenant_phone || row.booked_client_phone || "")}"></label>
+          <label>العميل / المستأجر<select id="nxUTenant">${clientOptions(row.tenant_client_id || row.booked_client_id)}</select></label>
+          <label>هاتف العميل<input id="nxUPhone" value="${esc(row.tenant_phone || row.booked_client_phone || "")}"></label>
+          <label>هاتف إضافي<input id="nxUPhoneAlt" value="${esc((byRow("clients", row.tenant_client_id || row.booked_client_id).phone_alt) || "")}"></label>
+          <label>رقم الهوية<input id="nxUNational" value="${esc((byRow("clients", row.tenant_client_id || row.booked_client_id).national_id) || "")}" readonly></label>
+          <label>الجنسية<input id="nxUNationality" value="${esc((byRow("clients", row.tenant_client_id || row.booked_client_id).nationality) || "")}" readonly></label>
+          <label>بداية الحجز<input id="nxUResStart" type="date" value="${esc(row.reservation_start_date || "")}"></label>
+          <label>نهاية الحجز<input id="nxUResEnd" type="date" value="${esc(row.reservation_end_date || "")}"></label>
           <label>المسؤول<input id="nxUManager" value="${esc(row.manager_name || "")}"></label>
           <label>ملاحظات<textarea id="nxUNotes" rows="3">${esc(row.notes || "")}</textarea></label>
         </div>`;
@@ -729,10 +734,26 @@
         if (typeof convertEstateReservation === "function") convertEstateReservation(entityType, entityId);
       });
       document.getElementById("nxUNewContract")?.addEventListener("click", () => createContractForUnit(entityType, entityId, row));
-      document.getElementById("nxUTenant")?.addEventListener("change", (e) => {
-        const c = byRow("clients", e.target.value);
+      document.getElementById("nxUTenant")?.addEventListener("change", async (e) => {
+        const clientId = e.target.value;
+        const c = byRow("clients", clientId);
         const phone = document.getElementById("nxUPhone");
-        if (c.phone && phone && !phone.value) phone.value = c.phone;
+        const phoneAlt = document.getElementById("nxUPhoneAlt");
+        const national = document.getElementById("nxUNational");
+        const nationality = document.getElementById("nxUNationality");
+        if (c.phone && phone) phone.value = c.phone;
+        if (phoneAlt) phoneAlt.value = c.phone_alt || "";
+        if (national) national.value = c.national_id || "";
+        if (nationality) nationality.value = c.nationality || "";
+        if (window.LQEstateFoundation && clientId) {
+          const filled = await window.LQEstateFoundation.autofillClientInto(clientId);
+          if (filled) {
+            if (phone && filled.phone) phone.value = filled.phone;
+            if (phoneAlt && filled.phone_alt) phoneAlt.value = filled.phone_alt;
+            if (national && filled.national_id) national.value = filled.national_id;
+            if (nationality && filled.nationality) nationality.value = filled.nationality;
+          }
+        }
       });
       return;
     }
@@ -792,11 +813,12 @@
       const amount = prompt("مبلغ التحصيل", String(Math.max(0, Number(openInv[0].amount || 0) - Number(openInv[0].paid_amount || 0))));
       if (amount === null) return;
       try {
-        await api("estate_contract_pay_invoice", {
+        const res = await api("estate_contract_pay_invoice", {
           method: "POST",
           body: JSON.stringify({ invoice_id: invId, amount: Number(amount || 0), payment_date: todayStr() }),
         });
-        toastOk("تم التحصيل");
+        const rcp = res.receipt?.receipt_no ? ` · سند ${res.receipt.receipt_no}` : "";
+        toastOk((res.message || "تم الحفظ بنجاح") + rcp);
         await loadAll();
         paintDrawer();
         render();
@@ -824,8 +846,23 @@
       tenant_phone: document.getElementById("nxUPhone")?.value || tenant.phone || "",
       manager_name: document.getElementById("nxUManager")?.value || "",
       notes: document.getElementById("nxUNotes")?.value || "",
+      reservation_start_date: document.getElementById("nxUResStart")?.value || row.reservation_start_date || null,
+      reservation_end_date: document.getElementById("nxUResEnd")?.value || row.reservation_end_date || null,
       last_update: todayStr(),
     };
+    if (status === "reserved") {
+      if (!tenantId) return toastBad("الحجز يتطلب اختيار عميل مسجّل أولاً");
+      payload.booked_client_id = tenantId;
+      payload.booked_client_name = tenant.name || "";
+      payload.booked_client_phone = payload.tenant_phone || tenant.phone || "";
+      payload.booked_by_employee = (window.Jawdah?.user?.name || window.Jawdah?.user?.username || "موظف");
+      if (!payload.reservation_start_date || !payload.reservation_end_date) {
+        return toastBad("الحجز يتطلب تاريخ بداية ونهاية");
+      }
+      if (Number(payload.booking_deposit || 0) <= 0) {
+        return toastBad("الحجز يتطلب عربونًا أكبر من صفر");
+      }
+    }
     if (
       typeof canEstatePricingEdit === "function" &&
       !canEstatePricingEdit() &&
@@ -835,8 +872,8 @@
       return toastBad("لا تملك صلاحية تعديل التسعير العقاري");
     }
     try {
-      await api(`${table}/${entityId}`, { method: "PUT", body: JSON.stringify(payload) });
-      toastOk("تم حفظ الوحدة");
+      const res = await api(`${table}/${entityId}`, { method: "PUT", body: JSON.stringify(payload) });
+      toastOk(res.message || "تم الحفظ بنجاح");
       await loadAll();
       render();
       openUnitDrawer(entityType, entityId, "details");
@@ -871,7 +908,7 @@
           notes: "",
         }),
       });
-      toastOk("تم إنشاء مسودة العقد");
+      toastOk("تم الحفظ بنجاح — مسودة العقد جاهزة للاعتماد");
       await loadAll();
       state.module = "contracts";
       openUnitDrawer(entityType, entityId, "contracts");
