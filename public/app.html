@@ -35,8 +35,7 @@
   <!-- OFFICIAL LOGIN UI 2026-08-02: lq-login-locked.css (owner-approved redesign) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@400;600;700;800&family=Noto+Sans+Bengali:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="lq-arabic-type.css?v=day1">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@600;700&family=Cairo:wght@700;800&family=Noto+Sans+Bengali:wght@600;700&family=Noto+Sans+Devanagari:wght@600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css?v=portal9">
   <link rel="stylesheet" href="lq-shell.css?v=shell30">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
@@ -45,10 +44,12 @@
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref10">
   <link rel="stylesheet" href="lq-emergency-clean.css?v=ec14">
   <link rel="stylesheet" href="lq-edition-terrifying.css?v=td3">
-  <link rel="stylesheet" href="lq-exec-theme.css?v=day1">
-  <link rel="stylesheet" href="lq-official-atmosphere.css?v=day2">
-  <link rel="stylesheet" href="lq-brand-mark.css?v=day3">
+  <link rel="stylesheet" href="lq-exec-theme.css?v=day2">
+  <link rel="stylesheet" href="lq-official-atmosphere.css?v=day3">
+  <link rel="stylesheet" href="lq-brand-mark.css?v=day6">
   <link rel="stylesheet" href="lq-login-locked.css?v=day3">
+  <!-- Typography last so one bold stack wins site-wide -->
+  <link rel="stylesheet" href="lq-arabic-type.css?v=day6">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme lq-edition-terrifying lq-exec" data-edition="terrifying-dev">
   <style>
@@ -113,7 +114,7 @@
     #lqBrandWatermark{display:none!important;opacity:0!important;visibility:hidden!important}
     #lqBrandWatermark img{display:none!important;opacity:0!important}
     /* Login visuals owned by lq-login-locked.css (official redesign) */
-    #lqBootMsg{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:#0b1a28;color:#f3efe6;font:600 16px Cairo,Tajawal,sans-serif;text-align:center;padding:24px}
+    #lqBootMsg{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:#0b1a28;color:#f3efe6;font:700 16px "IBM Plex Sans Arabic",Cairo,sans-serif;text-align:center;padding:24px}
     #lqBootMsg.show{display:grid}
   </style>
   <div id="lqBootMsg" role="status">جاري تحميل النظام…</div>
@@ -926,7 +927,7 @@
   <script src="lq-business-catalog.js?v=biz1-v64" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="lq-i18n.js?v=day3" defer></script>
+  <script src="lq-i18n.js?v=day6" defer></script>
   <script src="app.js?v=finish-remaining-v70" defer></script>
   <script src="lq-estate-nizwa-ux.js?v=nx2-copy" defer></script>
   <script src="lq-exec-app.js?v=day3" defer></script>

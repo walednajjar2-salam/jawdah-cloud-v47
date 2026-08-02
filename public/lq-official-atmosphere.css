@@ -1,9 +1,6 @@
-/* Official Daylight Estate — user-specified patio background */
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@400;600;700;800&display=swap");
-
+/* Official Daylight Estate — user-specified patio background
+   Fonts come from lq-arabic-type.css (single source of truth) */
 :root{
-  --lq-font-ar:"IBM Plex Sans Arabic","Cairo","Tajawal",sans-serif;
-  --lq-font-display:"IBM Plex Sans Arabic","Cairo",sans-serif;
   --lq-atm-ink:#0f2a4a;
   --lq-atm-sky:#dceaf7;
   --lq-atm-panel:rgba(255,255,255,.88);
@@ -22,14 +19,16 @@
 }
 
 html,body{
-  font-family:var(--lq-font-ar) !important;
+  font-family:var(--lq-font, var(--lq-font-ar)) !important;
+  font-weight:var(--lq-fw, 700) !important;
 }
 
 .lq-atm,
 body.lq-official-portal,
 body.login-ultra #loginScreen{
   background:var(--lq-atm-sky) !important;
-  font-family:var(--lq-font-ar) !important;
+  font-family:var(--lq-font, var(--lq-font-ar)) !important;
+  font-weight:var(--lq-fw, 700) !important;
 }
 
 .lq-atm-bg,

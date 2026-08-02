@@ -1,5 +1,5 @@
-/* Launch Quality — Official executive design system (gold + ink) */
-@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap");
+/* Launch Quality — Official executive design system (gold + ink)
+   Typography owned by lq-arabic-type.css */
 :root{
   --lq-bg:#eef2f6;
   --lq-panel:#ffffff;
@@ -18,13 +18,12 @@
   --lq-radius-sm:12px;
   --lq-shadow:0 16px 40px rgba(16,32,51,.08);
   --lq-shadow-sm:0 8px 20px rgba(16,32,51,.06);
-  --lq-font:"IBM Plex Sans Arabic","Cairo","Tajawal","Noto Sans Devanagari","Noto Sans Bengali","Noto Nastaliq Urdu",Segoe UI,sans-serif;
-  --lq-serif:"IBM Plex Sans Arabic","Cairo",Georgia,serif;
+  --lq-serif:var(--lq-font);
 }
-html[lang="ar"],html[lang="ur"]{--lq-font:"IBM Plex Sans Arabic","Cairo","Tajawal","Noto Nastaliq Urdu",Segoe UI,sans-serif}
 
 body.lq-exec{
   font-family:var(--lq-font)!important;
+  font-weight:var(--lq-fw,700)!important;
   background:var(--lq-bg)!important;
   color:var(--lq-text)!important;
 }

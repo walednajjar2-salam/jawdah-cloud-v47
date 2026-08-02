@@ -669,8 +669,22 @@ const api = async (path, opts={}) => {
   }
   return data;
 };
-const fmt = n => Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
-const money = n => fmt(n) + ' OMR';
+const fmt = n => {
+  try{
+    if(window.LQ_I18N && typeof LQ_I18N.formatNumber === 'function'){
+      return LQ_I18N.formatNumber(n, { maximumFractionDigits: 2 });
+    }
+  }catch(_){}
+  return Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+};
+const money = n => {
+  try{
+    if(window.LQ_I18N && typeof LQ_I18N.formatMoney === 'function'){
+      return LQ_I18N.formatMoney(n, 'OMR');
+    }
+  }catch(_){}
+  return fmt(n) + ' OMR';
+};
 function dashCommandClick(section, action){
   try{
     if(action==='backup') return (window.downloadBackup||downloadBackup)();
@@ -768,12 +782,35 @@ function applyUserHeader(){
   if(org && !org.textContent.trim()) org.textContent='مشاريع جودة الانطلاقة';
 }
 function toast(msg, err=false){ if(err) toastNotice(msg); else toastOk(msg); }
+function ensureLocaleDigits(root=document.body){
+  /* Convert digits only inside number UI — keep passwords/usernames untouched */
+  const lang = (window.LQ_I18N && LQ_I18N.getLang && LQ_I18N.getLang()) || document.documentElement.lang || 'ar';
+  const sys = (window.LQ_I18N && LQ_I18N.NUM_SYS && LQ_I18N.NUM_SYS[lang]) || (lang === 'ar' || lang === 'ur' ? 'arab' : 'latn');
+  const toLatn = (s) => String(s)
+    .replace(/[\u0660-\u0669]/g, ch => String(ch.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, ch => String(ch.charCodeAt(0) - 0x06F0))
+    .replace(/[\u09E6-\u09EF]/g, ch => String(ch.charCodeAt(0) - 0x09E6));
+  const fromLatn = (s, base) => toLatn(s).replace(/[0-9]/g, d => String.fromCharCode(base + Number(d)));
+  const convert = (s) => {
+    if (sys === 'arab') return fromLatn(s, 0x0660);
+    if (sys === 'beng') return fromLatn(s, 0x09E6);
+    return toLatn(s);
+  };
+  const hosts = (root || document.body).querySelectorAll
+    ? (root || document.body).querySelectorAll('.lq-num,[data-lq-num],.amount,.money,.price,.qty,.lq-kpi .value,td.num,th.num')
+    : [];
+  hosts.forEach((el) => {
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = walk.nextNode())) {
+      const next = convert(n.nodeValue);
+      if (next !== n.nodeValue) n.nodeValue = next;
+    }
+  });
+}
 function ensureEnglishDigits(root=document.body){
-  const rx=/[\u0660-\u0669\u06F0-\u06F9]/g;
-  const convert=s=>String(s).replace(rx,ch=>String(ch.charCodeAt(0)-((ch.charCodeAt(0)>=0x06F0)?0x06F0:0x0660)));
-  const walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
-  let n; while(n=walk.nextNode()){ if(rx.test(n.nodeValue)) n.nodeValue=convert(n.nodeValue); }
-  $$('input,textarea').forEach(el=>{ if(rx.test(el.value)) el.value=convert(el.value); });
+  /* Back-compat alias — now language-aware */
+  return ensureLocaleDigits(root);
 }
 async function login(){
   const btn = $('#loginBtn');
@@ -3781,7 +3818,7 @@ function drawProductivityChart(id, series){
     g.fillStyle='rgba(109,93,252,.7)'; g.fillRect(x,h-22-oh,bw,oh);
     g.fillStyle='rgba(0,212,255,.7)'; g.fillRect(x+bw+4,h-22-dh,bw,dh);
   });
-  g.fillStyle='rgba(139,149,168,.8)'; g.font='10px Tajawal,sans-serif';
+  g.fillStyle='rgba(139,149,168,.8)'; g.font='700 10px "IBM Plex Sans Arabic",Cairo,sans-serif';
   months.forEach((lb,i)=>{ g.fillText(String(lb).slice(5), 24+i*(w-50)/months.length, h-6); });
   if(wrap){
     wrap.classList.add('chart-drawn');
@@ -3818,7 +3855,7 @@ function drawLinePro(id, arr, labels=[], compareArr=null){
   if(compareArr && compareArr.length===arr.length) plotLine(compareArr,true,true);
   plotLine(arr,false,false);
   arr.forEach((v,i)=>{ const x=24+i*(w-48)/(arr.length-1||1), y=h-28-(v/max)*(h-58); g.beginPath(); g.fillStyle='#7C4DFF'; g.arc(x,y,4,0,Math.PI*2); g.fill(); });
-  g.fillStyle='rgba(139,149,168,.85)'; g.font='10px Tajawal,sans-serif';
+  g.fillStyle='rgba(139,149,168,.85)'; g.font='700 10px "IBM Plex Sans Arabic",Cairo,sans-serif';
   labels.slice(0,arr.length).forEach((lb,i)=>{ const x=24+i*(w-48)/(arr.length-1||1); g.fillText(String(lb).slice(5), x-8, h-8); });
   if(wrap){
     wrap.classList.add('chart-drawn');
@@ -3827,7 +3864,7 @@ function drawLinePro(id, arr, labels=[], compareArr=null){
     }
   }
 }
-function drawDonutPro(id,p){ const c=$('#'+id); if(!c) return; const wrap=c.parentElement; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/2.8; g.lineWidth=14; g.strokeStyle='rgba(255,255,255,.08)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const pct=Math.max(0,Math.min(100,Number(p||0))); const prior=Math.max(0,Math.min(100,pct*0.88)); g.lineWidth=10; g.strokeStyle='rgba(245,215,110,.35)'; g.beginPath(); g.arc(x,y,r+8,-Math.PI/2,-Math.PI/2+Math.PI*2*(prior/100)); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#D4AF37'); gr.addColorStop(1,'#6D5DFC'); g.strokeStyle=gr; g.lineWidth=14; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*(pct/100)); g.stroke(); if(pct<100){ g.strokeStyle='#00D4FF'; g.beginPath(); g.arc(x,y,r,-Math.PI/2+Math.PI*2*(pct/100),-Math.PI/2+Math.PI*2); g.stroke(); } g.fillStyle='#fff'; g.font='700 22px Tajawal'; g.textAlign='center'; g.fillText(fmt(pct)+'%',x,y+8); if(wrap){ wrap.classList.add('chart-drawn'); if(!wrap.querySelector('.chart-compare-legend')) wrap.insertAdjacentHTML('beforeend','<div class="chart-compare-legend"><span><i class="cur"></i>الشهر الحالي</span><span><i class="prior"></i>الشهر السابق</span></div>'); } }
+function drawDonutPro(id,p){ const c=$('#'+id); if(!c) return; const wrap=c.parentElement; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/2.8; g.lineWidth=14; g.strokeStyle='rgba(255,255,255,.08)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const pct=Math.max(0,Math.min(100,Number(p||0))); const prior=Math.max(0,Math.min(100,pct*0.88)); g.lineWidth=10; g.strokeStyle='rgba(245,215,110,.35)'; g.beginPath(); g.arc(x,y,r+8,-Math.PI/2,-Math.PI/2+Math.PI*2*(prior/100)); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#D4AF37'); gr.addColorStop(1,'#6D5DFC'); g.strokeStyle=gr; g.lineWidth=14; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*(pct/100)); g.stroke(); if(pct<100){ g.strokeStyle='#00D4FF'; g.beginPath(); g.arc(x,y,r,-Math.PI/2+Math.PI*2*(pct/100),-Math.PI/2+Math.PI*2); g.stroke(); } g.fillStyle='#fff'; g.font='700 22px "IBM Plex Sans Arabic",Cairo'; g.textAlign='center'; g.fillText(fmt(pct)+'%',x,y+8); if(wrap){ wrap.classList.add('chart-drawn'); if(!wrap.querySelector('.chart-compare-legend')) wrap.insertAdjacentHTML('beforeend','<div class="chart-compare-legend"><span><i class="cur"></i>الشهر الحالي</span><span><i class="prior"></i>الشهر السابق</span></div>'); } }
 function connectLiveStream(){
   if(Jawdah.liveStream){ try{ Jawdah.liveStream.close(); }catch(e){} Jawdah.liveStream=null; }
   if(!Jawdah.token) return;
@@ -3948,7 +3985,7 @@ function drawBarPro(id,arr,labels=[],compareArr=null){
     gr.addColorStop(0,colors[i%colors.length]); gr.addColorStop(1,'rgba(109,93,252,.4)');
     g.fillStyle=gr; g.fillRect(x,h-22-bh,bw,bh);
   });
-  g.fillStyle='rgba(139,149,168,.85)'; g.font='10px Tajawal,sans-serif';
+  g.fillStyle='rgba(139,149,168,.85)'; g.font='700 10px "IBM Plex Sans Arabic",Cairo,sans-serif';
   labels.slice(0,arr.length).forEach((lb,i)=>{ const x=24+i*(w-50)/arr.length+8; g.fillText(String(lb).slice(5), x, h-6); });
   const wrap=c.parentElement;
   if(wrap){

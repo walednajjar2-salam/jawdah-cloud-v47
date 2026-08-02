@@ -320,11 +320,16 @@
     return s;
   }
 
+  const LOCALES = { ar: "ar-OM", en: "en-OM", hi: "hi-IN", bn: "bn-BD", ur: "ur-PK" };
+  /* Digits appropriate to each language script */
+  const NUM_SYS = { ar: "arab", en: "latn", hi: "latn", bn: "beng", ur: "arab" };
+
   function applyDocument() {
     const html = document.documentElement;
     html.lang = lang;
     html.dir = RTL.has(lang) ? "rtl" : "ltr";
     document.body?.setAttribute("data-lq-lang", lang);
+    html.setAttribute("data-lq-num", NUM_SYS[lang] || "latn");
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");
       if (!key) return;
@@ -338,7 +343,7 @@
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
       el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
     });
-    document.dispatchEvent(new CustomEvent("lq:langchange", { detail: { lang, dir: html.dir } }));
+    document.dispatchEvent(new CustomEvent("lq:langchange", { detail: { lang, dir: html.dir, num: NUM_SYS[lang] || "latn" } }));
   }
 
   function setLang(next) {
@@ -350,27 +355,39 @@
     return lang;
   }
 
-  function formatMoney(n, currency) {
-    const locales = { ar: "ar-OM", en: "en-OM", hi: "hi-IN", bn: "bn-BD", ur: "ur-PK" };
+  function formatNumber(n, opts) {
     try {
-      return new Intl.NumberFormat(locales[lang] || "en-OM", {
+      return new Intl.NumberFormat(LOCALES[lang] || "en-OM", {
+        numberingSystem: NUM_SYS[lang] || "latn",
+        maximumFractionDigits: 3,
+        ...(opts || {}),
+      }).format(Number(n || 0));
+    } catch (_) {
+      return String(Number(n || 0));
+    }
+  }
+
+  function formatMoney(n, currency) {
+    try {
+      return new Intl.NumberFormat(LOCALES[lang] || "en-OM", {
         style: "currency",
         currency: currency || "OMR",
+        numberingSystem: NUM_SYS[lang] || "latn",
         maximumFractionDigits: 3,
       }).format(Number(n || 0));
     } catch (_) {
-      return "OMR " + Number(n || 0).toFixed(3);
+      return "OMR " + formatNumber(n);
     }
   }
 
   function formatDate(iso) {
     if (!iso) return "—";
-    const locales = { ar: "ar-OM", en: "en-GB", hi: "hi-IN", bn: "bn-BD", ur: "ur-PK" };
     try {
-      return new Intl.DateTimeFormat(locales[lang] || "en-GB", {
+      return new Intl.DateTimeFormat(LOCALES[lang] || "en-GB", {
         year: "numeric",
         month: "short",
         day: "numeric",
+        numberingSystem: NUM_SYS[lang] || "latn",
       }).format(new Date(String(iso).slice(0, 10) + "T00:00:00"));
     } catch (_) {
       return String(iso).slice(0, 10);
@@ -404,11 +421,13 @@
     getLang: () => lang,
     isRtl: () => RTL.has(lang),
     applyDocument,
+    formatNumber,
     formatMoney,
     formatDate,
     langSwitcherHtml,
     bindSwitcher,
     DICT,
+    NUM_SYS,
   };
 
   if (document.readyState === "loading") {

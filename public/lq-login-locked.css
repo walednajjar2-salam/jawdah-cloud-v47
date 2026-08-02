@@ -18,7 +18,7 @@ body.saas-login{
   --lq-login-gold:var(--lq-atm-gold, #b8923f);
   --lq-login-gold-bright:var(--lq-atm-gold-bright, #d4b15d);
   --lq-login-gold-deep:var(--lq-atm-gold-deep, #8d6d2c);
-  --lq-login-font:var(--lq-font-ar, "IBM Plex Sans Arabic","Cairo",sans-serif);
+  --lq-login-font:var(--lq-font, var(--lq-font-ar, "IBM Plex Sans Arabic","Cairo",sans-serif));
 }
 
 body.login-ultra #loginScreen,
