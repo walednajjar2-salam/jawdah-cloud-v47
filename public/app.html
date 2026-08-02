@@ -47,8 +47,8 @@
   <link rel="stylesheet" href="lq-edition-terrifying.css?v=td3">
   <link rel="stylesheet" href="lq-exec-theme.css?v=day1">
   <link rel="stylesheet" href="lq-official-atmosphere.css?v=day2">
-  <link rel="stylesheet" href="lq-brand-mark.css?v=day2">
-  <link rel="stylesheet" href="lq-login-locked.css?v=day2">
+  <link rel="stylesheet" href="lq-brand-mark.css?v=day3">
+  <link rel="stylesheet" href="lq-login-locked.css?v=day3">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme lq-edition-terrifying lq-exec" data-edition="terrifying-dev">
   <style>
@@ -194,8 +194,8 @@
     </div>
     <div class="login-shell">
       <div class="login-top-logo" aria-hidden="false">
-        <div class="lq-brand-mark lq-brand-mark--lg login-logo-wrap login-logo-wrap--float">
-          <img src="assets/brand-mark-gold.png?v=day1" alt="مشاريع جودة الانطلاقة" class="login-logo-img login-logo-img--float" width="655" height="411" decoding="async">
+        <div class="lq-brand-mark lq-brand-mark--hero login-logo-wrap login-logo-wrap--float">
+          <img src="assets/brand-mark-gold.png?v=day3" alt="مشاريع جودة الانطلاقة" class="login-logo-img login-logo-img--float" width="655" height="411" decoding="async" fetchpriority="high">
         </div>
         <div class="login-brand-copy">
           <h1 class="login-brand-name">Launch Quality</h1>
@@ -212,33 +212,29 @@
           <div class="login-glass-stage-shine" aria-hidden="true"></div>
           <div class="login-auth login-auth--float">
           <section class="login-glass-card ev-auth-card login-card--floating" aria-label="تسجيل الدخول">
+            <div id="loginLangMount" class="login-topbar-lang" aria-label="اختيار اللغة"></div>
             <div class="login-card-head">
               <div>
-                <h2 class="login-card-title">مرحباً بك</h2>
-                <p class="login-card-sub">سجّل الدخول للوصول إلى حسابك</p>
+                <h2 class="login-card-title" data-i18n="welcomeBack">مرحباً بك</h2>
+                <p class="login-card-sub" data-i18n="signInContinue">سجّل الدخول للوصول إلى حسابك</p>
               </div>
             </div>
             <div id="authPanePassword" class="ev-auth-pane login-form" role="tabpanel">
               <label class="login-field">
-                <span class="login-field-label">اسم المستخدم</span>
-                <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username">
+                <span class="login-field-label" data-i18n="username">اسم المستخدم</span>
+                <input id="loginUser" placeholder="اسم المستخدم" autocomplete="username" data-i18n-placeholder="username">
               </label>
               <label class="login-field">
-                <span class="login-field-label">كلمة المرور</span>
-                <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password">
+                <span class="login-field-label" data-i18n="password">كلمة المرور</span>
+                <input id="loginPass" placeholder="كلمة المرور" type="password" autocomplete="current-password" data-i18n-placeholder="password">
                 <button type="button" id="loginPassToggle" class="login-pass-toggle" aria-label="إظهار أو إخفاء كلمة المرور">إظهار</button>
               </label>
               <div id="capsHint" class="login-caps-hint hidden">يبدو أن زر Caps Lock مفعّل</div>
               <div class="login-inline-tools">
-                <label class="login-remember-check"><input id="loginRemember" type="checkbox"> تذكرني على هذا الجهاز</label>
-                <button type="button" class="ghost login-help-btn" onclick="window.open('tel:+96871924089','_self')">الدعم الفني</button>
+                <label class="login-remember-check"><input id="loginRemember" type="checkbox"> <span data-i18n="rememberMe">تذكرني على هذا الجهاز</span></label>
+                <button type="button" class="ghost login-help-btn" onclick="window.open('tel:+96871924089','_self')" data-i18n="support">الدعم الفني</button>
               </div>
-              <button id="loginBtn" class="gold-btn login-submit" type="button">دخول</button>
-              <div class="login-quiet-links">
-                <a href="/get-windows?auto=1">ويندوز</a>
-                <a href="/get-android">أندرويد</a>
-                <a href="/download.html">التحميلات</a>
-              </div>
+              <button id="loginBtn" class="gold-btn login-submit" type="button" data-i18n="signIn">دخول</button>
             </div>
             <div id="authPaneFace" class="ev-auth-pane ev-auth-alt hidden" role="tabpanel">
               <div class="ev-bio-ring" aria-hidden="true"></div>
@@ -930,10 +926,10 @@
   <script src="lq-business-catalog.js?v=biz1-v64" defer></script>
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="lq-i18n.js?v=i18n1" defer></script>
+  <script src="lq-i18n.js?v=day3" defer></script>
   <script src="app.js?v=finish-remaining-v70" defer></script>
   <script src="lq-estate-nizwa-ux.js?v=nx2-copy" defer></script>
-  <script src="lq-exec-app.js?v=exec3-nx" defer></script>
+  <script src="lq-exec-app.js?v=day3" defer></script>
   <script src="lq-edition-terrifying.js?v=finish70" defer></script>
   <script src="enterprise-vision.js?v=ev12-v56" defer></script>
   <script src="historic-upgrade.js?v=historic21" defer></script>

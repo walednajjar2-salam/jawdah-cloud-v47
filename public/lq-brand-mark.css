@@ -49,8 +49,35 @@
   animation:lqBrandFloat 5.8s ease-in-out infinite alternate;
 }
 .lq-brand-mark--lg{--bm-size:min(210px,42vw)}
+.lq-brand-mark--hero{--bm-size:min(420px,56vw)}
 .lq-brand-mark--md{--bm-size:min(150px,36vw)}
 .lq-brand-mark--sm{--bm-size:96px}
+
+/* Login hero: double size + crisp 3D motion */
+.lq-brand-mark--hero{
+  perspective:900px;
+}
+.lq-brand-mark--hero img{
+  width:92%;
+  height:92%;
+  image-rendering:-webkit-optimize-contrast;
+  image-rendering:auto;
+  filter:
+    drop-shadow(0 16px 28px rgba(15,42,74,.28))
+    drop-shadow(0 0 26px rgba(197,165,106,.35))
+    contrast(1.06) saturate(1.08);
+  transform-style:preserve-3d;
+  animation:lqBrand3d 7s ease-in-out infinite;
+}
+.lq-brand-mark--hero::before{
+  inset:-22%;
+  background:
+    radial-gradient(circle at 50% 45%,
+      rgba(255,255,255,.7) 0%,
+      rgba(212,177,93,.42) 26%,
+      rgba(197,165,106,.16) 50%,
+      transparent 72%);
+}
 
 @keyframes lqBrandHalo{
   from{opacity:.75;transform:scale(.96)}
@@ -60,8 +87,18 @@
   from{transform:translateY(0)}
   to{transform:translateY(-6px)}
 }
+@keyframes lqBrand3d{
+  0%{transform:translateY(0) rotateY(-10deg) rotateX(2deg) scale(1)}
+  50%{transform:translateY(-10px) rotateY(10deg) rotateX(-2deg) scale(1.03)}
+  100%{transform:translateY(0) rotateY(-10deg) rotateX(2deg) scale(1)}
+}
+
+@media (max-width:860px){
+  .lq-brand-mark--hero{--bm-size:min(240px,62vw)}
+}
 
 @media (prefers-reduced-motion:reduce){
   .lq-brand-mark::before,
-  .lq-brand-mark img{animation:none!important}
+  .lq-brand-mark img,
+  .lq-brand-mark--hero img{animation:none!important}
 }
