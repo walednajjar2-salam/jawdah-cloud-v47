@@ -582,6 +582,12 @@
   function refreshBoard() {
     const portal = String(localStorage.getItem("jawdah_portal_choice") || "realestate").toLowerCase();
     if (!VALID.has(portal) || portal === "accounting") return;
+    // منصة العقارات تستخدم تجربة نزوى المطوّرة (lq-estate-nizwa-ux) بدل لوحة exec
+    if (portal === "realestate") {
+      document.getElementById("lqExecBoard-realestate")?.remove();
+      if (typeof window.renderEstatePlatform === "function") window.renderEstatePlatform();
+      return;
+    }
     const host = ensureBoardHost(portal === "overview" ? "overview" : portal);
     if (!host) return;
     if (portal === "hospitality") return renderHospitalityBoard(host);

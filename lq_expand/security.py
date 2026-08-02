@@ -104,17 +104,8 @@ def mfa_roles() -> Set[str]:
 
 
 def mfa_enforce_mode() -> str:
-    """
-    off | soft | strict
-    soft (default): require MFA for privileged roles when device is untrusted,
-    but skip if OTP delivery fails so login is never locked out.
-    """
-    mode = (_env("LQ_MFA_ENFORCE") or "soft").strip().lower()
-    if mode in ("off", "0", "false", "no"):
-        return "off"
-    if mode in ("strict", "hard", "1", "true", "on"):
-        return "strict"
-    return "soft"
+    """OTP/MFA login step is disabled — password-only sign-in."""
+    return "off"
 
 
 def role_requires_mfa(role: str) -> bool:
@@ -148,8 +139,8 @@ def pending_login_ttl_seconds() -> int:
 
 
 def otp_login_enabled() -> bool:
-    """Standalone passwordless OTP login (not MFA step). Default off."""
-    return _env("LQ_OTP_LOGIN_ENABLED") in ("1", "true", "yes", "on")
+    """Standalone passwordless OTP login — permanently disabled."""
+    return False
 
 
 def smtp_configured() -> bool:

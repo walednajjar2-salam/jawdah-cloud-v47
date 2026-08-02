@@ -99,11 +99,11 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v70.4-finish-remaining"
+APP_VERSION = "Launch-Quality-LLC-v70.5-estate-nizwa"
 # Production baseline family: v70. Ops-complete = full 42-item requirements closure.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
-STABLE_TAG = "v70.4-complete"
+STABLE_TAG = "v70.5-estate-nizwa"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -2080,6 +2080,13 @@ def init_db() -> None:
             ensure_column(db, "users", col, definition)
         ensure_security_runtime_tables(db)
         lq_quick_estate.ensure_tables(db)
+        try:
+            import lq_nizwa_estate_copy
+
+            # نسخ صامت وآمن (idempotent) — لا يمس جداول نزوى الأصلية
+            lq_nizwa_estate_copy.copy_qe_to_estate(db, uid_fn=uid, now_fn=now_iso, actor="system-auto-copy")
+        except Exception as exc:
+            print(f"[nizwa-estate-copy] skipped: {exc}")
         ensure_column(db, "clients", "id_card_image", "TEXT")
         ensure_column(db, "payments", "payment_proof_image", "TEXT")
         ensure_column(db, "payments", "received_by", "TEXT")
@@ -5024,6 +5031,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_operations_check" and method == "GET":
                     user = self.require_user(db, "estate_apartments:read")
                     return None if not user else self.api_estate_operations_check(db, user)
+                if parts[0] == "estate_copy_from_nizwa" and method == "POST":
+                    user = self.require_user(db, "estate_properties")
+                    if not user:
+                        return None
+                    if str(user.get("role") or "").lower() not in ("owner", "admin"):
+                        return self.send_json({"ok": False, "error": "نسخ بيانات نزوى متاح للمالك/الإدارة فقط"}, 403)
+                    return self.api_estate_copy_from_nizwa(db, user)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -6887,6 +6901,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 },
             }
         )
+
+    def api_estate_copy_from_nizwa(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        import lq_nizwa_estate_copy
+
+        result = lq_nizwa_estate_copy.copy_qe_to_estate(
+            db,
+            uid_fn=uid,
+            now_fn=now_iso,
+            actor=str(user.get("name") or user.get("username") or "owner"),
+        )
+        if result.get("ok"):
+            audit(
+                db,
+                user,
+                "copy",
+                "estate_properties",
+                str(result.get("property_id") or ""),
+                f"Copied Nizwa qe_* into estate_* | {result.get('created')}",
+            )
+            db.commit()
+        self.send_json(result, 200 if result.get("ok") else 400)
 
     def api_crud(self, db: sqlite3.Connection, method: str, parts: List[str], query: str) -> None:
         table = parts[0]

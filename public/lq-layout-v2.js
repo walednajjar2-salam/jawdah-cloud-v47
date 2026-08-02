@@ -70,6 +70,14 @@
 
   function init() {
     document.body.classList.add("lq-layout-v2");
+    // Executive shell uses a docked sidebar — skip floating center nav.
+    if (document.body.classList.contains("lq-exec")) {
+      const menuBtn = $("#menuBtn");
+      if (menuBtn) {
+        menuBtn.onclick = () => $("#sidebar")?.classList.toggle("open");
+      }
+      return;
+    }
     ensureFloatNav();
     hookMenuBtn();
 

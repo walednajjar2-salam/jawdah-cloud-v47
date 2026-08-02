@@ -1,5 +1,6 @@
 /* Launch Quality · Layout V2 — floating nav card, full-width canvas */
-body.lq-layout-v2 #sidebar.sidebar-ultra {
+/* Exec mode keeps a docked sidebar; hide only in non-exec layout-v2. */
+body.lq-layout-v2:not(.lq-exec) #sidebar.sidebar-ultra {
   transform: translateX(115%) !important;
   opacity: 0 !important;
   pointer-events: none !important;
