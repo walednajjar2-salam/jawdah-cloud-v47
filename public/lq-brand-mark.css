@@ -16,9 +16,9 @@
   border-radius:50%;
   background:
     radial-gradient(circle at 50% 45%,
-      rgba(226,196,138,.42) 0%,
-      rgba(201,169,110,.18) 34%,
-      rgba(201,169,110,.05) 58%,
+      rgba(255,255,255,.55) 0%,
+      rgba(212,177,93,.38) 28%,
+      rgba(184,146,63,.14) 52%,
       transparent 72%);
   filter:blur(2px);
   z-index:0;

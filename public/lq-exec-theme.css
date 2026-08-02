@@ -18,10 +18,10 @@
   --lq-radius-sm:12px;
   --lq-shadow:0 16px 40px rgba(16,32,51,.08);
   --lq-shadow-sm:0 8px 20px rgba(16,32,51,.06);
-  --lq-font:"Cairo","Tajawal","Noto Sans Devanagari","Noto Sans Bengali","Noto Nastaliq Urdu",Segoe UI,sans-serif;
-  --lq-serif:"Cormorant Garamond","Cairo",Georgia,serif;
+  --lq-font:"IBM Plex Sans Arabic","Cairo","Tajawal","Noto Sans Devanagari","Noto Sans Bengali","Noto Nastaliq Urdu",Segoe UI,sans-serif;
+  --lq-serif:"IBM Plex Sans Arabic","Cairo",Georgia,serif;
 }
-html[lang="ar"],html[lang="ur"]{--lq-font:"Cairo","Tajawal","Noto Nastaliq Urdu",Segoe UI,sans-serif}
+html[lang="ar"],html[lang="ur"]{--lq-font:"IBM Plex Sans Arabic","Cairo","Tajawal","Noto Nastaliq Urdu",Segoe UI,sans-serif}
 
 body.lq-exec{
   font-family:var(--lq-font)!important;

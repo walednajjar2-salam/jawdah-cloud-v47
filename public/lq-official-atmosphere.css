@@ -1,43 +1,67 @@
-/* Shared official atmosphere — one background for login, portal, brand */
+/* Official Daylight Estate atmosphere — shared login / portal / brand */
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap");
+
 :root{
-  --lq-atm-ink:#0b1a28;
-  --lq-atm-overlay:linear-gradient(115deg,rgba(8,18,30,.88) 0%,rgba(12,28,44,.72) 42%,rgba(18,36,52,.55) 100%);
-  --lq-atm-gold:radial-gradient(ellipse 80% 60% at 80% 20%,rgba(201,169,110,.22),transparent 55%);
-  --lq-atm-photo:url("/assets/login-portal-bg.png");
-  --lq-atm-bottom:linear-gradient(180deg,transparent 55%,rgba(8,16,28,.55) 100%);
+  --lq-font-ar:"IBM Plex Sans Arabic","Cairo","Tajawal",sans-serif;
+  --lq-font-display:"IBM Plex Sans Arabic","Cairo",sans-serif;
+  --lq-atm-ink:#0f2740;
+  --lq-atm-sky:#eaf4ff;
+  --lq-atm-panel:rgba(255,255,255,.92);
+  --lq-atm-text:#102033;
+  --lq-atm-muted:#4d6278;
+  --lq-atm-gold:#b8923f;
+  --lq-atm-gold-bright:#d4b15d;
+  --lq-atm-gold-deep:#8d6d2c;
+  --lq-atm-line:rgba(16,32,51,.12);
+  --lq-atm-overlay:linear-gradient(120deg,rgba(234,244,255,.78) 0%,rgba(255,255,255,.42) 38%,rgba(15,39,64,.28) 100%);
+  --lq-atm-gold-wash:radial-gradient(ellipse 70% 55% at 75% 20%,rgba(212,177,93,.18),transparent 58%);
+  --lq-atm-photo:url("/assets/login-daylight-3d.jpg");
+  --lq-atm-bottom:linear-gradient(180deg,transparent 50%,rgba(15,39,64,.35) 100%);
+  --lq-atm-shadow:0 22px 50px rgba(15,39,64,.18);
+}
+
+html,body{
+  font-family:var(--lq-font-ar) !important;
 }
 
 .lq-atm,
 body.lq-official-portal,
 body.login-ultra #loginScreen{
-  background:var(--lq-atm-ink) !important;
+  background:var(--lq-atm-sky) !important;
+  font-family:var(--lq-font-ar) !important;
 }
 
-.lq-atm-bg{
-  position:fixed;
-  inset:0;
-  z-index:0;
-  pointer-events:none;
+.lq-atm-bg,
+body.lq-official-portal .op-bg,
+body.login-ultra #loginScreen .login-cinema-photo-layer{
+  position:fixed !important;
+  inset:0 !important;
+  z-index:0 !important;
+  pointer-events:none !important;
   background:
     var(--lq-atm-overlay),
-    var(--lq-atm-gold),
-    var(--lq-atm-photo) center/cover no-repeat;
-  transform:scale(1.03);
-  animation:lqAtmDrift 18s ease-in-out infinite alternate;
+    var(--lq-atm-gold-wash),
+    var(--lq-atm-photo) center/cover no-repeat !important;
+  transform:scale(1.02);
+  animation:lqAtmDrift 20s ease-in-out infinite alternate;
 }
-.lq-atm-bg::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:var(--lq-atm-bottom);
-  pointer-events:none;
+.lq-atm-bg::after,
+body.lq-official-portal .op-bg::after,
+body.login-ultra #loginScreen .login-cinema-photo-layer::after{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  background:var(--lq-atm-bottom) !important;
+  pointer-events:none !important;
 }
 
 @keyframes lqAtmDrift{
-  from{transform:scale(1.03) translate3d(0,0,0)}
-  to{transform:scale(1.06) translate3d(-1.2%,.8%,0)}
+  from{transform:scale(1.02) translate3d(0,0,0)}
+  to{transform:scale(1.05) translate3d(-.8%,.5%,0)}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .lq-atm-bg{animation:none!important}
+  .lq-atm-bg,
+  body.lq-official-portal .op-bg,
+  body.login-ultra #loginScreen .login-cinema-photo-layer{animation:none!important}
 }

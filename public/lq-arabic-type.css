@@ -1,0 +1,24 @@
+/* Universal clear Arabic typeface for the whole product */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@400;600;700;800&display=swap");
+
+:root{
+  --lq-font-ar:"IBM Plex Sans Arabic","Cairo","Tajawal",sans-serif;
+}
+
+html,body,
+button,input,select,textarea,
+.login,.app,.content,.sidebar-ultra,
+.lq-exec,.lq-official-portal,.lq-atm{
+  font-family:var(--lq-font-ar) !important;
+}
+
+/* Keep Arabic text crisp and aligned */
+body{
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select{
+  text-align:right;
+}
