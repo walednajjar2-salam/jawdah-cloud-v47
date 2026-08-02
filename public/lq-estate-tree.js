@@ -7,18 +7,23 @@
 
   const LS = "lq_estate_tree_v1";
   const SECTIONS = [
-    { id: "home", label: "لوحة العقارات", perm: null },
-    { id: "properties", label: "العقارات", perm: "estate_properties:read" },
-    { id: "clients", label: "العملاء", perm: "clients" },
-    { id: "reservations", label: "الحجوزات", perm: "estate_apartments:read" },
-    { id: "contracts", label: "العقود", perm: "estate_actions_contract_create" },
-    { id: "collection", label: "التحصيل", perm: "collection" },
-    { id: "overdue", label: "المتأخرات", perm: "collection" },
-    { id: "maintenance", label: "الصيانة", perm: "estate_maintenance:read" },
-    { id: "files", label: "الملفات", perm: "files" },
-    { id: "approvals", label: "الاعتمادات", perm: "approvals" },
-    { id: "reports", label: "التقارير", perm: "reports" },
+    { id: "home", label: "لوحة العقارات", icon: "layout-dashboard", perm: null },
+    { id: "properties", label: "العقارات", icon: "building-2", perm: "estate_properties:read" },
+    { id: "clients", label: "العملاء", icon: "users", perm: "clients" },
+    { id: "reservations", label: "الحجوزات", icon: "calendar-check", perm: "estate_apartments:read" },
+    { id: "contracts", label: "العقود/فواتير", icon: "file-text", perm: "estate_actions_contract_create" },
+    { id: "collection", label: "التحصيل", icon: "wallet", perm: "collection" },
+    { id: "overdue", label: "المتأخرات", icon: "circle-alert", perm: "collection" },
+    { id: "maintenance", label: "الصيانة", icon: "wrench", perm: "estate_maintenance:read" },
+    { id: "files", label: "الملفات", icon: "folder-open", perm: "files" },
+    { id: "approvals", label: "الاعتمادات", icon: "badge-check", perm: "approvals" },
+    { id: "reports", label: "التقارير", icon: "bar-chart-3", perm: "reports" },
+    { id: "alerts", label: "التنبيهات", icon: "bell", perm: null },
   ];
+
+  const HERITAGE_NIZWA = { lat: 22.9335, lng: 57.5318, zoom: 15 };
+  let estateTreeMap = null;
+  let estateTreeMarkers = null;
 
   const state = {
     section: "home",
@@ -105,7 +110,7 @@
     const u = uname();
     if (typeof OWNER_USERNAMES !== "undefined" && OWNER_USERNAMES.has?.(u)) return true;
     if (["owner", "admin", "deputy"].includes(r)) return true;
-    if (id === "home") return true;
+    if (id === "home" || id === "alerts") return true;
     if (id === "approvals") {
       return typeof canSeeApprovals === "function" ? canSeeApprovals() : ["manager", "accountant", "operations"].includes(r);
     }
@@ -592,13 +597,24 @@
     if (typeof toast === "function") toast(m);
   }
 
+  function lucideIco(name, cls) {
+    return `<i data-lucide="${esc(name)}" class="${esc(cls || "")}" aria-hidden="true"></i>`;
+  }
+  function refreshIcons() {
+    try {
+      if (window.lucide && typeof window.lucide.createIcons === "function") {
+        window.lucide.createIcons({ attrs: { "stroke-width": 2 }, nameAttr: "data-lucide" });
+      }
+    } catch (_) {}
+  }
+
   function renderNav() {
     const host = document.getElementById("etNav");
     if (!host) return;
-    host.innerHTML = SECTIONS.filter((s) => canSection(s.id))
+    host.innerHTML = SECTIONS.filter((s) => canSection(s.id) && s.id !== "overdue")
       .map((s) => {
         const active = state.section === s.id ? "active" : "";
-        return `<button type="button" data-section="${s.id}" class="${active}">${esc(s.label)}</button>`;
+        return `<button type="button" data-section="${s.id}" class="${active}">${lucideIco(s.icon || "circle", "lq-et-nav-ico")}<span>${esc(s.label)}</span></button>`;
       })
       .join("");
   }
@@ -643,103 +659,239 @@
     const s = portfolioStats();
     const clients = rows("clients").length;
     const contracts = rows("estate_contracts").length;
+    const invoices = rows("estate_contract_invoices").length;
     const t = todayStr();
     const paymentsToday = rows("estate_contract_invoices").filter((i) => {
       const day = String(i.issued_at || i.due_date || "").slice(0, 10);
       return day === t || Number(i.paid_amount || 0) > 0;
     }).length;
+    const reserved = allUnits().filter((u) => unitStatus(u) === "reserved").length;
     const openMaint = rows("estate_maintenance").filter(
       (m) => !/closed|done|completed|ملغ/i.test(String(m.status || ""))
     ).length;
     const pendingMine = rows("approvals").filter((a) => String(a.status || "").toLowerCase() === "pending").length;
+    const alerts = needsAttention().length;
+    const buildings = rows("estate_buildings").length;
     return {
       units: s.total,
+      buildings,
       clients,
       contracts,
+      invoices,
       payments: paymentsToday,
+      reserved,
       maint: openMaint,
       approvals: pendingMine,
+      alerts,
       occPct: s.occPct,
     };
   }
 
+  function hubCard(h) {
+    return `<button type="button" class="lq-et-hub-card ${h.span || ""} ${h.urgent ? "urgent" : ""}" data-hub="${esc(h.id)}">
+      <div class="lq-et-hub-top">
+        <span class="lq-et-hub-ico">${lucideIco(h.icon, "lq-et-svg")}</span>
+        ${lucideIco("chevron-left", "lq-et-hub-arrow")}
+      </div>
+      <h4>${esc(h.label)}</h4>
+      <p>${esc(h.desc)}</p>
+      <strong>${esc(h.value)}</strong>
+      <span class="lq-et-hub-enter">دخول ${lucideIco("arrow-left", "lq-et-enter-arrow")}</span>
+    </button>`;
+  }
+
+  function buildingMapCoords(b, i) {
+    const loc = String(b.location || b.notes || "");
+    const m = loc.match(/(-?\d+\.?\d*)\s*[,،]\s*(-?\d+\.?\d*)/);
+    if (m) {
+      const lat = Number(m[1]);
+      const lng = Number(m[2]);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+    }
+    // Stable scatter around حي التراث نزوى
+    let hash = 0;
+    const key = String(b.id || i);
+    for (let n = 0; n < key.length; n++) hash = (hash * 31 + key.charCodeAt(n)) >>> 0;
+    const ring = (hash % 8) + 1;
+    const angle = ((hash % 360) * Math.PI) / 180;
+    const dist = 0.0012 * ring;
+    return {
+      lat: HERITAGE_NIZWA.lat + Math.sin(angle) * dist,
+      lng: HERITAGE_NIZWA.lng + Math.cos(angle) * dist,
+    };
+  }
+
+  function destroyEstateTreeMap() {
+    try {
+      if (estateTreeMap) {
+        estateTreeMap.remove();
+      }
+    } catch (_) {}
+    estateTreeMap = null;
+    estateTreeMarkers = null;
+  }
+
+  function mountHeritageMap() {
+    const host = document.getElementById("etHeritageMap");
+    if (!host || !window.L) return;
+    destroyEstateTreeMap();
+    estateTreeMap = window.L.map(host, { zoomControl: true, scrollWheelZoom: false }).setView(
+      [HERITAGE_NIZWA.lat, HERITAGE_NIZWA.lng],
+      HERITAGE_NIZWA.zoom
+    );
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap",
+    }).addTo(estateTreeMap);
+    estateTreeMarkers = window.L.layerGroup().addTo(estateTreeMap);
+    const blds = rows("estate_buildings");
+    const latLngs = [];
+    blds.forEach((b, idx) => {
+      const c = buildingMapCoords(b, idx);
+      latLngs.push([c.lat, c.lng]);
+      const st = buildingStats(b.id);
+      const marker = window.L.circleMarker([c.lat, c.lng], {
+        radius: 9,
+        color: "#2563eb",
+        weight: 2,
+        fillColor: "#3b82f6",
+        fillOpacity: 0.9,
+      }).addTo(estateTreeMarkers);
+      marker.bindPopup(
+        `<b>${esc(b.name || b.id)}</b><br>${esc(b.location || "حي التراث، نزوى")}<br>وحدات: ${fmtVal(st.total)} · إشغال ${fmtVal(st.occPct)}%`
+      );
+      marker.on("click", () => go("properties", { buildingId: b.id, unitKey: "", tab: "overview", sub: "buildings" }));
+    });
+    if (latLngs.length) {
+      estateTreeMap.fitBounds(window.L.latLngBounds(latLngs).pad(0.35));
+    }
+    setTimeout(() => {
+      try {
+        estateTreeMap.invalidateSize();
+      } catch (_) {}
+    }, 80);
+  }
+
   function renderHome() {
     const c = homeHubCounts();
-    const need = needsAttention().slice(0, 6);
-    const recent = recentOps().slice(0, 6);
+    const need = needsAttention().slice(0, 5);
+    const recent = recentOps().slice(0, 5);
     const hubs = [
       canSection("properties") && {
         id: "properties",
-        ico: "🏢",
+        icon: "building-2",
         label: "العقارات",
-        value: `${fmtVal(c.units)} وحدة`,
-        hint: `إشغال ${fmtVal(c.occPct)}%`,
+        desc: "إدارة المباني والوحدات",
+        value: `${fmtVal(c.units)} وحدة · ${fmtVal(c.buildings)} مبنى`,
       },
       canSection("clients") && {
         id: "clients",
-        ico: "👥",
+        icon: "users",
         label: "العملاء",
+        desc: "ملفات العملاء والمتابعات",
         value: `${fmtVal(c.clients)} عميل`,
-        hint: "ملفات ومتابعات",
       },
       canSection("contracts") && {
         id: "contracts",
-        ico: "📄",
-        label: "العقود",
-        value: `${fmtVal(c.contracts)} عقد`,
-        hint: "مسودة → اعتماد → تفعيل",
+        icon: "file-text",
+        label: "العقود/فواتير",
+        desc: "مسودة → اعتماد → تفعيل",
+        value: `${fmtVal(c.contracts)} عقد · ${fmtVal(c.invoices)} فاتورة`,
       },
       canSection("collection") && {
         id: "collection",
-        ico: "💰",
+        icon: "wallet",
         label: "التحصيل",
+        desc: "الدفعات والسندات",
         value: `${fmtVal(c.payments)} دفعة`,
-        hint: "اليوم / النشطة",
+      },
+      canSection("reservations") && {
+        id: "reservations",
+        icon: "calendar-check",
+        label: "الحجوزات",
+        desc: "الحجوزات الحالية والتحويل لعقود",
+        value: `${fmtVal(c.reserved)} حجز`,
+        span: "span-2",
+        zone: "before-map",
       },
       canSection("maintenance") && {
         id: "maintenance",
-        ico: "🛠",
+        icon: "wrench",
         label: "الصيانة",
+        desc: "طلبات الصيانة المفتوحة",
         value: `${fmtVal(c.maint)} طلبات`,
-        hint: "مفتوحة الآن",
+        span: "span-2",
+        zone: "after-map",
       },
       canSection("approvals") && {
         id: "approvals",
-        ico: "✅",
+        icon: "badge-check",
         label: "الاعتمادات",
+        desc: "طلبات بانتظار قرارك",
         value: `${fmtVal(c.approvals)} بانتظارك`,
-        hint: "قسم مستقل",
         urgent: c.approvals > 0,
+        zone: "after-map",
+      },
+      canSection("reports") && {
+        id: "reports",
+        icon: "bar-chart-3",
+        label: "التقارير",
+        desc: "إشغال · تحصيل · عقود",
+        value: `إشغال ${fmtVal(c.occPct)}%`,
+        zone: "after-map",
+      },
+      canSection("files") && {
+        id: "files",
+        icon: "folder-open",
+        label: "الملفات",
+        desc: "مستندات العقارات والعملاء",
+        value: "عرض الملفات",
+        zone: "after-map",
+      },
+      {
+        id: "alerts",
+        icon: "bell",
+        label: "التنبيهات",
+        desc: "عقود · حجوزات · متأخرات",
+        value: `${fmtVal(c.alerts)} تنبيه`,
+        urgent: c.alerts > 0,
+        zone: "after-map",
       },
     ].filter(Boolean);
+
+    // Mark top cards before map by default
+    hubs.forEach((h) => {
+      if (!h.zone) h.zone = "before-map";
+    });
+    const before = hubs.filter((h) => h.zone === "before-map");
+    const after = hubs.filter((h) => h.zone === "after-map");
+    const mapCard = `<article class="lq-et-map-card span-2">
+      <header class="lq-et-map-head">
+        <div>
+          <h4>${lucideIco("map-pinned", "lq-et-svg")} خارطة حي التراث — نزوى</h4>
+          <p>دبابيس حية على أماكن البنايات داخل الخريطة</p>
+        </div>
+        <button type="button" class="ghost" data-hub="properties">${lucideIco("building", "lq-et-svg")} المباني</button>
+      </header>
+      <div id="etHeritageMap" class="lq-et-map" role="img" aria-label="خارطة حي التراث نزوى"></div>
+    </article>`;
 
     return `
       <div class="lq-et-home">
         <div class="lq-et-home-board">
-          <h3 class="lq-et-home-title">لوحة العقارات</h3>
+          <h3 class="lq-et-home-title">
+            ${lucideIco("layout-dashboard", "lq-et-title-ico")}
+            لوحة العقارات
+          </h3>
           <div class="lq-et-hub">
-            ${hubs
-              .map(
-                (h) => `<button type="button" class="lq-et-hub-card ${h.urgent ? "urgent" : ""}" data-hub="${esc(h.id)}">
-                <span class="lq-et-hub-label"><span class="lq-et-hub-ico" aria-hidden="true">${h.ico}</span>${esc(h.label)}</span>
-                <strong>${esc(h.value)}</strong>
-                <em>${esc(h.hint)}</em>
-              </button>`
-              )
-              .join("")}
+            ${before.map(hubCard).join("")}
+            ${mapCard}
+            ${after.map(hubCard).join("")}
           </div>
-          <button type="button" class="lq-et-home-cta" data-hub="properties">جميع بيانات المنصة</button>
         </div>
-        <div class="lq-et-home-mini">
-          <button type="button" class="lq-et-kpi" data-hub="properties"><span>إجمالي الوحدات</span><strong>${fmtVal(c.units)}</strong></button>
-          <button type="button" class="lq-et-kpi" data-hub="reservations"><span>الحجوزات</span><strong>${fmtVal(
-            allUnits().filter((u) => unitStatus(u) === "reserved").length
-          )}</strong></button>
-        </div>
-        <div class="lq-et-home-rule" aria-hidden="true"></div>
         <div class="lq-et-home-cols">
           <div class="lq-et-panel">
-            <h3>آخر التنبيهات</h3>
+            <h3>${lucideIco("bell-ring", "lq-et-svg")} آخر التنبيهات</h3>
             <div class="lq-et-list">
               ${
                 need.length
@@ -748,6 +900,7 @@
                         (n, i) =>
                           `<button type="button" class="lq-et-row" data-need="${i}" style="width:100%;cursor:pointer;font:inherit;text-align:start">
                             <div><b class="tone-${esc(n.tone)}">${esc(n.title)}</b><small>${esc(n.detail)}</small></div>
+                            ${lucideIco("chevron-left", "lq-et-row-arrow")}
                           </button>`
                       )
                       .join("")
@@ -756,7 +909,7 @@
             </div>
           </div>
           <div class="lq-et-panel">
-            <h3>آخر العمليات</h3>
+            <h3>${lucideIco("history", "lq-et-svg")} آخر العمليات</h3>
             <div class="lq-et-list">
               ${
                 recent.length
@@ -765,6 +918,7 @@
                         (r, i) =>
                           `<button type="button" class="lq-et-row" data-recent="${i}" style="width:100%;cursor:pointer;font:inherit;text-align:start">
                             <div><b>${esc(r.title)}</b><small>${esc(r.detail)}</small></div>
+                            ${lucideIco("chevron-left", "lq-et-row-arrow")}
                           </button>`
                       )
                       .join("")
@@ -776,14 +930,39 @@
       </div>`;
   }
 
+  function renderAlerts() {
+    const need = needsAttention();
+    return `<div class="lq-et-panel">
+      <h3>${lucideIco("bell", "lq-et-svg")} مركز التنبيهات</h3>
+      <p class="mini">تنبيهات تشغيلية منفصلة عن الاعتمادات</p>
+      <div class="lq-et-list" style="margin-top:12px">
+        ${
+          need.length
+            ? need
+                .map(
+                  (n, i) =>
+                    `<button type="button" class="lq-et-row" data-need="${i}" style="width:100%;cursor:pointer;font:inherit;text-align:start">
+                      <div><b class="tone-${esc(n.tone)}">${esc(n.title)}</b><small>${esc(n.detail)}</small></div>
+                      ${lucideIco("chevron-left", "lq-et-row-arrow")}
+                    </button>`
+                )
+                .join("")
+            : `<div class="lq-et-empty">لا تنبيهات</div>`
+        }
+      </div>
+    </div>`;
+  }
+
   function wireHomeLinks(root) {
-    const need = needsAttention().slice(0, 6);
-    const recent = recentOps().slice(0, 6);
+    const need = needsAttention();
+    const recent = recentOps().slice(0, 5);
     root.querySelectorAll("[data-hub]").forEach((el) => {
       el.addEventListener("click", () => {
         const id = el.getAttribute("data-hub");
         if (id === "properties") go("properties", { clearDetail: true, sub: "buildings" });
+        else if (id === "reservations") go("reservations", { clearDetail: true, sub: "current" });
         else if (id === "approvals") go("approvals", { clearDetail: true, sub: "pending" });
+        else if (id === "alerts") go("alerts", { clearDetail: true });
         else go(id, { clearDetail: true });
       });
     });
@@ -793,6 +972,9 @@
     root.querySelectorAll("[data-recent]").forEach((el) => {
       el.addEventListener("click", () => recent[Number(el.getAttribute("data-recent"))]?.go?.());
     });
+    if (state.section === "home") {
+      requestAnimationFrame(() => mountHeritageMap());
+    }
   }
 
   function subnav(items, current) {
@@ -1655,6 +1837,9 @@
       case "reports":
         html = renderReports();
         break;
+      case "alerts":
+        html = renderAlerts();
+        break;
       case "search":
         html = renderSearch();
         break;
@@ -1662,8 +1847,10 @@
         html = renderHome();
     }
     host.innerHTML = html;
-    if (state.section === "home") wireHomeLinks(host);
+    if (state.section !== "home") destroyEstateTreeMap();
+    if (state.section === "home" || state.section === "alerts") wireHomeLinks(host);
     if (typeof ensureEnglishDigits === "function") ensureEnglishDigits(host);
+    refreshIcons();
   }
 
   function render() {
@@ -1677,6 +1864,8 @@
     renderBody();
     const input = document.getElementById("etSearchInput");
     if (input && document.activeElement !== input) input.value = state.searchQ || "";
+    // Lucide may load after first paint
+    setTimeout(refreshIcons, 40);
   }
 
   // Take over estate platform render after Nizwa shell
