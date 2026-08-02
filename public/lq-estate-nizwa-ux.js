@@ -73,8 +73,9 @@
     if (v === "approvalrequested") return "بانتظار الاعتماد";
     if (v === "approved") return "معتمد";
     if (v === "active") return "نشط";
+    if (v === "rejected") return "مرفوض";
     if (v === "ended") return "منتهٍ";
-    if (v === "cancelled") return "مرفوض/ملغى";
+    if (v === "cancelled" || v === "canceled") return "ملغى";
     return s || "—";
   }
   function maintStatusAr(s) {
@@ -505,14 +506,14 @@
               ? byRow("estate_rooms", c.entity_id)
               : byRow("estate_apartments", c.entity_id);
           const actions = [];
-          if (st === "draft") {
+          if (st === "draft" || st === "rejected") {
             actions.push(`<button type="button" class="gold-btn" data-c-act="request" data-cid="${esc(c.id)}">طلب اعتماد</button>`);
           }
           if (st === "approvalrequested" && typeof canDecideApprovals === "function" && canDecideApprovals()) {
             actions.push(`<button type="button" class="gold-btn" data-c-act="approve" data-cid="${esc(c.id)}">اعتماد</button>`);
             actions.push(`<button type="button" class="danger" data-c-act="reject" data-cid="${esc(c.id)}">رفض</button>`);
           }
-          if (st === "approved") {
+          if (st === "approved" && typeof canActivateContracts === "function" && canActivateContracts()) {
             actions.push(`<button type="button" class="gold-btn" data-c-act="activate" data-cid="${esc(c.id)}">تفعيل</button>`);
           }
           if (st === "active") {
@@ -616,15 +617,22 @@
         return closeEstateContractById(id);
       }
       if (act === "reject") {
+        if (typeof rejectEstateContract === "function") {
+          await rejectEstateContract(id);
+          render();
+          return;
+        }
         if (typeof canDecideApprovals === "function" && !canDecideApprovals()) {
           return toastBad("لا تملك صلاحية رفض الاعتماد");
         }
-        if (!confirm("رفض طلب الاعتماد وإلغاء العقد؟")) return;
-        await api(`estate_contracts/${id}`, {
-          method: "PUT",
-          body: JSON.stringify({ status: "Cancelled", notes: "رفض الاعتماد من منصة العقارات" }),
+        const reason = prompt("سبب رفض الاعتماد (إلزامي):", "");
+        if (reason === null) return;
+        if (String(reason || "").trim().length < 3) return toastBad("سبب الرفض مطلوب");
+        await api("estate_contract_reject", {
+          method: "POST",
+          body: JSON.stringify({ contract_id: id, reason: String(reason || "").trim() }),
         });
-        toastOk("تم رفض/إلغاء العقد");
+        toastOk("تم رفض الاعتماد");
         await loadAll();
         render();
       }
@@ -693,13 +701,21 @@
           <label>الاسم<input id="nxUName" value="${esc(row.name || "")}"></label>
           <label>الحالة
             <select id="nxUStatus">
-              ${["vacant", "reserved", "occupied", "maintenance", "suspended"]
-                .map(
-                  (s) =>
-                    `<option value="${s}" ${String(row.status || "").toLowerCase() === s ? "selected" : ""}>${unitStatusAr(s)}</option>`
-                )
-                .join("")}
+              ${(() => {
+                const cur = String(row.status || "").toLowerCase();
+                // Occupied only via approved contract activate — keep current if already occupied
+                const opts = cur === "occupied" || cur === "rented"
+                  ? ["occupied", "maintenance", "suspended", "vacant"]
+                  : ["vacant", "reserved", "maintenance", "suspended"];
+                return opts
+                  .map(
+                    (s) =>
+                      `<option value="${s}" ${cur === s || (s === "occupied" && cur === "rented") ? "selected" : ""}>${unitStatusAr(s)}</option>`
+                  )
+                  .join("");
+              })()}
             </select>
+            <span class="mini">الإشغال (مؤجرة) يتم فقط بعد اعتماد وتفعيل العقد</span>
           </label>
           <label>الإيجار (OMR)<input id="nxURent" type="number" min="0" step="0.001" value="${esc(row.rent_price || 0)}"></label>
           <label>عربون الحجز<input id="nxUDeposit" type="number" min="0" step="0.001" value="${esc(row.booking_deposit || 0)}"></label>
@@ -713,21 +729,13 @@
       foot.innerHTML = `
         <button type="button" class="ghost" id="nxUClose">إغلاق</button>
         ${
-          String(row.status || "").toLowerCase() === "reserved" && typeof canEstateConvertReservation === "function" && canEstateConvertReservation()
-            ? `<button type="button" class="ghost" id="nxUConvert">تحويل الحجز</button>`
-            : ""
-        }
-        ${
           typeof canEstateCreateContract === "function" && canEstateCreateContract() && !["maintenance", "suspended"].includes(String(row.status || "").toLowerCase())
-            ? `<button type="button" class="ghost" id="nxUNewContract">مسودة عقد</button>`
+            ? `<button type="button" class="ghost" id="nxUNewContract">مسودة عقد (اعتماد)</button>`
             : ""
         }
         <button type="button" class="gold-btn" id="nxUSave">حفظ</button>`;
       document.getElementById("nxUClose")?.addEventListener("click", closeDrawer);
       document.getElementById("nxUSave")?.addEventListener("click", () => saveUnit(entityType, entityId));
-      document.getElementById("nxUConvert")?.addEventListener("click", () => {
-        if (typeof convertEstateReservation === "function") convertEstateReservation(entityType, entityId);
-      });
       document.getElementById("nxUNewContract")?.addEventListener("click", () => createContractForUnit(entityType, entityId, row));
       document.getElementById("nxUTenant")?.addEventListener("change", (e) => {
         const c = byRow("clients", e.target.value);
@@ -744,14 +752,19 @@
           .map((c) => {
             const st = String(c.status || "").toLowerCase();
             let acts = "";
-            if (st === "draft") acts += `<button type="button" class="gold-btn" data-c-act="request" data-cid="${esc(c.id)}">طلب اعتماد</button> `;
+            if (st === "draft" || st === "rejected") acts += `<button type="button" class="gold-btn" data-c-act="request" data-cid="${esc(c.id)}">طلب اعتماد</button> `;
             if (st === "approvalrequested" && typeof canDecideApprovals === "function" && canDecideApprovals()) {
               acts += `<button type="button" class="gold-btn" data-c-act="approve" data-cid="${esc(c.id)}">اعتماد</button> `;
               acts += `<button type="button" class="danger" data-c-act="reject" data-cid="${esc(c.id)}">رفض</button> `;
             }
-            if (st === "approved") acts += `<button type="button" class="gold-btn" data-c-act="activate" data-cid="${esc(c.id)}">تفعيل</button> `;
+            if (st === "approved" && typeof canActivateContracts === "function" && canActivateContracts()) {
+              acts += `<button type="button" class="gold-btn" data-c-act="activate" data-cid="${esc(c.id)}">تفعيل</button> `;
+            }
             if (st === "active") acts += `<button type="button" class="ghost" data-c-act="close" data-cid="${esc(c.id)}">إنهاء</button> `;
-            return `<div class="statement-row"><span><b>${esc(c.contract_no || c.id)}</b><br><small>${esc(c.start_date)} → ${esc(c.end_date)} · ${moneyVal(c.rent_amount)}</small></span><b>${esc(contractStatusAr(st))}</b></div><div class="toolbar" style="margin-bottom:10px">${acts}</div>`;
+            const reason = st === "rejected" && c.rejection_reason
+              ? `<div class="mini" style="color:#b91c1c">سبب الرفض: ${esc(c.rejection_reason)}</div>`
+              : "";
+            return `<div class="statement-row"><span><b>${esc(c.contract_no || c.id)}</b><br><small>${esc(c.start_date)} → ${esc(c.end_date)} · ${moneyVal(c.rent_amount)}</small>${reason}</span><b>${esc(contractStatusAr(st))}</b></div><div class="toolbar" style="margin-bottom:10px">${acts}</div>`;
           })
           .join("") || `<p class="mini">لا عقود بعد لهذه الوحدة.</p>`;
       body.querySelectorAll("[data-c-act]").forEach((btn) => {
