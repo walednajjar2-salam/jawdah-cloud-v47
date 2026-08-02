@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>جودة الانطلاقة | اختيار القسم</title>
+  <title>جودة الانطلاقة | اختيار المنصة</title>
   <link rel="icon" href="/assets/app-icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="lq-arabic-type.css?v=day1">
   <link rel="stylesheet" href="lq-exec-theme.css?v=day1">
   <link rel="stylesheet" href="lq-official-atmosphere.css?v=day2">
-  <link rel="stylesheet" href="lq-brand-mark.css?v=day2">
-  <link rel="stylesheet" href="lq-official-portal.css?v=day2">
+  <link rel="stylesheet" href="lq-brand-mark.css?v=day3">
+  <link rel="stylesheet" href="lq-official-portal.css?v=day3">
 </head>
 <body class="lq-exec lq-official-portal">
   <div class="op-bg lq-atm-bg" aria-hidden="true"></div>
@@ -19,8 +19,8 @@
     <div class="op-top" id="langMount"></div>
 
     <header class="op-brand">
-      <div class="lq-brand-mark lq-brand-mark--lg" aria-hidden="false">
-        <img src="/assets/brand-mark-gold.png?v=day1" alt="جودة الانطلاقة">
+      <div class="lq-brand-mark lq-brand-mark--hero" aria-hidden="false">
+        <img src="/assets/brand-mark-gold.png?v=day3" alt="جودة الانطلاقة" width="655" height="411" fetchpriority="high">
       </div>
       <h1 class="op-brand-name">Launch Quality</h1>
       <p class="op-brand-ar">جودة الانطلاقة</p>
@@ -37,7 +37,7 @@
       </button>
 
       <button class="op-choice" type="button" data-enter="realestate" data-portal="realestate">
-        <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/login-portal-bg.png" alt=""></div>
+        <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/login-daylight-3d.jpg" alt=""></div>
         <h2 data-i18n="realestate">العقارات</h2>
         <p data-i18n="realestateDesc">الوحدات، العملاء، العقود، الفواتير، والصيانة</p>
         <span class="op-enter" data-i18n="enter">دخول</span>
@@ -75,7 +75,7 @@
     <footer class="op-foot">Launch Quality LLC · مشاريع جودة الانطلاقة للخدمات</footer>
   </main>
 
-  <script src="lq-i18n.js?v=nizwa3"></script>
+  <script src="lq-i18n.js?v=day3"></script>
   <script>
     function readToken() {
       try {
@@ -120,7 +120,7 @@
         location.replace(qUrl);
         return;
       }
-      let url = "/app.html?fresh=20260802v706official&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
+      let url = "/app.html?fresh=20260802v706day3&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
       if (token) url += "&token=" + encodeURIComponent(token);
       location.replace(url);
     }
