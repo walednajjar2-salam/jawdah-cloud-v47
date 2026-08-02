@@ -66,15 +66,27 @@
             const acts = canDecide()
               ? `<button class="gold-btn" type="button" onclick="LQ_APPROVALS.decide('${r.id}',true)">موافقة</button> <button class="ghost" type="button" onclick="LQ_APPROVALS.decide('${r.id}',false)">رفض</button>`
               : "";
-            return `<tr><td>${typeLabel(r.request_type)}</td><td>${entityLabel(r)}</td><td>${r.requested_by || ""}</td><td>${r.requested_at || ""}</td><td><span class="badge overdue">Pending</span></td><td>${acts}</td></tr>`;
+            const who =
+              window.LQ_AVATARS && typeof LQ_AVATARS.inlinePersonHtml === "function"
+                ? LQ_AVATARS.inlinePersonHtml(r.requested_by, { size: "sm" })
+                : r.requested_by || "";
+            return `<tr><td>${typeLabel(r.request_type)}</td><td>${entityLabel(r)}</td><td>${who}</td><td>${r.requested_at || ""}</td><td><span class="badge overdue">Pending</span></td><td>${acts}</td></tr>`;
           })
           .join("")
       : "<tr><td colspan='6'>لا طلبات معلقة — كل شيء واضح ✅</td></tr>";
     const histHtml = history
-      .map(
-        (r) =>
-          `<tr><td>${typeLabel(r.request_type)}</td><td>${entityLabel(r)}</td><td>${r.requested_by || ""}</td><td>${r.approved_by || "—"}</td><td>${r.approved_at || ""}</td><td>${r.status || ""}</td></tr>`
-      )
+      .map((r) => {
+        const req =
+          window.LQ_AVATARS && typeof LQ_AVATARS.inlinePersonHtml === "function"
+            ? LQ_AVATARS.inlinePersonHtml(r.requested_by, { size: "sm" })
+            : r.requested_by || "";
+        const appr = r.approved_by
+          ? window.LQ_AVATARS && typeof LQ_AVATARS.inlinePersonHtml === "function"
+            ? LQ_AVATARS.inlinePersonHtml(r.approved_by, { size: "sm" })
+            : r.approved_by
+          : "—";
+        return `<tr><td>${typeLabel(r.request_type)}</td><td>${entityLabel(r)}</td><td>${req}</td><td>${appr}</td><td>${r.approved_at || ""}</td><td>${r.status || ""}</td></tr>`;
+      })
       .join("");
     host.innerHTML = `
       <h4>⏳ بانتظار الاعتماد (${pending.length})</h4>

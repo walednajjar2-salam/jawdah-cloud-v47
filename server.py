@@ -94,6 +94,12 @@ MAX_PROPERTY_PHOTO_BYTES = int(os.environ.get("JQ_MAX_PROPERTY_PHOTO_BYTES", "52
 MAX_JOURNAL_FILE_BYTES = int(os.environ.get("LQ_MAX_JOURNAL_FILE_BYTES", "2097152") or "2097152")
 MAX_CLIENT_CARD_BYTES = int(os.environ.get("LQ_MAX_CLIENT_CARD_BYTES", "5242880") or "5242880")
 MAX_PAYMENT_PROOF_BYTES = int(os.environ.get("LQ_MAX_PAYMENT_PROOF_BYTES", "5242880") or "5242880")
+MAX_AVATAR_BYTES = int(os.environ.get("LQ_MAX_AVATAR_BYTES", "2097152") or "2097152")
+AVATAR_PRESET_IDS = {
+    *(f"m{i:02d}" for i in range(1, 13)),
+    *(f"w{i:02d}" for i in range(1, 13)),
+}
+AVATAR_ALLOWED_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"}
 MAX_JOURNAL_FILES_PER_ENTRY = 5
 HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
@@ -173,6 +179,7 @@ ROLE_LABELS_AR = {
     "owner": "المدير العام",
     "admin": "مدير النظام",
     "deputy": "نائب المدير",
+    "manager": "مدير",
     "accountant": "محاسب",
     "operations": "مسؤول العقارات",
     "reception": "استقبال",
@@ -224,7 +231,11 @@ TABLES = {
     "estate_month_closes": ["id", "month_key", "status", "total_invoiced", "total_collected", "outstanding_due", "closed_by", "closed_at", "note"],
     "estate_status_history": ["id", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "old_status", "new_status", "changed_by", "changed_at", "note"],
     "estate_reservation_invoices": ["id", "invoice_no", "entity_type", "entity_id", "property_id", "building_id", "apartment_id", "room_id", "client_id", "client_name", "issued_by", "issue_date", "due_date", "rent_price", "deposit_amount", "prepaid_amount", "total_amount", "status", "note"],
-    "users": ["id", "username", "name", "role", "active", "email", "must_change_password", "password_changed_at", "created_at", "last_login"],
+    "users": [
+        "id", "username", "name", "role", "active", "email", "job_title",
+        "must_change_password", "password_changed_at", "created_at", "last_login",
+        "avatar_type", "avatar_preset", "avatar_image", "avatar_updated_at",
+    ],
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
@@ -2076,6 +2087,11 @@ def init_db() -> None:
             ("totp_secret", "TEXT"),
             ("totp_enabled", "INTEGER NOT NULL DEFAULT 0"),
             ("password_changed_at", "TEXT"),
+            ("job_title", "TEXT"),
+            ("avatar_type", "TEXT NOT NULL DEFAULT 'initials'"),
+            ("avatar_preset", "TEXT"),
+            ("avatar_image", "TEXT"),
+            ("avatar_updated_at", "TEXT"),
         ]:
             ensure_column(db, "users", col, definition)
         ensure_security_runtime_tables(db)
@@ -2537,7 +2553,8 @@ def build_owner_staff_activity(db: sqlite3.Connection, days: int = 14) -> Dict[s
     staff_rows = rows_to_dicts(
         db.execute(
             """
-            SELECT id, username, name, role, last_login, active
+            SELECT id, username, name, role, job_title, last_login, active,
+                   avatar_type, avatar_preset, avatar_image, avatar_updated_at
             FROM users
             WHERE active=1 AND role NOT IN ('owner')
             ORDER BY name
@@ -2550,6 +2567,7 @@ def build_owner_staff_activity(db: sqlite3.Connection, days: int = 14) -> Dict[s
     audit_today = 0
     today_start = today() + " 00:00:00"
     for u in staff_rows:
+        u = public_people_row(u)
         uid_val = u["id"]
         jcount = db.execute(
             "SELECT COUNT(*) FROM work_journal WHERE user_id=? AND work_date>=?",
@@ -3793,6 +3811,78 @@ def ensure_upload_dirs() -> None:
     PAYMENT_PROOF_DIR.mkdir(parents=True, exist_ok=True)
     CONTRACT_ATTACHMENT_DIR.mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "estate_images").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "avatars").mkdir(parents=True, exist_ok=True)
+
+
+def _strip_name_article(token: str) -> str:
+    """Strip Arabic/English definite article from a name token (الـ / Al-)."""
+    t = str(token or "").strip()
+    if len(t) > 2 and t.startswith("ال"):
+        return t[2:] or t
+    if len(t) > 3 and t.lower().startswith("al-"):
+        return t[3:] or t
+    # AlNajjar (camel/pascal) — require uppercase letter after Al
+    if len(t) > 3 and t[:2].lower() == "al" and t[2].isupper():
+        return t[2:] or t
+    return t
+
+
+def avatar_initials(name: str) -> str:
+    """Arabic/English initials: first of first name + first of family name.
+
+    Family names with the article الـ are normalized (النجار → ن).
+    Example: أحمد محمد النجار → أ ن
+    """
+    parts = [p for p in re.split(r"\s+", str(name or "").strip()) if p]
+    if not parts:
+        return "?"
+    if len(parts) == 1:
+        token = _strip_name_article(parts[0])
+        return (token[:2] if len(token) > 1 else token[0]).strip()
+    first = parts[0][0]
+    family = _strip_name_article(parts[-1])
+    last = family[0] if family else parts[-1][0]
+    return f"{first} {last}".strip()
+
+
+def can_moderate_avatars(user: Optional[Dict[str, Any]]) -> bool:
+    if not user:
+        return False
+    role = str(user.get("role") or "").lower()
+    if role in ("owner", "admin", "deputy", "manager"):
+        return True
+    uname = str(user.get("username") or "").strip().lower()
+    return uname in FULL_ACCESS_USERNAMES or uname in DAILY_OPS_MANAGER_USERNAMES
+
+
+def public_people_row(row: Any) -> Dict[str, Any]:
+    d = dict(row) if not isinstance(row, dict) else dict(row)
+    return {
+        "id": d.get("id"),
+        "username": d.get("username"),
+        "name": d.get("name"),
+        "role": d.get("role"),
+        "job_title": d.get("job_title") or ROLE_LABELS_AR.get(str(d.get("role") or ""), d.get("role")),
+        "active": d.get("active"),
+        "last_login": d.get("last_login"),
+        "avatar_type": d.get("avatar_type") or "initials",
+        "avatar_preset": d.get("avatar_preset"),
+        "avatar_image": d.get("avatar_image"),
+        "avatar_updated_at": d.get("avatar_updated_at"),
+        "initials": avatar_initials(str(d.get("name") or d.get("username") or "")),
+    }
+
+
+def load_avatar_catalog() -> Dict[str, Any]:
+    path = BASE_DIR / "public" / "assets" / "avatars" / "catalog.json"
+    if path.exists():
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    men = [{"id": f"m{i:02d}", "label": f"رجل عماني {i}", "gender": "men", "url": f"/assets/avatars/m{i:02d}.svg"} for i in range(1, 13)]
+    women = [{"id": f"w{i:02d}", "label": f"امرأة عمانية {i}", "gender": "women", "url": f"/assets/avatars/w{i:02d}.svg"} for i in range(1, 13)]
+    return {"men": men, "women": women}
 
 
 def mirror_upload_best_effort(url: str, file_bytes: bytes, content_type: str) -> None:
@@ -4342,8 +4432,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return None
         row = db.execute(
             """
-            SELECT u.id,u.username,u.name,u.role,u.active,u.email,u.created_at,u.last_login,
-                   u.must_change_password,u.password_changed_at,s.expires_at
+            SELECT u.id,u.username,u.name,u.role,u.active,u.email,u.job_title,u.created_at,u.last_login,
+                   u.must_change_password,u.password_changed_at,
+                   u.avatar_type,u.avatar_preset,u.avatar_image,u.avatar_updated_at,
+                   s.expires_at
             FROM sessions s JOIN users u ON u.id=s.user_id
             WHERE s.token=? AND u.active=1
             """,
@@ -4355,7 +4447,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
             db.execute("DELETE FROM sessions WHERE token=?", (token,))
             db.commit()
             return None
-        return dict(row)
+        user = dict(row)
+        user["initials"] = avatar_initials(str(user.get("name") or user.get("username") or ""))
+        if not user.get("job_title"):
+            user["job_title"] = ROLE_LABELS_AR.get(str(user.get("role") or ""), user.get("role"))
+        user["avatar_type"] = user.get("avatar_type") or "initials"
+        return user
 
     def require_user(self, db: sqlite3.Connection, permission: Optional[str] = None, query: str = "") -> Optional[Dict[str, Any]]:
         user = self.current_user(db, query)
@@ -4740,6 +4837,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "env_mode": APP_ENV_MODE,
                         "env_label_ar": APP_ENV_LABEL_AR,
                     })
+                if parts[0] == "me" and len(parts) >= 2 and parts[1] == "avatar" and method == "POST":
+                    user = self.require_user(db)
+                    return None if not user else self.api_me_avatar_set(db, user)
+                if parts[0] == "me" and len(parts) >= 2 and parts[1] == "avatar" and method == "DELETE":
+                    user = self.require_user(db)
+                    return None if not user else self.api_me_avatar_clear(db, user)
+                if parts[0] == "avatars" and len(parts) >= 2 and parts[1] == "catalog" and method == "GET":
+                    user = self.require_user(db)
+                    return None if not user else self.send_json({"ok": True, "catalog": load_avatar_catalog()})
+                if parts[0] == "people" and method == "GET":
+                    user = self.require_user(db)
+                    return None if not user else self.api_people_directory(db)
+                if parts[0] == "users" and len(parts) >= 3 and parts[2] == "avatar" and method == "DELETE":
+                    user = self.require_user(db)
+                    return None if not user else self.api_user_avatar_remove(db, user, parts[1])
                 if parts[0] == "dashboard" and method == "GET":
                     user = self.require_user(db, "dashboard")
                     return None if not user else self.api_dashboard(db)
@@ -5164,7 +5276,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
         db.commit()
         user = dict(row)
         user.pop("password_hash", None)
+        user.pop("totp_secret", None)
         user["must_change_password"] = bool(user.get("must_change_password"))
+        user["avatar_type"] = user.get("avatar_type") or "initials"
+        user["initials"] = avatar_initials(str(user.get("name") or user.get("username") or ""))
+        if not user.get("job_title"):
+            user["job_title"] = ROLE_LABELS_AR.get(str(user.get("role") or ""), user.get("role"))
         user["security"] = security_status_payload(
             user,
             trusted_device=trusted,
@@ -5976,11 +6093,180 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def api_bootstrap(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
         data = {}
         for table, cols in TABLES.items():
-            if table == "users" and user["role"] not in ("admin", "owner"):
+            if table == "users" and user["role"] not in ("admin", "owner", "deputy"):
                 continue
             visible_cols = ",".join(cols)
             data[table] = rows_to_dicts(db.execute(f"SELECT {visible_cols} FROM {table} ORDER BY rowid DESC").fetchall())
-        self.send_json({"ok": True, "data": data, "dashboard": build_dashboard(db), "user": user})
+        people = [
+            public_people_row(r)
+            for r in db.execute(
+                """
+                SELECT id, username, name, role, active, job_title, last_login,
+                       avatar_type, avatar_preset, avatar_image, avatar_updated_at
+                FROM users WHERE active=1 ORDER BY name
+                """
+            ).fetchall()
+        ]
+        self.send_json({
+            "ok": True,
+            "data": data,
+            "dashboard": build_dashboard(db),
+            "user": user,
+            "people": people,
+        })
+
+    def api_people_directory(self, db: sqlite3.Connection) -> None:
+        people = [
+            public_people_row(r)
+            for r in db.execute(
+                """
+                SELECT id, username, name, role, active, job_title, last_login,
+                       avatar_type, avatar_preset, avatar_image, avatar_updated_at
+                FROM users WHERE active=1 ORDER BY name
+                """
+            ).fetchall()
+        ]
+        self.send_json({"ok": True, "people": people})
+
+    def _refresh_user_public(self, db: sqlite3.Connection, user_id: str) -> Dict[str, Any]:
+        row = db.execute(
+            """
+            SELECT id, username, name, role, active, email, job_title, created_at, last_login,
+                   must_change_password, password_changed_at,
+                   avatar_type, avatar_preset, avatar_image, avatar_updated_at
+            FROM users WHERE id=?
+            """,
+            (user_id,),
+        ).fetchone()
+        if not row:
+            return {}
+        return public_people_row(row) | {
+            "email": row["email"],
+            "created_at": row["created_at"],
+            "must_change_password": bool(row["must_change_password"] or 0),
+            "password_changed_at": row["password_changed_at"],
+        }
+
+    def api_me_avatar_set(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        data = self.read_json()
+        mode = str(data.get("mode") or data.get("avatar_type") or "").strip().lower()
+        if mode not in ("upload", "preset", "initials"):
+            return self.send_json({"ok": False, "error": "mode يجب أن يكون upload أو preset أو initials"}, 400)
+
+        current = db.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+        if not current:
+            return self.send_json({"ok": False, "error": "المستخدم غير موجود"}, 404)
+        old_image = str(current["avatar_image"] or "") if "avatar_image" in current.keys() else ""
+
+        avatar_type = mode
+        avatar_preset = None
+        avatar_image = None
+        detail = ""
+
+        if mode == "upload":
+            try:
+                file_bytes, content_type = decode_upload_payload(data)
+            except ValueError as exc:
+                return self.send_json({"ok": False, "error": str(exc)}, 400)
+            content_type = (content_type or "").split(";")[0].strip().lower()
+            if content_type == "image/jpg":
+                content_type = "image/jpeg"
+            if content_type not in AVATAR_ALLOWED_TYPES:
+                return self.send_json({"ok": False, "error": "نوع الملف غير مدعوم — JPG/PNG/WebP/GIF فقط"}, 400)
+            if len(file_bytes) > MAX_AVATAR_BYTES:
+                return self.send_json(
+                    {"ok": False, "error": f"حجم الصورة كبير — الحد الأقصى {MAX_AVATAR_BYTES // (1024 * 1024)}MB"},
+                    400,
+                )
+            try:
+                avatar_image = save_named_image_upload(
+                    "avatars",
+                    f"u-{user['id']}",
+                    file_bytes,
+                    content_type,
+                    MAX_AVATAR_BYTES,
+                )
+            except ValueError as exc:
+                return self.send_json({"ok": False, "error": str(exc)}, 400)
+            detail = "Uploaded profile photo"
+        elif mode == "preset":
+            preset = str(data.get("preset") or data.get("avatar_preset") or "").strip().lower()
+            if preset not in AVATAR_PRESET_IDS:
+                return self.send_json({"ok": False, "error": "أفاتار غير معروف"}, 400)
+            avatar_preset = preset
+            detail = f"Selected preset avatar {preset}"
+        else:
+            detail = "Switched to initials avatar"
+
+        db.execute(
+            """
+            UPDATE users
+            SET avatar_type=?, avatar_preset=?, avatar_image=?, avatar_updated_at=?
+            WHERE id=?
+            """,
+            (avatar_type, avatar_preset, avatar_image, now_iso(), user["id"]),
+        )
+        if old_image and old_image != (avatar_image or "") and is_stored_upload_url(old_image, "avatars"):
+            delete_upload_file(old_image, "avatars")
+        audit(db, user, "avatar_change", "users", user["id"], detail)
+        db.commit()
+        refreshed = self._refresh_user_public(db, user["id"])
+        self.send_json({"ok": True, "user": refreshed, "mode": avatar_type})
+
+    def api_me_avatar_clear(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        current = db.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+        if not current:
+            return self.send_json({"ok": False, "error": "المستخدم غير موجود"}, 404)
+        old_image = str(current["avatar_image"] or "") if "avatar_image" in current.keys() else ""
+        db.execute(
+            """
+            UPDATE users
+            SET avatar_type='initials', avatar_preset=NULL, avatar_image=NULL, avatar_updated_at=?
+            WHERE id=?
+            """,
+            (now_iso(), user["id"]),
+        )
+        if old_image and is_stored_upload_url(old_image, "avatars"):
+            delete_upload_file(old_image, "avatars")
+        audit(db, user, "avatar_clear", "users", user["id"], "Cleared own profile photo")
+        db.commit()
+        self.send_json({"ok": True, "user": self._refresh_user_public(db, user["id"])})
+
+    def api_user_avatar_remove(self, db: sqlite3.Connection, user: Dict[str, Any], target_id: str) -> None:
+        if not can_moderate_avatars(user):
+            return self.send_json({"ok": False, "error": "صلاحية إزالة الصورة للمدير فقط"}, 403)
+        reason = ""
+        try:
+            data = self.read_json()
+            reason = str(data.get("reason") or "").strip()
+        except Exception:
+            reason = ""
+        if user["id"] != target_id and not reason and str(user.get("role") or "") not in ("owner", "admin"):
+            return self.send_json({"ok": False, "error": "يجب ذكر سبب إزالة صورة الموظف"}, 400)
+        current = db.execute("SELECT * FROM users WHERE id=?", (target_id,)).fetchone()
+        if not current:
+            return self.send_json({"ok": False, "error": "المستخدم غير موجود"}, 404)
+        old_image = str(current["avatar_image"] or "") if "avatar_image" in current.keys() else ""
+        db.execute(
+            """
+            UPDATE users
+            SET avatar_type='initials', avatar_preset=NULL, avatar_image=NULL, avatar_updated_at=?
+            WHERE id=?
+            """,
+            (now_iso(), target_id),
+        )
+        if old_image and is_stored_upload_url(old_image, "avatars"):
+            delete_upload_file(old_image, "avatars")
+        audit(
+            db,
+            user,
+            "avatar_moderate",
+            "users",
+            target_id,
+            f"Removed avatar ({reason or 'moderation'})",
+        )
+        db.commit()
+        self.send_json({"ok": True, "user": self._refresh_user_public(db, target_id)})
 
     def api_dashboard(self, db: sqlite3.Connection) -> None:
         self.send_json({"ok": True, "dashboard": build_dashboard(db)})

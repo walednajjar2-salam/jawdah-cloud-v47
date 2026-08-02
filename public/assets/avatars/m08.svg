@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EAF3F0"/>
+      <stop offset="100%" stop-color="#EAF3F0" stop-opacity=".85"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="35%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#fff" stop-opacity=".35"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#g)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#shine)"/>
+  
+  <path d="M28 200 C40 150, 60 138, 100 138 C140 138, 160 150, 172 200 Z" fill="#F2F2EE"/>
+  <path d="M100 138 v62" stroke="#D4D4D0" stroke-width="1.5" opacity=".7"/>
+
+  <ellipse cx="100" cy="112" rx="42" ry="46" fill="#D4A574"/>
+  <ellipse cx="100" cy="116" rx="28" ry="18" fill="#D4A574" opacity=".35"/>
+  <!-- eyes -->
+  <ellipse cx="86" cy="108" rx="3.2" ry="3.6" fill="#2C2416"/>
+  <ellipse cx="114" cy="108" rx="3.2" ry="3.6" fill="#2C2416"/>
+  <!-- brows -->
+  <path d="M78 100q8-6 16 0" stroke="#5C4030" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M106 100q8-6 16 0" stroke="#5C4030" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <!-- nose -->
+  <path d="M100 110v10" stroke="#C49A78" stroke-width="2" stroke-linecap="round"/>
+  <!-- smile -->
+  <path d="M90 128q10 8 20 0" stroke="#8B5E4B" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <path d="M78 118 Q100 138 122 118 Q118 128 100 132 Q82 128 78 118 Z" fill="#5C4030" opacity=".35"/>
+
+  <path d="M58 86 Q100 42 142 86 L138 98 Q100 70 62 98 Z" fill="#9A3412"/>
+  <path d="M70 90 Q100 62 130 90" stroke="#FEF3C7" stroke-width="2" fill="none" opacity=".35"/>
+  <ellipse cx="100" cy="78" rx="36" ry="14" fill="#9A3412" opacity=".9"/>
+
+</svg>
