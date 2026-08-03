@@ -1,4 +1,4 @@
-/* Launch Quality � Official executive design system (gold + ink)
+/* Launch Quality  Official executive design system (gold + ink)
    Typography owned by lq-arabic-type.css */
 :root{
   --lq-bg:#eef2f6;
@@ -61,7 +61,7 @@ body.lq-exec .sidebar-ultra{
   border-inline-end:1px solid var(--lq-line)!important;
 }
 
-/* User card must stay inside sidebar — never cover workspace */
+/* User card must stay inside sidebar â never cover workspace */
 body.lq-exec #sidebarUser.sidebar-user,
 body.lq-exec.saas-luxury #sidebarUser.sidebar-user,
 body.app-ready #sidebarUser.sidebar-user,
@@ -115,7 +115,7 @@ body.lq-exec .toast{
   max-width:min(520px,92vw)!important;
 }
 
-/* Docked sidebar — never float over header/dashboard */
+/* Docked sidebar â never float over header/dashboard */
 @media (min-width:901px){
   body.lq-exec.saas-luxury #app.app,
   body.lq-exec.app-ready #app.app,
@@ -205,7 +205,7 @@ body.lq-exec #nav button.active{
   color:var(--lq-brand-dark)!important;
   border:1px solid #c9d9f8!important;
 }
-/* Kill turquoise label paints from historic theme � icons only */
+/* Kill turquoise label paints from historic theme  icons only */
 body.lq-exec #nav button .nav-icon,
 body.lq-exec .avatar,
 body.lq-exec .avatar-pro{
@@ -471,29 +471,30 @@ body.lq-exec .top-pill-pro.lq-header-clock{
   .lq-full-timeline-item{grid-template-columns:72px 16px 1fr}
 }
 
-/* �� Estate official UX �� */
+/*  Estate official UX  */
 .lq-estate-nx{display:flex;flex-direction:column;gap:14px}
 .lq-estate-nx-head{
   display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end;
   padding:20px 22px;border-radius:var(--lq-radius);
-  background:
-    linear-gradient(125deg,rgba(11,26,40,.96) 0%,rgba(19,41,61,.92) 55%,rgba(15,42,64,.9) 100%);
-  border:1px solid rgba(201,169,110,.35);
-  box-shadow:0 18px 40px rgba(11,26,40,.18);
-  color:#f3efe6;
+  background:rgba(255,255,255,.62);
+  border:1px solid rgba(15,42,74,.14);
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 14px 32px rgba(15,39,68,.10);
+  color:#000;
+  backdrop-filter:blur(16px) saturate(1.2);
+  -webkit-backdrop-filter:blur(16px) saturate(1.2);
   animation:lqEstateIn .55s ease both;
 }
 .lq-estate-nx-head h3{
-  margin:0 0 4px;font-size:clamp(1.25rem,2.2vw,1.55rem);color:#f7f1e4;
-  font-family:var(--lq-serif);font-weight:700;letter-spacing:.01em;
+  margin:0 0 4px;font-size:12px;color:#000;
+  font-family:var(--lq-font);font-weight:800;letter-spacing:.01em;
 }
-.lq-estate-nx-head .mini{color:rgba(243,239,230,.72)!important}
-.lq-estate-nx-filters label,.lq-estate-nx-budget{display:flex;flex-direction:column;gap:4px;min-width:200px;color:rgba(243,239,230,.8)}
+.lq-estate-nx-head .mini{color:#000!important}
+.lq-estate-nx-filters label,.lq-estate-nx-budget{display:flex;flex-direction:column;gap:4px;min-width:200px;color:#000}
 .lq-estate-nx-filters select,.lq-estate-nx-toolbar input,.lq-estate-nx-toolbar select{
-  border:1px solid var(--lq-line);border-radius:10px;padding:9px 11px;font:inherit;background:#fff;min-height:40px
+  border:1px solid var(--lq-line);border-radius:10px;padding:9px 11px;font:inherit;background:#fff;min-height:40px;color:#000
 }
 .lq-estate-nx-head .lq-estate-nx-filters select{
-  background:rgba(255,255,255,.08);color:#f3efe6;border-color:rgba(201,169,110,.35)
+  background:rgba(255,255,255,.9);color:#000;border-color:rgba(15,42,74,.18)
 }
 .lq-estate-nx-stats{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px

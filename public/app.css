@@ -137,7 +137,7 @@
 }
 .login-features{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:4px}
 .login-feature-chip{position:relative;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;color:rgba(248,250,252,.92);background:linear-gradient(145deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.12);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-.login-feature-chip[data-tone="gold"]{--lf-accent:#fbbf24}.login-feature-chip[data-tone="violet"]{--lf-accent:#a78bfa}.login-feature-chip[data-tone="cyan"]{--lf-accent:#22d3ee}.login-feature-chip[data-tone="rose"]{--lf-accent:#fb7185}
+.login-feature-chip[data-tone="gold"]{--lf-accent:#fbbf24}.login-feature-chip[data-tone="violet"]{--lf-accent:#a78bfa}.login-feature-chip[data-tone="cyan"]{--lf-accent:#0f2744}.login-feature-chip[data-tone="rose"]{--lf-accent:#fb7185}
 .login-feature-chip .lf-chip-glow{position:absolute;inset:0;background:radial-gradient(circle at 20% 50%,color-mix(in srgb,var(--lf-accent) 28%,transparent),transparent 70%);pointer-events:none}
 .login-feature-chip b{font-size:16px;line-height:1;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--lf-accent) 50%,transparent))}
 .login-field-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:20px;opacity:.9;pointer-events:none;filter:drop-shadow(0 0 8px rgba(212,175,55,.35)) drop-shadow(0 2px 4px rgba(0,0,0,.25));animation:iconPulse 4s ease-in-out infinite}

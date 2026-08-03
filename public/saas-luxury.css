@@ -28,12 +28,12 @@
 
 /* Kill conflicting light theme from app-ultra */
 body.saas-luxury{background:linear-gradient(165deg,var(--saas-bg) 0%,var(--saas-bg2) 45%,#0d1528 100%)!important;color:var(--saas-text)!important;font-family:'Tajawal',Inter,sans-serif!important;min-height:100vh;overflow-x:hidden}
-body.saas-luxury:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 50% at 15% -10%,rgba(109,93,252,.16),transparent),radial-gradient(ellipse 60% 40% at 85% 0%,rgba(0,212,255,.07),transparent);z-index:0}
+body.saas-luxury:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 50% at 15% -10%,rgba(109,93,252,.16),transparent),radial-gradient(ellipse 60% 40% at 85% 0%,rgba(15,39,68,.07),transparent);z-index:0}
 body.saas-luxury:after{
   content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
     radial-gradient(circle 280px at 8% 72%,rgba(109,93,252,.11),transparent 70%),
-    radial-gradient(circle 220px at 92% 28%,rgba(0,212,255,.08),transparent 68%);
+    radial-gradient(circle 220px at 92% 28%,rgba(15,39,68,.08),transparent 68%);
   animation:saasAmbient 14s ease-in-out infinite alternate
 }
 @keyframes saasAmbient{from{opacity:.85;transform:scale(1)}to{opacity:1;transform:scale(1.03)}}
@@ -42,7 +42,7 @@ body.saas-luxury.app-ultra:not(.dash-pro-active) .card,
 body.saas-luxury.app-ultra .card{backdrop-filter:blur(24px)!important;background:var(--saas-glass)!important;border:1px solid var(--saas-border)!important;border-radius:var(--saas-radius)!important;box-shadow:var(--saas-glow)!important;color:var(--saas-text)!important;margin-bottom:16px}
 body.saas-luxury.app-ultra .card h3{color:#fff!important}
 body.saas-luxury.app-ultra input,body.saas-luxury.app-ultra select,body.saas-luxury.app-ultra textarea{background:rgba(255,255,255,.05)!important;border:1px solid var(--saas-border)!important;color:var(--saas-text)!important;border-radius:12px!important}
-body.saas-luxury.app-ultra th{background:rgba(109,93,252,.12)!important;color:var(--saas-cyan)!important}
+body.saas-luxury.app-ultra th{background:rgba(109,93,252,.12)!important;color:#000000!important}
 body.saas-luxury.app-ultra td{color:var(--saas-text)!important;border-color:rgba(255,255,255,.06)!important}
 body.saas-luxury.app-ultra .gold-btn{background:linear-gradient(135deg,var(--saas-primary),var(--saas-primary2))!important;color:#fff!important}
 body.saas-luxury.app-ultra .ghost{border-color:var(--saas-border)!important;background:var(--saas-glass)!important;color:var(--saas-text)!important}
@@ -169,7 +169,7 @@ body.saas-luxury .tb-logout{padding:10px 14px!important;font-size:var(--saas-fs-
 .saas-page-head-compact{margin-bottom:16px}
 .saas-page-head h1{display:none}
 .saas-head-chips{display:flex;flex-wrap:wrap;gap:8px}
-.saas-chip{padding:7px 13px;border-radius:999px;background:var(--saas-glass);border:1px solid var(--saas-border);font-size:12px;font-weight:600;color:var(--saas-cyan)}
+.saas-chip{padding:7px 13px;border-radius:999px;background:var(--saas-glass);border:1px solid var(--saas-border);font-size:12px;font-weight:600;color:#000000}
 .saas-chip.danger{color:var(--saas-danger);border-color:rgba(255,82,82,.35)}
 
 /* Command center — full flash-drive command palette */
@@ -189,7 +189,7 @@ body.saas-luxury .tb-logout{padding:10px 14px!important;font-size:var(--saas-fs-
 .saas-ops-matrix{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:14px}
 .saas-ops-matrix div{padding:10px 12px;border-radius:12px;border:1px solid var(--saas-border);background:rgba(255,255,255,.03)}
 .saas-ops-matrix b{display:block;font-size:11px;color:var(--saas-muted);margin-bottom:4px}
-.saas-ops-matrix span{font-size:15px;font-weight:800;color:var(--saas-cyan)}
+.saas-ops-matrix span{font-size:15px;font-weight:800;color:#000000}
 .saas-decision-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.06)}
 .saas-decision-row p{margin:0;font-size:13px;line-height:1.5;color:var(--saas-text)}
 @media(max-width:1200px){.saas-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.saas-command-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.saas-ops-matrix{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -211,7 +211,7 @@ body.saas-luxury .tb-logout{padding:10px 14px!important;font-size:var(--saas-fs-
 .saas-section{margin-bottom:20px}
 .saas-section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px}
 .saas-section-head h3{margin:0;font-size:17px;font-weight:700;color:#fff}
-.saas-link-btn{background:none;border:none;color:var(--saas-cyan);font-weight:700;cursor:pointer;font-size:13px;padding:0}
+.saas-link-btn{background:none;border:none;color:#000000;font-weight:700;cursor:pointer;font-size:13px;padding:0}
 
 .saas-analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:20px}
 .saas-chart-panel{padding:18px;min-height:260px}
@@ -657,11 +657,11 @@ body.login-ultra.saas-login .login-stage--center .login-glass-card{
 }
 .saas-exec-hero:before{
   content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(120deg,rgba(109,93,252,.14),transparent 45%,rgba(0,212,255,.08))
+  background:linear-gradient(120deg,rgba(109,93,252,.14),transparent 45%,rgba(15,39,68,.08))
 }
 .exec-hero-left{position:relative;z-index:1;flex:1;min-width:0}
 .exec-badge{display:inline-flex;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;
-  background:rgba(124,77,255,.2);border:1px solid rgba(124,77,255,.35);color:var(--saas-cyan);margin-bottom:10px}
+  background:rgba(124,77,255,.2);border:1px solid rgba(124,77,255,.35);color:#000000;margin-bottom:10px}
 .saas-exec-hero h2{margin:0 0 6px;font-size:clamp(20px,2.4vw,28px);font-weight:800;color:#fff;line-height:1.35}
 .saas-exec-hero p{margin:0 0 12px;color:var(--saas-muted);font-size:13px;font-weight:600}
 .exec-meta{display:flex;flex-wrap:wrap;gap:8px}
@@ -680,7 +680,7 @@ body.login-ultra.saas-login .login-stage--center .login-glass-card{
 .saas-prop-status{padding:16px 18px;margin-bottom:16px}
 .prop-status-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .prop-status-head h4{margin:0;font-size:14px;color:#fff}
-.prop-status-head span{font-size:12px;color:var(--saas-cyan);font-weight:700}
+.prop-status-head span{font-size:12px;color:#000000;font-weight:700}
 .prop-status-bars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .prop-bar-top{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--saas-muted);margin-bottom:6px;font-weight:700}
 .prop-bar-top b{color:#fff}
@@ -721,7 +721,7 @@ body.login-ultra.saas-login .login-stage--center .login-glass-card{
 .cashflow-col i.inc{background:linear-gradient(180deg,#1e4f8c,#6D5DFC)}
 .cashflow-col i.exp{background:linear-gradient(180deg,#FF7043,#FF5252)}
 .cashflow-month span{font-size:11px;font-weight:700;color:var(--saas-muted)}
-.cashflow-month small{font-size:9px;color:var(--saas-cyan);font-weight:700}
+.cashflow-month small{font-size:9px;color:#000000;font-weight:700}
 .cashflow-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:11px;color:var(--saas-muted);font-weight:700}
 .cashflow-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:4px;vertical-align:middle}
 .cashflow-legend i.inc{background:#1e4f8c}
@@ -740,7 +740,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
 .dash-live-ticker{padding:0;margin-bottom:16px;overflow:hidden}
 .ticker-track{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
 .ticker-inner{display:flex;gap:28px;width:max-content;animation:tickerScroll 38s linear infinite;padding:10px 0}
-.ticker-item{font-size:12px;font-weight:700;color:var(--saas-cyan);white-space:nowrap;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.ticker-item{font-size:12px;font-weight:700;color:#000000;white-space:nowrap;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
 @keyframes tickerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
 /* Mega cockpit bento */
@@ -753,7 +753,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
 .bento-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
 .bento-head h4{margin:0;font-size:14px;color:#fff;font-weight:800}
 .exec-brief-text{margin:0;font-size:13px;line-height:1.85;color:var(--saas-text);font-weight:600}
-.bento-brief{background:linear-gradient(135deg,rgba(109,93,252,.12),rgba(0,212,255,.06))!important}
+.bento-brief{background:linear-gradient(135deg,rgba(109,93,252,.12),rgba(15,39,68,.06))!important}
 
 .bento-gauges{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
 .bento-gauge{text-align:center}
@@ -769,7 +769,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
 .risk-pill.med{border-color:rgba(255,179,0,.32);background:rgba(255,179,0,.08)}
 .risk-pill.low{border-color:rgba(0,200,83,.28);background:rgba(0,200,83,.06)}
 .risk-pill b{font-size:12px;color:#fff}
-.risk-pill span{font-size:12px;font-weight:800;color:var(--saas-cyan)}
+.risk-pill span{font-size:12px;font-weight:800;color:#000000}
 
 .rank-list,.event-list,.bld-list{display:grid;gap:8px;max-height:240px;overflow:auto}
 .rank-row,.event-row,.bld-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);cursor:pointer;transition:.15s}
@@ -778,7 +778,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
 .rank-row>div{flex:1;min-width:0}
 .rank-row b,.event-row b{font-size:12px;color:#fff;display:block}
 .rank-row small,.event-row small{font-size:10px;color:var(--saas-muted)}
-.rank-row strong{font-size:12px;color:var(--saas-cyan);white-space:nowrap}
+.rank-row strong{font-size:12px;color:#000000;white-space:nowrap}
 
 .pipe-list{display:grid;gap:10px}
 .pipe-top{display:flex;justify-content:space-between;font-size:11px;color:var(--saas-muted);font-weight:700;margin-bottom:5px}
@@ -796,7 +796,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
 .aging-track i{display:block;height:100%;background:linear-gradient(90deg,#FF7043,#FF5252);border-radius:999px}
 .aging-bar-item b{color:#fff;font-size:11px}
 
-.event-date{font-size:10px;font-weight:800;color:var(--saas-cyan);min-width:72px;flex-shrink:0}
+.event-date{font-size:10px;font-weight:800;color:#000000;min-width:72px;flex-shrink:0}
 .event-row.high{border-color:rgba(255,82,82,.3)}
 .event-row.med{border-color:rgba(255,179,0,.25)}
 
@@ -817,7 +817,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
 .heat-map{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
 .heat-cell{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
 .heat-cell span{font-size:12px;font-weight:800;color:var(--saas-muted)}
-.heat-cell i{display:block;width:100%;height:36px;border-radius:10px;background:linear-gradient(180deg,rgba(109,93,252,calc(var(--heat,50)/100)),rgba(0,212,255,calc(var(--heat,50)/130)))}
+.heat-cell i{display:block;width:100%;height:36px;border-radius:10px;background:linear-gradient(180deg,rgba(109,93,252,calc(var(--heat,50)/100)),rgba(15,39,68,calc(var(--heat,50)/130)))}
 
 .saas-kpi-tertiary{margin-bottom:16px}
 .saas-kpi-tert:before{background:linear-gradient(90deg,#FFB300,var(--saas-primary))}
@@ -844,7 +844,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
 .saas-kpi-pro.tone-warn:before{background:linear-gradient(90deg,#FFB300,#FF7043)}
 .saas-kpi-pro.tone-warn .saas-kpi-trend{color:#FFB300}
 .saas-kpi-pro.tone-med:before{background:linear-gradient(90deg,#6D5DFC,#7C4DFF)}
-.saas-kpi-pro.tone-med .saas-kpi-trend{color:var(--saas-cyan)}
+.saas-kpi-pro.tone-med .saas-kpi-trend{color:#000000}
 .saas-kpi-pro.tone-neutral:before{background:linear-gradient(90deg,rgba(255,255,255,.2),rgba(255,255,255,.08))}
 .saas-kpi-pro.tone-neutral .saas-kpi-trend{color:var(--saas-muted)}
 
@@ -876,7 +876,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
 .cockpit-zone-label{
   display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
   font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--saas-cyan);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);
+  color:#000000;background:rgba(15,39,68,.08);border:1px solid rgba(15,39,68,.2);
   margin-bottom:10px
 }
 .bento-tile.cockpit-zone{position:relative;overflow:hidden}
@@ -1190,7 +1190,7 @@ body.saas-luxury .app-body:has(#sec-dashboard.active) .page-head{display:none!im
   overflow:hidden;
   border:1px solid rgba(212,175,55,.22)!important;
   background:
-    radial-gradient(ellipse 90% 70% at 50% 110%,rgba(0,212,255,.16),transparent 58%),
+    radial-gradient(ellipse 90% 70% at 50% 110%,rgba(15,39,68,.16),transparent 58%),
     radial-gradient(ellipse 55% 45% at 18% 22%,rgba(124,77,255,.18),transparent 62%),
     radial-gradient(ellipse 50% 40% at 82% 18%,rgba(212,175,55,.14),transparent 58%),
     linear-gradient(180deg,rgba(8,14,32,.92),rgba(4,8,18,.98))!important;
@@ -1199,14 +1199,14 @@ body.saas-luxury .app-body:has(#sec-dashboard.active) .page-head{display:none!im
 .lq-sim-stage:before{
   content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
   background:
-    linear-gradient(90deg,rgba(0,212,255,.08) 1px,transparent 1px),
-    linear-gradient(rgba(0,212,255,.05) 1px,transparent 1px);
+    linear-gradient(90deg,rgba(15,39,68,.08) 1px,transparent 1px),
+    linear-gradient(rgba(15,39,68,.05) 1px,transparent 1px);
   background-size:56px 56px;
   mask-image:linear-gradient(180deg,rgba(0,0,0,.55),transparent 92%)
 }
 .lq-sim-stage:after{
   content:"";position:absolute;inset-inline:0;top:0;height:2px;z-index:4;
-  background:linear-gradient(90deg,transparent,rgba(212,175,55,.85),rgba(109,93,252,.85),rgba(0,212,255,.75),transparent);
+  background:linear-gradient(90deg,transparent,rgba(212,175,55,.85),rgba(109,93,252,.85),rgba(15,39,68,.75),transparent);
   animation:lqSimScan 5.5s linear infinite
 }
 @keyframes lqSimScan{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
@@ -1234,7 +1234,7 @@ body.saas-luxury .app-body:has(#sec-dashboard.active) .page-head{display:none!im
   box-shadow:inset 0 0 40px rgba(109,93,252,.08)
 }
 .lq-sim-ring.r1{width:100%;height:100%;animation:lqSimSpin 28s linear infinite}
-.lq-sim-ring.r2{width:72%;height:72%;border-color:rgba(0,212,255,.18);animation:lqSimSpin 18s linear infinite reverse}
+.lq-sim-ring.r2{width:72%;height:72%;border-color:rgba(15,39,68,.18);animation:lqSimSpin 18s linear infinite reverse}
 .lq-sim-ring.r3{width:46%;height:46%;border-color:rgba(212,175,55,.22);animation:lqSimSpin 12s linear infinite}
 @keyframes lqSimSpin{to{transform:rotate(360deg)}}
 
@@ -1267,8 +1267,8 @@ body.saas-luxury .app-body:has(#sec-dashboard.active) .page-head{display:none!im
 }
 .lq-sim-tower{
   flex:0 0 auto;width:clamp(28px,4vw,46px);border-radius:8px 8px 2px 2px;
-  background:linear-gradient(180deg,rgba(0,212,255,.35),rgba(109,93,252,.12) 55%,rgba(4,8,20,.9));
-  border:1px solid rgba(255,255,255,.1);box-shadow:0 -8px 24px rgba(0,212,255,.12);
+  background:linear-gradient(180deg,rgba(15,39,68,.35),rgba(109,93,252,.12) 55%,rgba(4,8,20,.9));
+  border:1px solid rgba(255,255,255,.1);box-shadow:0 -8px 24px rgba(15,39,68,.12);
   animation:lqSimTower 3.5s ease-in-out infinite alternate
 }
 .lq-sim-tower:nth-child(odd){animation-delay:-1s}
