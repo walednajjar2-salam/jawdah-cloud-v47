@@ -1,24 +1,22 @@
 /* ============================================================
-   Smart glass dropdown menus — matching owner glass rail design
-   Dark translucent panels · icon pills · fast commands
-   No turquoise / cyan
+   Smart glass dropdowns — LIGHT glass (no navy wash)
+   Black text + dark icons on white/glass so commands are readable
    ============================================================ */
 
 :root{
-  --lq-dd-glass:rgba(12, 22, 38, .72);
-  --lq-dd-glass-item:rgba(18, 30, 48, .78);
-  --lq-dd-glass-hover:rgba(28, 44, 68, .88);
-  --lq-dd-line:rgba(255,255,255,.12);
+  --lq-dd-glass:rgba(255,255,255,.78);
+  --lq-dd-glass-item:rgba(255,255,255,.92);
+  --lq-dd-glass-hover:rgba(247,241,228,.95);
+  --lq-dd-line:rgba(15,42,74,.14);
   --lq-dd-gold:rgba(201,169,110,.55);
-  --lq-dd-ink:#f4f7fb;
-  --lq-dd-muted:rgba(244,247,251,.72);
+  --lq-dd-ink:#000000;
+  --lq-dd-muted:rgba(15,39,68,.72);
   --lq-dd-radius:14px;
   --lq-dd-shadow:
-    0 1px 0 rgba(255,255,255,.12) inset,
-    0 14px 32px rgba(8,16,28,.28);
+    0 1px 0 rgba(255,255,255,.9) inset,
+    0 10px 24px rgba(15,39,68,.08);
 }
 
-/* ---- Smart command rail (sidebar top) ---- */
 body.app-ready #lqSmartRail,
 body.lq-exec #lqSmartRail,
 #lqSmartRail,
@@ -29,6 +27,7 @@ body.lq-exec #lqSmartRail,
   margin:0 0 14px;
   padding:0 2px 12px;
   border-bottom:1px solid rgba(15,42,74,.10);
+  background:transparent !important;
 }
 
 body.app-ready .lq-dd,
@@ -37,6 +36,7 @@ body.lq-exec .lq-dd,
   position:relative;
   border-radius:var(--lq-dd-radius);
   background:var(--lq-dd-glass) !important;
+  background-image:linear-gradient(145deg,rgba(255,255,255,.92),rgba(255,255,255,.62)) !important;
   border:1px solid var(--lq-dd-line) !important;
   box-shadow:var(--lq-dd-shadow) !important;
   backdrop-filter:blur(18px) saturate(1.2) !important;
@@ -58,8 +58,8 @@ body.lq-exec .lq-dd-toggle,
   border-radius:var(--lq-dd-radius) !important;
   background:transparent !important;
   box-shadow:none !important;
-  color:var(--lq-dd-ink) !important;
-  -webkit-text-fill-color:var(--lq-dd-ink) !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
   font-family:"IBM Plex Sans Arabic",sans-serif !important;
   font-size:12px !important;
   font-weight:800 !important;
@@ -74,8 +74,8 @@ body.lq-exec .lq-dd-toggle .lq-dd-title span{
   display:flex;
   align-items:center;
   gap:10px;
-  color:var(--lq-dd-ink) !important;
-  -webkit-text-fill-color:var(--lq-dd-ink) !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
   font-size:12px !important;
   font-weight:800 !important;
 }
@@ -88,12 +88,18 @@ body.lq-exec .lq-dd-toggle .lq-dd-chev,
   display:grid;
   place-items:center;
   border-radius:8px;
-  background:rgba(255,255,255,.08) !important;
-  border:1px solid rgba(255,255,255,.12) !important;
-  color:var(--lq-dd-ink) !important;
-  -webkit-text-fill-color:var(--lq-dd-ink) !important;
+  background:rgba(15,42,74,.06) !important;
+  border:1px solid rgba(15,42,74,.12) !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
   transition:transform .22s ease;
   font-size:11px !important;
+}
+
+body.app-ready .lq-dd-toggle .lq-dd-chev .lq-ico,
+body.app-ready .lq-dd-toggle-ico .lq-ico{
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
 }
 
 .lq-dd.open .lq-dd-toggle .lq-dd-chev{
@@ -117,7 +123,7 @@ body.lq-exec .lq-dd-toggle .lq-dd-chev,
   opacity:1;
 }
 
-/* Command rows — match screenshot glass pills */
+/* Command rows — light glass, black label, readable SVG */
 body.app-ready .lq-dd-item,
 body.lq-exec .lq-dd-item,
 .lq-dd-item{
@@ -129,13 +135,13 @@ body.lq-exec .lq-dd-item,
   padding:11px 12px;
   margin:0;
   border-radius:12px !important;
-  border:1px solid rgba(255,255,255,.10) !important;
-  background:var(--lq-dd-glass-item) !important;
-  box-shadow:0 1px 0 rgba(255,255,255,.06) inset !important;
+  border:1px solid rgba(15,42,74,.12) !important;
+  background:#ffffff !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 6px 14px rgba(15,39,68,.05) !important;
   backdrop-filter:blur(12px);
   -webkit-backdrop-filter:blur(12px);
-  color:var(--lq-dd-ink) !important;
-  -webkit-text-fill-color:var(--lq-dd-ink) !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
   font-family:"IBM Plex Sans Arabic",sans-serif !important;
   font-size:12px !important;
   font-weight:700 !important;
@@ -147,24 +153,24 @@ body.lq-exec .lq-dd-item,
 body.app-ready .lq-dd-item:hover,
 body.app-ready .lq-dd-item:focus-visible,
 body.lq-exec .lq-dd-item:hover{
-  background:var(--lq-dd-glass-hover) !important;
+  background:linear-gradient(145deg,#fff,#f7f1e4) !important;
   border-color:var(--lq-dd-gold) !important;
   transform:translateY(-1px);
   outline:none;
-  color:var(--lq-dd-ink) !important;
-  -webkit-text-fill-color:var(--lq-dd-ink) !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
 }
 
 body.app-ready .lq-dd-item.active{
   border-color:rgba(201,169,110,.65) !important;
-  background:linear-gradient(145deg,rgba(40,54,78,.92),rgba(22,34,52,.88)) !important;
+  background:linear-gradient(145deg,#fff,#f3f7fc) !important;
 }
 
 body.app-ready .lq-dd-item .lq-dd-label,
 body.lq-exec .lq-dd-item .lq-dd-label{
   flex:1;
-  color:var(--lq-dd-ink) !important;
-  -webkit-text-fill-color:var(--lq-dd-ink) !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
   font-size:12px !important;
   font-weight:700 !important;
 }
@@ -178,30 +184,49 @@ body.lq-exec .lq-dd-item .lq-dd-ico,
   display:grid !important;
   place-items:center !important;
   border-radius:11px !important;
-  background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.05)) !important;
-  border:1px solid rgba(255,255,255,.16) !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(236,242,250,.75)) !important;
+  border:1px solid rgba(15,42,74,.14) !important;
   outline:1px solid rgba(201,169,110,.28) !important;
   outline-offset:-3px !important;
-  box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 8px 14px rgba(0,0,0,.18) !important;
-  color:#fff !important;
-  -webkit-text-fill-color:#fff !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 8px 14px rgba(15,39,68,.08) !important;
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
   font-size:15px !important;
   transform:perspective(600px) rotateX(6deg);
 }
 
+body.app-ready .lq-dd-item .lq-dd-ico .lq-ico,
+body.app-ready .lq-dd-item .lq-dd-ico .lq-ico svg{
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
+  stroke:#0f2744 !important;
+}
+
 body.app-ready .lq-dd-item.lq-dd-accent .lq-dd-ico{
-  background:linear-gradient(145deg,rgba(201,169,110,.55),rgba(120,90,40,.35)) !important;
+  background:linear-gradient(145deg,rgba(201,169,110,.35),rgba(255,255,255,.85)) !important;
   outline-color:rgba(201,169,110,.5) !important;
 }
 
-/* ---- Nav accordion groups (same glass language) ---- */
+body.app-ready .lq-dd-toggle-ico{
+  display:inline-grid !important;
+  place-items:center !important;
+  width:28px !important;
+  height:28px !important;
+  border-radius:9px !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(236,242,250,.7)) !important;
+  border:1px solid rgba(15,42,74,.14) !important;
+  color:#0f2744 !important;
+}
+
+/* Nav accordion groups — same light glass */
 body.app-ready #nav.nav-ultra .lq-nav-dd,
 body.lq-exec #nav.nav-ultra .lq-nav-dd{
   margin:0 0 8px;
   border-radius:var(--lq-dd-radius);
-  background:rgba(12,22,38,.55) !important;
-  border:1px solid rgba(255,255,255,.10) !important;
-  box-shadow:0 10px 22px rgba(8,16,28,.16) !important;
+  background:rgba(255,255,255,.72) !important;
+  background-image:linear-gradient(145deg,rgba(255,255,255,.9),rgba(255,255,255,.55)) !important;
+  border:1px solid rgba(15,42,74,.12) !important;
+  box-shadow:0 8px 18px rgba(15,39,68,.06) !important;
   backdrop-filter:blur(14px);
   -webkit-backdrop-filter:blur(14px);
   overflow:hidden;
@@ -212,8 +237,8 @@ body.lq-exec #nav.nav-ultra .lq-nav-dd > .lq-dd-toggle{
   background:transparent !important;
   border:0 !important;
   box-shadow:none !important;
-  color:#f4f7fb !important;
-  -webkit-text-fill-color:#f4f7fb !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
 }
 
 body.app-ready #nav.nav-ultra .lq-nav-dd .lq-dd-panel{
@@ -228,37 +253,43 @@ body.app-ready #nav.nav-ultra .lq-nav-dd.open .lq-dd-panel{
 body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section],
 body.app-ready #nav.nav-ultra .lq-nav-dd > .lq-dd-panel > button,
 body.lq-exec #nav.nav-ultra .lq-nav-dd button[data-section]{
-  background:rgba(255,255,255,.08) !important;
-  border:1px solid rgba(255,255,255,.10) !important;
-  color:#f4f7fb !important;
-  -webkit-text-fill-color:#f4f7fb !important;
-  box-shadow:0 1px 0 rgba(255,255,255,.06) inset !important;
+  background:#ffffff !important;
+  border:1px solid rgba(15,42,74,.12) !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+  box-shadow:0 4px 12px rgba(15,39,68,.05) !important;
 }
 
 body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section] .nav-ar,
 body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section] .nav-text,
 body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section] span,
 body.lq-exec #nav.nav-ultra .lq-nav-dd button[data-section] .nav-ar{
-  color:#f4f7fb !important;
-  -webkit-text-fill-color:#f4f7fb !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
 }
 
 body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section].active,
 body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section]:hover{
-  background:rgba(255,255,255,.14) !important;
+  background:linear-gradient(145deg,#fff,#f7f1e4) !important;
   border-color:rgba(201,169,110,.45) !important;
 }
 
 body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section] .nav-icon{
-  background:linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.06)) !important;
-  border-color:rgba(255,255,255,.18) !important;
-  color:#fff !important;
-  -webkit-text-fill-color:#fff !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(236,242,250,.7)) !important;
+  border-color:rgba(15,42,74,.14) !important;
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
+}
+
+body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section] .nav-icon .lq-ico,
+body.app-ready #nav.nav-ultra .lq-nav-dd button[data-section] .nav-icon .lq-ico svg{
+  color:#0f2744 !important;
+  stroke:#0f2744 !important;
 }
 
 body.app-ready #nav.nav-ultra .nav-group-label{display:none !important;}
 
-/* ---- Header ops bar → compact glass dropdown ---- */
+/* Header ops dropdowns — light glass */
 body.app-ready #opsQuickBar.ops-quick-bar.lq-ops-dd-host,
 #opsQuickBar.ops-quick-bar.lq-ops-dd-host{
   display:flex;
@@ -281,11 +312,11 @@ body.lq-exec #opsQuickBar .lq-ops-dd > .lq-dd-toggle{
   min-width:148px;
   padding:9px 12px;
   border-radius:12px !important;
-  background:rgba(12,22,38,.78) !important;
-  border:1px solid rgba(255,255,255,.12) !important;
+  background:#ffffff !important;
+  border:1px solid rgba(15,42,74,.14) !important;
   box-shadow:var(--lq-dd-shadow) !important;
-  color:#f4f7fb !important;
-  -webkit-text-fill-color:#f4f7fb !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
 }
 
 #opsQuickBar .lq-ops-dd .lq-dd-panel{
@@ -297,10 +328,10 @@ body.lq-exec #opsQuickBar .lq-ops-dd > .lq-dd-toggle{
   max-height:none;
   padding:8px;
   display:none;
-  background:rgba(12,22,38,.92) !important;
-  border:1px solid rgba(255,255,255,.12) !important;
+  background:#ffffff !important;
+  border:1px solid rgba(15,42,74,.14) !important;
   border-radius:14px;
-  box-shadow:0 18px 40px rgba(8,16,28,.35);
+  box-shadow:0 18px 40px rgba(15,39,68,.14);
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
   opacity:1;
@@ -313,6 +344,16 @@ body.lq-exec #opsQuickBar .lq-ops-dd > .lq-dd-toggle{
 }
 
 #opsQuickBar .ops-label{display:none !important;}
+
+/* Hard kill leftover navy washes on command UI */
+body.app-ready #lqSmartRail .lq-dd,
+body.app-ready #nav .lq-nav-dd,
+body.app-ready #opsQuickBar .lq-dd,
+body.app-ready .sidebar-ultra .lq-dd,
+body.app-ready .sidebar-ultra .lq-nav-dd{
+  background:#fff !important;
+  background-image:linear-gradient(145deg,#fff,rgba(247,250,252,.9)) !important;
+}
 
 @keyframes lqDdIn{
   from{opacity:0; transform:translateY(-6px)}

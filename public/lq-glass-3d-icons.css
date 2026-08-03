@@ -164,10 +164,12 @@ body.lq-exec .nav-icon .lq-ico{
 }
 body.app-ready .lq-dd-ico .lq-ico,
 body.app-ready .lq-dd-item .lq-dd-ico,
-body.app-ready .lq-dd-toggle .lq-dd-ico .lq-ico{
+body.app-ready .lq-dd-item .lq-dd-ico .lq-ico,
+body.app-ready .lq-dd-toggle .lq-dd-ico .lq-ico,
+body.app-ready .lq-dd-toggle-ico .lq-ico{
   font-size:15px !important;
-  color:#f4f7fb !important;
-  -webkit-text-fill-color:#f4f7fb !important;
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
 }
 body.app-ready .lq-dd-ico{
   display:grid !important;
@@ -175,7 +177,8 @@ body.app-ready .lq-dd-ico{
 }
 body.app-ready .lq-dd-chev .lq-ico{
   font-size:13px !important;
-  color:#f4f7fb !important;
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
 }
 body.app-ready .saas-cmd-icon .lq-ico,
 body.app-ready .saas-dash-menu-ico .lq-ico{
