@@ -668,23 +668,9 @@ function makeDropdown(host, conf, items){
   return wrap;
 }
 function renderSmartCommandRail(nav){
-  let rail=$('#lqSmartRail');
-  if(!rail){
-    rail=document.createElement('div');
-    rail.id='lqSmartRail';
-    rail.className='lq-smart-rail';
-    rail.setAttribute('aria-label','أوامر ذكية وسريعة');
-    if(nav && nav.parentNode) nav.parentNode.insertBefore(rail, nav);
-    else return;
-  }
-  rail.innerHTML='';
-  SMART_DD_GROUPS.forEach(group=>{
-    const open=Jawdah._navOpenGroups.has(group.id) || (!Jawdah._navOpenGroups.size && group.open);
-    const source=group.source==='ops'?OPS_QUICK_COMMANDS:FAB_QUICK_COMMANDS;
-    const items=source.filter(isSmartCmdAllowed).map(makeSmartDdItem);
-    if(!items.length) return;
-    makeDropdown(rail, {...group, open}, items);
-  });
+  // Retired: quick commands must not duplicate the primary sidebar navigation.
+  const rail=$('#lqSmartRail');
+  if(rail) rail.remove();
 }
 function syncFabDock(){
   const dock=$('#saasFabDock'); if(!dock) return;
