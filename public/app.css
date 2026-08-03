@@ -113,7 +113,8 @@
 .login-float-icon[data-tone="cyan"]{--lf-accent:#22d3ee;--lf-accent2:#0891b2}
 .login-float-icon[data-tone="amber"]{--lf-accent:#f59e0b;--lf-accent2:#b45309}
 .login-float-icon[data-tone="violet"]{--lf-accent:#a78bfa;--lf-accent2:#7c3aed}
-.login-float-icon[data-tone="teal"]{--lf-accent:#2dd4bf;--lf-accent2:#0d9488}
+.login-float-icon[data-tone="teal"]{--lf-accent:#1e4f8c;--lf-accent2:#0f2744}
+.login-float-icon[data-tone="navy"]{--lf-accent:#1e4f8c;--lf-accent2:#0f2744}
 .login-float-icon[data-tone="rose"]{--lf-accent:#fb7185;--lf-accent2:#e11d48}
 .lfi-orbit{position:absolute;inset:-10px;border-radius:24px;border:1px solid color-mix(in srgb,var(--lf-accent) 35%,transparent);opacity:.55;animation:lfiOrbit 8s linear infinite}
 .lfi-glow{position:absolute;inset:8px;border-radius:14px;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--lf-accent) 42%,transparent),transparent 68%);filter:blur(2px);animation:lfiPulse 4.2s ease-in-out infinite}
