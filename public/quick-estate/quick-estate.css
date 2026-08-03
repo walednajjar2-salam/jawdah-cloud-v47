@@ -4908,3 +4908,91 @@ body.app-body .content .panel{
   background:#fff !important;
   backdrop-filter:none !important;
 }
+
+/* ===== nizwa-clean2: absolute kill of watermarks + aqua (owner lock) ===== */
+html body.theme-realestate,
+html body.theme-realestate.section-dashboard,
+html body.app-body.theme-realestate{
+  background:#eef2f6 !important;
+  background-image:none !important;
+}
+html body.theme-realestate .workspace,
+html body.theme-realestate .app-shell,
+html body.section-dashboard .workspace{
+  background:#eef2f6 !important;
+  background-image:none !important;
+}
+html body.section-dashboard .content,
+html body.section-dashboard .content.dashboard-page,
+html body.section-dashboard .content.dashboard-page.brand-realestate,
+html body.theme-realestate .content.brand-realestate,
+html body.theme-realestate .content.brand-gold{
+  background:#f7f8fa !important;
+  background-image:none !important;
+}
+html body.section-dashboard .content.dashboard-page::before,
+html body.section-dashboard .content.dashboard-page.brand-realestate::before,
+html body.theme-realestate .content::before,
+html body.theme-realestate .content.brand-realestate::before,
+html body.theme-realestate .content.brand-gold::before,
+.content::before,
+.content.brand-realestate::before,
+.content.brand-gold::before,
+.login-gold-watermark,
+.login-panel:before{
+  content:none !important;
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  background:none !important;
+  background-image:none !important;
+  pointer-events:none !important;
+}
+/* Solid cards/tables — no شفاشف */
+html body.section-dashboard .content .card,
+html body.section-dashboard .content .stat-card,
+html body.section-dashboard .content .table-wrap,
+html body.section-dashboard .content .data-table th,
+html body.section-dashboard .content .data-table td,
+html body.section-dashboard .content .kpi,
+html body.section-dashboard .content .panel,
+html body.section-dashboard .empty-state,
+html body.section-dashboard .units-table-wrap,
+html body.section-dashboard .units-table,
+html body.section-dashboard .units-table tbody,
+html body.section-dashboard .units-table tbody tr,
+html body.section-dashboard .units-table tbody td,
+html body.theme-realestate .sidebar,
+html body.theme-realestate .nav-item,
+html body.theme-realestate .nav-item.active{
+  background:#fff !important;
+  background-image:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+html body.theme-realestate .sidebar{
+  background:linear-gradient(180deg,#0f2744,#1a3358) !important;
+  color:#fff !important;
+}
+html body.theme-realestate .nav-item{
+  background:rgba(255,255,255,.08) !important;
+  color:#f5f7fa !important;
+  border:1px solid rgba(201,169,110,.28) !important;
+}
+html body.theme-realestate .nav-item.active{
+  background:linear-gradient(145deg,#d4b15d,#8d6d2c) !important;
+  color:#1a1408 !important;
+  border-color:rgba(154,122,63,.5) !important;
+}
+html body.theme-realestate .nav-item span,
+html body.theme-realestate .nav-item.active span{
+  color:inherit !important;
+  background:transparent !important;
+}
+/* Kill aqua/turquoise tokens on Nizwa */
+html body.theme-realestate{
+  --aqua:#1e4f8c;
+  --aqua2:#0f2744;
+  --aqua-text:#0f2744;
+  --aqua-soft:#e8eef6;
+}

@@ -4,7 +4,7 @@
   --saas-bg2:#0B1020;
   --saas-primary:#6D5DFC;
   --saas-primary2:#7C4DFF;
-  --saas-cyan:#00D4FF;
+  --saas-cyan:#1e4f8c;
   --saas-success:#00C853;
   --saas-warning:#FFB300;
   --saas-danger:#FF5252;
@@ -718,13 +718,13 @@ body.login-ultra.saas-login .login-stage--center .login-glass-card{
 .cashflow-month{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
 .cashflow-col{position:relative;width:100%;max-width:42px;height:120px;display:flex;align-items:flex-end;justify-content:center;gap:3px}
 .cashflow-col i{display:block;width:14px;border-radius:6px 6px 2px 2px;min-height:4px;transition:height .5s ease}
-.cashflow-col i.inc{background:linear-gradient(180deg,#00D4FF,#6D5DFC)}
+.cashflow-col i.inc{background:linear-gradient(180deg,#1e4f8c,#6D5DFC)}
 .cashflow-col i.exp{background:linear-gradient(180deg,#FF7043,#FF5252)}
 .cashflow-month span{font-size:11px;font-weight:700;color:var(--saas-muted)}
 .cashflow-month small{font-size:9px;color:var(--saas-cyan);font-weight:700}
 .cashflow-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:11px;color:var(--saas-muted);font-weight:700}
 .cashflow-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:4px;vertical-align:middle}
-.cashflow-legend i.inc{background:#00D4FF}
+.cashflow-legend i.inc{background:#1e4f8c}
 .cashflow-legend i.exp{background:#FF7043}
 
 .saas-recent-table{padding:0;overflow:hidden}
@@ -897,7 +897,7 @@ body.saas-luxury .avatar-pro{width:38px!important;height:38px!important;font-siz
   font-size:9px;font-weight:700;color:var(--saas-muted);pointer-events:none
 }
 .canvas-wrap .chart-compare-legend i{display:inline-block;width:16px;height:2px;margin-inline-end:4px;vertical-align:middle;border-radius:2px}
-.canvas-wrap .chart-compare-legend i.cur{background:linear-gradient(90deg,#6D5DFC,#00D4FF)}
+.canvas-wrap .chart-compare-legend i.cur{background:linear-gradient(90deg,#6D5DFC,#1e4f8c)}
 .canvas-wrap .chart-compare-legend i.prior{background:repeating-linear-gradient(90deg,rgba(245,215,110,.7) 0 4px,transparent 4px 8px)}
 @keyframes chartDrawIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
 
@@ -1283,7 +1283,7 @@ body.saas-luxury .app-body:has(#sec-dashboard.active) .page-head{display:none!im
   padding:10px 12px;border-radius:14px;text-align:center;
   border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04)
 }
-.lq-sim-metric b{display:block;font-size:14px;font-weight:900;color:var(--saas-cyan,#00D4FF)}
+.lq-sim-metric b{display:block;font-size:14px;font-weight:900;color:var(--saas-cyan,#1e4f8c)}
 .lq-sim-metric span{display:block;margin-top:4px;font-size:10px;font-weight:700;color:rgba(226,232,240,.72)}
 
 body.saas-luxury .lq-cockpit-v30 .saas-kpi-grid{

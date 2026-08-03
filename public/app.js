@@ -774,8 +774,6 @@ function applyUserHeader(){
   if($('#userName')) $('#userName').textContent=name;
   if($('#userRole')) $('#userRole').textContent=role;
   if($('#avatar')) $('#avatar').textContent=initial;
-  const greet=$('#headerGreeting');
-  if(greet) greet.textContent=dashGreeting();
   const org=$('#headerOrgName');
   if(org && !org.textContent.trim()) org.textContent='مشاريع جودة الانطلاقة';
 }
@@ -1141,9 +1139,8 @@ function renderSidebarUser(){
   const name=displayUserName(Jawdah.user);
   const role=displayUserRole(Jawdah.user);
   const initial=(name||'ي').trim().charAt(0);
-  // Compact account card only — greeting stays in the header (do not cover nav/content).
-  el.innerHTML=`<div class="su-avatar">${initial}</div><div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div><button type="button" class="su-logout">Sign Out · خروج</button></div>`;
-  el.querySelector('.su-logout').onclick=logout;
+  // Identity only — logout lives once in the header (no duplicate).
+  el.innerHTML=`<div class="su-avatar">${initial}</div><div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div></div>`;
 }
 function employeeGreeting(name){
   const h = new Date().getHours();
@@ -1939,7 +1936,7 @@ function renderDashSimStage(k,eng){
   const towers=Math.min(7,Math.max(3,Number(k.properties||0)||3));
   const towerHtml=Array.from({length:towers},(_,i)=>`<i class="lq-sim-tower" style="height:${38+(i%4)*14}%"></i>`).join('');
   const nodes=[
-    {b:occ+'%',s:'إشغال',c:'#00D4FF'},
+    {b:occ+'%',s:'إشغال',c:'#1e4f8c'},
     {b:coll+'%',s:'تحصيل',c:'#00C853'},
     {b:money(k.net||0),s:'صافي',c:'#D4AF37'},
     {b:fmt(eng?.openMaintCount||0),s:'صيانة',c:'#FFB300'}
@@ -2007,7 +2004,7 @@ function renderDashMegaCockpit(k,data,eng){
   const gauges = portal==='hospitality'
     ? [
         gaugeSvg(majlisColl,'تحصيل مجالس','#00C853'),
-        gaugeSvg(eng.collectionPct,'تحصيل عام','#00D4FF'),
+        gaugeSvg(eng.collectionPct,'تحصيل عام','#1e4f8c'),
         gaugeSvg(k.health,'جاهزية','#6D5DFC'),
         gaugeSvg(eng.profitMargin,'هامش ربح','#7C4DFF'),
         gaugeSvg(hEvents.length?Math.round((activeMajlis.length/Math.max(hEvents.length,1))*100):0,'نشط','#FFB300'),
@@ -2020,10 +2017,10 @@ function renderDashMegaCockpit(k,data,eng){
           gaugeSvg(eng.profitMargin,'هامش ربح','#7C4DFF'),
           gaugeSvg(k.billed?Math.min(100,Math.round((Number(k.overdue||0)/Math.max(Number(k.billed),1))*100)):0,'ضغط متأخرات','#FF5252'),
           gaugeSvg(eng.slaPct,'إغلاق فترات','#FFB300'),
-          gaugeSvg(Math.max(0,100-Number(eng.profitMargin||0)),'ضغط تكلفة','#00D4FF')
+          gaugeSvg(Math.max(0,100-Number(eng.profitMargin||0)),'ضغط تكلفة','#1e4f8c')
         ].join('')
       : [
-          gaugeSvg(k.occupancy,'إشغال','#00D4FF'),
+          gaugeSvg(k.occupancy,'إشغال','#1e4f8c'),
           gaugeSvg(eng.collectionPct,'تحصيل','#00C853'),
           gaugeSvg(k.health,'جاهزية','#6D5DFC'),
           gaugeSvg(eng.profitMargin,'هامش ربح','#7C4DFF'),
@@ -3814,7 +3811,7 @@ function drawProductivityChart(id, series){
     const x=24+i*(w-50)/months.length+8;
     const oh=(openCounts[i]/max)*(h-36), dh=(doneCounts[i]/max)*(h-36);
     g.fillStyle='rgba(109,93,252,.7)'; g.fillRect(x,h-22-oh,bw,oh);
-    g.fillStyle='rgba(0,212,255,.7)'; g.fillRect(x+bw+4,h-22-dh,bw,dh);
+    g.fillStyle='rgba(30,79,140,.7)'; g.fillRect(x+bw+4,h-22-dh,bw,dh);
   });
   g.fillStyle='rgba(139,149,168,.8)'; g.font='700 10px "IBM Plex Sans Arabic",Cairo,sans-serif';
   months.forEach((lb,i)=>{ g.fillText(String(lb).slice(5), 24+i*(w-50)/months.length, h-6); });
@@ -3841,7 +3838,7 @@ function drawLinePro(id, arr, labels=[], compareArr=null){
       g.strokeStyle=gr;
     } else {
       const gr=g.createLinearGradient(0,0,w,0);
-      gr.addColorStop(0,'#6D5DFC'); gr.addColorStop(1,'#00D4FF');
+      gr.addColorStop(0,'#6D5DFC'); gr.addColorStop(1,'#1e4f8c');
       g.strokeStyle=gr;
     }
     g.lineWidth=dashed?2:3;
@@ -3862,7 +3859,7 @@ function drawLinePro(id, arr, labels=[], compareArr=null){
     }
   }
 }
-function drawDonutPro(id,p){ const c=$('#'+id); if(!c) return; const wrap=c.parentElement; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/2.8; g.lineWidth=14; g.strokeStyle='rgba(255,255,255,.08)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const pct=Math.max(0,Math.min(100,Number(p||0))); const prior=Math.max(0,Math.min(100,pct*0.88)); g.lineWidth=10; g.strokeStyle='rgba(245,215,110,.35)'; g.beginPath(); g.arc(x,y,r+8,-Math.PI/2,-Math.PI/2+Math.PI*2*(prior/100)); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#D4AF37'); gr.addColorStop(1,'#6D5DFC'); g.strokeStyle=gr; g.lineWidth=14; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*(pct/100)); g.stroke(); if(pct<100){ g.strokeStyle='#00D4FF'; g.beginPath(); g.arc(x,y,r,-Math.PI/2+Math.PI*2*(pct/100),-Math.PI/2+Math.PI*2); g.stroke(); } g.fillStyle='#fff'; g.font='700 22px "IBM Plex Sans Arabic",Cairo'; g.textAlign='center'; g.fillText(fmt(pct)+'%',x,y+8); if(wrap){ wrap.classList.add('chart-drawn'); if(!wrap.querySelector('.chart-compare-legend')) wrap.insertAdjacentHTML('beforeend','<div class="chart-compare-legend"><span><i class="cur"></i>الشهر الحالي</span><span><i class="prior"></i>الشهر السابق</span></div>'); } }
+function drawDonutPro(id,p){ const c=$('#'+id); if(!c) return; const wrap=c.parentElement; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/2.8; g.lineWidth=14; g.strokeStyle='rgba(255,255,255,.08)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const pct=Math.max(0,Math.min(100,Number(p||0))); const prior=Math.max(0,Math.min(100,pct*0.88)); g.lineWidth=10; g.strokeStyle='rgba(245,215,110,.35)'; g.beginPath(); g.arc(x,y,r+8,-Math.PI/2,-Math.PI/2+Math.PI*2*(prior/100)); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#D4AF37'); gr.addColorStop(1,'#6D5DFC'); g.strokeStyle=gr; g.lineWidth=14; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*(pct/100)); g.stroke(); if(pct<100){ g.strokeStyle='#1e4f8c'; g.beginPath(); g.arc(x,y,r,-Math.PI/2+Math.PI*2*(pct/100),-Math.PI/2+Math.PI*2); g.stroke(); } g.fillStyle='#fff'; g.font='700 22px "IBM Plex Sans Arabic",Cairo'; g.textAlign='center'; g.fillText(fmt(pct)+'%',x,y+8); if(wrap){ wrap.classList.add('chart-drawn'); if(!wrap.querySelector('.chart-compare-legend')) wrap.insertAdjacentHTML('beforeend','<div class="chart-compare-legend"><span><i class="cur"></i>الشهر الحالي</span><span><i class="prior"></i>الشهر السابق</span></div>'); } }
 function connectLiveStream(){
   if(Jawdah.liveStream){ try{ Jawdah.liveStream.close(); }catch(e){} Jawdah.liveStream=null; }
   if(!Jawdah.token) return;
@@ -3969,7 +3966,7 @@ function drawBarPro(id,arr,labels=[],compareArr=null){
   const c=$('#'+id); if(!c) return;
   const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h);
   const vals=[...arr,...(compareArr||[]),1], max=Math.max(...vals)*1.25;
-  const colors=['#6D5DFC','#7C4DFF','#00D4FF','#6D5DFC','#7C4DFF','#00D4FF'];
+  const colors=['#6D5DFC','#7C4DFF','#1e4f8c','#6D5DFC','#7C4DFF','#1e4f8c'];
   const bw=(w-50)/arr.length*.55;
   if(compareArr && compareArr.length===arr.length){
     compareArr.forEach((v,i)=>{
@@ -4039,25 +4036,20 @@ function prepCanvas(c){
   const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   return [g,w,h];
 }
-function drawDonut(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=22; g.lineCap='round'; g.strokeStyle='rgba(148,163,184,.14)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#9fd4d0'); gr.addColorStop(.5,'#6aab9e'); gr.addColorStop(1,'#4a8580'); g.strokeStyle=gr; g.shadowBlur=0; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.fillStyle='#e2e8f0'; g.font='700 28px Segoe UI'; g.textAlign='center'; g.fillText(fmt(p)+'%',x,y+6); g.font='13px Segoe UI'; g.fillStyle='rgba(148,163,184,.85)'; g.fillText('Occupancy',x,y+28); }
-function drawBar(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,'#9fd4d0'); grd.addColorStop(1,'#4a8580'); g.fillStyle=grd; g.shadowBlur=0; g.fillRect(x,h-25-bh,bw,bh);}); }
+function drawDonut(id,p){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const x=w/2,y=h/2,r=Math.min(w,h)/3; g.lineWidth=22; g.lineCap='round'; g.strokeStyle='rgba(148,163,184,.14)'; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.stroke(); const gr=g.createLinearGradient(x-r,y-r,x+r,y+r); gr.addColorStop(0,'#c9a96e'); gr.addColorStop(.5,'#8d6d2c'); gr.addColorStop(1,'#0f2744'); g.strokeStyle=gr; g.shadowBlur=0; g.beginPath(); g.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*p/100); g.stroke(); g.fillStyle='#e2e8f0'; g.font='700 28px Segoe UI'; g.textAlign='center'; g.fillText(fmt(p)+'%',x,y+6); g.font='13px Segoe UI'; g.fillStyle='rgba(148,163,184,.85)'; g.fillText('Occupancy',x,y+28); }
+function drawBar(id,arr){ const c=$('#'+id); if(!c) return; const [g,w,h]=prepCanvas(c); g.clearRect(0,0,w,h); const max=Math.max(...arr,1)*1.2, bw=(w-60)/arr.length*.65; arr.forEach((v,i)=>{const x=30+i*(w-60)/arr.length+10, bh=(v/max)*(h-50); const grd=g.createLinearGradient(0,h-25-bh,0,h-25); grd.addColorStop(0,'#c9a96e'); grd.addColorStop(1,'#0f2744'); g.fillStyle=grd; g.shadowBlur=0; g.fillRect(x,h-25-bh,bw,bh);}); }
 function syncHeaderClock(){
   const el=$('#clock');
   if(!el) return;
   el.textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
 }
 function syncHeaderGreeting(){
-  const greet=$('#headerGreeting');
-  if(greet) greet.textContent=dashGreeting();
+  /* Header greeting removed by owner request — keep noop for callers */
 }
 function initClock(){
   syncHeaderClock();
-  syncHeaderGreeting();
   setInterval(()=>{
     syncHeaderClock();
-    const m=new Date().getMinutes();
-    const s=new Date().getSeconds();
-    if(s===0 && (m===0 || m===30)) syncHeaderGreeting();
   },1000);
 }
 function initLoginCinema(){

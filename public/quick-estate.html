@@ -4,15 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>عقارات نزوى | جودة الانطلاقة</title>
-  <link rel="stylesheet" href="/quick-estate/quick-estate.css?v=nizwa-clean1">
+  <link rel="stylesheet" href="/quick-estate/quick-estate.css?v=nizwa-clean2">
   <style>
     :root{
       --qe-logo:url('/quick-estate/assets/logo_real_estate_transparent.png');
     }
-    /* No watermark text behind the workspace */
-    body.theme-realestate{
+    /* No watermark / no translucency behind the workspace */
+    html, body.app-body.theme-realestate, body.theme-realestate.section-dashboard{
       background:#eef2f6 !important;
       background-image:none !important;
+    }
+    body.section-dashboard .content.dashboard-page,
+    body.section-dashboard .content.dashboard-page.brand-realestate{
+      background:#f7f8fa !important;
+      background-image:none !important;
+    }
+    body.section-dashboard .content.dashboard-page::before,
+    .content::before, .content.brand-realestate::before{
+      content:none !important; display:none !important; opacity:0 !important;
+      background:none !important; background-image:none !important;
+    }
+    body.section-dashboard .content .card,
+    body.section-dashboard .content .stat-card,
+    body.section-dashboard .content .table-wrap{
+      background:#fff !important; backdrop-filter:none !important;
     }
     .qe-topbar-actions{display:flex;gap:8px;align-items:center}
     .qe-back{text-decoration:none}
@@ -27,7 +42,7 @@
     .hidden{display:none!important}
   </style>
 </head>
-<body class="theme-realestate section-dashboard">
+<body class="app-body theme-realestate section-dashboard">
   <div class="app-shell">
     <aside class="sidebar open">
       <div class="sidebar-brand">

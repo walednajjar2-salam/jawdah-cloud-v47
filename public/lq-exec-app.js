@@ -462,7 +462,7 @@
         </div>
       </div>`;
     bindLang();
-    requestAnimationFrame(() => drawSpark(document.getElementById("lqHospChart"), monthly, "#0d9488"));
+    requestAnimationFrame(() => drawSpark(document.getElementById("lqHospChart"), monthly, "#1e4f8c"));
   }
 
   function renderProductsBoard(host) {
