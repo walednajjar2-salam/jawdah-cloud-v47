@@ -197,7 +197,22 @@ body.app-ready table button.gold-btn{
   box-shadow:0 6px 14px rgba(141,109,44,.18) !important;
 }
 
-/* Nav icons: 3D glass navy/gold — never turquoise */
+/* ---------- Avatar letter icon removed (owner request) ---------- */
+body.app-ready #avatar,
+body.lq-exec #avatar,
+body.app-ready .userbox .avatar,
+body.app-ready .userbox-pro .avatar-pro,
+body.app-ready #sidebarUser .su-avatar,
+body.lq-exec #sidebarUser .su-avatar,
+.su-avatar{
+  display:none !important;
+  width:0 !important;
+  height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  visibility:hidden !important;
+}
 body.app-ready .nav-icon,
 body.lq-exec .nav-icon,
 body.saas-luxury .nav-icon,
