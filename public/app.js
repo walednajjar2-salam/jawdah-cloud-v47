@@ -712,11 +712,13 @@ function syncCmdFab(){
 }
 window.syncCmdFab = syncCmdFab;
 function syncFabDock(){
-  const dock=$('#saasFabDock'); if(!dock) return;
-  // Legacy elevator FAB stays disabled; new launcher is #lqCmdFab
-  dock.classList.add('hidden');
-  dock.setAttribute('hidden','');
-  dock.style.display='none';
+  const dock=$('#saasFabDock');
+  if(dock){
+    // Legacy elevator FAB stays disabled; new launcher is #lqCmdFab
+    dock.classList.add('hidden');
+    dock.setAttribute('hidden','');
+    dock.style.display='none';
+  }
   syncCmdFab();
 }
 function initFabDock(){

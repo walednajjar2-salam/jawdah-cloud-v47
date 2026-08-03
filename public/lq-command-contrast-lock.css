@@ -108,3 +108,23 @@ body.app-ready .content .dash-panel-dark{
   color:#000000 !important;
   border:1px solid rgba(15,42,74,.12) !important;
 }
+
+/* FAB navy pills keep white text (intentional contrast on dark) */
+body.app-ready #lqCmdFab .lq-cmd-fab-item,
+body.app-ready #lqCmdFab .lq-cmd-fab-item .lq-cmd-fab-label{
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+}
+body.app-ready #lqCmdFab .lq-cmd-fab-item{
+  background:rgba(12, 22, 40, .9) !important;
+  background-image:linear-gradient(145deg,rgba(22,34,56,.94),rgba(10,18,34,.92)) !important;
+}
+body.app-ready #lqCmdFab .lq-cmd-fab-ico .lq-ico svg{
+  stroke:#ffffff !important;
+  color:#ffffff !important;
+}
+body.app-ready #lqCmdFab{
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
