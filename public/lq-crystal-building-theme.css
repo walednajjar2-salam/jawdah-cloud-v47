@@ -357,3 +357,23 @@ html body .sidebar-section-logo{
 @media(prefers-reduced-motion:reduce){
   html body button{transition:none!important}
 }
+
+/* Final login crystal lock: visibly gold edges + black support copy */
+html body.login-ultra .login-glass-card,
+html body.login-ultra .ev-auth-card,
+html body.login-ultra .login-card--floating,
+html body.login-ultra .login-auth,
+html body.login-ultra .login-glass-stage{
+  border:2px solid rgba(174,128,30,.78)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 0 0 1px rgba(255,255,255,.48),
+    0 16px 34px rgba(58,42,14,.18),
+    0 0 0 1px rgba(201,169,110,.22)!important;
+}
+html body.login-ultra .login-help-btn,
+html body.login-ultra .login-help-btn *,
+html body.login-ultra a{
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+}
