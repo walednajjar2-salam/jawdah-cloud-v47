@@ -1093,7 +1093,15 @@ function applyEnvModeBadge(me){
 }
 function showAppShell(){
   document.body.classList.remove('login-ultra','saas-login');
-  document.body.classList.add('saas-luxury','enterprise-vision','va-theme','app-ready');
+  document.body.classList.add('saas-luxury','enterprise-vision','app-ready');
+  document.body.classList.remove('va-theme','login-ultra','saas-login');
+  // Owner: kill dark cosmic/teal wash permanently in the app shell
+  try{
+    const cosmic=document.getElementById('lqCosmicStars');
+    if(cosmic){ cosmic.remove(); }
+    document.querySelectorAll('.lq-cosmic-bg,.lq-app-bg-parity,#lqCosmicBg').forEach(el=>el.remove());
+  }catch(_){}
+  if(typeof syncCmdFab==='function') syncCmdFab();
   applyTerrifyingBase();
   $('#app')?.classList.remove('hidden');
   const login=$('#loginScreen');
