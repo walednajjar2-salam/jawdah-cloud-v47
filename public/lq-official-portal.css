@@ -11,13 +11,13 @@ body.lq-official-portal{
 
 body.lq-official-portal .op-stage{
   position:relative;z-index:1;
-  width:min(1040px,100%);
+  width:min(1220px,100%);
   margin:0 auto;
-  padding:8px 14px 10px;
+  padding:10px 18px 12px;
   display:flex;
   flex-direction:column;
   align-items:stretch;
-  gap:8px;
+  gap:10px;
   min-height:100vh;
   min-height:100dvh;
   box-sizing:border-box;
@@ -59,7 +59,8 @@ body.lq-official-portal .op-brand{
 body.lq-official-portal .op-brand .lq-brand-mark,
 body.lq-official-portal .op-brand .lq-brand-mark--portal{
   margin:0 auto -2px;
-  --bm-size:min(320px,38vh) !important;
+  /* Slightly smaller crest so the six packages can grow and still fit one viewport */
+  --bm-size:min(250px,28vh) !important;
   width:var(--bm-size) !important;
   height:var(--bm-size) !important;
   filter:drop-shadow(0 18px 28px rgba(15,42,74,.28));
@@ -94,15 +95,15 @@ body.lq-official-portal .op-support{
 body.lq-official-portal .op-count,
 body.lq-official-portal .op-rule{display:none !important}
 
-/* Photo-first compact tiles */
+/* Photo-first packages — larger tiles, all six visible together */
 body.lq-official-portal .op-choices{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
+  gap:14px;
   width:100%;
-  align-items:start;
+  align-items:stretch;
   flex:0 0 auto;
-  margin-top:2px;
+  margin-top:4px;
   animation:opRise .85s .1s ease both;
 }
 body.lq-official-portal .op-choice{
@@ -114,7 +115,7 @@ body.lq-official-portal .op-choice{
   gap:0;
   padding:0;
   overflow:hidden;
-  border-radius:16px;
+  border-radius:18px;
   background:rgba(255,255,255,.94);
   color:var(--lq-atm-text);
   border:2px solid rgba(15,42,74,.14);
@@ -122,8 +123,8 @@ body.lq-official-portal .op-choice{
   outline-offset:-4px;
   box-shadow:
     0 1px 0 rgba(255,255,255,.95) inset,
-    0 10px 18px rgba(15,42,74,.1),
-    0 22px 40px rgba(15,42,74,.12);
+    0 12px 22px rgba(15,42,74,.1),
+    0 26px 48px rgba(15,42,74,.12);
   backdrop-filter:blur(14px);
   transition:transform .28s ease, border-color .28s ease, box-shadow .28s ease;
   min-height:0;
@@ -155,7 +156,7 @@ body.lq-official-portal .op-mark{display:none}
 body.lq-official-portal .op-mark.op-mark-photo{
   display:block;
   width:100%;
-  height:86px;
+  height:clamp(118px,16vh,148px);
   border:0;border-radius:0;
   box-shadow:none;
   position:relative;z-index:1;
@@ -165,6 +166,7 @@ body.lq-official-portal .op-mark.op-mark-photo{
 }
 body.lq-official-portal .op-mark.op-mark-photo img{
   width:100%;height:100%;object-fit:cover;
+  object-position:center;
   transition:transform .45s ease;
   filter:saturate(1.08) contrast(1.04);
 }
@@ -178,30 +180,30 @@ body.lq-official-portal .op-mark.op-mark-photo::after{
 body.lq-official-portal .op-choice h2{
   margin:0;
   position:relative;z-index:1;
-  padding:7px 11px 0;
-  font-size:.95rem;font-weight:800;color:var(--lq-atm-ink);
+  padding:10px 14px 0;
+  font-size:1.05rem;font-weight:800;color:var(--lq-atm-ink);
   text-align:right;line-height:1.15;
   flex:0 0 auto;
 }
 body.lq-official-portal .op-choice p{
   margin:0;
   position:relative;z-index:1;
-  padding:2px 11px 0;
+  padding:3px 14px 0;
   flex:0 0 auto;
-  color:var(--lq-atm-muted);font-size:.7rem;line-height:1.3;font-weight:600;
+  color:var(--lq-atm-muted);font-size:.76rem;line-height:1.35;font-weight:600;
   text-align:right;
   display:-webkit-box;
-  -webkit-line-clamp:1;
+  -webkit-line-clamp:2;
   -webkit-box-orient:vertical;
   overflow:hidden;
 }
 body.lq-official-portal .op-enter{
   position:relative;z-index:1;
   display:inline-flex;align-items:center;justify-content:center;
-  margin:6px 9px 9px;
-  min-height:32px;padding:5px 10px;border-radius:10px;
+  margin:8px 12px 12px;
+  min-height:36px;padding:6px 12px;border-radius:11px;
   background:linear-gradient(145deg,var(--lq-atm-gold-bright),var(--lq-atm-gold-deep));
-  color:#1a1408;font-weight:800;font-size:.84rem;
+  color:#1a1408;font-weight:800;font-size:.9rem;
   border:1.5px solid rgba(154,122,63,.42);
   box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 8px 16px rgba(141,109,44,.22);
   text-align:center;
@@ -246,43 +248,43 @@ body.lq-official-portal .op-choice:nth-child(6){animation:opCardIn .55s .34s eas
   body.lq-official-portal .op-choices{grid-template-columns:1fr 1fr}
   body.lq-official-portal .op-brand .lq-brand-mark,
   body.lq-official-portal .op-brand .lq-brand-mark--portal{
-    --bm-size:min(240px,32vh) !important;
+    --bm-size:min(210px,28vh) !important;
   }
-  body.lq-official-portal .op-mark.op-mark-photo{height:84px}
+  body.lq-official-portal .op-mark.op-mark-photo{height:clamp(110px,15vh,136px)}
 }
 @media (max-width:640px){
-  body.lq-official-portal .op-stage{justify-content:flex-start;padding-top:48px;gap:10px}
+  body.lq-official-portal .op-stage{justify-content:flex-start;padding-top:48px;gap:12px}
   body.lq-official-portal .op-choices{grid-template-columns:1fr}
   body.lq-official-portal .op-choice,
   body.lq-official-portal .op-choice:hover{transform:none}
   body.lq-official-portal .op-brand .lq-brand-mark,
   body.lq-official-portal .op-brand .lq-brand-mark--portal{
-    --bm-size:min(200px,30vh) !important;
+    --bm-size:min(180px,26vh) !important;
   }
-  body.lq-official-portal .op-mark.op-mark-photo{height:110px}
+  body.lq-official-portal .op-mark.op-mark-photo{height:140px}
 }
 
 @media (max-height:820px){
-  body.lq-official-portal .op-stage{padding:6px 12px 8px;gap:4px}
+  body.lq-official-portal .op-stage{padding:8px 14px 10px;gap:6px}
   body.lq-official-portal .op-brand .lq-brand-mark,
   body.lq-official-portal .op-brand .lq-brand-mark--portal{
-    --bm-size:min(220px,30vh) !important;
+    --bm-size:min(190px,24vh) !important;
   }
   body.lq-official-portal .op-brand-name{font-size:clamp(1.4rem,2.8vw,1.85rem)}
   body.lq-official-portal .op-brand-ar{font-size:.95rem}
   body.lq-official-portal .op-support{font-size:.74rem;margin-top:3px}
-  body.lq-official-portal .op-choices{gap:8px}
-  body.lq-official-portal .op-mark.op-mark-photo{height:70px}
-  body.lq-official-portal .op-choice h2{padding-top:6px;font-size:.92rem}
-  body.lq-official-portal .op-enter{min-height:30px;margin:6px 8px 8px;font-size:.82rem}
+  body.lq-official-portal .op-choices{gap:10px}
+  body.lq-official-portal .op-mark.op-mark-photo{height:clamp(96px,13vh,118px)}
+  body.lq-official-portal .op-choice h2{padding-top:8px;font-size:.98rem}
+  body.lq-official-portal .op-enter{min-height:32px;margin:7px 10px 10px;font-size:.86rem}
 }
 @media (max-height:700px){
   body.lq-official-portal .op-support{display:none}
   body.lq-official-portal .op-brand .lq-brand-mark,
   body.lq-official-portal .op-brand .lq-brand-mark--portal{
-    --bm-size:min(170px,24vh) !important;
+    --bm-size:min(150px,20vh) !important;
   }
-  body.lq-official-portal .op-mark.op-mark-photo{height:58px}
+  body.lq-official-portal .op-mark.op-mark-photo{height:clamp(78px,12vh,96px)}
   body.lq-official-portal .op-choice p{display:none}
 }
 
