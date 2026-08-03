@@ -394,40 +394,47 @@ body.login-ultra.saas-login .login-bottom-center .login-features{
   margin-top:0!important;
 }
 
-/* Circular logo — transparent black background */
-body.login-ultra.saas-login .login-logo-wrap--circle{
-  width:clamp(148px,22vw,196px)!important;
-  height:clamp(148px,22vw,196px)!important;
-  border-radius:50%!important;
-  overflow:hidden!important;
+/* Logo — NEVER circular; rectangular crest only */
+body.login-ultra.saas-login .login-logo-wrap--circle,
+body.login-ultra.saas-login .login-logo-wrap--float,
+body.login-ultra.saas-login .lq-brand-mark{
+  width:min(420px,90vw)!important;
+  height:auto!important;
+  border-radius:0!important;
+  overflow:visible!important;
   background:transparent!important;
-  border:2px solid rgba(212,175,55,.28)!important;
-  box-shadow:0 0 48px rgba(212,175,55,.22),inset 0 0 24px rgba(212,175,55,.08)!important;
-  display:grid!important;
-  place-items:center!important;
+  border:0!important;
+  box-shadow:none!important;
+  display:block!important;
   margin:0 auto 4px!important;
   padding:0!important;
   line-height:0!important;
+  clip-path:none!important;
 }
-body.login-ultra.saas-login .login-logo-img--circle{
-  width:112%!important;
-  height:112%!important;
-  max-height:none!important;
-  object-fit:cover!important;
+body.login-ultra.saas-login .login-logo-img--circle,
+body.login-ultra.saas-login .login-logo-img--float,
+body.login-ultra.saas-login .login-logo-img{
+  width:100%!important;
+  height:auto!important;
+  max-height:clamp(220px,34vh,420px)!important;
+  object-fit:contain!important;
   object-position:center!important;
   background:transparent!important;
-  border-radius:50%!important;
-  mix-blend-mode:lighten!important;
+  border-radius:0!important;
+  clip-path:none!important;
+  mix-blend-mode:normal!important;
   filter:drop-shadow(0 10px 28px rgba(212,175,55,.38))!important;
-  animation:none!important;
-  transform:none!important;
 }
 
-body.saas-luxury .brand-logo-pro--circle{
-  width:88px!important;
-  height:88px!important;
-  max-height:88px!important;
+body.saas-luxury .brand-logo-pro--circle,
+body.saas-luxury .brand-logo-pro,
+body.saas-luxury .brand-logo-pro--hd{
+  width:128px!important;
+  height:auto!important;
+  max-height:82px!important;
+  aspect-ratio:auto!important;
   border-radius:0!important;
+  clip-path:none!important;
   object-fit:contain!important;
   object-position:center!important;
   mix-blend-mode:normal!important;

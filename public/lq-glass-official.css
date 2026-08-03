@@ -200,15 +200,21 @@ body.app-ready .tb-icon{
   filter:none !important;
 }
 
-/* ===== Logo: full, no plate, floating shadow, slow spin ===== */
+/* ===== Logo: full crest · swing right↔left · NOT circular ===== */
 @keyframes lqLogoFloatSlow{
-  0%{transform:translateY(0) rotate(-1.2deg)}
-  50%{transform:translateY(-5px) rotate(1.2deg)}
-  100%{transform:translateY(0) rotate(-1.2deg)}
+  0%{transform:translateX(8px) rotate(14deg)}
+  50%{transform:translateX(-8px) rotate(-14deg)}
+  100%{transform:translateX(8px) rotate(14deg)}
 }
 @keyframes lqLogoSpinSlow{
-  from{transform:rotate(0deg)}
-  to{transform:rotate(360deg)}
+  0%{transform:translateX(8px) rotate(14deg)}
+  50%{transform:translateX(-8px) rotate(-14deg)}
+  100%{transform:translateX(8px) rotate(14deg)}
+}
+@keyframes lqLogoSwingRL{
+  0%{transform:translateX(8px) rotate(14deg)}
+  50%{transform:translateX(-8px) rotate(-14deg)}
+  100%{transform:translateX(8px) rotate(14deg)}
 }
 
 body.app-ready .lq-header-brand,
@@ -236,25 +242,31 @@ body.app-ready .login-logo-img{
   max-height:88px !important;
   padding:0 !important;
   filter:drop-shadow(0 10px 18px rgba(15,39,68,.28)) drop-shadow(0 2px 6px rgba(201,169,110,.25)) !important;
-  animation:lqLogoFloatSlow 7.5s ease-in-out infinite !important;
+  animation:lqLogoSwingRL 4.8s ease-in-out infinite !important;
+  border-radius:0 !important;
+  clip-path:none !important;
 }
-/* Header crest slightly larger and fully visible */
+/* Header crest — natural rectangle, not a circle */
 body.app-ready .lq-header-logo{
-  width:92px !important;
-  height:84px !important;
-  max-height:84px !important;
+  width:118px !important;
+  height:auto !important;
+  max-height:72px !important;
+  aspect-ratio:auto !important;
 }
 body.app-ready .brand-logo-pro{
-  width:108px !important;
+  width:128px !important;
   height:auto !important;
-  max-height:100px !important;
+  max-height:82px !important;
+  aspect-ratio:auto !important;
 }
-/* Slow continuous spin for brand mark on login/portal only */
+/* Login/portal: same right↔left swing, never circular crop */
 body.login-ultra .lq-brand-mark--hero img,
 body.lq-official-portal .lq-brand-mark--portal img{
-  animation:lqLogoSpinSlow 48s linear infinite !important;
+  animation:lqLogoSwingRL 4.8s ease-in-out infinite !important;
   filter:drop-shadow(0 18px 30px rgba(15,39,68,.32)) drop-shadow(0 4px 10px rgba(201,169,110,.28)) !important;
   background:transparent !important;
+  border-radius:0 !important;
+  clip-path:none !important;
 }
 body.login-ultra .lq-brand-mark::before,
 body.login-ultra .lq-brand-mark::after,
@@ -289,11 +301,7 @@ body.app-ready th{
 }
 
 
-/* ===== SLOW LOGO SPIN FLOAT — full crest, no plate ===== */
-@keyframes lqLogoSpinSlow{
-  from{transform:rotate(0deg)}
-  to{transform:rotate(360deg)}
-}
+/* ===== LOGO SWING — full crest rectangle, no circle plate ===== */
 body.app-ready .lq-header-brand,
 body.app-ready .brand-pro,
 body.app-ready .lq-header-brand::before,
@@ -321,19 +329,20 @@ body.app-ready .brand-logo-pro--hd{
   background:transparent !important;
   border:0 !important;
   border-radius:0 !important;
+  clip-path:none !important;
   padding:0 !important;
   box-shadow:none !important;
   object-fit:contain !important;
   image-rendering:auto !important;
   filter:drop-shadow(0 12px 22px rgba(15,39,68,.24)) drop-shadow(0 2px 8px rgba(201,169,110,.30)) !important;
-  animation:lqLogoSpinSlow 48s linear infinite !important;
+  animation:lqLogoSwingRL 4.8s ease-in-out infinite !important;
   transform-origin:50% 50% !important;
 }
 body.app-ready .lq-header-logo{
-  width:96px !important;height:96px !important;max-width:96px !important;max-height:96px !important;
+  width:118px !important;height:auto !important;max-width:118px !important;max-height:72px !important;aspect-ratio:auto !important;
 }
 body.app-ready .brand-logo-pro--hd{
-  width:112px !important;height:112px !important;max-width:112px !important;max-height:112px !important;
+  width:128px !important;height:auto !important;max-width:128px !important;max-height:82px !important;aspect-ratio:auto !important;
 }
 @media (prefers-reduced-motion:reduce){
   body.app-ready .lq-header-logo,

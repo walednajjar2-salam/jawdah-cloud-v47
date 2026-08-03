@@ -172,10 +172,11 @@ body.app-ready .nav button .nav-icon{
   filter:none !important;
 }
 
-/* ----- Logo: full mark, no plate, floating shadow, slow spin ----- */
-@keyframes lqLogoSpinSlow{
-  from{transform:rotate(0deg)}
-  to{transform:rotate(360deg)}
+/* ----- Logo: full crest, NOT circular · swing right↔left ----- */
+@keyframes lqLogoSwingRL{
+  0%{transform:translateX(8px) rotate(14deg)}
+  50%{transform:translateX(-8px) rotate(-14deg)}
+  100%{transform:translateX(8px) rotate(14deg)}
 }
 
 body.app-ready .lq-header-brand,
@@ -197,35 +198,45 @@ body.app-ready .brand-logo-pro,
 body.app-ready .brand-logo-pro--circle,
 body.app-ready .brand-logo-pro--hd,
 body.lq-exec .brand-logo-pro,
-body.lq-exec .brand-logo-pro--hd{
+body.lq-exec .brand-logo-pro--hd,
+body.login-ultra .lq-brand-mark img,
+body.login-ultra .login-logo-img,
+body.lq-official-portal .lq-brand-mark img{
   background:transparent !important;
   border:0 !important;
   border-radius:0 !important;
+  clip-path:none !important;
+  -webkit-clip-path:none !important;
   padding:0 !important;
   box-shadow:none !important;
   object-fit:contain !important;
+  object-position:center !important;
   image-rendering:auto !important;
   -webkit-backface-visibility:hidden;
   backface-visibility:hidden;
   filter:drop-shadow(0 10px 18px rgba(15,39,68,.22)) drop-shadow(0 2px 6px rgba(201,169,110,.28)) !important;
-  animation:lqLogoSpinSlow 48s linear infinite !important;
+  animation:lqLogoSwingRL 4.8s ease-in-out infinite !important;
   transform-origin:center center !important;
 }
 
-/* Header logo size — crisp full crest */
+/* Natural rectangular crest — never a circle / equal square crop */
 body.app-ready .lq-header-logo,
 body.lq-exec .lq-header-logo{
-  width:92px !important;
-  height:92px !important;
-  max-width:92px !important;
-  max-height:92px !important;
+  width:118px !important;
+  height:auto !important;
+  max-width:118px !important;
+  max-height:72px !important;
+  aspect-ratio:auto !important;
 }
+body.app-ready .brand-logo-pro,
 body.app-ready .brand-logo-pro--hd,
+body.lq-exec .brand-logo-pro,
 body.lq-exec .brand-logo-pro--hd{
-  width:108px !important;
-  height:108px !important;
-  max-width:108px !important;
-  max-height:108px !important;
+  width:128px !important;
+  height:auto !important;
+  max-width:128px !important;
+  max-height:82px !important;
+  aspect-ratio:auto !important;
 }
 
 body.app-ready .lq-header-brand-text strong,
@@ -253,7 +264,9 @@ body.app-ready .su-avatar{display:none !important}
 @media (prefers-reduced-motion:reduce){
   body.app-ready .lq-header-logo,
   body.app-ready .brand-logo-pro,
-  body.app-ready .brand-logo-pro--hd{
+  body.app-ready .brand-logo-pro--hd,
+  body.login-ultra .lq-brand-mark img,
+  body.login-ultra .login-logo-img{
     animation:none !important;
   }
 }
