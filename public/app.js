@@ -658,68 +658,31 @@ function makeDropdown(host, conf, items){
   return wrap;
 }
 function renderSmartCommandRail(nav){
-  // Sidebar accordion rail retired — commands live in bottom-left FAB popout
-  const rail=$('#lqSmartRail');
-  if(rail){ rail.innerHTML=''; rail.setAttribute('hidden',''); }
-  syncCmdFab();
-}
-function syncCmdFab(){
-  let fab=$('#lqCmdFab');
-  if(!fab){
-    fab=document.createElement('div');
-    fab.id='lqCmdFab';
-    fab.className='lq-cmd-fab';
-    fab.innerHTML=`<button type="button" class="lq-cmd-fab-toggle" id="lqCmdFabToggle" aria-expanded="false" aria-label="أوامر ذكية"><span class="lq-cmd-fab-diamond" aria-hidden="true"></span></button><div class="lq-cmd-fab-stack" id="lqCmdFabStack" role="menu"></div>`;
-    document.body.appendChild(fab);
-    if(!fab.dataset.bound){
-      fab.dataset.bound='1';
-      const toggle=$('#lqCmdFabToggle');
-      toggle.onclick=e=>{
-        e.stopPropagation();
-        const open=fab.classList.toggle('open');
-        toggle.setAttribute('aria-expanded', open?'true':'false');
-        haptic(10);
-      };
-      document.addEventListener('click',e=>{
-        if(!fab.classList.contains('open')) return;
-        if(!fab.contains(e.target)){ fab.classList.remove('open'); toggle.setAttribute('aria-expanded','false'); }
-      });
-    }
+  let rail=$('#lqSmartRail');
+  if(!rail){
+    rail=document.createElement('div');
+    rail.id='lqSmartRail';
+    rail.className='lq-smart-rail';
+    rail.setAttribute('aria-label','أوامر ذكية وسريعة');
+    if(nav && nav.parentNode) nav.parentNode.insertBefore(rail, nav);
+    else return;
   }
-  const stack=$('#lqCmdFabStack'); if(!stack) return;
-  stack.innerHTML='';
-  FAB_QUICK_COMMANDS.filter(isSmartCmdAllowed).forEach(cmd=>{
-    const b=document.createElement('button');
-    b.type='button';
-    b.className='lq-cmd-fab-item'+(cmd.accent?' lq-cmd-fab-accent':'');
-    b.setAttribute('role','menuitem');
-    b.innerHTML=`<span class="lq-cmd-fab-label">${htmlEscape(cmd.label)}</span><span class="lq-cmd-fab-ico" aria-hidden="true">${lqIcon(cmd.icon||'dot',16)}</span>`;
-    b.onclick=()=>{
-      fab.classList.remove('open');
-      const t=$('#lqCmdFabToggle'); if(t) t.setAttribute('aria-expanded','false');
-      dashCommandClick(cmd.section, cmd.action||'');
-    };
-    stack.appendChild(b);
+  rail.innerHTML='';
+  SMART_DD_GROUPS.forEach(group=>{
+    const open=Jawdah._navOpenGroups.has(group.id) || (!Jawdah._navOpenGroups.size && group.open);
+    const source=group.source==='ops'?OPS_QUICK_COMMANDS:FAB_QUICK_COMMANDS;
+    const items=source.filter(isSmartCmdAllowed).map(makeSmartDdItem);
+    if(!items.length) return;
+    makeDropdown(rail, {...group, open}, items);
   });
-  // Force visible only when app ready (hide on login)
-  if(document.body.classList.contains('app-ready')){
-    fab.removeAttribute('hidden');
-    fab.style.cssText = 'display:flex!important;visibility:visible!important;opacity:1!important;';
-  }else{
-    fab.setAttribute('hidden','');
-    fab.style.cssText = 'display:none!important;';
-  }
 }
-window.syncCmdFab = syncCmdFab;
 function syncFabDock(){
-  const dock=$('#saasFabDock');
-  if(dock){
-    // Legacy elevator FAB stays disabled; new launcher is #lqCmdFab
-    dock.classList.add('hidden');
-    dock.setAttribute('hidden','');
-    dock.style.display='none';
-  }
-  syncCmdFab();
+  const dock=$('#saasFabDock'); if(!dock) return;
+  // Floating assistant / elevator FAB permanently disabled
+  dock.classList.add('hidden');
+  dock.setAttribute('hidden','');
+  dock.style.display='none';
+  return;
 }
 function initFabDock(){
   const dock=$('#saasFabDock'), toggle=$('#saasFabToggle'), top=$('#saasScrollTop');
@@ -744,15 +707,21 @@ function initFabDock(){
       });
     });
   }
-  syncCmdFab();
 }
 function syncOpsBar(){
   const bar=$('#opsQuickBar'); if(!bar) return;
   try{
-    // Header ops replaced by bottom-left FAB popout
-    bar.innerHTML='';
     bar.classList.add('lq-ops-dd-host');
-    bar.setAttribute('hidden','');
+    bar.innerHTML='';
+    const mk=(id,title,icon,cmds,open)=>{
+      const allowed=cmds.filter(isSmartCmdAllowed);
+      if(!allowed.length) return;
+      makeDropdown(bar, {id, title, icon, open:!!open}, allowed.map(makeSmartDdItem));
+      const last=bar.lastElementChild;
+      if(last) last.classList.add('lq-ops-dd');
+    };
+    mk('hdr-smart','أوامر ذكية','⚡',FAB_QUICK_COMMANDS,false);
+    mk('hdr-ops','عمليات','🚀',OPS_QUICK_COMMANDS,false);
   }catch(e){}
 }
 const STATUS_CLASS = {
@@ -1101,7 +1070,6 @@ function showAppShell(){
     if(cosmic){ cosmic.remove(); }
     document.querySelectorAll('.lq-cosmic-bg,.lq-app-bg-parity,#lqCosmicBg').forEach(el=>el.remove());
   }catch(_){}
-  if(typeof syncCmdFab==='function') syncCmdFab();
   applyTerrifyingBase();
   $('#app')?.classList.remove('hidden');
   const login=$('#loginScreen');

@@ -175,3 +175,29 @@ html body.app-ready #lqCmdFab .lq-cmd-fab-ico .lq-ico svg{
   stroke:#fff !important;
   color:#fff !important;
 }
+
+/* Forms/fields: force readable white fields */
+html body.app-ready input,
+html body.app-ready select,
+html body.app-ready textarea,
+html body.app-ready .toolbar input,
+html body.app-ready .toolbar select,
+html body.app-ready .form input,
+html body.app-ready .form select,
+html body.app-ready .form textarea{
+  background:#ffffff !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+  border:1px solid rgba(15,42,74,.18) !important;
+}
+html body.app-ready input::placeholder,
+html body.app-ready textarea::placeholder{
+  color:#475569 !important;
+  -webkit-text-fill-color:#475569 !important;
+  opacity:1 !important;
+}
+/* Hide empty nav wrappers/rows if any */
+html body.app-ready #nav .lq-dd:has(.lq-dd-panel:empty),
+html body.app-ready #nav button[data-section]:empty{
+  display:none !important;
+}
