@@ -524,14 +524,100 @@ function maybeSendWelcomeMessage(user){
 function htmlEscape(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const FAB_QUICK_COMMANDS = [
   {label:'لوحة التحكم', section:'dashboard', icon:'🏠'},
-  {label:'إضافة عقار', section:'properties', icon:'🏢'},
-  {label:'إضافة عميل', section:'clients', icon:'👥'},
-  {label:'إنشاء عقد', section:'contracts', icon:'📄'},
+  {label:'إضافة عقار', section:'properties', icon:'🏢', action:'focus'},
+  {label:'إضافة عميل', section:'clients', icon:'👥', action:'focus'},
+  {label:'إنشاء عقد', section:'contracts', icon:'📄', action:'focus'},
   {label:'الفواتير', section:'invoices', icon:'💳'},
   {label:'التقارير', section:'reports', icon:'📈'},
   {label:'Backup', section:'backup', icon:'💾', action:'backup'},
-  {label:'اختبار', section:'qa', icon:'✅', action:'qa'}
+  {label:'اختبار', section:'qa', icon:'✅', action:'qa', accent:true}
 ];
+const SMART_DD_GROUPS = [
+  {id:'smart', title:'أوامر ذكية', icon:'⚡', open:true, source:'fab'},
+  {id:'ops', title:'عمليات سريعة', icon:'🚀', open:false, source:'ops'}
+];
+if(!Jawdah._navOpenGroups) Jawdah._navOpenGroups = new Set(['smart','تشغيل']);
+function focusSectionForm(section){
+  const map={
+    properties:'#pBuilding',
+    clients:'#cName',
+    contracts:'#contractProperty',
+    invoices:'#sec-invoices .gold-btn',
+    maintenance:'#sec-maintenance input, #sec-maintenance select',
+    'admin-expenses':'#sec-admin-expenses input, #sec-admin-expenses select',
+    accounts:'#sec-accounts input, #sec-accounts select'
+  };
+  const sel=map[section]; if(!sel) return;
+  setTimeout(()=>{
+    try{
+      const el=document.querySelector(sel);
+      if(!el) return;
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      if(typeof el.focus==='function') el.focus({preventScroll:true});
+    }catch(_){}
+  }, 140);
+}
+function isSmartCmdAllowed(cmd){
+  if(cmd.finance && !canSeeFinanceSection(cmd.section)) return false;
+  if(cmd.admin && !['admin','owner'].includes(Jawdah.user?.role)) return false;
+  if(cmd.action==='backup' || cmd.action==='qa') return true;
+  return canAccessSection(cmd.section);
+}
+function makeSmartDdItem(cmd){
+  const b=document.createElement('button');
+  b.type='button';
+  b.className='lq-dd-item'+(cmd.accent?' lq-dd-accent':'');
+  b.innerHTML=`<span class="lq-dd-label">${htmlEscape(cmd.label)}</span><span class="lq-dd-ico" aria-hidden="true">${cmd.icon||'•'}</span>`;
+  b.onclick=()=>dashCommandClick(cmd.section, cmd.action||'');
+  return b;
+}
+function makeDropdown(host, conf, items){
+  const wrap=document.createElement('div');
+  wrap.className='lq-dd'+(conf.open?' open':'');
+  wrap.dataset.ddId=conf.id||'';
+  const toggle=document.createElement('button');
+  toggle.type='button';
+  toggle.className='lq-dd-toggle';
+  toggle.setAttribute('aria-expanded', conf.open?'true':'false');
+  toggle.innerHTML=`<span class="lq-dd-title"><span class="lq-dd-ico" aria-hidden="true" style="width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14)">${conf.icon||'▾'}</span><span>${htmlEscape(conf.title)}</span></span><span class="lq-dd-chev" aria-hidden="true">▾</span>`;
+  const panel=document.createElement('div');
+  panel.className='lq-dd-panel';
+  panel.setAttribute('role','menu');
+  items.forEach(el=>panel.appendChild(el));
+  toggle.onclick=e=>{
+    e.stopPropagation();
+    const willOpen=!wrap.classList.contains('open');
+    wrap.classList.toggle('open', willOpen);
+    toggle.setAttribute('aria-expanded', willOpen?'true':'false');
+    if(conf.id){
+      if(willOpen) Jawdah._navOpenGroups.add(conf.id);
+      else Jawdah._navOpenGroups.delete(conf.id);
+    }
+  };
+  wrap.appendChild(toggle);
+  wrap.appendChild(panel);
+  host.appendChild(wrap);
+  return wrap;
+}
+function renderSmartCommandRail(nav){
+  let rail=$('#lqSmartRail');
+  if(!rail){
+    rail=document.createElement('div');
+    rail.id='lqSmartRail';
+    rail.className='lq-smart-rail';
+    rail.setAttribute('aria-label','أوامر ذكية وسريعة');
+    if(nav && nav.parentNode) nav.parentNode.insertBefore(rail, nav);
+    else return;
+  }
+  rail.innerHTML='';
+  SMART_DD_GROUPS.forEach(group=>{
+    const open=Jawdah._navOpenGroups.has(group.id) || (!Jawdah._navOpenGroups.size && group.open);
+    const source=group.source==='ops'?OPS_QUICK_COMMANDS:FAB_QUICK_COMMANDS;
+    const items=source.filter(isSmartCmdAllowed).map(makeSmartDdItem);
+    if(!items.length) return;
+    makeDropdown(rail, {...group, open}, items);
+  });
+}
 function syncFabDock(){
   const dock=$('#saasFabDock'); if(!dock) return;
   // Floating assistant / elevator FAB permanently disabled
@@ -555,20 +641,29 @@ function initFabDock(){
     window.addEventListener('scroll',onScroll,{passive:true});
     onScroll();
   }
+  if(!document.body.dataset.lqDdOutside){
+    document.body.dataset.lqDdOutside='1';
+    document.addEventListener('click',e=>{
+      $$('#opsQuickBar .lq-ops-dd.open').forEach(dd=>{
+        if(!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  }
 }
 function syncOpsBar(){
   const bar=$('#opsQuickBar'); if(!bar) return;
   try{
-    bar.innerHTML='<span class="ops-label">عمليات:</span>';
-    OPS_QUICK_COMMANDS.forEach(cmd=>{
-      if(cmd.finance && !canSeeFinanceSection(cmd.section)) return;
-      if(cmd.admin && !['admin','owner'].includes(Jawdah.user?.role)) return;
-      if(!canAccessSection(cmd.section)) return;
-      const b=document.createElement('button'); b.type='button';
-      b.textContent=`${cmd.icon} ${cmd.label}`;
-      b.onclick=()=>dashCommandClick(cmd.section, cmd.action||'');
-      bar.appendChild(b);
-    });
+    bar.classList.add('lq-ops-dd-host');
+    bar.innerHTML='';
+    const mk=(id,title,icon,cmds,open)=>{
+      const allowed=cmds.filter(isSmartCmdAllowed);
+      if(!allowed.length) return;
+      makeDropdown(bar, {id, title, icon, open:!!open}, allowed.map(makeSmartDdItem));
+      const last=bar.lastElementChild;
+      if(last) last.classList.add('lq-ops-dd');
+    };
+    mk('hdr-smart','أوامر ذكية','⚡',FAB_QUICK_COMMANDS,false);
+    mk('hdr-ops','عمليات','🚀',OPS_QUICK_COMMANDS,false);
   }catch(e){}
 }
 const STATUS_CLASS = {
@@ -693,6 +788,9 @@ function dashCommandClick(section, action){
     if(action==='statements'){ showSection('statements'); return (window.loadFinancialStatements||loadFinancialStatements)?.(); }
     if(section==='reports' || action==='reports'){ showSection('reports'); return (window.renderReports||renderReports)?.(); }
     showSection(section);
+    if(action==='focus') focusSectionForm(section);
+    // Close header floating dropdowns after a fast command
+    $$('#opsQuickBar .lq-ops-dd.open').forEach(dd=>dd.classList.remove('open'));
   }catch(e){ toastErr(e); }
 }
 window.dashCommandClick = dashCommandClick;
@@ -1148,24 +1246,59 @@ function employeeGreeting(name){
 }
 function buildNav(){
   const nav=$('#nav'); if(!nav) return; nav.innerHTML='';
-  const addGroup=(t)=>{const g=document.createElement('div'); g.className='nav-group-label'; g.textContent=t; nav.appendChild(g);};
+  renderSmartCommandRail(nav);
+  let currentPanel=null;
+  let currentGroupId='';
+  const ensureGroup=(id,title,icon='📁')=>{
+    const open=Jawdah._navOpenGroups.has(id) || id==='تشغيل';
+    const wrap=document.createElement('div');
+    wrap.className='lq-nav-dd lq-dd'+(open?' open':'');
+    wrap.dataset.ddId=id;
+    const toggle=document.createElement('button');
+    toggle.type='button';
+    toggle.className='lq-dd-toggle';
+    toggle.setAttribute('aria-expanded', open?'true':'false');
+    toggle.innerHTML=`<span class="lq-dd-title"><span>${icon}</span><span>${htmlEscape(title)}</span></span><span class="lq-dd-chev" aria-hidden="true">▾</span>`;
+    const panel=document.createElement('div');
+    panel.className='lq-dd-panel';
+    toggle.onclick=e=>{
+      e.stopPropagation();
+      const willOpen=!wrap.classList.contains('open');
+      wrap.classList.toggle('open', willOpen);
+      toggle.setAttribute('aria-expanded', willOpen?'true':'false');
+      if(willOpen) Jawdah._navOpenGroups.add(id);
+      else Jawdah._navOpenGroups.delete(id);
+    };
+    wrap.appendChild(toggle);
+    wrap.appendChild(panel);
+    nav.appendChild(wrap);
+    currentPanel=panel;
+    currentGroupId=id;
+    return panel;
+  };
+  const addGroup=(t,icon)=>{
+    const id=String(t).split('·')[0].trim()||t;
+    ensureGroup(id,t,icon||'📁');
+  };
   const addBtn=(id,label,icon,cls='')=>{
     if(!uiAllowedSection(id)) return;
+    if(!currentPanel) ensureGroup('تشغيل','تشغيل','⚙️');
     const b=document.createElement('button'); b.dataset.section=id;
     if(cls) b.className=cls;
     b.innerHTML=`<span class="nav-icon">${icon}</span><span class="nav-text"><span class="nav-ar">${label}</span></span>`;
-    b.onclick=()=>showSection(id); nav.appendChild(b);
+    b.onclick=()=>showSection(id);
+    currentPanel.appendChild(b);
   };
   const portal = currentPortalChoice();
   const portalLabel = portal==='hospitality' ? 'مجالس' : (portal==='accounting' ? 'محاسبة' : 'عقارات');
   if(canManageUsersSection()){
-    addGroup('المالك');
+    addGroup('المالك','👑');
     if(isPrimaryOwnerUser()){
       addBtn('owner-staff','متابعة الموظفين','👑');
       addBtn('owner-live','لوحة المالك الحية','🛰️');
     }
   }
-  addGroup(`تشغيل · ${portalLabel}`);
+  addGroup(`تشغيل · ${portalLabel}`,'⚙️');
   if(portal==='realestate' || portal==='overview'){
     const nz=document.createElement('button');
     nz.type='button';
@@ -1174,7 +1307,7 @@ function buildNav(){
       const tok=encodeURIComponent(Jawdah.token||'');
       location.href='/quick-estate.html?portal=nizwaestate&t='+Date.now()+(tok?('&token='+tok):'');
     };
-    nav.appendChild(nz);
+    currentPanel.appendChild(nz);
   }
   NAV_SAAS_ITEMS.forEach(([id,label,icon])=>{
     if(!portalAllowsNavId(id)) return;
@@ -1184,7 +1317,7 @@ function buildNav(){
   });
   // Finance extras only inside accounting portal (or inventory for realestate).
   if(portal==='accounting' && (canSeeFinance() || canSeeInventory())){
-    addGroup('المالية');
+    addGroup('المالية','💼');
     [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{
       if(!canSeeFinanceSection(id)) return;
       if(!portalAllowsNavId(id) && id!=='accounts') return;
@@ -1195,11 +1328,11 @@ function buildNav(){
     addBtn('inventory','المخزن','📦','nav-finance-extra');
   }
   if(portal==='accounting' && canSeeApprovals()){
-    addGroup('الاعتمادات');
+    addGroup('الاعتمادات','✅');
     addBtn('approvals','مركز الاعتمادات','✅');
   }
   if(canManageUsersSection()){
-    addGroup('أدوات الإدارة');
+    addGroup('أدوات الإدارة','🛠️');
     addBtn('users','المستخدمين','🛡️');
     addBtn('business-catalog','كتالوج العمل','📋');
     addBtn('walid','وليد · الذكاء','🤖');
@@ -1208,6 +1341,7 @@ function buildNav(){
     if(portal==='realestate') addBtn('properties','المشاريع (قائمة)','🏢');
   }
   renderDashSideMenu();
+  syncOpsBar();
 }
 function renderDashSideMenu(){
   const host=$('#dashSideMenu'); if(!host) return;
