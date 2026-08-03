@@ -237,18 +237,15 @@
       <button type="button" class="ghost" id="lqNxCopyNizwa" title="نسخ من عقارات نزوى دون حذف الأصلية">نسخ بيانات نزوى</button>
     </div>
   </header>
-
-  <div class="lq-estate-nx-stats" id="lqNxStats"></div>
-
   <nav class="lq-estate-nx-modules" id="lqNxModules" aria-label="وحدات العمل">
     <button type="button" data-mod="units">الوحدات</button>
     <button type="button" data-mod="contracts">العقود</button>
     <button type="button" data-mod="maint">الصيانة</button>
   </nav>
 
-  <div class="lq-estate-nx-buildings" id="lqNxBuildings"></div>
-
   <div class="lq-estate-nx-toolbar" id="lqNxToolbar"></div>
+  <div class="lq-estate-nx-stats" id="lqNxStats"></div>
+  <div class="lq-estate-nx-buildings" id="lqNxBuildings"></div>
   <div class="lq-estate-nx-body" id="lqNxBody"></div>
 </div>
 

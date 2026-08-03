@@ -121,6 +121,12 @@ const NAV_SAAS_ITEMS = [
   ['backup','النسخ الاحتياطي','archive'],
   ['settings','الإعدادات','settings']
 ];
+const PORTAL_PRIMARY_NAV_ORDER = {
+  realestate: ['dashboard','estate-platform','clients','contracts','invoices','receivables','maintenance','reports','messages','timeline','backup','daily-ops','properties'],
+  hospitality: ['dashboard','hospitality-platform','clients','invoices','receivables','business-catalog','reports','messages','backup','daily-ops'],
+  accounting: ['dashboard','accounting-platform','reports','messages','backup','daily-ops'],
+  overview: ['dashboard','estate-platform','hospitality-platform','clients','contracts','invoices','receivables','maintenance','reports','messages','timeline','backup']
+};
 /** Portal-scoped product nav — only these appear in Operations for each portal. */
 const PORTAL_NAV_IDS = {
   realestate: new Set([
@@ -1309,6 +1315,8 @@ function buildNav(){
   const nav=$('#nav'); if(!nav) return; nav.innerHTML='';
   renderSmartCommandRail(nav);
   let currentPanel=null;
+  const addedNavIds = new Set();
+  const navMeta = new Map(NAV_SAAS_ITEMS.map(([id,label,icon])=>[id,{label,icon}]));
   const ensureGroup=(id,title,icon='📁')=>{
     const open=Jawdah._navOpenGroups.has(id) || id==='تشغيل';
     const wrap=document.createElement('div');
@@ -1341,12 +1349,14 @@ function buildNav(){
   };
   const addBtn=(id,label,icon,cls='')=>{
     if(!uiAllowedSection(id)) return;
+    if(addedNavIds.has(id)) return;
     if(!currentPanel) ensureGroup('تشغيل','تشغيل','gear');
     const b=document.createElement('button'); b.dataset.section=id;
     if(cls) b.className=cls;
     b.innerHTML=`<span class="nav-icon">${lqIcon(icon,16)}</span><span class="nav-text"><span class="nav-ar">${label}</span></span>`;
     b.onclick=()=>showSection(id);
     currentPanel.appendChild(b);
+    addedNavIds.add(id);
   };
   const portal = currentPortalChoice();
   const portalLabel = portal==='hospitality' ? 'مجالس' : (portal==='accounting' ? 'محاسبة' : 'عقارات');
@@ -1366,11 +1376,14 @@ function buildNav(){
     };
     currentPanel.appendChild(nz);
   }
-  NAV_SAAS_ITEMS.forEach(([id,label,icon])=>{
+  const orderedIds = PORTAL_PRIMARY_NAV_ORDER[portal] || PORTAL_PRIMARY_NAV_ORDER.realestate;
+  orderedIds.forEach((id)=>{
+    const meta = navMeta.get(id);
+    if(!meta) return;
     if(!portalAllowsNavId(id)) return;
     if(['revenues','admin-expenses'].includes(id) && !canSeeFinance()) return;
     if(id==='settings' && !Jawdah.user) return;
-    addBtn(id,label,icon);
+    addBtn(id,meta.label,meta.icon);
   });
   // Finance extras only inside accounting portal (or inventory for realestate).
   if(portal==='accounting' && (canSeeFinance() || canSeeInventory())){
@@ -1395,7 +1408,6 @@ function buildNav(){
     addBtn('walid','وليد · الذكاء','bot');
     addBtn('enterprise','التوسع / البنية','landmark');
     addBtn('production','جاهزية النظام','check');
-    if(portal==='realestate') addBtn('properties','المشاريع (قائمة)','building');
   }
   renderDashSideMenu();
   syncOpsBar();
