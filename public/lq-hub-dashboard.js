@@ -11,6 +11,18 @@
   function hubTiles(k) {
     const tiles = [
       {
+        id: "estate-platform",
+        icon: "🏛️",
+        label: "منصة العقارات",
+        value: () =>
+          fmt(
+            ((Jawdah.data.estate_apartments || []).length || 0) +
+              ((Jawdah.data.estate_rooms || []).length || 0)
+          ),
+        sub: "نفس الجلسة · بنايات ووحدات وعقود",
+        tone: "violet",
+      },
+      {
         id: "properties",
         icon: "🏢",
         label: "العقارات",
@@ -112,7 +124,7 @@
         <div class="lq-hub-hero-inner">
           <span class="lq-hub-pill">🌟 Data Insights · Command Hub</span>
           <h2>${greeting}، ${htmlEscape(name)}</h2>
-          <p>مركز القيادة — اختر منطقة العمل أو افتح التحليلات الكاملة</p>
+          <p>مركز القيادة — الجلسة مستمرة بنفس المستخدم والصورة والصلاحيات عبر المنصات</p>
         </div>
         <div class="lq-hub-hero-kpis">
           <div class="lq-hub-kpi"><b class="lq-kpi-pulse">${fmt(k.occupancy || 0)}%</b><span>إشغال</span></div>

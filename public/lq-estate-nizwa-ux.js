@@ -381,6 +381,38 @@
       .join("");
   }
 
+  async function renderBuildingSummary() {
+    const host = document.getElementById("lqNxBldSummary");
+    if (!host) return;
+    if (!state.buildingId) {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    try {
+      const res = await api("estate_building_summary?building_id=" + encodeURIComponent(state.buildingId));
+      const c = res.counts || {};
+      const col = res.collection || {};
+      host.hidden = false;
+      host.innerHTML = `
+        <div class="status-line" style="gap:8px;flex-wrap:wrap;margin:8px 0 4px">
+          <span class="badge">إشغال ${fmtVal(res.occupancy_pct)}%</span>
+          <span class="badge">مؤجرة ${fmtVal(c.occupied)}</span>
+          <span class="badge">شاغرة ${fmtVal(c.vacant)}</span>
+          <span class="badge">محجوزة ${fmtVal(c.reserved)}</span>
+          <span class="badge">صيانة ${fmtVal(c.maintenance)}</span>
+          <span class="badge">تحصيل ${moneyVal(col.collected)} / ${moneyVal(col.billed)}</span>
+          <span class="badge overdue">متأخرات ${moneyVal(col.overdue)}</span>
+          <span class="badge">تكلفة صيانة ${moneyVal(res.maintenance_cost)}</span>
+          <span class="badge">عملاء حاليون ${fmtVal((res.current_client_ids || []).length)}</span>
+          <span class="badge">عقود ${fmtVal((res.contracts || []).length)}</span>
+        </div>`;
+    } catch (e) {
+      host.hidden = false;
+      host.innerHTML = `<span class="badge">تعذر تحميل ملخص البناية</span>`;
+    }
+  }
+
   function renderToolbar() {
     const host = document.getElementById("lqNxToolbar");
     if (!host) return;
@@ -615,6 +647,18 @@
       if (act === "close" && typeof closeEstateContractById === "function") {
         return closeEstateContractById(id);
       }
+      if (act === "amend") {
+        const c = byRow("estate_contracts", id);
+        if (typeof requestEstateAmendment === "function") {
+          return requestEstateAmendment("estate_contracts", id, {
+            rent_amount: c.rent_amount,
+            end_date: c.end_date,
+            payment_cycle: c.payment_cycle,
+            notes: c.notes,
+          });
+        }
+        return toastBad("مركز طلبات التعديل غير متاح");
+      }
       if (act === "reject") {
         if (typeof canDecideApprovals === "function" && !canDecideApprovals()) {
           return toastBad("لا تملك صلاحية رفض الاعتماد");
@@ -705,16 +749,26 @@
           <label>عربون الحجز<input id="nxUDeposit" type="number" min="0" step="0.001" value="${esc(row.booking_deposit || 0)}"></label>
           <label>الطابق<input id="nxUFloor" type="number" value="${esc(row.floor_no ?? "")}"></label>
           <label>المساحة م²<input id="nxUArea" type="number" min="0" step="0.01" value="${esc(row.area_sqm || 0)}"></label>
-          <label>المستأجر (عملاء النظام)<select id="nxUTenant">${clientOptions(row.tenant_client_id || row.booked_client_id)}</select></label>
-          <label>هاتف المستأجر<input id="nxUPhone" value="${esc(row.tenant_phone || row.booked_client_phone || "")}"></label>
+          <label>العميل / المستأجر<select id="nxUTenant">${clientOptions(row.tenant_client_id || row.booked_client_id)}</select></label>
+          <label>هاتف العميل<input id="nxUPhone" value="${esc(row.tenant_phone || row.booked_client_phone || "")}"></label>
+          <label>هاتف إضافي<input id="nxUPhoneAlt" value="${esc((byRow("clients", row.tenant_client_id || row.booked_client_id).phone_alt) || "")}"></label>
+          <label>رقم الهوية<input id="nxUNational" value="${esc((byRow("clients", row.tenant_client_id || row.booked_client_id).national_id) || "")}" readonly></label>
+          <label>الجنسية<input id="nxUNationality" value="${esc((byRow("clients", row.tenant_client_id || row.booked_client_id).nationality) || "")}" readonly></label>
+          <label>بداية الحجز<input id="nxUResStart" type="date" value="${esc(row.reservation_start_date || "")}"></label>
+          <label>نهاية الحجز<input id="nxUResEnd" type="date" value="${esc(row.reservation_end_date || "")}"></label>
           <label>المسؤول<input id="nxUManager" value="${esc(row.manager_name || "")}"></label>
           <label>ملاحظات<textarea id="nxUNotes" rows="3">${esc(row.notes || "")}</textarea></label>
-        </div>`;
+        </div>
+        ${
+          row.tenant_client_id || row.booked_client_id
+            ? `<div class="toolbar" style="margin-top:8px"><button type="button" class="ghost" id="nxUDossier">ملف العميل المرتبط</button></div>`
+            : ""
+        }`;
       foot.innerHTML = `
         <button type="button" class="ghost" id="nxUClose">إغلاق</button>
         ${
           String(row.status || "").toLowerCase() === "reserved" && typeof canEstateConvertReservation === "function" && canEstateConvertReservation()
-            ? `<button type="button" class="ghost" id="nxUConvert">تحويل الحجز</button>`
+            ? `<button type="button" class="ghost" id="nxUConvert">تحويل إلى مسودة عقد</button><button type="button" class="danger" id="nxUCancelRes">إلغاء الحجز</button>`
             : ""
         }
         ${
@@ -725,14 +779,50 @@
         <button type="button" class="gold-btn" id="nxUSave">حفظ</button>`;
       document.getElementById("nxUClose")?.addEventListener("click", closeDrawer);
       document.getElementById("nxUSave")?.addEventListener("click", () => saveUnit(entityType, entityId));
+      document.getElementById("nxUDossier")?.addEventListener("click", () => {
+        const cid = document.getElementById("nxUTenant")?.value || row.tenant_client_id || row.booked_client_id;
+        if (cid && typeof openClientDossier === "function") openClientDossier(cid);
+        else toastBad("لا يوجد عميل مرتبط");
+      });
       document.getElementById("nxUConvert")?.addEventListener("click", () => {
         if (typeof convertEstateReservation === "function") convertEstateReservation(entityType, entityId);
       });
+      document.getElementById("nxUCancelRes")?.addEventListener("click", async () => {
+        if (!confirm("إلغاء الحجز وإعادة الوحدة إلى شاغرة؟")) return;
+        try {
+          const res = await api("estate_cancel_reservation", {
+            method: "POST",
+            body: JSON.stringify({ entity_type: entityType, entity_id: entityId, note: "Cancelled from unit drawer" }),
+          });
+          toastOk(res.message || "تم الحفظ بنجاح");
+          await loadAll();
+          openUnitDrawer(entityType, entityId, "details");
+          render();
+        } catch (e) {
+          toastBad(e);
+        }
+      });
       document.getElementById("nxUNewContract")?.addEventListener("click", () => createContractForUnit(entityType, entityId, row));
-      document.getElementById("nxUTenant")?.addEventListener("change", (e) => {
-        const c = byRow("clients", e.target.value);
+      document.getElementById("nxUTenant")?.addEventListener("change", async (e) => {
+        const clientId = e.target.value;
+        const c = byRow("clients", clientId);
         const phone = document.getElementById("nxUPhone");
-        if (c.phone && phone && !phone.value) phone.value = c.phone;
+        const phoneAlt = document.getElementById("nxUPhoneAlt");
+        const national = document.getElementById("nxUNational");
+        const nationality = document.getElementById("nxUNationality");
+        if (c.phone && phone) phone.value = c.phone;
+        if (phoneAlt) phoneAlt.value = c.phone_alt || "";
+        if (national) national.value = c.national_id || "";
+        if (nationality) nationality.value = c.nationality || "";
+        if (window.LQEstateFoundation && clientId) {
+          const filled = await window.LQEstateFoundation.autofillClientInto(clientId);
+          if (filled) {
+            if (phone && filled.phone) phone.value = filled.phone;
+            if (phoneAlt && filled.phone_alt) phoneAlt.value = filled.phone_alt;
+            if (national && filled.national_id) national.value = filled.national_id;
+            if (nationality && filled.nationality) nationality.value = filled.nationality;
+          }
+        }
       });
       return;
     }
@@ -751,6 +841,9 @@
             }
             if (st === "approved") acts += `<button type="button" class="gold-btn" data-c-act="activate" data-cid="${esc(c.id)}">تفعيل</button> `;
             if (st === "active") acts += `<button type="button" class="ghost" data-c-act="close" data-cid="${esc(c.id)}">إنهاء</button> `;
+            if (["approved", "active", "ended"].includes(st)) {
+              acts += `<button type="button" class="ghost" data-c-act="amend" data-cid="${esc(c.id)}">طلب تعديل</button> `;
+            }
             return `<div class="statement-row"><span><b>${esc(c.contract_no || c.id)}</b><br><small>${esc(c.start_date)} → ${esc(c.end_date)} · ${moneyVal(c.rent_amount)}</small></span><b>${esc(contractStatusAr(st))}</b></div><div class="toolbar" style="margin-bottom:10px">${acts}</div>`;
           })
           .join("") || `<p class="mini">لا عقود بعد لهذه الوحدة.</p>`;
@@ -792,11 +885,12 @@
       const amount = prompt("مبلغ التحصيل", String(Math.max(0, Number(openInv[0].amount || 0) - Number(openInv[0].paid_amount || 0))));
       if (amount === null) return;
       try {
-        await api("estate_contract_pay_invoice", {
+        const res = await api("estate_contract_pay_invoice", {
           method: "POST",
           body: JSON.stringify({ invoice_id: invId, amount: Number(amount || 0), payment_date: todayStr() }),
         });
-        toastOk("تم التحصيل");
+        const rcp = res.receipt?.receipt_no ? ` · سند ${res.receipt.receipt_no}` : "";
+        toastOk((res.message || "تم الحفظ بنجاح") + rcp);
         await loadAll();
         paintDrawer();
         render();
@@ -824,8 +918,23 @@
       tenant_phone: document.getElementById("nxUPhone")?.value || tenant.phone || "",
       manager_name: document.getElementById("nxUManager")?.value || "",
       notes: document.getElementById("nxUNotes")?.value || "",
+      reservation_start_date: document.getElementById("nxUResStart")?.value || row.reservation_start_date || null,
+      reservation_end_date: document.getElementById("nxUResEnd")?.value || row.reservation_end_date || null,
       last_update: todayStr(),
     };
+    if (status === "reserved") {
+      if (!tenantId) return toastBad("الحجز يتطلب اختيار عميل مسجّل أولاً");
+      payload.booked_client_id = tenantId;
+      payload.booked_client_name = tenant.name || "";
+      payload.booked_client_phone = payload.tenant_phone || tenant.phone || "";
+      payload.booked_by_employee = (window.Jawdah?.user?.name || window.Jawdah?.user?.username || "موظف");
+      if (!payload.reservation_start_date || !payload.reservation_end_date) {
+        return toastBad("الحجز يتطلب تاريخ بداية ونهاية");
+      }
+      if (Number(payload.booking_deposit || 0) <= 0) {
+        return toastBad("الحجز يتطلب عربونًا أكبر من صفر");
+      }
+    }
     if (
       typeof canEstatePricingEdit === "function" &&
       !canEstatePricingEdit() &&
@@ -835,8 +944,8 @@
       return toastBad("لا تملك صلاحية تعديل التسعير العقاري");
     }
     try {
-      await api(`${table}/${entityId}`, { method: "PUT", body: JSON.stringify(payload) });
-      toastOk("تم حفظ الوحدة");
+      const res = await api(`${table}/${entityId}`, { method: "PUT", body: JSON.stringify(payload) });
+      toastOk(res.message || "تم الحفظ بنجاح");
       await loadAll();
       render();
       openUnitDrawer(entityType, entityId, "details");
@@ -871,7 +980,7 @@
           notes: "",
         }),
       });
-      toastOk("تم إنشاء مسودة العقد");
+      toastOk("تم الحفظ بنجاح — مسودة العقد جاهزة للاعتماد");
       await loadAll();
       state.module = "contracts";
       openUnitDrawer(entityType, entityId, "contracts");
@@ -934,24 +1043,49 @@
   }
 
   async function createMaintPrompt() {
-    const title = prompt("عنوان طلب الصيانة");
+    const units = unifyUnits(state.propertyId, state.buildingId);
+    let entityType = "";
+    let entityId = "";
+    let autofill = {};
+    if (units.length) {
+      const labels = units.map((u, i) => `${i + 1}) ${u.name} (${unitStatusAr(u.status)})`).join("\n");
+      const pick = prompt(`اختر رقم الوحدة للصيانة (أو اتركه فارغًا للبناية فقط):\n${labels}`, "1");
+      if (pick === null) return;
+      const idx = Number(pick) - 1;
+      if (pick && units[idx]) {
+        entityType = units[idx].entityType;
+        entityId = units[idx].entityId;
+        if (window.LQEstateFoundation) {
+          autofill = (await window.LQEstateFoundation.autofillUnitInto(entityType, entityId)) || {};
+        }
+      }
+    }
+    const title = prompt("عنوان طلب الصيانة", autofill.unit_name ? `صيانة ${autofill.unit_name}` : "");
     if (!title) return;
+    const blocksAns = prompt("هل تمنع الصيانة التأجير/السكن؟ (نعم/لا)", "لا");
+    if (blocksAns === null) return;
+    const blocks_rental = /^(1|yes|y|نعم|true)$/i.test(String(blocksAns || "").trim()) ? 1 : 0;
+    const payload = {
+      property_id: autofill.property_id || state.propertyId || null,
+      building_id: autofill.building_id || state.buildingId || null,
+      apartment_id: entityType === "apartment" ? entityId : autofill.apartment_id || null,
+      room_id: entityType === "room" ? entityId : null,
+      title,
+      status: "Open",
+      priority: "Medium",
+      blocks_rental,
+      maintenance_date: todayStr(),
+      responsible_name: "",
+      parts_cost: 0,
+      labor_cost: 0,
+      total_cost: 0,
+      notes: autofill.tenant_name
+        ? `مستأجر: ${autofill.tenant_name || ""} · هاتف: ${autofill.tenant_phone || ""} · ${autofill.last_maintenance_notes || ""}`
+        : autofill.last_maintenance_notes || "",
+    };
     try {
-      await api("estate_maintenance", {
-        method: "POST",
-        body: JSON.stringify({
-          property_id: state.propertyId || null,
-          building_id: state.buildingId || null,
-          title,
-          status: "Open",
-          priority: "Medium",
-          maintenance_date: todayStr(),
-          parts_cost: 0,
-          labor_cost: 0,
-          total_cost: 0,
-        }),
-      });
-      toastOk("تم تسجيل طلب الصيانة");
+      const res = await api("estate_maintenance", { method: "POST", body: JSON.stringify(payload) });
+      toastOk(res.message || "تم الحفظ بنجاح");
       await loadAll();
       state.module = "maint";
       render();
@@ -979,6 +1113,7 @@
     renderStats(state.buildingId ? unitsBld : unitsAllProp);
     renderModules();
     renderBuildings();
+    renderBuildingSummary();
     renderToolbar();
     renderBody();
     if (state.drawer) paintDrawer();

@@ -72,7 +72,7 @@
   function headActions(extra) {
     return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       ${extra || ""}
-      <button type="button" class="ghost" onclick="location.href='/portal-select.html'">${t("switchPortal")}</button>
+      <button type="button" class="ghost" onclick="(function(){var tok=(window.Jawdah&&Jawdah.token)||localStorage.getItem('jawdah_cloud_token')||'';location.href='/portal-select.html?from=exec&t='+Date.now()+(tok?('&token='+encodeURIComponent(tok)):'');})()">${t("switchPortal")}</button>
       <span id="execLangMount"></span>
     </div>`;
   }

@@ -2281,8 +2281,9 @@ function renderProperties(){
   fillSelect('#propStatusFilter',['',...PROPERTY_STATUSES],false);
 }
 function renderClients(){
-  const rows=filterRows('clients',['name','phone','email','national_id']);
-  $('#clientsTable').innerHTML=tableHtml([['صورة البطاقة','id_card_image',(v,r)=>imagePreviewHtml(v, `بطاقة ${r.name||''}`)],['الاسم','name'],['الهاتف','phone'],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['ملاحظات','notes']],rows,r=>`<button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
+  const lifeLabel = {prospect:'عميل محتمل',current_tenant:'مستأجر حالي',former_tenant:'مستأجر سابق'};
+  const rows=filterRows('clients',['name','phone','email','national_id','lifecycle_status','phone_alt','nationality']);
+  $('#clientsTable').innerHTML=tableHtml([['صورة البطاقة','id_card_image',(v,r)=>imagePreviewHtml(v, `بطاقة ${r.name||''}`)],['الاسم','name'],['الهاتف','phone'],['الحالة','lifecycle_status',(v)=>`<span class="badge">${lifeLabel[v]||v||'عميل'}</span>`],['البريد','email'],['الهوية/السجل','national_id'],['الرصيد','balance',(v)=>money(v)],['ملاحظات','notes']],rows,r=>`<button class="gold-btn" onclick="openClientDossier('${r.id}')">ملف العميل</button> <button class="ghost" onclick="clientStatement('${r.id}')">كشف</button> <button class="ghost" onclick="editRecord('clients','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('clients','${r.id}')">حذف</button>`);
 }
 function renderContracts(){
   fillSelect('#contractProperty',Jawdah.data.properties||[],true,'id','name',propertyLabel); fillSelect('#contractClient',Jawdah.data.clients||[],true,'id','name');
@@ -2464,8 +2465,29 @@ async function runAutoBackup(){
     renderBackup();
   }catch(e){ toastErr(e); }
 }
+async function verifyBackupRestore(){
+  const box=$('#backupVerifyBox');
+  if(box) box.innerHTML='<p class="mini">جاري فحص الاستعادة على بيئة مؤقتة…</p>';
+  try{
+    const res=await api('backup/verify');
+    const vr=res.verification||res||{};
+    const checks=vr.checks||[];
+    const html=`
+      <div class="status-line" style="margin-bottom:8px">
+        <span class="badge ${vr.ok?'paid':'overdue'}">Dry-run ${vr.ok?'ناجح':'يحتاج مراجعة'} · ${fmt(vr.score||0)}%</span>
+      </div>
+      ${checks.map(c=>`<p class="badge ${c.ok?'paid':'overdue'}">${htmlEscape(c.name)}: ${htmlEscape(String(c.value??''))}${c.expected!=null?' · متوقع '+htmlEscape(String(c.expected)):''}</p>`).join('')}
+      <p class="mini" style="margin-top:8px">هذا فحص استعادة على قاعدة مؤقتة — لا يغيّر بيانات الإنتاج ولا ينشر النظام.</p>`;
+    if(box) box.innerHTML=html;
+    toast(vr.ok?'نجح فحص الاستعادة (Dry-run)':'فحص الاستعادة أظهر ملاحظات');
+  }catch(e){
+    if(box) box.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    toastErr(e);
+  }
+}
+window.verifyBackupRestore=verifyBackupRestore;
 function renderQA(){
-  $('#qaBox').innerHTML='<p>يمكنك تشغيل الاختبار العام أو QA العقار خطوة بخطوة. سيتم تشغيل نغمة نجاح/فشل لكل حالة تلقائيًا.</p>';
+  $('#qaBox').innerHTML='<p>شغّل الاختبار العام، QA العقار، أو السيناريو الكامل (عميل←حجز←عقد←دفع←سند←صيانة←طلب تعديل). النشر ما زال موقفًا.</p>';
 }
 function populateSelects(){
   fillSelect('#pBranch', Jawdah.data.branches||[], true, 'id', 'name');
@@ -3167,7 +3189,19 @@ async function createClient(){
     if(!String(cardFile.type||'').startsWith('image/')){ toastNotice('ملف بطاقة العميل يجب أن يكون صورة'); return; }
     idCardUpload = { image: await readFileAsDataUrl(cardFile), content_type: cardFile.type, name: cardFile.name };
   }
-  await saveNew('clients',{name,phone:val('cPhone'),email:val('cEmail'),national_id:val('cNational'),id_card_upload:idCardUpload,balance:0,notes:val('cNotes')});
+  await saveNew('clients',{
+    name,
+    phone:val('cPhone'),
+    phone_alt:val('cPhoneAlt'),
+    email:val('cEmail'),
+    national_id:val('cNational'),
+    nationality:val('cNationality'),
+    address:val('cAddress'),
+    id_card_upload:idCardUpload,
+    balance:0,
+    notes:val('cNotes'),
+    lifecycle_status:'prospect'
+  });
   if($('#cCardImage')) $('#cCardImage').value='';
   if($('#cCardPreview')){ $('#cCardPreview').classList.add('hidden'); $('#cCardPreview').removeAttribute('src'); }
 }
@@ -3264,7 +3298,7 @@ async function applyUserPermissionTemplate(){
   if(statusBox) statusBox.innerHTML = `<span class="badge paid">تم تطبيق الضبط</span><span class="badge">محدث: ${fmt(updated)}</span><span class="badge">بدون تغيير: ${fmt(skipped)}</span>`;
   toast('تم ضبط الصلاحيات بنجاح');
 }
-async function saveNew(table,row){ try{ await api(table,{method:'POST',body:JSON.stringify(row)}); toast('تم الحفظ'); await loadAll(); }catch(e){toastErr(e)} }
+async function saveNew(table,row){ try{ const res=await api(table,{method:'POST',body:JSON.stringify(row)}); toast(res.message||'تم الحفظ بنجاح'); await loadAll(); }catch(e){toastErr(e)} }
 function val(id){ return ($('#'+id)?.value||'').trim(); } function num(id){ return Number(val(id)||0); }
 async function delRecord(table,id){
   if(table==='users'){
@@ -3313,12 +3347,15 @@ function editOptions(field, row, table=''){
   if(table === 'hospitality_bookings' && field === 'room_id') return (Jawdah.data.hospitality_rooms||[]).map(x=>[x.id, `${x.room_code||x.id} · ${propertyLabel(byId('properties',x.property_id))}`]);
   if(table === 'hospitality_season_rates' && field === 'active') return [['1','Active'],['0','Inactive']];
   if(field === 'deposit_received') return [['1','نعم — تم الاستلام'],['0','لا — لم يُستلم']];
+  if(field === 'lifecycle_status') return [['prospect','عميل محتمل'],['current_tenant','مستأجر حالي'],['former_tenant','مستأجر سابق']];
+  if(table === 'estate_maintenance' && field === 'status') return [['Open','مفتوح'],['In Progress','قيد التنفيذ'],['Closed','مغلق']];
   if(opts[field]) return opts[field].map(x=>[x, field==='role'?roleName(x):(x==='1'?'نعم':x==='0'?'لا':x)]);
   return null;
 }
 const EDIT_CONFIG = {
   properties: {title:'تعديل عقار', fields:[['building_no','رقم البناية','text'],['apartment_no','رقم الوحدة','text'],['unit_kind','نوع الوحدة','select'],['room_no','رقم الغرفة (للغرفة المستقلة)','text'],['unit_rooms_count','عدد غرف الشقة','number'],['status','الحالة','select'],['price','السعر','number'],['location','الموقع','text'],['latitude','Latitude','number'],['longitude','Longitude','number'],['name','اسم العرض (اختياري)','text'],['type','النوع','select'],['image','رمز/صورة','text'],['notes','ملاحظات','textarea']]},
-  clients: {title:'تعديل عميل', fields:[['name','اسم العميل','text'],['phone','الهاتف','text'],['email','البريد','text'],['national_id','الهوية/السجل','text'],['id_card_image','رابط صورة البطاقة','text'],['balance','الرصيد الافتتاحي','number'],['notes','ملاحظات','textarea']]},
+  clients: {title:'تعديل عميل', fields:[['name','اسم العميل','text'],['phone','الهاتف','text'],['phone_alt','هاتف إضافي','text'],['email','البريد','text'],['national_id','الهوية/السجل','text'],['nationality','الجنسية','text'],['address','العنوان','text'],['lifecycle_status','حالة العميل','select'],['id_card_image','رابط صورة البطاقة','text'],['balance','الرصيد الافتتاحي','number'],['notes','ملاحظات','textarea']]},
+  estate_maintenance: {title:'تعديل صيانة عقارية', fields:[['title','عنوان الطلب','text'],['property_id','العقار','text'],['building_id','البناية','text'],['apartment_id','الشقة','text'],['room_id','الغرفة','text'],['priority','الأولوية','select'],['status','الحالة','select'],['blocks_rental','تمنع التأجير/السكن (1/0)','number'],['maintenance_date','تاريخ الطلب','date'],['responsible_name','المسؤول','text'],['parts_cost','قطع غيار','number'],['labor_cost','أجور','number'],['total_cost','التكلفة الفعلية','number'],['invoice_no','رقم فاتورة الصيانة','text'],['notes','ملاحظات','textarea']]},
   contracts: {title:'تعديل عقد', fields:[['contract_no','رقم العقد','text'],['contract_type','نوع العقد','select'],['property_id','الوحدة المؤجرة','select'],['client_id','المستأجر','select'],['tenant_nationality','جنسية المستأجر','text'],['tenant_id_no','رقم الهوية/السجل','text'],['unit_details','تفاصيل الوحدة','textarea'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['rent_amount','قيمة الإيجار','number'],['late_fee','غرامة التأخير','number'],['grace_days','مهلة السداد بالأيام','number'],['renewal_notice_days','تنبيه التجديد بالأيام','number'],['status','الحالة','select'],['payment_cycle','دورة الدفع','select'],['legal_terms','الشروط القانونية','textarea'],['notes','ملاحظات','textarea']]},
   accounts: {title:'تعديل حركة مالية', fields:[['entry_date','التاريخ','date'],['type','النوع','select'],['category','التصنيف','text'],['description','الوصف','text'],['client_id','العميل','select'],['property_id','العقار','select'],['invoice_id','الفاتورة','select'],['amount','المبلغ','number']]},
   maintenance: {title:'تعديل طلب صيانة', fields:[['property_id','العقار','select'],['title','عنوان الطلب','text'],['priority','الأولوية','select'],['status','الحالة','select'],['request_date','تاريخ الطلب','date'],['cost','التكلفة','number'],['notes','ملاحظات','textarea']]},
@@ -3363,9 +3400,9 @@ async function submitEditRecord(table,id){
     ){
       return toastErr('لا تملك صلاحية تعديل التسعير العقاري');
     }
-    await api(`${table}/${id}`, {method:'PUT', body:JSON.stringify(data)});
+    const res=await api(`${table}/${id}`, {method:'PUT', body:JSON.stringify(data)});
     closeModal('genericModal');
-    toast('تم حفظ التعديل');
+    toast(res.message||'تم الحفظ بنجاح');
     await loadAll();
   }catch(e){ toastErr(e); }
 }
@@ -3772,6 +3809,63 @@ async function runEstateQaScenario(){
   }
 }
 window.runEstateQaScenario = runEstateQaScenario;
+async function runEstateLifecycleScenario(){
+  const box=$('#qaBox');
+  if(!box) return;
+  box.innerHTML=`<div class="card lq-ops-guide"><h3>🏢 سيناريو منصة العقارات الكامل</h3><p class="mini">عميل ← احتياج ← معاينة ← حجز ← عقد ← اعتماد ← تفعيل ← دفع ← سند ← صيانة تمنع التأجير ← طلب تعديل · مع تنظيف تلقائي.</p><p class="mini">جاري التنفيذ على الخادم…</p></div>`;
+  try{
+    const res=await api('estate_qa_lifecycle',{method:'POST',body:JSON.stringify({})});
+    const steps=res.steps||[];
+    steps.forEach(s=>playQaTone(!!s.ok));
+    const finalOk=!!res.ok;
+    playQaTone(finalOk);
+    box.innerHTML=`
+      <div class="card lq-ops-guide">
+        <h3>🏁 تقرير السيناريو الكامل</h3>
+        <p class="mini">نجح ${fmt(res.passed||0)} من ${fmt(res.total||steps.length)} · النشر موقف: ${res.publish_blocked!==false?'نعم':'لا'}</p>
+      </div>
+      ${steps.map((r,i)=>qaRowHtml(i,{name:r.name,ok:r.ok,detail:r.detail||''})).join('')}
+      <div class="status-line" style="margin-top:10px">
+        <span class="badge ${finalOk?'paid':'overdue'}">${finalOk?'السيناريو نجح — جاهز لاستكمال الاختبارات البشرية':'يحتاج معالجة قبل المتابعة'}</span>
+        <span class="badge overdue">لا نشر</span>
+      </div>`;
+    toast(res.message||(finalOk?'نجح السيناريو الكامل':'السيناريو أظهر إخفاقات'));
+    if(typeof loadAll==='function') await loadAll();
+  }catch(e){
+    playQaTone(false);
+    box.innerHTML=`<p class="badge overdue">فشل السيناريو: ${htmlEscape(friendlyMsg(e))}</p>`;
+    toastErr(e);
+  }
+}
+window.runEstateLifecycleScenario=runEstateLifecycleScenario;
+async function runEstateIntegrityCheck(){
+  const box=$('#qaBox');
+  if(!box) return;
+  try{
+    const [integ, audit]=await Promise.all([
+      api('estate_integrity'),
+      api('estate_foundation_audit').catch(()=>({}))
+    ]);
+    const report=integ.report||integ;
+    const issues=report.issues||[];
+    box.innerHTML=`
+      <div class="card lq-ops-guide">
+        <h3>سلامة بيانات منصة العقارات</h3>
+        <p class="mini">المشاكل: ${fmt(report.issue_count||issues.length)} · جاهز للنشر: ${report.publish_ready?'لا — انتظر بوابة النشر':'لا'}</p>
+      </div>
+      <div class="status-line">
+        <span class="badge ${(report.issue_count||0)===0?'paid':'overdue'}">issues=${fmt(report.issue_count||0)}</span>
+        <span class="badge overdue">publish_blocked</span>
+      </div>
+      ${issues.slice(0,40).map(i=>`<p class="badge overdue">${htmlEscape(i.code||'')}: ${htmlEscape(i.detail||'')}</p>`).join('')||'<p class="badge paid">لا مشاكل سلامة ظاهرة</p>'}
+      <p class="mini" style="margin-top:10px">${htmlEscape((audit.audit&&audit.audit.note_ar)||report.note_ar||'النشر موقوف حتى اكتمال الخطة.')}</p>`;
+    toast((report.issue_count||0)===0?'سلامة البيانات نظيفة':'توجد ملاحظات سلامة');
+  }catch(e){
+    box.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    toastErr(e);
+  }
+}
+window.runEstateIntegrityCheck=runEstateIntegrityCheck;
 function drawCharts(){
   try{
   const series=chartSeries();
@@ -5519,7 +5613,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       r=>{
         const st = String(r.status||'').toLowerCase();
         const convertBtn = st==='reserved' && canEstateConvertReservation()
-          ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مؤجرة</button> `
+          ? `<button class="gold-btn" onclick="convertEstateReservation('apartment','${r.id}')">تحويل إلى مسودة عقد</button> `
           : '';
         const contractBtn = !['maintenance','suspended'].includes(st) && canEstateCreateContract()
           ? `<button class="gold-btn" onclick="openEstateContractFlow('apartment','${r.id}')">إنشاء عقد (مسودة)</button> `
@@ -5534,7 +5628,7 @@ window.printHospitalityFolio = printHospitalityFolio;
       r=>{
         const st = String(r.status||'').toLowerCase();
         const convertBtn = st==='reserved' && canEstateConvertReservation()
-          ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مؤجرة</button> `
+          ? `<button class="gold-btn" onclick="convertEstateReservation('room','${r.id}')">تحويل إلى مسودة عقد</button> `
           : '';
         const contractBtn = !['maintenance','suspended'].includes(st) && canEstateCreateContract()
           ? `<button class="gold-btn" onclick="openEstateContractFlow('room','${r.id}')">إنشاء عقد (مسودة)</button> `
@@ -6037,13 +6131,13 @@ window.printHospitalityFolio = printHospitalityFolio;
     try{
       if(!canEstateConvertReservation()) return toastErr('لا تملك صلاحية تحويل الحجز');
       const t = entityType==='room' ? 'غرفة' : 'شقة';
-      const note = prompt(`ملاحظة التحويل (${t}) — اختياري`, 'تم التحويل إلى تأجير فعلي');
+      const note = prompt(`ملاحظة التحويل إلى مسودة عقد (${t}) — اختياري`, 'تحويل حجز إلى مسودة عقد');
       if(note===null) return;
-      await api('estate_convert_reservation',{
+      const res = await api('estate_convert_reservation',{
         method:'POST',
         body:JSON.stringify({ entity_type: entityType, entity_id: entityId, note: String(note||'').trim() })
       });
-      toast('تم التحويل إلى مؤجرة وإغلاق فاتورة الحجز المفتوحة');
+      toast(res.message || 'تم الحفظ بنجاح — أُنشئت مسودة عقد من الحجز (الشغل يحدث بعد اعتماد وتفعيل العقد)');
       await loadAll();
       if($('#sec-estate-platform')?.classList.contains('active')) renderEstatePlatform();
     }catch(e){ toastErr(e); }
