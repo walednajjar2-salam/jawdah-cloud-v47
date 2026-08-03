@@ -534,9 +534,29 @@ body.lq-exec .top-pill-pro.lq-header-clock{
 /* hide any leftover legacy dock if reintroduced */
 #sec-estate-platform .estate-work-dock,#sec-estate-platform .estate-panels{display:none!important}
 #sec-estate-platform #lqExecBoard-realestate{display:none!important}
+@media (max-width:1366px){
+  .lq-estate-nx-filters label,.lq-estate-nx-budget{min-width:160px}
+  .lq-estate-nx-table{min-width:640px}
+  .lq-estate-nx-stat strong{font-size:1.05rem}
+}
+@media (max-width:900px){
+  .lq-estate-nx-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lq-estate-nx-toolbar input[type="search"]{min-width:140px}
+  .lq-estate-nx-bld{min-width:120px}
+  .lq-estate-nx-table{min-width:560px}
+  .lq-estate-nx-bld-summary .badge{font-size:.72rem}
+}
 @media (max-width:720px){
   .lq-estate-nx-form{grid-template-columns:1fr}
   .lq-estate-nx-form label:nth-child(n+7){grid-column:auto}
+  .lq-estate-nx-stats{grid-template-columns:1fr 1fr}
+  .lq-estate-nx-filters label,.lq-estate-nx-budget{min-width:100%;width:100%}
+  .lq-estate-nx-table{min-width:480px}
+  .lq-estate-nx-head h3{font-size:1.15rem}
+}
+@media (max-width:480px){
+  .lq-estate-nx-stats{grid-template-columns:1fr}
+  .lq-estate-nx-modules button{flex:1 1 auto}
 }
 @media (prefers-reduced-motion:reduce){
   .lq-estate-nx-head,.lq-estate-nx-stat{animation:none!important}

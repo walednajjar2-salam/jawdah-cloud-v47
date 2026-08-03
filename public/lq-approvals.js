@@ -143,15 +143,54 @@
     bell.classList.toggle("hidden", !(n > 0 || overdue > 0 || exp > 0));
   }
 
+  async function requestEstateAmendment(entity, entityId, defaults) {
+    if (!entity || !entityId) return;
+    const reason = prompt("سبب التعديل (إلزامي)", "");
+    if (reason === null) return;
+    if (!String(reason || "").trim()) {
+      if (typeof toastErr === "function") toastErr("سبب التعديل مطلوب");
+      return;
+    }
+    const field = prompt(
+      entity === "estate_contracts"
+        ? "الحقل للتعديل (end_date | rent_amount | payment_cycle | notes)"
+        : "الحقل للتعديل (amount | due_date | note)",
+      entity === "estate_contracts" ? "rent_amount" : "note"
+    );
+    if (!field) return;
+    const current = defaults && defaults[field] != null ? String(defaults[field]) : "";
+    const next = prompt(`القيمة الجديدة لـ ${field}`, current);
+    if (next === null) return;
+    try {
+      const res = await api("estate_amendment_request", {
+        method: "POST",
+        body: JSON.stringify({
+          entity,
+          entity_id: entityId,
+          reason: String(reason).trim(),
+          changes: { [field]: next },
+        }),
+      });
+      if (typeof toast === "function") toast(res.message || "تم إرسال طلب التعديل");
+      if (typeof loadAll === "function") await loadAll();
+      renderTable();
+      updateBell();
+    } catch (e) {
+      if (typeof toastErr === "function") toastErr(e);
+    }
+  }
+
   window.LQ_APPROVALS = {
     explainHtml,
     renderTable,
     decide,
     requestContract,
+    requestEstateAmendment,
     updateBell,
     threshold: THRESHOLD,
     canDecide,
     canRequest,
   };
   window.requestContractApproval = requestContract;
+  window.requestEstateAmendment = requestEstateAmendment;
 })();

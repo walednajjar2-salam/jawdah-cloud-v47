@@ -2465,8 +2465,29 @@ async function runAutoBackup(){
     renderBackup();
   }catch(e){ toastErr(e); }
 }
+async function verifyBackupRestore(){
+  const box=$('#backupVerifyBox');
+  if(box) box.innerHTML='<p class="mini">جاري فحص الاستعادة على بيئة مؤقتة…</p>';
+  try{
+    const res=await api('backup/verify');
+    const vr=res.verification||res||{};
+    const checks=vr.checks||[];
+    const html=`
+      <div class="status-line" style="margin-bottom:8px">
+        <span class="badge ${vr.ok?'paid':'overdue'}">Dry-run ${vr.ok?'ناجح':'يحتاج مراجعة'} · ${fmt(vr.score||0)}%</span>
+      </div>
+      ${checks.map(c=>`<p class="badge ${c.ok?'paid':'overdue'}">${htmlEscape(c.name)}: ${htmlEscape(String(c.value??''))}${c.expected!=null?' · متوقع '+htmlEscape(String(c.expected)):''}</p>`).join('')}
+      <p class="mini" style="margin-top:8px">هذا فحص استعادة على قاعدة مؤقتة — لا يغيّر بيانات الإنتاج ولا ينشر النظام.</p>`;
+    if(box) box.innerHTML=html;
+    toast(vr.ok?'نجح فحص الاستعادة (Dry-run)':'فحص الاستعادة أظهر ملاحظات');
+  }catch(e){
+    if(box) box.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    toastErr(e);
+  }
+}
+window.verifyBackupRestore=verifyBackupRestore;
 function renderQA(){
-  $('#qaBox').innerHTML='<p>يمكنك تشغيل الاختبار العام أو QA العقار خطوة بخطوة. سيتم تشغيل نغمة نجاح/فشل لكل حالة تلقائيًا.</p>';
+  $('#qaBox').innerHTML='<p>شغّل الاختبار العام، QA العقار، أو السيناريو الكامل (عميل←حجز←عقد←دفع←سند←صيانة←طلب تعديل). النشر ما زال موقفًا.</p>';
 }
 function populateSelects(){
   fillSelect('#pBranch', Jawdah.data.branches||[], true, 'id', 'name');
@@ -3788,6 +3809,63 @@ async function runEstateQaScenario(){
   }
 }
 window.runEstateQaScenario = runEstateQaScenario;
+async function runEstateLifecycleScenario(){
+  const box=$('#qaBox');
+  if(!box) return;
+  box.innerHTML=`<div class="card lq-ops-guide"><h3>🏢 سيناريو منصة العقارات الكامل</h3><p class="mini">عميل ← احتياج ← معاينة ← حجز ← عقد ← اعتماد ← تفعيل ← دفع ← سند ← صيانة تمنع التأجير ← طلب تعديل · مع تنظيف تلقائي.</p><p class="mini">جاري التنفيذ على الخادم…</p></div>`;
+  try{
+    const res=await api('estate_qa_lifecycle',{method:'POST',body:JSON.stringify({})});
+    const steps=res.steps||[];
+    steps.forEach(s=>playQaTone(!!s.ok));
+    const finalOk=!!res.ok;
+    playQaTone(finalOk);
+    box.innerHTML=`
+      <div class="card lq-ops-guide">
+        <h3>🏁 تقرير السيناريو الكامل</h3>
+        <p class="mini">نجح ${fmt(res.passed||0)} من ${fmt(res.total||steps.length)} · النشر موقف: ${res.publish_blocked!==false?'نعم':'لا'}</p>
+      </div>
+      ${steps.map((r,i)=>qaRowHtml(i,{name:r.name,ok:r.ok,detail:r.detail||''})).join('')}
+      <div class="status-line" style="margin-top:10px">
+        <span class="badge ${finalOk?'paid':'overdue'}">${finalOk?'السيناريو نجح — جاهز لاستكمال الاختبارات البشرية':'يحتاج معالجة قبل المتابعة'}</span>
+        <span class="badge overdue">لا نشر</span>
+      </div>`;
+    toast(res.message||(finalOk?'نجح السيناريو الكامل':'السيناريو أظهر إخفاقات'));
+    if(typeof loadAll==='function') await loadAll();
+  }catch(e){
+    playQaTone(false);
+    box.innerHTML=`<p class="badge overdue">فشل السيناريو: ${htmlEscape(friendlyMsg(e))}</p>`;
+    toastErr(e);
+  }
+}
+window.runEstateLifecycleScenario=runEstateLifecycleScenario;
+async function runEstateIntegrityCheck(){
+  const box=$('#qaBox');
+  if(!box) return;
+  try{
+    const [integ, audit]=await Promise.all([
+      api('estate_integrity'),
+      api('estate_foundation_audit').catch(()=>({}))
+    ]);
+    const report=integ.report||integ;
+    const issues=report.issues||[];
+    box.innerHTML=`
+      <div class="card lq-ops-guide">
+        <h3>سلامة بيانات منصة العقارات</h3>
+        <p class="mini">المشاكل: ${fmt(report.issue_count||issues.length)} · جاهز للنشر: ${report.publish_ready?'لا — انتظر بوابة النشر':'لا'}</p>
+      </div>
+      <div class="status-line">
+        <span class="badge ${(report.issue_count||0)===0?'paid':'overdue'}">issues=${fmt(report.issue_count||0)}</span>
+        <span class="badge overdue">publish_blocked</span>
+      </div>
+      ${issues.slice(0,40).map(i=>`<p class="badge overdue">${htmlEscape(i.code||'')}: ${htmlEscape(i.detail||'')}</p>`).join('')||'<p class="badge paid">لا مشاكل سلامة ظاهرة</p>'}
+      <p class="mini" style="margin-top:10px">${htmlEscape((audit.audit&&audit.audit.note_ar)||report.note_ar||'النشر موقوف حتى اكتمال الخطة.')}</p>`;
+    toast((report.issue_count||0)===0?'سلامة البيانات نظيفة':'توجد ملاحظات سلامة');
+  }catch(e){
+    box.innerHTML=`<p class="badge overdue">${htmlEscape(friendlyMsg(e))}</p>`;
+    toastErr(e);
+  }
+}
+window.runEstateIntegrityCheck=runEstateIntegrityCheck;
 function drawCharts(){
   try{
   const series=chartSeries();

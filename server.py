@@ -5313,6 +5313,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 if parts[0] == "estate_amendment_request" and method == "POST":
                     user = self.require_user(db, "approvals:request")
                     return None if not user else self.api_estate_amendment_request(db, user)
+                if parts[0] == "estate_qa_lifecycle" and method == "POST":
+                    user = self.require_user(db, "estate_actions_contract_create")
+                    return None if not user else self.api_estate_qa_lifecycle(db, user)
                 if parts[0] in TABLES:
                     return self.api_crud(db, method, parts, query)
                 self.send_json({"ok": False, "error": "Unknown endpoint"}, 404)
@@ -8746,6 +8749,410 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "approval_id": approval_id,
                 "status": "Pending",
                 "message": "تم إرسال طلب التعديل — بانتظار المراجعة في مركز الاعتمادات",
+            }
+        )
+
+    def api_estate_qa_lifecycle(self, db: sqlite3.Connection, user: Dict[str, Any]) -> None:
+        """End-to-end estate scenario with tagged temp data and cleanup. Does not publish."""
+        role = str(user.get("role") or "").strip().lower()
+        if role not in ("owner", "admin", "deputy", "operations"):
+            return self.send_json({"ok": False, "error": "اختبار السيناريو الكامل للمالك/الإدارة/مسؤول العقارات فقط"}, 403)
+        actor = str(user.get("name") or user.get("username") or "QA")
+        tag = f"__QA__{uid('T')[-8:]}"
+        steps: List[Dict[str, Any]] = []
+        created: Dict[str, List[str]] = {
+            "clients": [],
+            "estate_properties": [],
+            "estate_buildings": [],
+            "estate_apartments": [],
+            "client_viewings": [],
+            "client_needs": [],
+            "estate_contracts": [],
+            "estate_contract_invoices": [],
+            "payment_receipts": [],
+            "accounts": [],
+            "estate_maintenance": [],
+            "approvals": [],
+        }
+
+        def step(name: str, ok: bool, detail: str = "") -> None:
+            steps.append({"name": name, "ok": bool(ok), "detail": detail})
+
+        try:
+            cid = uid("CLI")
+            insert(
+                db,
+                "clients",
+                {
+                    "id": cid,
+                    "name": f"{tag} عميل اختبار",
+                    "phone": "90001111",
+                    "phone_alt": "90002222",
+                    "email": "qa@example.com",
+                    "national_id": "QA123",
+                    "nationality": "عماني",
+                    "address": "نزوى",
+                    "balance": 0,
+                    "notes": tag,
+                    "lifecycle_status": "prospect",
+                },
+            )
+            created["clients"].append(cid)
+            step("إضافة عميل", True, cid)
+
+            need_id = uid("CND")
+            insert(
+                db,
+                "client_needs",
+                {
+                    "id": need_id,
+                    "client_id": cid,
+                    "need_type": "سكني",
+                    "budget_min": 100,
+                    "budget_max": 250,
+                    "rooms": "2",
+                    "location_pref": "نزوى",
+                    "status": "open",
+                    "notes": tag,
+                    "created_at": now_iso(),
+                    "updated_at": now_iso(),
+                },
+            )
+            created["client_needs"].append(need_id)
+            step("تسجيل احتياج العميل", True, need_id)
+
+            pid = uid("EPR")
+            insert(
+                db,
+                "estate_properties",
+                {"id": pid, "name": f"{tag} عقار", "status": "active", "location": "نزوى", "last_update": today()},
+            )
+            created["estate_properties"].append(pid)
+            bid = uid("EBD")
+            insert(
+                db,
+                "estate_buildings",
+                {"id": bid, "property_id": pid, "name": f"{tag} بناية", "last_update": today()},
+            )
+            created["estate_buildings"].append(bid)
+            aid = uid("EAP")
+            insert(
+                db,
+                "estate_apartments",
+                {
+                    "id": aid,
+                    "property_id": pid,
+                    "building_id": bid,
+                    "name": f"{tag} شقة",
+                    "unit_kind": "شقة كاملة",
+                    "status": "vacant",
+                    "room_count": 2,
+                    "floor_no": 1,
+                    "area_sqm": 90,
+                    "rent_price": 180,
+                    "booking_deposit": 0,
+                    "prepaid_amount": 0,
+                    "last_update": today(),
+                    "notes": tag,
+                },
+            )
+            created["estate_apartments"].append(aid)
+            step("إنشاء عقار/بناية/وحدة شاغرة", True, aid)
+
+            vid = uid("CVW")
+            insert(
+                db,
+                "client_viewings",
+                {
+                    "id": vid,
+                    "client_id": cid,
+                    "property_id": pid,
+                    "building_id": bid,
+                    "entity_type": "apartment",
+                    "entity_id": aid,
+                    "viewing_at": today(),
+                    "status": "done",
+                    "notes": tag,
+                    "created_by": actor,
+                    "created_at": now_iso(),
+                },
+            )
+            created["client_viewings"].append(vid)
+            step("تسجيل معاينة", True, vid)
+
+            start = today()
+            end = (date.today() + timedelta(days=14)).isoformat()
+            db.execute(
+                """
+                UPDATE estate_apartments
+                SET status='reserved', booking_deposit=50, prepaid_amount=0,
+                    reservation_start_date=?, reservation_end_date=?,
+                    booked_client_id=?, booked_client_name=?, booked_client_phone=?,
+                    booked_by_employee=?, last_update=?
+                WHERE id=?
+                """,
+                (start, end, cid, f"{tag} عميل اختبار", "90001111", actor, today(), aid),
+            )
+            step("حجز الوحدة بعميل مسجّل", True, f"{aid} → reserved")
+
+            contract_id = uid("ESC")
+            contract_no = next_estate_contract_no(db)
+            end_contract = (date.today() + timedelta(days=365)).isoformat()
+            insert(
+                db,
+                "estate_contracts",
+                {
+                    "id": contract_id,
+                    "contract_no": contract_no,
+                    "entity_type": "apartment",
+                    "entity_id": aid,
+                    "property_id": pid,
+                    "building_id": bid,
+                    "apartment_id": aid,
+                    "room_id": None,
+                    "client_id": cid,
+                    "start_date": start,
+                    "end_date": end_contract,
+                    "rent_amount": 180,
+                    "payment_cycle": "monthly",
+                    "status": "Draft",
+                    "created_by": actor,
+                    "created_at": now_iso(),
+                    "attachments": "[]",
+                    "notes": tag,
+                },
+            )
+            created["estate_contracts"].append(contract_id)
+            step("تحويل الحجز إلى مسودة عقد", True, contract_no)
+
+            db.execute("UPDATE estate_contracts SET status=? WHERE id=?", ("ApprovalRequested", contract_id))
+            db.execute(
+                "UPDATE estate_contracts SET status=?, approved_by=?, approved_at=? WHERE id=?",
+                ("Approved", actor, now_iso(), contract_id),
+            )
+            step("اعتماد العقد", True, "Approved")
+
+            schedule = generate_estate_contract_invoices(
+                db,
+                {
+                    "id": contract_id,
+                    "start_date": start,
+                    "end_date": end_contract,
+                    "payment_cycle": "monthly",
+                    "rent_amount": 180,
+                },
+                actor,
+                replace_open=False,
+            )
+            inv = db.execute(
+                "SELECT * FROM estate_contract_invoices WHERE contract_id=? ORDER BY due_date ASC LIMIT 1",
+                (contract_id,),
+            ).fetchone()
+            if inv:
+                created["estate_contract_invoices"].append(inv["id"])
+            db.execute(
+                "UPDATE estate_contracts SET status=?, activated_by=?, activated_at=? WHERE id=?",
+                ("Active", actor, now_iso(), contract_id),
+            )
+            db.execute(
+                """
+                UPDATE estate_apartments
+                SET status='occupied', tenant_client_id=?, tenant_phone=?,
+                    booked_client_id=NULL, booked_client_name=NULL, booked_client_phone=NULL,
+                    booked_by_employee=NULL, reservation_start_date=NULL, reservation_end_date=NULL,
+                    last_update=?
+                WHERE id=?
+                """,
+                (cid, "90001111", today(), aid),
+            )
+            lq_foundation.sync_client_lifecycle_status(db, cid)
+            life = db.execute("SELECT lifecycle_status FROM clients WHERE id=?", (cid,)).fetchone()
+            step(
+                "تفعيل العقد + استحقاقات + حالة مستأجر حالي",
+                bool(inv) and str((life["lifecycle_status"] if life else "")) == "current_tenant",
+                f"invoices_created={schedule.get('created')} lifecycle={life['lifecycle_status'] if life else ''}",
+            )
+
+            receipt_ok = False
+            if inv:
+                pay_amount = round(float(inv["amount"] or 0) / 2, 3) or 1
+                new_paid = pay_amount
+                db.execute(
+                    "UPDATE estate_contract_invoices SET paid_amount=?, status=? WHERE id=?",
+                    (new_paid, "Partial", inv["id"]),
+                )
+                rcp_id = uid("RCP")
+                rcp_no = next_receipt_no(db)
+                insert(
+                    db,
+                    "payment_receipts",
+                    {
+                        "id": rcp_id,
+                        "receipt_no": rcp_no,
+                        "payment_id": uid("PAY"),
+                        "invoice_id": None,
+                        "estate_invoice_id": inv["id"],
+                        "contract_id": contract_id,
+                        "client_id": cid,
+                        "amount": pay_amount,
+                        "method": "Cash",
+                        "receipt_date": today(),
+                        "note": tag,
+                        "created_by": actor,
+                        "created_at": now_iso(),
+                    },
+                )
+                created["payment_receipts"].append(rcp_id)
+                acc_id = uid("ACC")
+                insert(
+                    db,
+                    "accounts",
+                    {
+                        "id": acc_id,
+                        "entry_date": today(),
+                        "type": "income",
+                        "category": "Estate Contract Collection",
+                        "description": f"QA {rcp_no}",
+                        "client_id": cid,
+                        "property_id": None,
+                        "invoice_id": None,
+                        "amount": pay_amount,
+                    },
+                )
+                created["accounts"].append(acc_id)
+                receipt_ok = True
+                step("دفع جزئي + سند قبض", True, rcp_no)
+            else:
+                step("دفع جزئي + سند قبض", False, "لا فاتورة للاستحقاق")
+
+            # Maintenance blocks rental on a second vacant unit
+            aid2 = uid("EAP")
+            insert(
+                db,
+                "estate_apartments",
+                {
+                    "id": aid2,
+                    "property_id": pid,
+                    "building_id": bid,
+                    "name": f"{tag} شقة صيانة",
+                    "unit_kind": "شقة كاملة",
+                    "status": "vacant",
+                    "room_count": 1,
+                    "floor_no": 2,
+                    "area_sqm": 60,
+                    "rent_price": 120,
+                    "booking_deposit": 0,
+                    "prepaid_amount": 0,
+                    "last_update": today(),
+                    "notes": tag,
+                },
+            )
+            created["estate_apartments"].append(aid2)
+            mid = uid("EMT")
+            maint = {
+                "id": mid,
+                "property_id": pid,
+                "building_id": bid,
+                "apartment_id": aid2,
+                "room_id": None,
+                "title": f"{tag} صيانة تمنع التأجير",
+                "status": "Open",
+                "priority": "High",
+                "blocks_rental": 1,
+                "parts_cost": 0,
+                "labor_cost": 0,
+                "total_cost": 25,
+                "maintenance_date": today(),
+                "notes": tag,
+            }
+            insert(db, "estate_maintenance", maint)
+            created["estate_maintenance"].append(mid)
+            sync_estate_maintenance_unit_link(db, maint, actor)
+            st2 = db.execute("SELECT status FROM estate_apartments WHERE id=?", (aid2,)).fetchone()
+            blocked = estate_unit_status_blocks_contract(st2["status"] if st2 else "")
+            step("صيانة تمنع التأجير → وحدة صيانة", blocked, f"status={st2['status'] if st2 else ''}")
+
+            # Amendment on active contract
+            apr = create_approval_request(
+                db,
+                "estate_contracts",
+                contract_id,
+                "amendment",
+                actor,
+                "QA amendment",
+                meta={"changes": {"notes": f"{tag} amended"}, "before": {"notes": tag}, "reason": "QA"},
+            )
+            created["approvals"].append(apr)
+            pending = db.execute("SELECT status FROM approvals WHERE id=?", (apr,)).fetchone()
+            step("طلب تعديل ملف مقفول", str((pending["status"] if pending else "")).lower() == "pending", apr)
+
+            # Unauthorized simulation: viewer cannot decide amendment
+            viewer_can = can_decide_approval({"role": "viewer", "username": "viewer_qa"}, "amendment")
+            step("منع المشاهد من اعتماد التعديل", not viewer_can, "viewer blocked")
+
+            # Integrity + publish gate
+            integrity = lq_foundation.integrity_report(db)
+            step("فحص سلامة البيانات متاح", True, f"issues={integrity.get('issue_count')}")
+            step("النشر ما زال موقفًا", bool(lq_foundation.PHASE1_AUDIT.get("publish_blocked")), "publish_blocked=True")
+
+            db.commit()
+        except Exception as exc:
+            step("تنفيذ السيناريو", False, str(exc))
+            try:
+                db.rollback()
+            except Exception:
+                pass
+
+        # Cleanup QA artifacts (best-effort)
+        cleanup_ok = True
+        try:
+            for table in (
+                "payment_receipts",
+                "accounts",
+                "estate_contract_invoices",
+                "approvals",
+                "estate_contracts",
+                "estate_maintenance",
+                "client_viewings",
+                "client_needs",
+                "estate_apartments",
+                "estate_buildings",
+                "estate_properties",
+                "clients",
+            ):
+                for rid in created.get(table, []):
+                    try:
+                        db.execute(f"DELETE FROM {table} WHERE id=?", (rid,))
+                    except Exception:
+                        cleanup_ok = False
+            # Also wipe any leftover reservation invoices for QA apartments
+            for aid_q in created.get("estate_apartments", []):
+                try:
+                    db.execute(
+                        "DELETE FROM estate_reservation_invoices WHERE entity_id=?",
+                        (aid_q,),
+                    )
+                    db.execute(
+                        "DELETE FROM estate_status_history WHERE entity_id=?",
+                        (aid_q,),
+                    )
+                except Exception:
+                    pass
+            db.commit()
+        except Exception:
+            cleanup_ok = False
+        step("تنظيف بيانات الاختبار", cleanup_ok, "حُذفت السجلات المؤقتة" if cleanup_ok else "تعذر تنظيف بعض السجلات")
+
+        passed = sum(1 for s in steps if s.get("ok"))
+        total = len(steps)
+        self.send_json(
+            {
+                "ok": passed == total,
+                "passed": passed,
+                "total": total,
+                "steps": steps,
+                "publish_blocked": True,
+                "message": "تم تشغيل سيناريو منصة العقارات — النشر ما زال موقفًا",
             }
         )
 

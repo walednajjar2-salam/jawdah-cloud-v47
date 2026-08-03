@@ -872,7 +872,7 @@
       </section>
 
       <section id="sec-backup" class="section">
-        <div class="card"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id="backupStatus" class="status-line"></div><div class="toolbar" style="margin-top:16px"><button class="gold-btn" onclick="downloadBackup()">تنزيل Backup JSON</button><button class="gold-btn" onclick="downloadBackupFile('json')">تنزيل آخر نسخة JSON</button><button class="gold-btn" onclick="downloadBackupFile('sqlite')">تنزيل آخر نسخة SQLite</button><button class="ghost" onclick="runAutoBackup()">نسخ احتياطي تلقائي الآن</button><button class="ghost" onclick="exportCsv('properties')">عقارات CSV</button><button class="ghost" onclick="exportCsv('clients')">عملاء CSV</button><button class="ghost" onclick="exportCsv('contracts')">عقود CSV</button><button class="ghost" onclick="exportCsv('invoices')">فواتير CSV</button><button class="ghost" onclick="exportCsv('accounts')">حسابات CSV</button></div><p class="mini" style="margin-top:12px">للنسخ خارج Railway: نزّل JSON + SQLite واحفظهما في OneDrive شهرياً، أو شغّل <code>scripts\download_offsite_backup.ps1</code>.</p></div>
+        <div class="card"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id="backupStatus" class="status-line"></div><div class="toolbar" style="margin-top:16px"><button class="gold-btn" onclick="downloadBackup()">تنزيل Backup JSON</button><button class="gold-btn" onclick="downloadBackupFile('json')">تنزيل آخر نسخة JSON</button><button class="gold-btn" onclick="downloadBackupFile('sqlite')">تنزيل آخر نسخة SQLite</button><button class="ghost" onclick="runAutoBackup()">نسخ احتياطي تلقائي الآن</button><button class="gold-btn" onclick="verifyBackupRestore()">فحص الاستعادة (Dry-run)</button><button class="ghost" onclick="exportCsv('properties')">عقارات CSV</button><button class="ghost" onclick="exportCsv('clients')">عملاء CSV</button><button class="ghost" onclick="exportCsv('contracts')">عقود CSV</button><button class="ghost" onclick="exportCsv('invoices')">فواتير CSV</button><button class="ghost" onclick="exportCsv('accounts')">حسابات CSV</button></div><div id="backupVerifyBox" class="mini" style="margin-top:12px"></div><p class="mini" style="margin-top:12px">للنسخ خارج Railway: نزّل JSON + SQLite واحفظهما في OneDrive شهرياً، أو شغّل <code>scripts\download_offsite_backup.ps1</code>. لا يُعتبر النسخ ناجحًا إلا بعد نجاح فحص الاستعادة.</p></div>
         <div class="card"><h3>مركز التصدير — نتائج الفلاتر</h3><p class="mini">تصدير سريع للبيانات الظاهرة حسب الفلاتر الحالية بكل قسم.</p><div id="exportHubButtons" class="toolbar" style="margin-top:12px"></div></div>
       </section>
 
@@ -895,6 +895,8 @@
           <div class="toolbar">
             <button class="gold-btn" onclick="runQA()">تشغيل الاختبار العام</button>
             <button class="ghost" onclick="runEstateQaScenario()">تشغيل QA العقار خطوة بخطوة</button>
+            <button class="gold-btn" onclick="runEstateLifecycleScenario()">سيناريو منصة العقارات كامل</button>
+            <button class="ghost" onclick="runEstateIntegrityCheck()">فحص سلامة بيانات العقارات</button>
           </div>
           <div id="qaBox" style="margin-top:15px"></div>
         </div>

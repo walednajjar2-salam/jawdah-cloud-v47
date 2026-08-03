@@ -647,6 +647,18 @@
       if (act === "close" && typeof closeEstateContractById === "function") {
         return closeEstateContractById(id);
       }
+      if (act === "amend") {
+        const c = byRow("estate_contracts", id);
+        if (typeof requestEstateAmendment === "function") {
+          return requestEstateAmendment("estate_contracts", id, {
+            rent_amount: c.rent_amount,
+            end_date: c.end_date,
+            payment_cycle: c.payment_cycle,
+            notes: c.notes,
+          });
+        }
+        return toastBad("مركز طلبات التعديل غير متاح");
+      }
       if (act === "reject") {
         if (typeof canDecideApprovals === "function" && !canDecideApprovals()) {
           return toastBad("لا تملك صلاحية رفض الاعتماد");
