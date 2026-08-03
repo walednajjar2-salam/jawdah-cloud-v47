@@ -237,7 +237,17 @@ const OWNER_NAME_BY_USERNAME = {
   'owner': 'القائد يعقوب فاضل الخصيبي',
   'yaqoub.khasibi': 'القائد يعقوب فاضل الخصيبي',
   'yaqoub': 'القائد يعقوب فاضل الخصيبي',
-  'waleed.najjar': 'وليد نجار',
+  'waleed.najjar': 'وليد محمد عبد الهادي',
+  'waleed': 'وليد محمد عبد الهادي',
+  'ahmed': 'احمد محمد عبد الهادي',
+  'ahmed.najjar': 'احمد محمد عبد الهادي',
+  'razan': 'رزان سالم الشعيلي',
+  'razan.shuaili': 'رزان سالم الشعيلي',
+  'ali': 'علي محمد علي النديش',
+  'ali.hospitality': 'علي محمد علي النديش',
+  'mohammed.siraj': 'محمد صالح سراج النور',
+  'amjad': 'امجد',
+  'amjad.jamoudi': 'امجد',
 };
 function shouldForceClassicMode(user){
   const role = String(user?.role||'').toLowerCase();
@@ -3400,7 +3410,7 @@ async function createMaintenance(){ await saveNew('maintenance',{property_id:val
 async function createUser(){
   const username = String(val('uUsername')||'').trim().toLowerCase();
   const role = String(val('uRole')||'viewer').trim().toLowerCase();
-  const fullAccessUsers = new Set(['waleed','yaqoub','ahmed','waleed.najjar','yaqoub.khasibi','ahmed.najjar']);
+  const fullAccessUsers = new Set(['waleed','yaqoub','ahmed','owner','waleed.najjar','yaqoub.khasibi','ahmed.najjar']);
   if(['owner','admin'].includes(role) && !fullAccessUsers.has(username)){
     toastNotice('الصلاحية الكاملة (Owner/Admin) متاحة فقط لوليد أو يعقوب أو أحمد');
     return;
@@ -3430,9 +3440,12 @@ async function applyUserPermissionTemplate(){
     'waleed.najjar': {role:'owner', active:true},
     'yaqoub.khasibi': {role:'owner', active:true},
     'ahmed.najjar': {role:'admin', active:true},
-    'razan': {role:'accountant', active:true},
+    'razan': {role:'reception', active:true},
+    'razan.shuaili': {role:'reception', active:true},
+    'mohammed.siraj': {role:'operations', active:true},
     'amjad': {role:'operations', active:true},
-    'ali': {role:'maintenance', active:true},
+    'ali': {role:'operations', active:true},
+    'ali.hospitality': {role:'operations', active:true},
     'admin': {role:'viewer', active:true},
   };
   let updated = 0;
@@ -6804,7 +6817,7 @@ window.printHospitalityFolio = printHospitalityFolio;
   renderAll=function(){ oldRenderAll2(); renderProductionUsers(); };
   window.renderProductionUsers=function(){
     const users=Jawdah.data.users||[];
-    const required=['owner','ahmed.najjar','waleed.najjar','ahoud.shuaili','amjad.jamoudi','operations','ali.hospitality','maintenance','viewer','accountant','razan.accounting','razan.shuaili'];
+    const required=['owner','yaqoub','ahmed','ahmed.najjar','waleed','waleed.najjar','razan','razan.shuaili','ali','ali.hospitality','mohammed.siraj','amjad','amjad.jamoudi'];
     const host=$('#productionUsersBox');
     if(!host) return;
     host.innerHTML=required.map(u=>{

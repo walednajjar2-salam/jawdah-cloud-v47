@@ -60,12 +60,12 @@ STAFF_ROSTER: List[Dict[str, str]] = [
     {"username": "yaqoub", "name": "يعقوب فاضل الخصيبي", "title": "المدير العام والمدير التنفيذي", "role": "owner", "department": "housing"},
     {"username": "owner", "name": "يعقوب فاضل الخصيبي", "title": "المالك / المدير التنفيذي", "role": "owner", "department": "housing"},
     {"username": "rahma", "name": "رحمة محمد عبد الهادي", "title": "شؤون إدارية — منسق المدير", "role": "admin", "department": "housing"},
-    {"username": "waleed", "name": "وليد محمد عبد الهادي", "title": "محاسب", "role": "accountant", "department": "realestate"},
+    {"username": "waleed", "name": "وليد محمد عبد الهادي", "title": "مالك", "role": "owner", "department": "housing"},
     {"username": "marwan", "name": "مروان سالم الشعيلي", "title": "كاشير إداري وإعلام", "role": "operations", "department": "housing"},
-    {"username": "ali", "name": "علي محمد علي التريكي", "title": "مسؤول خدمات الضيافة والمخازن", "role": "operations", "department": "hospitality"},
-    {"username": "mohammed.siraj", "name": "محمد صالح سراج", "title": "مسؤول الخدمات العقارية والصيانة", "role": "maintenance", "department": "realestate"},
+    {"username": "ali", "name": "علي محمد علي النديش", "title": "مخزن", "role": "operations", "department": "realestate"},
+    {"username": "mohammed.siraj", "name": "محمد صالح سراج النور", "title": "عقارات", "role": "operations", "department": "realestate"},
     {"username": "mohammed.riyami", "name": "محمد حمود الريامي", "title": "مسؤول إداري العلاقات العامة وخدمة العملاء", "role": "operations", "department": "housing"},
-    {"username": "ahoud", "name": "عهود سعيد الشعيلي", "title": "مسؤول خدمات الإسكان والاستقبال والمنسقيات", "role": "operations", "department": "housing"},
+    {"username": "ahoud", "name": "عهود سعيد الشعيلي", "title": "تسويق ريسبشن ادخالات", "role": "reception", "department": "housing"},
     {"username": "mohammed.jahbul", "name": "محمد جهبول إسلام", "title": "مسؤول العمال", "role": "maintenance", "department": "hospitality"},
 ]
 

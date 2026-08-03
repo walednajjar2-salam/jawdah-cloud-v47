@@ -228,9 +228,9 @@ TABLES = {
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
-FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi"}
+FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi", "ahmed", "ahmed.najjar"}
 PRIMARY_OWNER_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi"}
-DAILY_OPS_MANAGER_USERNAMES = {"razan", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
+DAILY_OPS_MANAGER_USERNAMES = {"razan", "razan.shuaili", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
 RESTRICTED_ADMIN_USERNAMES = {"ahmed", "ahmed.najjar", "ahmed.alnajjar"}
 
 WRITE_ROLES = {"owner", "admin", "deputy", "accountant", "operations", "reception", "maintenance"}
@@ -4221,15 +4221,16 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
     team = [
         ("owner", "يعقوب فاضل الخصيبي", "owner", "001970"),
         ("yaqoub", "يعقوب فاضل الخصيبي", "owner", "owner2015"),
-        ("waleed", "وليد محمد النجار", "owner", "111111"),
-        ("waleed.najjar", "وليد محمد النجار", "owner", "Waleed2026!"),
-        ("ahmed", "أحمد محمد النجار", "admin", "Ahmed2026!"),
-        ("ahmed.najjar", "أحمد محمد النجار", "admin", "Ahmed2026!"),
+        ("waleed", "وليد محمد عبد الهادي", "owner", "111111"),
+        ("waleed.najjar", "وليد محمد عبد الهادي", "owner", "Waleed2026!"),
+        ("ahmed", "احمد محمد عبد الهادي", "admin", "Ahmed2026!"),
+        ("ahmed.najjar", "احمد محمد عبد الهادي", "admin", "Ahmed2026!"),
         ("admin", "System Admin", "admin", "555555"),
-        ("razan", "رزان سالم الشعيلي", "accountant", "222222"),
-        ("razan.shuaili", "رزان سالم الشعيلي", "accountant", "Razan2026!"),
-        ("amjad", "أمجد", "operations", "333333"),
-        ("ali", "علي محمد النديش", "maintenance", "444444"),
+        ("razan", "رزان سالم الشعيلي", "reception", "222222"),
+        ("razan.shuaili", "رزان سالم الشعيلي", "reception", "Razan2026!"),
+        ("amjad", "امجد", "operations", "333333"),
+        ("ali", "علي محمد علي النديش", "operations", "444444"),
+        ("mohammed.siraj", "محمد صالح سراج النور", "operations", "Siraj2026!"),
         ("reception", "موظف استقبال", "reception", "Reception2026!"),
         ("dataentry", "موظف إدخال", "operations", "DataEntry2026!"),
         ("staff", "موظف عام", "operations", "Staff2026!"),
@@ -4254,10 +4255,10 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
         pass
     # Force planned roles without rotating passwords.
     db.execute(
-        "UPDATE users SET role='admin', active=1, name='أحمد محمد النجار' WHERE lower(username) IN ('ahmed.najjar','ahmed')"
+        "UPDATE users SET role='admin', active=1, name='احمد محمد عبد الهادي' WHERE lower(username) IN ('ahmed.najjar','ahmed')"
     )
     db.execute(
-        "UPDATE users SET role='owner', active=1, name='وليد محمد النجار' WHERE lower(username) IN ('waleed','waleed.najjar')"
+        "UPDATE users SET role='owner', active=1, name='وليد محمد عبد الهادي' WHERE lower(username) IN ('waleed','waleed.najjar')"
     )
     db.execute(
         "UPDATE users SET role='owner', active=1, name=COALESCE(NULLIF(name,''), 'يعقوب فاضل الخصيبي') "
@@ -4267,13 +4268,19 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
         "UPDATE users SET role='owner', active=1, name='يعقوب فاضل الخصيبي' WHERE lower(username)='yaqoub'"
     )
     db.execute(
-        "UPDATE users SET role='accountant', active=1 WHERE lower(username) IN ('razan','razan.shuaili')"
+        "UPDATE users SET role='reception', active=1, name='رزان سالم الشعيلي' "
+        "WHERE lower(username) IN ('razan','razan.shuaili','razan.accounting')"
     )
     db.execute(
-        "UPDATE users SET role='operations', active=1, name=COALESCE(NULLIF(name,''), 'أمجد') WHERE lower(username)='amjad'"
+        "UPDATE users SET role='operations', active=1, name='امجد' WHERE lower(username) IN ('amjad','amjad.jamoudi')"
     )
     db.execute(
-        "UPDATE users SET role='maintenance', active=1 WHERE lower(username)='ali'"
+        "UPDATE users SET role='operations', active=1, name='علي محمد علي النديش' "
+        "WHERE lower(username) IN ('ali','ali.hospitality')"
+    )
+    db.execute(
+        "UPDATE users SET role='operations', active=1, name='محمد صالح سراج النور' "
+        "WHERE lower(username) IN ('mohammed.siraj')"
     )
 
 
