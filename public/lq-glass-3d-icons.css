@@ -137,3 +137,65 @@ body.login-ultra #loginScreen #loginBtn{
     transform:none !important;
   }
 }
+
+/* SVG line icons inside glass pills (emoji replacement) */
+.lq-ico{
+  display:inline-grid !important;
+  place-items:center !important;
+  line-height:0 !important;
+  color:inherit !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+.lq-ico svg{
+  display:block !important;
+  width:1em !important;
+  height:1em !important;
+  min-width:14px;
+  min-height:14px;
+  color:inherit !important;
+  stroke:currentColor !important;
+}
+body.app-ready .nav-icon .lq-ico,
+body.app-ready .nav button .nav-icon .lq-ico,
+body.lq-exec .nav-icon .lq-ico{
+  font-size:16px !important;
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
+}
+body.app-ready .lq-dd-ico .lq-ico,
+body.app-ready .lq-dd-item .lq-dd-ico,
+body.app-ready .lq-dd-toggle .lq-dd-ico .lq-ico{
+  font-size:15px !important;
+  color:#f4f7fb !important;
+  -webkit-text-fill-color:#f4f7fb !important;
+}
+body.app-ready .lq-dd-ico{
+  display:grid !important;
+  place-items:center !important;
+}
+body.app-ready .lq-dd-chev .lq-ico{
+  font-size:13px !important;
+  color:#f4f7fb !important;
+}
+body.app-ready .saas-cmd-icon .lq-ico,
+body.app-ready .saas-dash-menu-ico .lq-ico{
+  font-size:18px !important;
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
+}
+body.app-ready .tb-icon .lq-ico,
+body.app-ready .lq-header-settings .lq-ico{
+  font-size:16px !important;
+  color:#0f2744 !important;
+  -webkit-text-fill-color:#0f2744 !important;
+}
+body.app-ready .lq-dd-toggle-ico{
+  display:inline-grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  border-radius:9px;
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.14);
+  color:#f4f7fb !important;
+}

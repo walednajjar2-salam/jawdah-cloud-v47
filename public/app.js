@@ -27,6 +27,64 @@ let liveLastAuditKey = '';
 let liveKpiSignalAt = { overdue: 0, health: 0, expiring: 0 };
 const NIZWA_DEFAULT = { lat: 22.9333, lng: 57.5333, zoom: 11 };
 function haptic(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||12); }catch(e){} }
+/* Glass SVG icons — replace emoji across nav / smart commands */
+function lqIcon(name, size){
+  const n=String(name||'dot').trim();
+  const s=size||18;
+  const paths={
+    home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M6 10.5V20h12v-9.5"/>',
+    building:'<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3"/>',
+    hotel:'<path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6M9 10h.01M15 10h.01"/>',
+    briefcase:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+    folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+    clipboard:'<rect x="7" y="4" width="10" height="16" rx="2"/><path d="M9 4.5h6M9 9h6M9 13h6M9 17h4"/>',
+    users:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3.5 19c1.2-3.2 3.3-4.8 5.5-4.8S13.3 15.8 14.5 19M14.2 14.4c1.3-.4 2.7-.2 4.3 1.1"/>',
+    file:'<path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+    money:'<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c.7-1 2-1.5 2.5-1.5s2 .6 2 1.7-1.2 1.6-2.5 2-2.5.9-2.5 2.1 1.2 1.8 2.6 1.8 2-.6 2.5-1.5"/>',
+    card:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h4"/>',
+    cash:'<path d="M4 8h16v10H4z"/><path d="M4 11h16M8 8V6h8v2M12 13.5v.01"/>',
+    chart:'<path d="M4 19V5M4 19h16"/><path d="M8 16v-5M12 16V8M16 16v-8"/>',
+    trend:'<path d="M3 17 10 10l4 4 7-7"/><path d="M14 7h7v7"/>',
+    wrench:'<path d="M14.5 6.5a4 4 0 0 0-5.6 5.6L4 17l3 3 4.9-4.9a4 4 0 0 0 5.6-5.6L15 12l-2.5-2.5z"/>',
+    bell:'<path d="M6 16h12l-1.2-2.2a6.5 6.5 0 0 1-.8-3.1V9a5 5 0 0 0-10 0v1.7c0 1.1-.3 2.2-.8 3.1L6 16z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+    bot:'<rect x="5" y="8" width="14" height="10" rx="3"/><path d="M12 5v3M9 12h.01M15 12h.01M9 16h6"/>',
+    landmark:'<path d="M4 20h16M6 20V10l6-5 6 5v10M9 14h.01M12 14h.01M15 14h.01"/>',
+    check:'<circle cx="12" cy="12" r="8"/><path d="m8.5 12.2 2.4 2.4 4.6-5"/>',
+    calendar:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/>',
+    archive:'<path d="M3 7h18v3H3zM5 10v9h14v-9M10 14h4"/>',
+    disk:'<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8 4v4h5"/>',
+    settings:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M4.9 6.3l1.6 1.6M17.5 16.1l1.6 1.6M3 12h2.2M18.8 12H21M4.9 17.7l1.6-1.6M17.5 7.9l1.6-1.6"/>',
+    bolt:'<path d="M13 2 5 13h6l-1 9 9-12h-6l0-8z"/>',
+    rocket:'<path d="M5 19c2-1 4.5-1.4 6.5-1L20 6s-2-2-6 0-6.5 7-6.5 9.5c0 .8.2 1.7.5 2.5z"/><path d="M9 15l-3 5M12.5 8.5l3 3"/>',
+    crown:'<path d="M3 17h18l-1.5-9-4.5 4-3-6-3 6-4.5-4L3 17z"/><path d="M5 17h14v2H5z"/>',
+    satellite:'<path d="m6 14 4 4M14 6l4 4M9 15l6-6"/><circle cx="7.5" cy="16.5" r="2.2"/><circle cx="16.5" cy="7.5" r="2.2"/><path d="M12 12h.01"/>',
+    flask:'<path d="M9 3h6M10 3v6L5.5 19a2 2 0 0 0 1.7 3h9.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M8.2 15h7.6"/>',
+    box:'<path d="M3 8.5 12 4l9 4.5v9L12 22 3 17.5z"/><path d="M12 22V13M3 8.5l9 4.5 9-4.5"/>',
+    bank:'<path d="M4 10h16v10H4zM2 10h20L12 4 2 10zM8 14h.01M12 14h.01M16 14h.01M8 20v-3h8v3"/>',
+    book:'<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3z"/><path d="M5 4v16"/>',
+    balance:'<path d="M12 3v18M5 8h14"/><path d="M7 8 4 14h6L7 8zM17 8l-3 6h6l-3-6z"/>',
+    receipt:'<path d="M7 3h10v18l-2-1.2L13 21l-2-1.2L9 21l-2-1.2z"/><path d="M10 8h4M10 12h4M10 16h3"/>',
+    tie:'<path d="M10 3h4l1 4-3 2-3-2zM9 7l3 14 3-14"/>',
+    refresh:'<path d="M4 12a8 8 0 0 1 13.5-5.5L20 9"/><path d="M20 4v5h-5M20 12a8 8 0 0 1-13.5 5.5L4 15"/><path d="M4 20v-5h5"/>',
+    shield:'<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/>',
+    gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 6.2l1.4 1.4M18.4 16.4l1.4 1.4M3 12h2M19 12h2M4.2 17.8l1.4-1.4M18.4 7.6l1.4-1.4"/>',
+    chevron:'<path d="m7 10 5 5 5-5"/>',
+    dot:'<circle cx="12" cy="12" r="3"/>',
+    spark:'<path d="M12 3v4M12 17v4M4.9 6.3l2.8 2.8M16.3 14.9l2.8 2.8M3 12h4M17 12h4M4.9 17.7l2.8-2.8M16.3 9.1l2.8-2.8"/>'
+  };
+  const emojiAlias={
+    '🏠':'home','🏢':'building','🏨':'hotel','💼':'briefcase','🗂️':'folder','📋':'clipboard','👥':'users',
+    '📄':'file','💰':'money','💳':'card','💸':'cash','📊':'chart','📈':'trend','🔧':'wrench','🔔':'bell',
+    '🤖':'bot','🏛️':'landmark','✅':'check','📅':'calendar','📂':'archive','💾':'disk','⚙️':'settings',
+    '⚡':'bolt','🚀':'rocket','👑':'crown','🛰️':'satellite','🔬':'flask','📦':'box','🏦':'bank','📒':'book',
+    '📘':'book','⚖️':'balance','🧾':'receipt','👔':'tie','🔁':'refresh','🛡️':'shield','📁':'folder','✨':'spark',
+    '🏘️':'building'
+  };
+  const key=paths[n]?n:(emojiAlias[n]||'dot');
+  const d=paths[key]||paths.dot;
+  return `<span class="lq-ico" data-ico="${key}" aria-hidden="true"><svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg></span>`;
+}
+window.lqIcon = lqIcon;
 function normalizeOwnerTimelineDays(v){
   const n = Number(v);
   return [0,1,7,30,90].includes(n) ? n : 7;
@@ -39,29 +97,29 @@ function ownerTimelineFilterLabel(v){
 }
 const PROPERTY_STATUSES = ['شاغرة', 'محجوزة', 'مستأجرة', 'تحت الصيانة', 'موقوفة'];
 const NAV_SAAS_ITEMS = [
-  ['dashboard','لوحة التحكم','🏠'],
-  ['estate-platform','منصة العقارات','🏢'],
-  ['hospitality-platform','منصة المجالس','🏨'],
-  ['accounting-platform','منصة المحاسبة','💼'],
-  ['daily-ops','العمليات اليومية','🗂️'],
-  ['properties','المشاريع','🏢'],
-  ['tasks','المهام','📋'],
-  ['clients','العملاء','👥'],
-  ['contracts','العقود','📄'],
-  ['revenues','الإيرادات','💰'],
-  ['invoices','المدفوعات','💳'],
-  ['receivables','التحصيل الذكي','💸'],
-  ['admin-expenses','المصروفات','📊'],
-  ['maintenance','الصيانة','🔧'],
-  ['reports','التقارير','📈'],
-  ['messages','التنبيهات','🔔'],
-  ['walid','وليد · الذكاء','🤖'],
-  ['enterprise','التوسع','🏛️'],
-  ['business-catalog','كتالوج العمل','📋'],
-  ['production','المتابعة','✅'],
-  ['timeline','الجدول الزمني','📅'],
-  ['backup','النسخ الاحتياطي','📂'],
-  ['settings','الإعدادات','⚙️']
+  ['dashboard','لوحة التحكم','home'],
+  ['estate-platform','منصة العقارات','building'],
+  ['hospitality-platform','منصة المجالس','hotel'],
+  ['accounting-platform','منصة المحاسبة','briefcase'],
+  ['daily-ops','العمليات اليومية','folder'],
+  ['properties','المشاريع','building'],
+  ['tasks','المهام','clipboard'],
+  ['clients','العملاء','users'],
+  ['contracts','العقود','file'],
+  ['revenues','الإيرادات','money'],
+  ['invoices','المدفوعات','card'],
+  ['receivables','التحصيل الذكي','cash'],
+  ['admin-expenses','المصروفات','chart'],
+  ['maintenance','الصيانة','wrench'],
+  ['reports','التقارير','trend'],
+  ['messages','التنبيهات','bell'],
+  ['walid','وليد · الذكاء','bot'],
+  ['enterprise','التوسع','landmark'],
+  ['business-catalog','كتالوج العمل','clipboard'],
+  ['production','المتابعة','check'],
+  ['timeline','الجدول الزمني','calendar'],
+  ['backup','النسخ الاحتياطي','archive'],
+  ['settings','الإعدادات','settings']
 ];
 /** Portal-scoped product nav — only these appear in Operations for each portal. */
 const PORTAL_NAV_IDS = {
@@ -189,62 +247,62 @@ function shouldForceClassicMode(user){
   return ['owner','admin','accountant'].includes(role) || OWNER_USERNAMES.has(uname);
 }
 const DASH_EXEC_COMMANDS = [
-  {label:'إضافة عميل', section:'clients', icon:'👥'},
-  {label:'إضافة عقار / بناية', section:'properties', icon:'🏢'},
-  {label:'الدخول للمحاسبة', section:'accounts', icon:'💼'},
-  {label:'إدارة الوحدات', section:'properties', icon:'🏠'},
-  {label:'إنشاء عقد', section:'contracts', icon:'📄'},
-  {label:'فاتورة من عقد', section:'invoices', icon:'🧾'},
-  {label:'تحصيل دفعة', section:'invoices', icon:'💳'},
-  {label:'تجديد عقد', section:'contracts', icon:'🔁'},
-  {label:'تقرير مالي', section:'reports', icon:'📈'},
-  {label:'Backup فوري', section:'backup', icon:'💾', action:'backup'},
-  {label:'اختبار التشغيل', section:'qa', icon:'✅', action:'qa'}
+  {label:'إضافة عميل', section:'clients', icon:'users'},
+  {label:'إضافة عقار / بناية', section:'properties', icon:'building'},
+  {label:'الدخول للمحاسبة', section:'accounts', icon:'briefcase'},
+  {label:'إدارة الوحدات', section:'properties', icon:'home'},
+  {label:'إنشاء عقد', section:'contracts', icon:'file'},
+  {label:'فاتورة من عقد', section:'invoices', icon:'receipt'},
+  {label:'تحصيل دفعة', section:'invoices', icon:'card'},
+  {label:'تجديد عقد', section:'contracts', icon:'refresh'},
+  {label:'تقرير مالي', section:'reports', icon:'trend'},
+  {label:'Backup فوري', section:'backup', icon:'disk', action:'backup'},
+  {label:'اختبار التشغيل', section:'qa', icon:'check', action:'qa'}
 ];
 const DASH_ALL_COMMANDS = [
-  {label:'لوحة التحكم', section:'dashboard', icon:'🏠'},
-  {label:'المشاريع', section:'properties', icon:'🏢'},
-  {label:'المهام', section:'tasks', icon:'📋'},
-  {label:'العملاء', section:'clients', icon:'👥'},
-  {label:'العقود', section:'contracts', icon:'📄'},
-  {label:'المدفوعات', section:'invoices', icon:'💳'},
-  {label:'التحصيل الذكي', section:'receivables', icon:'💸'},
-  {label:'الصيانة', section:'maintenance', icon:'🔧'},
-  {label:'التقارير', section:'reports', icon:'📈'},
-  {label:'الرسائل', section:'messages', icon:'📨'},
-  {label:'المتابعة', section:'production', icon:'✅', action:'production'},
-  {label:'الجدول الزمني', section:'timeline', icon:'📅'},
-  {label:'المستندات', section:'backup', icon:'📂'},
-  {label:'الإيرادات', section:'revenues', icon:'💰', finance:true},
-  {label:'المصروفات', section:'admin-expenses', icon:'📊', finance:true},
-  {label:'الحسابات', section:'accounts', icon:'💼', finance:true},
-  {label:'مشتريات', section:'purchases', icon:'🧾', finance:true},
-  {label:'الرواتب', section:'payroll', icon:'👔', finance:true},
-  {label:'المخزن', section:'inventory', icon:'📦', finance:true},
-  {label:'كشف البنك', section:'bank', icon:'🏦', finance:true},
-  {label:'دليل الحسابات', section:'chart-accounts', icon:'📒', finance:true},
-  {label:'قوائم مالية', section:'statements', icon:'📘', finance:true, action:'statements'},
-  {label:'تسوية البنك', section:'bank-reconciliation', icon:'⚖️', finance:true},
-  {label:'الفترات المالية', section:'financial-periods', icon:'📅', finance:true},
-  {label:'المستخدمين', section:'users', icon:'🛡️', admin:true},
-  {label:'اختبار التشغيل', section:'qa', icon:'🔬', action:'qa'}
+  {label:'لوحة التحكم', section:'dashboard', icon:'home'},
+  {label:'المشاريع', section:'properties', icon:'building'},
+  {label:'المهام', section:'tasks', icon:'clipboard'},
+  {label:'العملاء', section:'clients', icon:'users'},
+  {label:'العقود', section:'contracts', icon:'file'},
+  {label:'المدفوعات', section:'invoices', icon:'card'},
+  {label:'التحصيل الذكي', section:'receivables', icon:'cash'},
+  {label:'الصيانة', section:'maintenance', icon:'wrench'},
+  {label:'التقارير', section:'reports', icon:'trend'},
+  {label:'الرسائل', section:'messages', icon:'bell'},
+  {label:'المتابعة', section:'production', icon:'check', action:'production'},
+  {label:'الجدول الزمني', section:'timeline', icon:'calendar'},
+  {label:'المستندات', section:'backup', icon:'archive'},
+  {label:'الإيرادات', section:'revenues', icon:'money', finance:true},
+  {label:'المصروفات', section:'admin-expenses', icon:'chart', finance:true},
+  {label:'الحسابات', section:'accounts', icon:'briefcase', finance:true},
+  {label:'مشتريات', section:'purchases', icon:'receipt', finance:true},
+  {label:'الرواتب', section:'payroll', icon:'tie', finance:true},
+  {label:'المخزن', section:'inventory', icon:'box', finance:true},
+  {label:'كشف البنك', section:'bank', icon:'bank', finance:true},
+  {label:'دليل الحسابات', section:'chart-accounts', icon:'book', finance:true},
+  {label:'قوائم مالية', section:'statements', icon:'book', finance:true, action:'statements'},
+  {label:'تسوية البنك', section:'bank-reconciliation', icon:'balance', finance:true},
+  {label:'الفترات المالية', section:'financial-periods', icon:'calendar', finance:true},
+  {label:'المستخدمين', section:'users', icon:'shield', admin:true},
+  {label:'اختبار التشغيل', section:'qa', icon:'flask', action:'qa'}
 ];
 const OPS_QUICK_COMMANDS = [
-  {label:'عقار', section:'properties', icon:'🏢'},
-  {label:'عميل', section:'clients', icon:'👥'},
-  {label:'عقد', section:'contracts', icon:'📄'},
-  {label:'صيانة', section:'maintenance', icon:'🔧'},
-  {label:'فاتورة', section:'invoices', icon:'💳'},
-  {label:'مصروف', section:'admin-expenses', icon:'📊', finance:true},
-  {label:'مالي', section:'accounts', icon:'💼', finance:true},
-  {label:'مشتريات', section:'purchases', icon:'🧾', finance:true},
-  {label:'رواتب', section:'payroll', icon:'👔', finance:true},
-  {label:'مخزن', section:'inventory', icon:'📦', finance:true},
-  {label:'بنك', section:'bank', icon:'🏦', finance:true},
-  {label:'تقارير', section:'reports', icon:'📈'},
-  {label:'Backup', section:'backup', icon:'💾', action:'backup'},
-  {label:'متابعة', section:'production', icon:'✅', action:'production'},
-  {label:'اختبار', section:'qa', icon:'🔬', action:'qa'}
+  {label:'عقار', section:'properties', icon:'building'},
+  {label:'عميل', section:'clients', icon:'users'},
+  {label:'عقد', section:'contracts', icon:'file'},
+  {label:'صيانة', section:'maintenance', icon:'wrench'},
+  {label:'فاتورة', section:'invoices', icon:'card'},
+  {label:'مصروف', section:'admin-expenses', icon:'chart', finance:true},
+  {label:'مالي', section:'accounts', icon:'briefcase', finance:true},
+  {label:'مشتريات', section:'purchases', icon:'receipt', finance:true},
+  {label:'رواتب', section:'payroll', icon:'tie', finance:true},
+  {label:'مخزن', section:'inventory', icon:'box', finance:true},
+  {label:'بنك', section:'bank', icon:'bank', finance:true},
+  {label:'تقارير', section:'reports', icon:'trend'},
+  {label:'Backup', section:'backup', icon:'disk', action:'backup'},
+  {label:'متابعة', section:'production', icon:'check', action:'production'},
+  {label:'اختبار', section:'qa', icon:'flask', action:'qa'}
 ];
 function dashKpis(){ return Jawdah.dashboard?.kpis || {properties:0,rented:0,vacant:0,income:0,expense:0,net:0,overdue:0,occupancy:0,health:0,maintenance:0,expiring:0,expired:0,billed:0,paid:0}; }
 function kpiSparkSvg(vals,color){
@@ -523,18 +581,18 @@ function maybeSendWelcomeMessage(user){
 }
 function htmlEscape(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const FAB_QUICK_COMMANDS = [
-  {label:'لوحة التحكم', section:'dashboard', icon:'🏠'},
-  {label:'إضافة عقار', section:'properties', icon:'🏢', action:'focus'},
-  {label:'إضافة عميل', section:'clients', icon:'👥', action:'focus'},
-  {label:'إنشاء عقد', section:'contracts', icon:'📄', action:'focus'},
-  {label:'الفواتير', section:'invoices', icon:'💳'},
-  {label:'التقارير', section:'reports', icon:'📈'},
-  {label:'Backup', section:'backup', icon:'💾', action:'backup'},
-  {label:'اختبار', section:'qa', icon:'✅', action:'qa', accent:true}
+  {label:'لوحة التحكم', section:'dashboard', icon:'home'},
+  {label:'إضافة عقار', section:'properties', icon:'building', action:'focus'},
+  {label:'إضافة عميل', section:'clients', icon:'users', action:'focus'},
+  {label:'إنشاء عقد', section:'contracts', icon:'file', action:'focus'},
+  {label:'الفواتير', section:'invoices', icon:'card'},
+  {label:'التقارير', section:'reports', icon:'trend'},
+  {label:'Backup', section:'backup', icon:'disk', action:'backup'},
+  {label:'اختبار', section:'qa', icon:'check', action:'qa', accent:true}
 ];
 const SMART_DD_GROUPS = [
-  {id:'smart', title:'أوامر ذكية', icon:'⚡', open:true, source:'fab'},
-  {id:'ops', title:'عمليات سريعة', icon:'🚀', open:false, source:'ops'}
+  {id:'smart', title:'أوامر ذكية', icon:'bolt', open:true, source:'fab'},
+  {id:'ops', title:'عمليات سريعة', icon:'rocket', open:false, source:'ops'}
 ];
 if(!Jawdah._navOpenGroups) Jawdah._navOpenGroups = new Set(['smart','تشغيل']);
 function focusSectionForm(section){
@@ -567,7 +625,7 @@ function makeSmartDdItem(cmd){
   const b=document.createElement('button');
   b.type='button';
   b.className='lq-dd-item'+(cmd.accent?' lq-dd-accent':'');
-  b.innerHTML=`<span class="lq-dd-label">${htmlEscape(cmd.label)}</span><span class="lq-dd-ico" aria-hidden="true">${cmd.icon||'•'}</span>`;
+  b.innerHTML=`<span class="lq-dd-label">${htmlEscape(cmd.label)}</span><span class="lq-dd-ico" aria-hidden="true">${lqIcon(cmd.icon||'dot',16)}</span>`;
   b.onclick=()=>dashCommandClick(cmd.section, cmd.action||'');
   return b;
 }
@@ -579,7 +637,7 @@ function makeDropdown(host, conf, items){
   toggle.type='button';
   toggle.className='lq-dd-toggle';
   toggle.setAttribute('aria-expanded', conf.open?'true':'false');
-  toggle.innerHTML=`<span class="lq-dd-title"><span class="lq-dd-ico" aria-hidden="true" style="width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14)">${conf.icon||'▾'}</span><span>${htmlEscape(conf.title)}</span></span><span class="lq-dd-chev" aria-hidden="true">▾</span>`;
+  toggle.innerHTML=`<span class="lq-dd-title"><span class="lq-dd-ico" aria-hidden="true">${lqIcon(conf.icon||'folder',15)}</span><span>${htmlEscape(conf.title)}</span></span><span class="lq-dd-chev" aria-hidden="true">${lqIcon('chevron',14)}</span>`;
   const panel=document.createElement('div');
   panel.className='lq-dd-panel';
   panel.setAttribute('role','menu');
@@ -808,7 +866,7 @@ function renderDashCommands(){
       `<span class="saas-chip ${Number(k.overdue||0)>0?'danger':''}">متأخر ${money(k.overdue||0)}</span>`,
       `<span class="saas-chip">صيانة ${fmt(openMaint)}</span>`
     ].join('');
-    const mkBtn=(cmd,exec)=>`<button type="button" class="saas-cmd${exec?' saas-cmd-exec':''}" data-dash-section="${htmlEscape(cmd.section)}" data-dash-action="${htmlEscape(cmd.action||'')}"><span class="saas-cmd-icon">${cmd.icon}</span><b>${htmlEscape(cmd.label)}</b>${exec?'<small>أمر تنفيذي سريع</small>':''}</button>`;
+    const mkBtn=(cmd,exec)=>`<button type="button" class="saas-cmd${exec?' saas-cmd-exec':''}" data-dash-section="${htmlEscape(cmd.section)}" data-dash-action="${htmlEscape(cmd.action||'')}"><span class="saas-cmd-icon">${lqIcon(cmd.icon,18)}</span><b>${htmlEscape(cmd.label)}</b>${exec?'<small>أمر تنفيذي سريع</small>':''}</button>`;
     const quick=$('#dashQuickActions');
     if(quick){
       quick.innerHTML=DASH_EXEC_COMMANDS.filter(cmd=>canAccessSection(cmd.section)).map(cmd=>mkBtn(cmd,true)).join('');
@@ -1257,7 +1315,7 @@ function buildNav(){
     toggle.type='button';
     toggle.className='lq-dd-toggle';
     toggle.setAttribute('aria-expanded', open?'true':'false');
-    toggle.innerHTML=`<span class="lq-dd-title"><span>${icon}</span><span>${htmlEscape(title)}</span></span><span class="lq-dd-chev" aria-hidden="true">▾</span>`;
+    toggle.innerHTML=`<span class="lq-dd-title"><span class="lq-dd-toggle-ico">${lqIcon(icon||'folder',15)}</span><span>${htmlEscape(title)}</span></span><span class="lq-dd-chev" aria-hidden="true">${lqIcon('chevron',14)}</span>`;
     const panel=document.createElement('div');
     panel.className='lq-dd-panel';
     toggle.onclick=e=>{
@@ -1276,29 +1334,29 @@ function buildNav(){
   };
   const addGroup=(t,icon)=>{
     const id=String(t).split('·')[0].trim()||t;
-    ensureGroup(id,t,icon||'📁');
+    ensureGroup(id,t,icon||'folder');
   };
   const addBtn=(id,label,icon,cls='')=>{
     if(!uiAllowedSection(id)) return;
-    if(!currentPanel) ensureGroup('تشغيل','تشغيل','⚙️');
+    if(!currentPanel) ensureGroup('تشغيل','تشغيل','gear');
     const b=document.createElement('button'); b.dataset.section=id;
     if(cls) b.className=cls;
-    b.innerHTML=`<span class="nav-icon">${icon}</span><span class="nav-text"><span class="nav-ar">${label}</span></span>`;
+    b.innerHTML=`<span class="nav-icon">${lqIcon(icon,16)}</span><span class="nav-text"><span class="nav-ar">${label}</span></span>`;
     b.onclick=()=>showSection(id);
     currentPanel.appendChild(b);
   };
   const portal = currentPortalChoice();
   const portalLabel = portal==='hospitality' ? 'مجالس' : (portal==='accounting' ? 'محاسبة' : 'عقارات');
   if(isPrimaryOwnerUser()){
-    addGroup('المالك','👑');
-    addBtn('owner-staff','متابعة الموظفين','👑');
-    addBtn('owner-live','لوحة المالك الحية','🛰️');
+    addGroup('المالك','crown');
+    addBtn('owner-staff','متابعة الموظفين','crown');
+    addBtn('owner-live','لوحة المالك الحية','satellite');
   }
-  addGroup(`تشغيل · ${portalLabel}`,'⚙️');
+  addGroup(`تشغيل · ${portalLabel}`,'gear');
   if(portal==='realestate' || portal==='overview'){
     const nz=document.createElement('button');
     nz.type='button';
-    nz.innerHTML=`<span class="nav-icon">🏘️</span><span class="nav-text"><span class="nav-ar">عقارات نزوى</span></span>`;
+    nz.innerHTML=`<span class="nav-icon">${lqIcon('building',16)}</span><span class="nav-text"><span class="nav-ar">عقارات نزوى</span></span>`;
     nz.onclick=()=>{
       const tok=encodeURIComponent(Jawdah.token||'');
       location.href='/quick-estate.html?portal=nizwaestate&t='+Date.now()+(tok?('&token='+tok):'');
@@ -1313,28 +1371,28 @@ function buildNav(){
   });
   // Finance extras only inside accounting portal (or inventory for realestate).
   if(portal==='accounting' && (canSeeFinance() || canSeeInventory())){
-    addGroup('المالية','💼');
-    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{
+    addGroup('المالية','briefcase');
+    [['accounts','الحسابات','briefcase'],['purchases','مشتريات','receipt'],['payroll','رواتب','tie'],['bank','البنك','bank'],['chart-accounts','دليل حسابات','book'],['statements','قوائم مالية','book'],['bank-reconciliation','تسوية البنك','balance'],['financial-periods','الفترات المالية','calendar']].forEach(([id,label,icon])=>{
       if(!canSeeFinanceSection(id)) return;
       if(!portalAllowsNavId(id) && id!=='accounts') return;
       addBtn(id,label,icon,'nav-finance-extra');
     });
   }
   if(portal==='realestate' && canSeeInventory()){
-    addBtn('inventory','المخزن','📦','nav-finance-extra');
+    addBtn('inventory','المخزن','box','nav-finance-extra');
   }
   if(portal==='accounting' && canSeeApprovals()){
-    addGroup('الاعتمادات','✅');
-    addBtn('approvals','مركز الاعتمادات','✅');
+    addGroup('الاعتمادات','check');
+    addBtn('approvals','مركز الاعتمادات','check');
   }
   if(canManageUsersSection()){
-    addGroup('أدوات الإدارة','🛠️');
-    addBtn('users','المستخدمين','🛡️');
-    addBtn('business-catalog','كتالوج العمل','📋');
-    addBtn('walid','وليد · الذكاء','🤖');
-    addBtn('enterprise','التوسع / البنية','🏛️');
-    addBtn('production','جاهزية النظام','✅');
-    if(portal==='realestate') addBtn('properties','المشاريع (قائمة)','🏢');
+    addGroup('أدوات الإدارة','wrench');
+    addBtn('users','المستخدمين','shield');
+    addBtn('business-catalog','كتالوج العمل','clipboard');
+    addBtn('walid','وليد · الذكاء','bot');
+    addBtn('enterprise','التوسع / البنية','landmark');
+    addBtn('production','جاهزية النظام','check');
+    if(portal==='realestate') addBtn('properties','المشاريع (قائمة)','building');
   }
   renderDashSideMenu();
   syncOpsBar();
@@ -1348,17 +1406,17 @@ function renderDashSideMenu(){
     items.push({id,label,icon});
   });
   if(currentPortalChoice()==='accounting' && (canSeeFinance() || canSeeInventory())){
-    [['accounts','الحسابات','💼'],['purchases','مشتريات','🧾'],['payroll','رواتب','👔'],['bank','البنك','🏦'],['chart-accounts','دليل حسابات','📒'],['statements','قوائم مالية','📘'],['bank-reconciliation','تسوية البنك','⚖️'],['financial-periods','الفترات المالية','📅']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
+    [['accounts','الحسابات','briefcase'],['purchases','مشتريات','receipt'],['payroll','رواتب','tie'],['bank','البنك','bank'],['chart-accounts','دليل حسابات','book'],['statements','قوائم مالية','book'],['bank-reconciliation','تسوية البنك','balance'],['financial-periods','الفترات المالية','calendar']].forEach(([id,label,icon])=>{ if(canSeeFinanceSection(id)) items.push({id,label,icon}); });
   }
-  if(currentPortalChoice()==='realestate' && canSeeInventory()) items.push({id:'inventory',label:'المخزن',icon:'📦'});
-  if(currentPortalChoice()==='accounting' && canSeeApprovals()) items.push({id:'approvals',label:'مركز الاعتمادات',icon:'✅'});
-  if(canManageUsersSection()) items.push({id:'users',label:'المستخدمين',icon:'🛡️'});
+  if(currentPortalChoice()==='realestate' && canSeeInventory()) items.push({id:'inventory',label:'المخزن',icon:'box'});
+  if(currentPortalChoice()==='accounting' && canSeeApprovals()) items.push({id:'approvals',label:'مركز الاعتمادات',icon:'check'});
+  if(canManageUsersSection()) items.push({id:'users',label:'المستخدمين',icon:'shield'});
   if(isPrimaryOwnerUser()){
-    items.push({id:'owner-staff',label:'متابعة الموظفين',icon:'👑'});
-    items.push({id:'owner-live',label:'لوحة المالك الحية',icon:'🛰️'});
+    items.push({id:'owner-staff',label:'متابعة الموظفين',icon:'crown'});
+    items.push({id:'owner-live',label:'لوحة المالك الحية',icon:'satellite'});
   }
   const active=Jawdah.activeSection||'dashboard';
-  host.innerHTML=items.map(x=>`<button type="button" class="saas-dash-menu-btn${active===x.id?' active':''}" onclick="showSection('${x.id}')"><span class="saas-dash-menu-ico">${x.icon}</span><span>${htmlEscape(x.label)}</span></button>`).join('');
+  host.innerHTML=items.map(x=>`<button type="button" class="saas-dash-menu-btn${active===x.id?' active':''}" onclick="showSection('${x.id}')"><span class="saas-dash-menu-ico">${lqIcon(x.icon,16)}</span><span>${htmlEscape(x.label)}</span></button>`).join('');
 }
 function renderSectionSkeleton(id){
   const sec=$('#sec-'+resolveSection(id)); if(!sec||id==='dashboard') return;
