@@ -327,6 +327,9 @@
   });
 
   patch("renderUsers", function () {
+    if (typeof window.renderStaffMapping === "function") {
+      window.renderStaffMapping();
+    }
     if (
       !Jawdah.data.users &&
       !["admin", "owner"].includes(Jawdah.user?.role)

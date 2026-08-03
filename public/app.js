@@ -2604,7 +2604,39 @@ function renderMaintenance(){
   const rows=filterRows('maintenance',['title','priority','status','notes']);
   $('#maintenanceGrid').innerHTML=rows.map(m=>`<div class="card"><h3>${m.title}</h3><p>${propertyLabel(byId('properties',m.property_id))||m.property_id}</p><span class="badge">${m.priority}</span> <span class="badge">${m.status}</span><p>التكلفة: ${money(m.cost)}</p><button class="ghost" onclick="editRecord('maintenance','${m.id}')">متابعة</button> <button class="danger" onclick="delRecord('maintenance','${m.id}')">حذف</button></div>`).join('')||'<div class="card">لا توجد طلبات صيانة</div>';
 }
+const STAFF_MAPPING = [
+  {usernames:['owner','yaqoub','yaqoub.khasibi'], name:'يعقوب فاضل الخصيبي', title:'مالك', role:'owner'},
+  {usernames:['ahmed','ahmed.najjar'], name:'احمد محمد عبد الهادي', title:'مدير تنفيذي بصلاحيات محدودة', role:'admin'},
+  {usernames:['waleed','waleed.najjar'], name:'وليد محمد عبد الهادي', title:'مالك', role:'owner'},
+  {usernames:['razan','razan.shuaili','razan.accounting'], name:'رزان سالم الشعيلي', title:'تسويق · ريسبشن · إدخالات', role:'reception'},
+  {usernames:['ali','ali.hospitality'], name:'علي محمد علي النديش', title:'مخزن', role:'operations'},
+  {usernames:['mohammed.siraj'], name:'محمد صالح سراج النور', title:'عقارات', role:'operations'},
+  {usernames:['amjad','amjad.jamoudi'], name:'امجد', title:'عقارات', role:'operations'},
+];
+function renderStaffMapping(){
+  const host=$('#staffMappingTable'); if(!host) return;
+  const users=Array.isArray(Jawdah.data?.users)?Jawdah.data.users:[];
+  const roleLabels={owner:'مالك',admin:'مدير نظام محدود',reception:'ريسبشن / إدخالات',operations:'تشغيل'};
+  const rows=STAFF_MAPPING.map(person=>{
+    const accounts=users.filter(u=>person.usernames.includes(String(u.username||'').toLowerCase()));
+    const active=accounts.some(u=>Number(u.active)!==0);
+    const usernames=accounts.length?accounts.map(u=>u.username):[person.usernames[0]];
+    return `<tr>
+      <td><strong>${htmlEscape(person.name)}</strong></td>
+      <td>${htmlEscape(person.title)}</td>
+      <td><code dir="ltr">${usernames.map(htmlEscape).join(' / ')}</code></td>
+      <td><span class="badge">${htmlEscape(roleLabels[person.role]||roleName(person.role))}</span></td>
+      <td>${accounts.length?(active?'<span class="badge paid">نشط</span>':'<span class="badge overdue">معطّل</span>'):'<span class="badge pending">يُنشأ تلقائياً</span>'}</td>
+    </tr>`;
+  }).join('');
+  host.innerHTML=`<div class="lq-staff-map-wrap"><table class="lq-staff-map-table">
+    <thead><tr><th>الاسم الكامل</th><th>المسمى الوظيفي</th><th>اسم الدخول</th><th>صلاحية النظام</th><th>الحالة</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+window.renderStaffMapping=renderStaffMapping;
 function renderUsers(){
+  renderStaffMapping();
   if(!Jawdah.data.users && !canManageUsersSection()){ $('#usersTable').innerHTML='<div class="card">هذا القسم مخصص لحسابات الإدارة المخولة</div>'; return; }
   if(!Jawdah.data.users){ $('#usersTable').innerHTML='<div class="card mini">جاري تحميل المستخدمين...</div>'; return; }
   $('#usersTable').innerHTML=tableHtml(
