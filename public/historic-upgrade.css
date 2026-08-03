@@ -796,35 +796,31 @@ body.saas-luxury .ev-showcase-viz {
   }
 }
 
-/* Transparent turquoise finish. */
+/* Transparent turquoise finish — neutralized to navy/gold (no turquoise). */
 body.saas-luxury,
 body.enterprise-vision.saas-luxury {
-  --lq-ink: #eafcff;
-  --lq-ink-soft: #bdd8df;
-  --lq-muted: #86a7b1;
-  --lq-turquoise: #18d6cb;
-  --lq-turquoise-strong: #44f2e6;
-  --lq-turquoise-deep: #0b817c;
-  --lq-deep: #06131f;
-  --lq-deep-2: #0a1f2e;
-  --lq-glass: rgba(10, 31, 46, 0.68);
-  --lq-glass-soft: rgba(17, 53, 67, 0.46);
-  --lq-glass-line: rgba(68, 242, 230, 0.20);
-  --lq-glass-line-strong: rgba(68, 242, 230, 0.34);
-  --lq-shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
-  --lq-shadow-soft: 0 14px 42px rgba(0, 0, 0, 0.24);
-  --lq-prism: linear-gradient(135deg, #12c8bf, #44f2e6 48%, #7dd3fc);
-  background:
-    linear-gradient(125deg, rgba(6, 19, 31, 0.98), rgba(9, 34, 49, 0.96) 44%, rgba(5, 26, 37, 0.98)),
-    linear-gradient(180deg, #06131f 0%, #0a1f2e 100%) !important;
-  color: var(--lq-ink) !important;
+  --lq-ink: #102033;
+  --lq-ink-soft: #334155;
+  --lq-muted: #5b6b7c;
+  --lq-turquoise: #1e4f8c;
+  --lq-turquoise-strong: #c9a96e;
+  --lq-turquoise-deep: #0f2744;
+  --lq-deep: #f4f7fb;
+  --lq-deep-2: #eef2f7;
+  --lq-glass: rgba(255, 255, 255, 0.82);
+  --lq-glass-soft: rgba(255, 255, 255, 0.66);
+  --lq-glass-line: rgba(15, 42, 74, 0.14);
+  --lq-glass-line-strong: rgba(201, 169, 110, 0.34);
+  --lq-shadow: 0 20px 48px rgba(15, 39, 68, 0.10);
+  --lq-shadow-soft: 0 12px 28px rgba(15, 39, 68, 0.08);
+  --lq-prism: linear-gradient(135deg, #0f2744, #1e4f8c 48%, #c9a96e);
 }
 
 body.saas-luxury::before {
   background:
-    linear-gradient(90deg, rgba(68, 242, 230, 0.08), transparent 24%, transparent 76%, rgba(125, 211, 252, 0.08)),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.026) 0 1px, transparent 1px 72px),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 72px) !important;
+    linear-gradient(90deg, rgba(201, 169, 110, 0.06), transparent 24%, transparent 76%, rgba(30, 79, 140, 0.05)),
+    repeating-linear-gradient(90deg, rgba(15, 42, 74, 0.02) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg, rgba(15, 42, 74, 0.015) 0 1px, transparent 1px 72px) !important;
   opacity: 1 !important;
 }
 
@@ -984,10 +980,10 @@ body.saas-luxury .gold-btn,
 body.saas-luxury .primary,
 body.saas-luxury .lq-chip-button,
 body.saas-luxury .lq-flow-line button {
-  background: linear-gradient(135deg, #0b817c, #18d6cb 58%, #7dd3fc) !important;
+  background: linear-gradient(145deg, #d4b15d, #8d6d2c) !important;
   border: 0 !important;
-  color: #02131a !important;
-  box-shadow: 0 16px 34px rgba(24, 214, 203, 0.18) !important;
+  color: #1a1408 !important;
+  box-shadow: 0 12px 26px rgba(141, 109, 44, 0.18) !important;
 }
 
 body.saas-luxury .ghost {
@@ -1091,4 +1087,31 @@ body.saas-luxury .lq-print-head {
 body.saas-luxury .lq-print-head h2,
 body.saas-luxury .lq-receipt-amount span {
   color: #0b817c !important;
+}
+
+/* ===== No turquoise — final lock (navy/gold daylight) ===== */
+body.saas-luxury,
+body.enterprise-vision.saas-luxury,
+body.lq-exec.saas-luxury {
+  --lq-turquoise: #1e4f8c !important;
+  --lq-turquoise-strong: #c9a96e !important;
+  --lq-turquoise-deep: #0f2744 !important;
+  --lq-prism: linear-gradient(135deg, #0f2744, #1e4f8c 48%, #c9a96e) !important;
+}
+body.lq-exec.saas-luxury,
+body.lq-exec.app-ready {
+  background: #f4f7fb !important;
+  color: #102033 !important;
+}
+body.lq-exec.saas-luxury::before {
+  opacity: 0.35 !important;
+  background:
+    linear-gradient(90deg, rgba(201,169,110,.05), transparent 30%, transparent 70%, rgba(30,79,140,.04)) !important;
+}
+body.saas-luxury .lq-print-head {
+  border-bottom-color: #c9a96e !important;
+}
+body.saas-luxury .lq-print-head h2,
+body.saas-luxury .lq-receipt-amount span {
+  color: #0f2744 !important;
 }
