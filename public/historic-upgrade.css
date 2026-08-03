@@ -865,7 +865,7 @@ body.saas-luxury .section.active::before,
 .lq-chain-stage::before,
 .lq-hospitality-issue::before,
 .lq-accountant-strip::before {
-  background: linear-gradient(135deg, rgba(68, 242, 230, 0.58), rgba(125, 211, 252, 0.16), rgba(255, 255, 255, 0.10)) !important;
+  background: linear-gradient(135deg, rgba(201, 169, 110, 0.58), rgba(30, 79, 140, 0.16), rgba(255, 255, 255, 0.10)) !important;
   opacity: 0.44 !important;
 }
 
@@ -873,8 +873,8 @@ body.saas-luxury .sidebar,
 body.saas-luxury .sidebar-ultra {
   background:
     linear-gradient(180deg, rgba(5, 18, 29, 0.92), rgba(8, 30, 43, 0.84)),
-    linear-gradient(135deg, rgba(24, 214, 203, 0.12), rgba(125, 211, 252, 0.05)) !important;
-  border-color: rgba(68, 242, 230, 0.20) !important;
+    linear-gradient(135deg, rgba(30, 79, 140, 0.12), rgba(30, 79, 140, 0.05)) !important;
+  border-color: rgba(201, 169, 110, 0.20) !important;
   color: var(--lq-ink) !important;
   box-shadow: 0 26px 70px rgba(0, 0, 0, 0.38) !important;
   backdrop-filter: blur(24px) saturate(1.22) !important;
@@ -885,7 +885,7 @@ body.saas-luxury .brand-pro,
 body.saas-luxury .ops-block,
 body.saas-luxury .nav button {
   background: rgba(13, 41, 55, 0.58) !important;
-  border: 1px solid rgba(68, 242, 230, 0.16) !important;
+  border: 1px solid rgba(201, 169, 110, 0.16) !important;
   color: var(--lq-ink) !important;
   box-shadow: none !important;
 }
@@ -953,7 +953,7 @@ body.saas-luxury textarea,
 .lq-contract-toolbar input,
 .lq-contract-toolbar select {
   background: rgba(4, 18, 28, 0.64) !important;
-  border: 1px solid rgba(68, 242, 230, 0.20) !important;
+  border: 1px solid rgba(201, 169, 110, 0.20) !important;
   color: var(--lq-ink) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
 }
@@ -971,8 +971,8 @@ body.saas-luxury textarea::placeholder {
 body.saas-luxury input:focus,
 body.saas-luxury select:focus,
 body.saas-luxury textarea:focus {
-  border-color: rgba(68, 242, 230, 0.72) !important;
-  box-shadow: 0 0 0 4px rgba(24, 214, 203, 0.16) !important;
+  border-color: rgba(201, 169, 110, 0.72) !important;
+  box-shadow: 0 0 0 4px rgba(30, 79, 140, 0.16) !important;
   outline: none !important;
 }
 
@@ -988,13 +988,13 @@ body.saas-luxury .lq-flow-line button {
 
 body.saas-luxury .ghost {
   background: rgba(12, 37, 52, 0.58) !important;
-  border: 1px solid rgba(68, 242, 230, 0.20) !important;
+  border: 1px solid rgba(201, 169, 110, 0.20) !important;
   color: #dffcff !important;
 }
 
 body.saas-luxury .ghost:hover {
-  background: rgba(24, 214, 203, 0.12) !important;
-  border-color: rgba(68, 242, 230, 0.40) !important;
+  background: rgba(30, 79, 140, 0.12) !important;
+  border-color: rgba(201, 169, 110, 0.40) !important;
 }
 
 body.saas-luxury .danger {
@@ -1009,12 +1009,12 @@ body.saas-luxury table {
 body.saas-luxury th {
   background: rgba(17, 70, 82, 0.58) !important;
   color: #dffcff !important;
-  border-bottom: 1px solid rgba(68, 242, 230, 0.20) !important;
+  border-bottom: 1px solid rgba(201, 169, 110, 0.20) !important;
 }
 
 body.saas-luxury td {
   color: var(--lq-ink-soft) !important;
-  border-bottom: 1px solid rgba(68, 242, 230, 0.08) !important;
+  border-bottom: 1px solid rgba(201, 169, 110, 0.08) !important;
 }
 
 body.saas-luxury tbody tr {
@@ -1022,7 +1022,7 @@ body.saas-luxury tbody tr {
 }
 
 body.saas-luxury tbody tr:hover {
-  background: rgba(24, 214, 203, 0.08) !important;
+  background: rgba(30, 79, 140, 0.08) !important;
 }
 
 body.saas-luxury .badge,
@@ -1035,7 +1035,7 @@ body.saas-luxury .top-pill,
 .lq-detail-grid article,
 .lq-attachment-list li {
   background: linear-gradient(145deg, rgba(13, 46, 61, 0.62), rgba(7, 24, 36, 0.56)) !important;
-  border: 1px solid rgba(68, 242, 230, 0.18) !important;
+  border: 1px solid rgba(201, 169, 110, 0.18) !important;
   color: var(--lq-ink) !important;
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18) !important;
 }
@@ -1081,12 +1081,12 @@ body.saas-luxury .lq-print-paper {
 }
 
 body.saas-luxury .lq-print-head {
-  border-bottom-color: #18d6cb !important;
+  border-bottom-color: #1e4f8c !important;
 }
 
 body.saas-luxury .lq-print-head h2,
 body.saas-luxury .lq-receipt-amount span {
-  color: #0b817c !important;
+  color: #0f2744 !important;
 }
 
 /* ===== No turquoise — final lock (navy/gold daylight) ===== */

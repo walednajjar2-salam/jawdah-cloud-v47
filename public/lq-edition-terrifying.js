@@ -85,11 +85,9 @@
       org.textContent = "مشاريع جودة الانطلاقة";
     }
     var greet = qs("#headerGreeting");
-    if (greet && typeof window.dashGreeting === "function") {
-      try {
-        greet.textContent = window.dashGreeting();
-      } catch (_) {}
-    }
+    if (greet && greet.parentNode) greet.parentNode.removeChild(greet);
+    var welcome = qs(".lq-header-welcome");
+    if (welcome && welcome.parentNode) welcome.parentNode.removeChild(welcome);
     if (typeof window.syncHeaderClock === "function") {
       try {
         window.syncHeaderClock();
