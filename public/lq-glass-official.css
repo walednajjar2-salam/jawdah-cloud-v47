@@ -242,7 +242,7 @@ body.app-ready .login-logo-img{
   max-height:88px !important;
   padding:0 !important;
   filter:drop-shadow(0 10px 18px rgba(15,39,68,.28)) drop-shadow(0 2px 6px rgba(201,169,110,.25)) !important;
-  animation:lqLogoSwingRL 4.8s ease-in-out infinite !important;
+  animation:none !important;
   border-radius:0 !important;
   clip-path:none !important;
 }

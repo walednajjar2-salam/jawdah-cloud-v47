@@ -1,0 +1,225 @@
+/* ============================================================
+   Brand layer: company name BEHIND crest · shared horizontal swing
+   Logo in front · name soft glass backdrop · no circular crop
+   ============================================================ */
+
+@keyframes lqBrandSwingRL{
+  0%{transform:translateX(12px)}
+  50%{transform:translateX(-12px)}
+  100%{transform:translateX(12px)}
+}
+
+/* Stack container */
+body.app-ready .lq-brand-layer,
+body.lq-exec .lq-brand-layer,
+body.login-ultra .lq-brand-layer,
+.lq-brand-layer{
+  position:relative !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  padding:0 !important;
+  overflow:visible !important;
+}
+
+/* Motion group — name + crest move together */
+body.app-ready .lq-brand-motion,
+body.lq-exec .lq-brand-motion,
+body.login-ultra .lq-brand-motion,
+.lq-brand-motion{
+  position:relative !important;
+  display:grid !important;
+  place-items:center !important;
+  width:max-content !important;
+  max-width:100% !important;
+  min-height:72px;
+  animation:lqBrandSwingRL 5.2s ease-in-out infinite !important;
+  transform-origin:center center !important;
+  will-change:transform;
+}
+
+body.login-ultra .lq-brand-motion--hero{
+  min-height:clamp(180px,28vh,320px);
+  width:min(520px,92vw) !important;
+}
+
+/* Name layer — BEHIND the crest */
+body.app-ready .lq-brand-name-back,
+body.lq-exec .lq-brand-name-back,
+body.login-ultra .lq-brand-name-back,
+.lq-brand-name-back{
+  position:absolute !important;
+  inset:auto 0 6% 0 !important;
+  z-index:1 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  gap:2px !important;
+  text-align:center !important;
+  pointer-events:none !important;
+  padding:0 8px !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+
+body.login-ultra .lq-brand-name-back--hero{
+  inset:auto 4% 8% 4% !important;
+}
+
+body.app-ready .lq-brand-name-back .lq-brand-ar,
+body.app-ready .lq-brand-name-back strong,
+body.lq-exec .lq-brand-name-back .lq-brand-ar,
+body.lq-exec .lq-brand-name-back strong,
+body.login-ultra .lq-brand-name-back .lq-brand-ar{
+  font-family:"IBM Plex Sans Arabic",sans-serif !important;
+  font-size:13px !important;
+  font-weight:800 !important;
+  line-height:1.25 !important;
+  letter-spacing:.01em !important;
+  color:rgba(10,18,32,.42) !important;
+  -webkit-text-fill-color:rgba(10,18,32,.42) !important;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.85),
+    0 8px 18px rgba(201,169,110,.18) !important;
+  background:none !important;
+  white-space:nowrap !important;
+}
+
+body.login-ultra .lq-brand-name-back--hero .lq-brand-ar{
+  font-size:clamp(22px,3.6vw,34px) !important;
+  color:rgba(10,18,32,.38) !important;
+  -webkit-text-fill-color:rgba(10,18,32,.38) !important;
+  letter-spacing:.02em !important;
+}
+
+body.app-ready .lq-brand-name-back .lq-brand-en,
+body.app-ready .lq-brand-name-back small,
+body.lq-exec .lq-brand-name-back .lq-brand-en,
+body.login-ultra .lq-brand-name-back .lq-brand-en{
+  font-family:"IBM Plex Sans Arabic",sans-serif !important;
+  font-size:11px !important;
+  font-weight:700 !important;
+  letter-spacing:.06em !important;
+  text-transform:none !important;
+  color:rgba(15,39,68,.36) !important;
+  -webkit-text-fill-color:rgba(15,39,68,.36) !important;
+  background:none !important;
+  white-space:nowrap !important;
+}
+
+body.login-ultra .lq-brand-name-back--hero .lq-brand-en{
+  font-size:clamp(13px,2vw,18px) !important;
+  letter-spacing:.12em !important;
+  color:rgba(15,39,68,.34) !important;
+  -webkit-text-fill-color:rgba(15,39,68,.34) !important;
+}
+
+/* Soft glass wash behind the name only (not a card) */
+body.app-ready .lq-brand-name-back::before,
+body.login-ultra .lq-brand-name-back::before{
+  content:"" !important;
+  position:absolute !important;
+  left:50% !important;
+  bottom:-2px !important;
+  transform:translateX(-50%) !important;
+  width:118% !important;
+  height:72% !important;
+  z-index:-1 !important;
+  border-radius:40% / 50% !important;
+  background:radial-gradient(ellipse at center,
+    rgba(255,255,255,.55) 0%,
+    rgba(255,255,255,.18) 55%,
+    transparent 72%) !important;
+  filter:blur(1px);
+  pointer-events:none !important;
+}
+
+/* Crest — FRONT */
+body.app-ready .lq-brand-crest,
+body.lq-exec .lq-brand-crest,
+body.login-ultra .lq-brand-crest,
+.lq-brand-crest,
+body.app-ready .lq-brand-layer .lq-header-logo,
+body.app-ready .lq-brand-layer .brand-logo-pro,
+body.app-ready .lq-brand-layer .brand-logo-pro--hd,
+body.login-ultra .lq-brand-layer .login-logo-img{
+  position:relative !important;
+  z-index:2 !important;
+  display:block !important;
+  margin:0 auto !important;
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  clip-path:none !important;
+  box-shadow:none !important;
+  object-fit:contain !important;
+  animation:none !important; /* parent carries the motion */
+  filter:drop-shadow(0 12px 22px rgba(15,39,68,.26)) drop-shadow(0 2px 8px rgba(201,169,110,.32)) !important;
+}
+
+body.app-ready .lq-header-brand.lq-brand-layer .lq-header-logo,
+body.app-ready .lq-header-brand .lq-brand-crest{
+  width:132px !important;
+  height:auto !important;
+  max-width:132px !important;
+  max-height:78px !important;
+}
+
+body.app-ready .brand-pro.lq-brand-layer .brand-logo-pro,
+body.app-ready .brand-pro .lq-brand-crest{
+  width:148px !important;
+  height:auto !important;
+  max-width:148px !important;
+  max-height:92px !important;
+}
+
+body.login-ultra .lq-brand-layer .login-logo-img,
+body.login-ultra .lq-brand-crest{
+  width:100% !important;
+  max-width:100% !important;
+  height:auto !important;
+  max-height:clamp(200px,32vh,380px) !important;
+}
+
+/* Kill old side-by-side copy next to logo */
+body.app-ready .lq-brand-layer .brand-copy-pro,
+body.app-ready .lq-brand-layer .lq-header-brand-text,
+body.app-ready .lq-brand-layer .login-brand-copy{
+  display:none !important;
+}
+
+/* Header brand width budget */
+body.app-ready .lq-header-brand.lq-brand-layer{
+  min-width:160px !important;
+  max-width:220px !important;
+}
+body.app-ready .sidebar-ultra .brand-pro.lq-brand-layer{
+  margin:4px 0 12px !important;
+  justify-content:center !important;
+}
+
+@media (prefers-reduced-motion:reduce){
+  body.app-ready .lq-brand-motion,
+  body.lq-exec .lq-brand-motion,
+  body.login-ultra .lq-brand-motion{
+    animation:none !important;
+  }
+}
+
+@media (max-width:900px){
+  body.app-ready .lq-header-brand.lq-brand-layer .lq-header-logo{
+    width:108px !important;
+    max-height:64px !important;
+  }
+  body.app-ready .lq-brand-name-back .lq-brand-ar{
+    font-size:11px !important;
+  }
+  body.app-ready .lq-brand-name-back .lq-brand-en{
+    font-size:10px !important;
+  }
+}
