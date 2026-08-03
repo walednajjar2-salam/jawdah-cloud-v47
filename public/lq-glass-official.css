@@ -287,3 +287,56 @@ body.app-ready th{
     animation:none !important;
   }
 }
+
+
+/* ===== SLOW LOGO SPIN FLOAT — full crest, no plate ===== */
+@keyframes lqLogoSpinSlow{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+body.app-ready .lq-header-brand,
+body.app-ready .brand-pro,
+body.app-ready .lq-header-brand::before,
+body.app-ready .lq-header-brand::after,
+body.app-ready .brand-pro::before,
+body.app-ready .brand-pro::after{
+  background:transparent !important;
+  background-image:none !important;
+  border:0 !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+body.app-ready .lq-header-brand::before,
+body.app-ready .lq-header-brand::after,
+body.app-ready .brand-pro::before,
+body.app-ready .brand-pro::after{
+  content:none !important;
+  display:none !important;
+}
+body.app-ready .lq-header-logo,
+body.app-ready .brand-logo-pro,
+body.app-ready .brand-logo-pro--circle,
+body.app-ready .brand-logo-pro--hd{
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  padding:0 !important;
+  box-shadow:none !important;
+  object-fit:contain !important;
+  image-rendering:auto !important;
+  filter:drop-shadow(0 12px 22px rgba(15,39,68,.24)) drop-shadow(0 2px 8px rgba(201,169,110,.30)) !important;
+  animation:lqLogoSpinSlow 48s linear infinite !important;
+  transform-origin:50% 50% !important;
+}
+body.app-ready .lq-header-logo{
+  width:96px !important;height:96px !important;max-width:96px !important;max-height:96px !important;
+}
+body.app-ready .brand-logo-pro--hd{
+  width:112px !important;height:112px !important;max-width:112px !important;max-height:112px !important;
+}
+@media (prefers-reduced-motion:reduce){
+  body.app-ready .lq-header-logo,
+  body.app-ready .brand-logo-pro,
+  body.app-ready .brand-logo-pro--hd{animation:none !important}
+}

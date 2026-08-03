@@ -572,3 +572,26 @@ body.lq-exec .top-pill-pro.lq-header-clock{
 @media (prefers-reduced-motion:reduce){
   .lq-estate-nx-head,.lq-estate-nx-stat{animation:none!important}
 }
+
+
+/* NO TURQUOISE ESTATE HEAD */
+.lq-estate-nx-head,
+.lq-estate-nx-head h3,
+.lq-estate-nx-head .mini,
+.lq-estate-nx-head *{
+  color:#000 !important;
+  text-shadow:none !important;
+  background-image:none;
+}
+.lq-estate-nx-head{
+  background:rgba(255,255,255,.62) !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 14px 32px rgba(15,39,68,.10) !important;
+}
+#lqNxCopyNizwa,
+.lq-estate-nx-head .ghost{
+  box-shadow:0 6px 14px rgba(15,39,68,.08) !important;
+  filter:none !important;
+  color:#000 !important;
+  border:1px solid rgba(15,42,74,.16) !important;
+  background:rgba(255,255,255,.9) !important;
+}
