@@ -1248,7 +1248,6 @@ function buildNav(){
   const nav=$('#nav'); if(!nav) return; nav.innerHTML='';
   renderSmartCommandRail(nav);
   let currentPanel=null;
-  let currentGroupId='';
   const ensureGroup=(id,title,icon='📁')=>{
     const open=Jawdah._navOpenGroups.has(id) || id==='تشغيل';
     const wrap=document.createElement('div');
@@ -1273,7 +1272,6 @@ function buildNav(){
     wrap.appendChild(panel);
     nav.appendChild(wrap);
     currentPanel=panel;
-    currentGroupId=id;
     return panel;
   };
   const addGroup=(t,icon)=>{
@@ -1291,12 +1289,10 @@ function buildNav(){
   };
   const portal = currentPortalChoice();
   const portalLabel = portal==='hospitality' ? 'مجالس' : (portal==='accounting' ? 'محاسبة' : 'عقارات');
-  if(canManageUsersSection()){
+  if(isPrimaryOwnerUser()){
     addGroup('المالك','👑');
-    if(isPrimaryOwnerUser()){
-      addBtn('owner-staff','متابعة الموظفين','👑');
-      addBtn('owner-live','لوحة المالك الحية','🛰️');
-    }
+    addBtn('owner-staff','متابعة الموظفين','👑');
+    addBtn('owner-live','لوحة المالك الحية','🛰️');
   }
   addGroup(`تشغيل · ${portalLabel}`,'⚙️');
   if(portal==='realestate' || portal==='overview'){
