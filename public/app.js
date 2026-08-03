@@ -770,7 +770,6 @@ function applyUserHeader(){
   if(!Jawdah.user) return;
   const name=displayUserName(Jawdah.user);
   const role=displayUserRole(Jawdah.user);
-  const initial=(name||'ي').trim().charAt(0);
   if($('#userName')) $('#userName').textContent=name;
   if($('#userRole')) $('#userRole').textContent=role;
   const org=$('#headerOrgName');
