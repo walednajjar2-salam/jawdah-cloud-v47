@@ -594,7 +594,7 @@ const SMART_DD_GROUPS = [
   {id:'smart', title:'أوامر ذكية', icon:'bolt', open:true, source:'fab'},
   {id:'ops', title:'عمليات سريعة', icon:'rocket', open:false, source:'ops'}
 ];
-if(!Jawdah._navOpenGroups) Jawdah._navOpenGroups = new Set(['smart','تشغيل']);
+if(!Jawdah._navOpenGroups) Jawdah._navOpenGroups = new Set(['smart','تشغيل','المالك','المالية','أدوات الإدارة','الاعتمادات']);
 function focusSectionForm(section){
   const map={
     properties:'#pBuilding',
@@ -701,14 +701,9 @@ function syncCmdFab(){
     };
     stack.appendChild(b);
   });
-  // Only show when app is ready
-  if(document.body.classList.contains('app-ready')){
-    fab.removeAttribute('hidden');
-    fab.style.display='';
-  }else{
-    fab.setAttribute('hidden','');
-    fab.style.display='none';
-  }
+  // Force visible when app ready
+  fab.removeAttribute('hidden');
+  fab.style.cssText = 'display:flex!important;visibility:visible!important;opacity:1!important;';
 }
 window.syncCmdFab = syncCmdFab;
 function syncFabDock(){
