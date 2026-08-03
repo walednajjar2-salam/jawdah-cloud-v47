@@ -280,15 +280,24 @@ body.saas-luxury .nav button.active {
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.10) !important;
 }
 
+/* Icons/avatar only — never paint nav text labels */
 body.saas-luxury .nav button .ico,
-body.saas-luxury .nav button span:last-child,
+body.saas-luxury .nav button .nav-icon,
 body.saas-luxury .mobile-nav,
 body.saas-luxury .top-icon,
 body.saas-luxury .avatar {
-  background: var(--lq-prism) !important;
+  background: linear-gradient(135deg, #0f2744, #1e4f8c) !important;
   color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.72) !important;
-  box-shadow: 0 12px 26px rgba(79, 70, 229, 0.16) !important;
+  border: 1px solid rgba(201, 169, 110, 0.35) !important;
+  box-shadow: 0 8px 18px rgba(15, 39, 68, 0.12) !important;
+}
+body.saas-luxury .nav button .nav-text,
+body.saas-luxury .nav button .nav-ar,
+body.saas-luxury .nav button span:last-child {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: inherit !important;
 }
 
 body.saas-luxury h1,
@@ -887,21 +896,30 @@ body.saas-luxury .nav button {
 
 body.saas-luxury .nav button:hover,
 body.saas-luxury .nav button.active {
-  background: linear-gradient(135deg, rgba(24, 214, 203, 0.24), rgba(125, 211, 252, 0.12)) !important;
-  border-color: rgba(68, 242, 230, 0.44) !important;
-  color: #ffffff !important;
-  box-shadow: 0 14px 30px rgba(24, 214, 203, 0.14) !important;
+  background: linear-gradient(135deg, rgba(30, 79, 140, 0.12), rgba(201, 169, 110, 0.10)) !important;
+  border-color: rgba(30, 79, 140, 0.28) !important;
+  color: #0f2744 !important;
+  box-shadow: 0 10px 22px rgba(15, 39, 68, 0.08) !important;
 }
 
+/* Icons/avatar only — never paint nav text labels with turquoise */
 body.saas-luxury .nav button .ico,
-body.saas-luxury .nav button span:last-child,
+body.saas-luxury .nav button .nav-icon,
 body.saas-luxury .mobile-nav,
 body.saas-luxury .top-icon,
 body.saas-luxury .avatar {
-  background: linear-gradient(135deg, #0b817c, #18d6cb) !important;
-  color: #ecfeff !important;
-  border: 1px solid rgba(68, 242, 230, 0.36) !important;
-  box-shadow: 0 12px 26px rgba(24, 214, 203, 0.18) !important;
+  background: linear-gradient(135deg, #0f2744, #1e4f8c) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(201, 169, 110, 0.35) !important;
+  box-shadow: 0 8px 18px rgba(15, 39, 68, 0.12) !important;
+}
+body.saas-luxury .nav button .nav-text,
+body.saas-luxury .nav button .nav-ar,
+body.saas-luxury .nav button span:last-child {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: inherit !important;
 }
 
 body.saas-luxury h1,
