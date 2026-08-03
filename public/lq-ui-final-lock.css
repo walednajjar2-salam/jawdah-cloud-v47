@@ -294,3 +294,18 @@ body.app-ready [style*="#00d4ff"]{
   body.app-ready .nav-icon,
   body.app-ready .avatar{transform:none !important}
 }
+
+
+/* KILL CYAN GLOW BUTTONS */
+body.app-ready .ghost,
+body.app-ready button.ghost,
+body.app-ready #lqNxCopyNizwa,
+body.app-ready .lq-estate-nx-head .ghost{
+  box-shadow:0 6px 14px rgba(15,39,68,.08) !important;
+  filter:none !important;
+  text-shadow:none !important;
+}
+body.app-ready .lq-estate-nx-head h3{
+  color:#000 !important;
+  -webkit-text-fill-color:#000 !important;
+}

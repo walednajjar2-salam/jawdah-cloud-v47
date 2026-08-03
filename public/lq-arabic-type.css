@@ -129,3 +129,14 @@ body.app-ready #app b{
   font-weight:800 !important;
   color:#000000 !important;
 }
+
+
+/* OFFICIAL TYPE LOCK 12 BLACK */
+html,body,body.app-ready,body.lq-exec,
+button,input,select,textarea,label,
+table,th,td,a,p,h1,h2,h3,h4,h5,h6,span,div,li,small{
+  font-family:"IBM Plex Sans Arabic",sans-serif !important;
+  font-size:12px !important;
+  font-weight:700 !important;
+  color:#000000 !important;
+}
