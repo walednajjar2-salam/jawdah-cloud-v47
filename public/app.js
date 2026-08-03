@@ -701,9 +701,14 @@ function syncCmdFab(){
     };
     stack.appendChild(b);
   });
-  // Force visible when app ready
-  fab.removeAttribute('hidden');
-  fab.style.cssText = 'display:flex!important;visibility:visible!important;opacity:1!important;';
+  // Force visible only when app ready (hide on login)
+  if(document.body.classList.contains('app-ready')){
+    fab.removeAttribute('hidden');
+    fab.style.cssText = 'display:flex!important;visibility:visible!important;opacity:1!important;';
+  }else{
+    fab.setAttribute('hidden','');
+    fab.style.cssText = 'display:none!important;';
+  }
 }
 window.syncCmdFab = syncCmdFab;
 function syncFabDock(){
