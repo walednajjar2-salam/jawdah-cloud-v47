@@ -29,6 +29,17 @@ function readToken() {
   return (localStorage.getItem('jawdah_cloud_token') || '').trim();
 }
 
+function goToPlatforms(event) {
+  if (event) event.preventDefault();
+  const token = readToken();
+  let url = '/portal-select.html?from=nizwaestate&t=' + Date.now();
+  if (token) url += '&token=' + encodeURIComponent(token);
+  location.href = url;
+}
+document.querySelectorAll('[data-back-platforms]').forEach((link) => {
+  link.addEventListener('click', goToPlatforms);
+});
+
 const e = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const money = (v) => `${Number(v || 0).toFixed(3)} ر.ع`;
 const dmy = (v) => {

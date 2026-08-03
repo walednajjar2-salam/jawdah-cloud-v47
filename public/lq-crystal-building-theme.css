@@ -377,3 +377,34 @@ html body.login-ultra a{
   color:#000!important;
   -webkit-text-fill-color:#000!important;
 }
+
+/* Persistent, explicit return to platform selector */
+html body .lq-back-platforms,
+html body .qe-back{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  width:auto!important;
+  min-width:max-content!important;
+  text-decoration:none!important;
+  white-space:nowrap!important;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+}
+html body .lq-back-platforms .lq-ico svg{
+  stroke:#000!important;
+}
+@media(max-width:720px){
+  html body .lq-back-platforms{
+    min-width:42px!important;
+    padding:9px!important;
+  }
+  html body .lq-back-platforms > span:last-child{
+    display:none!important;
+  }
+  html body.app-body .qe-back-top{
+    padding:8px 10px!important;
+    font-size:11px!important;
+  }
+}

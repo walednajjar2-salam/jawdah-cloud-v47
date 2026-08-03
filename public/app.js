@@ -5057,10 +5057,17 @@ function runSalamAgent(){
   if(!actions.length) actions.push('<span class="badge paid">الوضع المالي والتشغيلي مستقر حالياً</span>');
   host.innerHTML = actions.map(a=>`<div class="toolbar">${a}</div>`).join('');
 }
+function goToPlatforms(){
+  const token=String(Jawdah.token||localStorage.getItem('jawdah_cloud_token')||'').trim();
+  let url='/portal-select.html?from=app&t='+Date.now();
+  if(token) url+='&token='+encodeURIComponent(token);
+  location.href=url;
+}
+window.goToPlatforms=goToPlatforms;
 function bind(){
   $('#loginBtn').onclick=login; $('#logoutBtn').onclick=logout; $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open'); $('#globalSearch').oninput=()=>renderAll();
   $('#fieldModeBtn')?.addEventListener('click', toggleFieldMode);
-  $('#portalSwitchBtn')?.addEventListener('click', ()=>openPortalSwitch(true));
+  $('#portalSwitchBtn')?.addEventListener('click', goToPlatforms);
   initLoginCinema();
   initLoginUx();
   initThemeUx();
