@@ -262,7 +262,7 @@ body.app-ready .brand-logo-pro{
 /* Login/portal: same right↔left swing, never circular crop */
 body.login-ultra .lq-brand-mark--hero img,
 body.lq-official-portal .lq-brand-mark--portal img{
-  animation:lqLogoSwingRL 4.8s ease-in-out infinite !important;
+  animation:none !important;
   filter:drop-shadow(0 18px 30px rgba(15,39,68,.32)) drop-shadow(0 4px 10px rgba(201,169,110,.28)) !important;
   background:transparent !important;
   border-radius:0 !important;
@@ -335,7 +335,7 @@ body.app-ready .brand-logo-pro--hd{
   object-fit:contain !important;
   image-rendering:auto !important;
   filter:drop-shadow(0 12px 22px rgba(15,39,68,.24)) drop-shadow(0 2px 8px rgba(201,169,110,.30)) !important;
-  animation:lqLogoSwingRL 4.8s ease-in-out infinite !important;
+  animation:none !important;
   transform-origin:50% 50% !important;
 }
 body.app-ready .lq-header-logo{
