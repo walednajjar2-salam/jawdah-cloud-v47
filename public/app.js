@@ -770,9 +770,9 @@ function applyUserHeader(){
   if(!Jawdah.user) return;
   const name=displayUserName(Jawdah.user);
   const role=displayUserRole(Jawdah.user);
+  const initial=(name||'ي').trim().charAt(0);
   if($('#userName')) $('#userName').textContent=name;
   if($('#userRole')) $('#userRole').textContent=role;
-  if($('#avatar')) $('#avatar').textContent=initial;
   const org=$('#headerOrgName');
   if(org && !org.textContent.trim()) org.textContent='مشاريع جودة الانطلاقة';
 }
@@ -1137,9 +1137,8 @@ function renderSidebarUser(){
   const el=$('#sidebarUser'); if(!el||!Jawdah.user) return;
   const name=displayUserName(Jawdah.user);
   const role=displayUserRole(Jawdah.user);
-  const initial=(name||'ي').trim().charAt(0);
-  // Identity only — logout lives once in the header (no duplicate).
-  el.innerHTML=`<div class="su-avatar">${initial}</div><div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div></div>`;
+  // Name + role only — no avatar icon (owner request).
+  el.innerHTML=`<div class="su-info"><div class="su-name">${htmlEscape(name)}</div><div class="su-role">${htmlEscape(role)}</div></div>`;
 }
 function employeeGreeting(name){
   const h = new Date().getHours();
