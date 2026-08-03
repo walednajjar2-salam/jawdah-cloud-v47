@@ -57,6 +57,7 @@
   <link rel="stylesheet" href="lq-smart-dropdowns.css?v=light2">
   <link rel="stylesheet" href="lq-brand-layer.css?v=under1">
   <link rel="stylesheet" href="lq-command-contrast-lock.css?v=cc1">
+  <link rel="stylesheet" href="lq-cmd-fab.css?v=fab1">
 </head>
 <body class="login-ultra saas-login enterprise-vision va-theme lq-edition-terrifying lq-exec" data-edition="terrifying-dev">
   <style>
@@ -906,7 +907,13 @@
   <div id="genericModal" class="modal"><div class="modal-box"><div id="genericModalBody"></div><button class="ghost" onclick="closeModal('genericModal')">إغلاق</button></div></div>
 
   <div id="kpiInsightPanel" class="kpi-insight-panel" aria-hidden="true"></div>
-  <!-- saasFabDock / scroll elevator removed by owner request -->
+  <!-- Legacy saasFabDock removed; new command launcher is #lqCmdFab -->
+  <div id="lqCmdFab" class="lq-cmd-fab" aria-label="أوامر ذكية" hidden>
+    <button type="button" class="lq-cmd-fab-toggle" id="lqCmdFabToggle" aria-expanded="false" aria-label="فتح الأوامر الذكية">
+      <span class="lq-cmd-fab-diamond" aria-hidden="true"></span>
+    </button>
+    <div class="lq-cmd-fab-stack" id="lqCmdFabStack" role="menu"></div>
+  </div>
   </div>
 
   <script src="lq-print-templates.js?v=lq2" defer></script>
@@ -925,7 +932,7 @@
   <script src="lq-cosmic-bg.js?v=cosmic2" defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="lq-i18n.js?v=day6" defer></script>
-  <script src="app.js?v=svg-ico-v75" defer></script>
+  <script src="app.js?v=cmd-fab-v76" defer></script>
   <script src="lq-estate-nizwa-ux.js?v=nx2-copy" defer></script>
   <script src="lq-exec-app.js?v=day3" defer></script>
   <script src="lq-edition-terrifying.js?v=finish72" defer></script>
