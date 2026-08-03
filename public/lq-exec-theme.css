@@ -357,6 +357,15 @@ body.lq-exec #app *{
   color:#000!important;
 }
 
+/* Clock digits must remain light on the dark pill */
+body.lq-exec #app #clock,
+body.lq-exec #app .lq-header-clock,
+body.lq-exec #app #clock.lq-header-clock,
+body.lq-exec #app .top-pill-pro.lq-header-clock{
+  color:#f5f7fa!important;
+  -webkit-text-fill-color:#f5f7fa!important;
+}
+
 body.lq-exec input::placeholder,
 body.lq-exec textarea::placeholder{
   color:#000!important;
