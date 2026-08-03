@@ -1,5 +1,5 @@
 /*!
- * التطوير المؤسسي — Launch Quality ERP base edition runtime
+ * جودة الانطلاقة — Launch Quality ERP base edition runtime
  * Default foundation layer: identity, effectiveness heal, health probe.
  */
 (function () {
@@ -7,8 +7,8 @@
 
   var EDITION = {
     code: "terrifying-dev",
-    labelAr: "التطوير المؤسسي",
-    labelEn: "Institutional Development",
+    labelAr: "جودة الانطلاقة",
+    labelEn: "Launch Quality",
     uiVersion: "2026.3-TD",
     storageKey: "lq_ui_edition",
   };
@@ -31,35 +31,9 @@
   }
 
   function ensureEditionBadge() {
-    var host = qs("#lqEditionBadge") || qs(".lq-header-welcome-row") || qs(".app-header-row");
-    if (!host) return;
+    /* Development edition badge is intentionally not shown in the live UI. */
     var badge = qs("#lqEditionBadge");
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.id = "lqEditionBadge";
-      badge.className = "lq-edition-badge";
-      badge.setAttribute("title", EDITION.labelEn + " · base edition");
-      if (host.id === "lqEditionBadge") return;
-      var actions = qs(".app-header-actions");
-      if (actions && actions.parentNode === host) {
-        host.insertBefore(badge, actions);
-      } else if (host.classList && host.classList.contains("lq-header-welcome-row")) {
-        host.appendChild(badge);
-      } else {
-        host.appendChild(badge);
-      }
-    }
-    badge.innerHTML =
-      '<span class="lq-ed-kicker" id="lqEnvModeLabel">' +
-      (document.documentElement.getAttribute("data-lq-env-label") || "نسخة رسمية") +
-      "</span>" +
-      "<strong>" +
-      EDITION.labelAr +
-      "</strong>" +
-      '<small dir="ltr">v70.4</small>';
-    var mode = document.documentElement.getAttribute("data-lq-env-mode") || "official";
-    badge.classList.toggle("lq-env-trial", mode === "trial" || mode === "demo");
-    badge.classList.toggle("lq-env-official", mode === "official" || mode === "production");
+    if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
   }
 
   function healLayout() {
@@ -106,10 +80,6 @@
   }
 
   function healHeader() {
-    var leader = qs("#headerLeaderName");
-    if (leader && !String(leader.textContent || "").trim()) {
-      leader.textContent = "القائد يعقوب فاضل الخصيبي";
-    }
     var org = qs("#headerOrgName");
     if (org && !String(org.textContent || "").trim()) {
       org.textContent = "مشاريع جودة الانطلاقة";

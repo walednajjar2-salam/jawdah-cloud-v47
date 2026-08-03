@@ -776,8 +776,6 @@ function applyUserHeader(){
   if($('#avatar')) $('#avatar').textContent=initial;
   const greet=$('#headerGreeting');
   if(greet) greet.textContent=dashGreeting();
-  const leader=$('#headerLeaderName');
-  if(leader) leader.textContent=name || DISPLAY_OWNER_NAME;
   const org=$('#headerOrgName');
   if(org && !org.textContent.trim()) org.textContent='مشاريع جودة الانطلاقة';
 }
@@ -1167,7 +1165,7 @@ function buildNav(){
   const portal = currentPortalChoice();
   const portalLabel = portal==='hospitality' ? 'مجالس' : (portal==='accounting' ? 'محاسبة' : 'عقارات');
   if(canManageUsersSection()){
-    addGroup('Owner · المالك');
+    addGroup('المالك');
     if(isPrimaryOwnerUser()){
       addBtn('owner-staff','متابعة الموظفين','👑');
       addBtn('owner-live','لوحة المالك الحية','🛰️');

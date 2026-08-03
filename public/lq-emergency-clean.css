@@ -584,9 +584,9 @@ body.app-ready .lq-header-welcome{
 }
 body.saas-luxury .lq-welcome-greet,
 body.app-ready .lq-welcome-greet{
-  font-size:12px !important;
-  font-weight:600 !important;
-  color:#4a6280 !important;
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:#0f2744 !important;
 }
 body.saas-luxury .lq-welcome-leader,
 body.app-ready .lq-welcome-leader,
@@ -617,11 +617,12 @@ body.app-ready #clock.lq-header-clock{
   min-width:96px !important;
   padding:8px 12px !important;
   border-radius:12px !important;
-  background:#1f2d3d !important;
+  background:#0f2744 !important;
   color:#f5f7fa !important;
-  border:1px solid #15202c !important;
+  -webkit-text-fill-color:#f5f7fa !important;
+  border:1px solid #1a3a5c !important;
   font-variant-numeric:tabular-nums !important;
-  font-weight:700 !important;
+  font-weight:800 !important;
   font-size:14px !important;
   letter-spacing:.04em !important;
 }
@@ -779,6 +780,26 @@ body.app-ready #app .ghost,
 body.app-ready #app summary,
 body.app-ready #app pre{
   color:#0a0a0a !important;
+}
+
+/* Clock must stay light-on-dark — exclude from global black text */
+body.saas-luxury.app-ready #app #clock,
+body.saas-luxury.app-ready #app .lq-header-clock,
+body.saas-luxury.app-ready #app #clock.lq-header-clock,
+body.app-ready #app #clock,
+body.app-ready #app .lq-header-clock,
+body.lq-exec #app #clock,
+body.lq-exec #app .lq-header-clock{
+  color:#f5f7fa !important;
+  -webkit-text-fill-color:#f5f7fa !important;
+}
+
+/* Hide leftover development / scaffold chrome */
+body.saas-luxury .lq-header-kicker,
+body.app-ready .lq-header-kicker,
+#lqEditionBadge,
+.lq-edition-badge{
+  display:none !important;
 }
 
 /* Placeholders also dark enough to read */

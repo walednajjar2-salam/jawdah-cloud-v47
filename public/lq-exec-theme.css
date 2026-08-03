@@ -205,6 +205,27 @@ body.lq-exec #nav button.active{
   color:var(--lq-brand-dark)!important;
   border:1px solid #c9d9f8!important;
 }
+/* Kill turquoise label paints from historic theme — icons only */
+body.lq-exec #nav button .nav-icon,
+body.lq-exec .avatar,
+body.lq-exec .avatar-pro{
+  background:linear-gradient(135deg,#0f2744,#1e4f8c)!important;
+  color:#fff!important;
+  border:1px solid rgba(201,169,110,.35)!important;
+  box-shadow:0 8px 16px rgba(15,39,68,.10)!important;
+}
+body.lq-exec #nav button .nav-text,
+body.lq-exec #nav button .nav-ar,
+body.lq-exec #nav button span:last-child{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:inherit!important;
+}
+body.lq-exec #nav button:not(.active){
+  background:#fff!important;
+  border:1px solid var(--lq-line)!important;
+}
 body.lq-exec .search-pro input,
 body.lq-exec .form input,
 body.lq-exec .form select,
@@ -336,6 +357,15 @@ body.lq-exec #app *{
   color:#000!important;
 }
 
+/* Clock digits must remain light on the dark pill */
+body.lq-exec #app #clock,
+body.lq-exec #app .lq-header-clock,
+body.lq-exec #app #clock.lq-header-clock,
+body.lq-exec #app .top-pill-pro.lq-header-clock{
+  color:#f5f7fa!important;
+  -webkit-text-fill-color:#f5f7fa!important;
+}
+
 body.lq-exec input::placeholder,
 body.lq-exec textarea::placeholder{
   color:#000!important;
@@ -365,15 +395,15 @@ body.lq-exec .login-logo-img--float{
   filter:drop-shadow(0 6px 12px rgba(0,0,0,.16))!important;
 }
 
-/* Clock: dark background + black text as requested */
+/* Clock: dark pill with light digits for readable contrast */
 body.lq-exec #clock,
 body.lq-exec .lq-header-clock,
 body.lq-exec .top-pill-pro.lq-header-clock{
-  background:#111!important;
-  border:1px solid #111!important;
-  color:#000!important;
-  -webkit-text-fill-color:#000!important;
-  font-weight:900!important;
+  background:#0f2744!important;
+  border:1px solid #1a3a5c!important;
+  color:#f5f7fa!important;
+  -webkit-text-fill-color:#f5f7fa!important;
+  font-weight:800!important;
 }
 
 /* Contract chips */
