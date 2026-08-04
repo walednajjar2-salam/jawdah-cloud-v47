@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>رخصة مركبة — سلطنة عُمان (معبأة)</title>
+  <title>رخصة مركبة — Land Rover Defender</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@600;700&family=Libre+Baskerville:wght@700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -26,7 +26,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2rem;
+      gap: 1.5rem;
       padding: 2rem 1rem;
       background: #d5e3ed;
       font-family: "Noto Naskh Arabic", "Traditional Arabic", serif;
@@ -36,6 +36,47 @@
       font-size: 0.95rem;
       color: #4a6278;
       font-weight: 600;
+    }
+
+    .extract-box {
+      width: min(720px, 100%);
+      background: #fff;
+      border: 1px solid #c5d4e0;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+      text-align: right;
+    }
+
+    .extract-box h2 {
+      font-size: 0.95rem;
+      color: var(--ink);
+      margin-bottom: 0.6rem;
+    }
+
+    .extract-box table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .extract-box th,
+    .extract-box td {
+      border-bottom: 1px solid #e6eef4;
+      padding: 0.35rem 0.4rem;
+      text-align: right;
+    }
+
+    .extract-box th {
+      color: #5a7085;
+      font-weight: 600;
+      width: 38%;
+    }
+
+    .extract-box td {
+      color: #111;
+      font-weight: 700;
+      font-family: "Roboto Mono", "Noto Naskh Arabic", monospace;
     }
 
     .cards-row {
@@ -76,7 +117,6 @@
       background-color: var(--bg);
     }
 
-    /* ── FRONT HEADER ── */
     .front-header {
       display: grid;
       grid-template-columns: 1fr 92px 1fr;
@@ -106,13 +146,9 @@
       color: var(--red);
       margin-top: 2px;
       font-size: 0.68rem;
-      letter-spacing: 0.02em;
     }
 
-    .hdr-ar {
-      text-align: right;
-      line-height: 1.4;
-    }
+    .hdr-ar { text-align: right; line-height: 1.4; }
 
     .hdr-ar span {
       display: block;
@@ -127,13 +163,8 @@
       font-size: 0.88rem;
     }
 
-    .hdr-emblem {
-      width: 92px;
-      height: 92px;
-      justify-self: center;
-    }
+    .hdr-emblem { width: 92px; height: 92px; justify-self: center; }
 
-    /* ── FRONT BODY (filled rows) ── */
     .front-body {
       position: relative;
       padding: 4px 14px 14px;
@@ -156,7 +187,6 @@
       z-index: 1;
       display: flex;
       flex-direction: column;
-      gap: 0;
     }
 
     .data-row {
@@ -173,7 +203,7 @@
       direction: ltr;
       text-align: left;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 0.68rem;
+      font-size: 0.66rem;
       font-weight: 700;
       color: var(--text);
       line-height: 1.2;
@@ -181,7 +211,7 @@
 
     .data-row .en .lbl {
       display: block;
-      font-size: 0.55rem;
+      font-size: 0.52rem;
       font-weight: 600;
       color: #3a5a7a;
       text-transform: uppercase;
@@ -191,7 +221,7 @@
 
     .data-row .ar {
       text-align: right;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 700;
       color: var(--text);
       line-height: 1.25;
@@ -199,7 +229,7 @@
 
     .data-row .ar .lbl {
       display: block;
-      font-size: 0.58rem;
+      font-size: 0.55rem;
       font-weight: 600;
       color: #3a5a7a;
       margin-bottom: 1px;
@@ -207,14 +237,13 @@
 
     .data-row .mid {
       font-family: "Roboto Mono", "Courier New", monospace;
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       font-weight: 700;
       color: var(--text);
       white-space: nowrap;
-      padding: 0 4px;
+      padding: 0 2px;
     }
 
-    /* ── BACK ── */
     .back-body {
       position: relative;
       min-height: 350px;
@@ -283,18 +312,17 @@
 
     .field-value {
       font-family: "Roboto Mono", Arial, sans-serif;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 700;
       color: #000;
       flex: 1;
       text-align: right;
       padding-right: 4px;
-      letter-spacing: 0.01em;
     }
 
     .field-value.ar-val {
       font-family: "Noto Naskh Arabic", serif;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
     }
 
     .back-foot {
@@ -324,7 +352,6 @@
       font-weight: 900;
       letter-spacing: 0.06em;
       color: #000;
-      padding-left: 2px;
     }
 
     .mortgage-inline {
@@ -337,11 +364,6 @@
       align-self: flex-end;
     }
 
-    .mortgage-inline .val {
-      font-family: "Roboto Mono", Arial, sans-serif;
-      margin-right: 4px;
-    }
-
     .sig-box {
       background: #fff;
       border: 1.5px solid #6aacc8;
@@ -352,50 +374,45 @@
       flex-shrink: 0;
     }
 
-    .sig-box__head {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: #000;
-    }
-
-    .sig-box__sign {
-      height: 26px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
+    .sig-box__head { font-size: 0.7rem; font-weight: 700; color: #000; }
+    .sig-box__sign { height: 26px; display: flex; align-items: center; justify-content: center; }
     .sig-box__sign svg { width: 96px; height: 24px; }
-
-    .sig-box__date {
-      font-family: Arial, sans-serif;
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: #000;
-    }
+    .sig-box__date { font-family: Arial, sans-serif; font-size: 0.7rem; font-weight: 700; color: #000; }
 
     @media print {
       body { background: #fff; padding: 0; }
-      .page-title, .card-caption { display: none; }
+      .page-title, .card-caption, .extract-box { display: none; }
       .mulkiya { box-shadow: none; break-inside: avoid; }
-    }
-
-    @media (max-width: 600px) {
-      .mulkiya { width: 100%; max-width: 560px; }
-      .hdr-en span { font-size: 0.5rem; }
-      .hdr-ar span { font-size: 0.68rem; }
-      .data-row .en { font-size: 0.58rem; }
-      .data-row .ar { font-size: 0.68rem; }
     }
   </style>
 </head>
 <body>
 
-  <p class="page-title">رخصة مركبة — معبأة ببيانات نموذجية</p>
+  <p class="page-title">البيانات المستخرجة لرخصة المركبة</p>
+
+  <div class="extract-box">
+    <h2>حقول الرخصة (من بياناتك)</h2>
+    <table>
+      <tr><th>رقم الهيكل (VIN)</th><td>SALEA7BW5S2123456</td></tr>
+      <tr><th>الماركة</th><td>Land Rover</td></tr>
+      <tr><th>الطراز</th><td>Defender 110 P400</td></tr>
+      <tr><th>نوع المركبة</th><td>SUV / Station Wagon</td></tr>
+      <tr><th>اللون</th><td>Santorini Black (أسود)</td></tr>
+      <tr><th>سنة الطراز / الصنع</th><td>2025</td></tr>
+      <tr><th>رقم المحرك</th><td>306PS25A123456</td></tr>
+      <tr><th>سعة المحرك</th><td>2997 سم³</td></tr>
+      <tr><th>عدد الركاب / المقاعد</th><td>5</td></tr>
+      <tr><th>عدد المحاور</th><td>2</td></tr>
+      <tr><th>التأمين</th><td>شامل — الخليج العربي للتأمين (GIG)</td></tr>
+      <tr><th>رقم وثيقة التأمين</th><td>102/0502/2026/P/005102</td></tr>
+      <tr><th>أول تسجيل</th><td>05-07-2026</td></tr>
+      <tr><th>صلاحية الرخصة</th><td>من 05-07-2026 إلى 05-07-2027</td></tr>
+    </table>
+  </div>
 
   <div class="cards-row">
 
-    <!-- ═══════ FRONT (FILLED) ═══════ -->
+    <!-- FRONT -->
     <div class="card-wrap">
       <div class="mulkiya mulkiya--front">
         <header class="front-header">
@@ -405,26 +422,22 @@
             <span>DIR. GENERAL OF TRAFFIC</span>
             <span class="red">MOTOR VEHICLE LICENSE</span>
           </div>
-
           <div class="hdr-emblem" aria-hidden="true">
             <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
               <circle cx="60" cy="60" r="56" fill="none" stroke="#0c2d5e" stroke-width="1.2"/>
               <path d="M32 28 L38 16 L46 24 L60 10 L74 24 L82 16 L88 28 L88 34 L32 34 Z" fill="#c41e3a" stroke="#0c2d5e" stroke-width="0.7"/>
               <rect x="32" y="32" width="56" height="4" fill="#fff" stroke="#0c2d5e" stroke-width="0.4"/>
               <ellipse cx="60" cy="62" rx="38" ry="36" fill="none" stroke="#0c2d5e" stroke-width="2.2"/>
-              <ellipse cx="60" cy="62" rx="34" ry="32" fill="none" stroke="#1a5490" stroke-width="0.7" opacity="0.45"/>
               <g stroke="#0c2d5e" stroke-width="2.8" stroke-linecap="round">
                 <line x1="38" y1="78" x2="82" y2="50"/>
                 <line x1="38" y1="50" x2="82" y2="78"/>
               </g>
               <path d="M56 44 h8 l-1 22 l-3 6 l-3-6 Z" fill="#c41e3a" stroke="#0c2d5e" stroke-width="0.6"/>
-              <path d="M54 41 h12 l-2 3 h-8 Z" fill="#c41e3a" stroke="#0c2d5e" stroke-width="0.5"/>
-              <circle cx="60" cy="43" r="1.2" fill="#ffd700"/>
+              <path d="M54 41 h12 l-2 3 h-8 Z" fill="#c41e3a"/>
               <path d="M28 88 h64 a4 4 0 0 1 4 4 v6 a4 4 0 0 1-4 4 H28 a4 4 0 0 1-4-4 v-6 a4 4 0 0 1 4-4" fill="#0c2d5e"/>
-              <text x="60" y="99" text-anchor="middle" fill="#fff" font-size="5.8" font-family="Noto Naskh Arabic, Arial">شرطة عُمان السلطانية</text>
+              <text x="60" y="99" text-anchor="middle" fill="#fff" font-size="5.8">شرطة عُمان السلطانية</text>
             </svg>
           </div>
-
           <div class="hdr-ar">
             <span>سلطنة عُمان</span>
             <span>شرطة عُمان السلطانية</span>
@@ -447,62 +460,61 @@
 
           <div class="data-rows">
             <div class="data-row">
-              <div class="ar"><span class="lbl">اسم المالك</span>أحمد بن سعيد بن حمد البوسعيدي</div>
-              <div class="mid"></div>
-              <div class="en"><span class="lbl">Owner Name</span>Ahmed bin Saeed bin Hamad Al Busaidi</div>
+              <div class="ar"><span class="lbl">الماركة / الطراز</span>لاند روفر / ديفندر ١١٠</div>
+              <div class="mid">DEFENDER 110</div>
+              <div class="en"><span class="lbl">Make / Model</span>Land Rover / Defender 110 P400</div>
             </div>
             <div class="data-row">
-              <div class="ar"><span class="lbl">الرقم المدني</span>١٢٣٤٥٦٧٨</div>
-              <div class="mid">12345678</div>
-              <div class="en"><span class="lbl">Civil Number</span>12345678</div>
+              <div class="ar"><span class="lbl">نوع المركبة</span>دفع رباعي / ستيشن واجن</div>
+              <div class="mid">SUV</div>
+              <div class="en"><span class="lbl">Vehicle Type</span>SUV / Station Wagon</div>
             </div>
             <div class="data-row">
-              <div class="ar"><span class="lbl">رقم اللوحة</span>أ / ٤٢٥٨٣</div>
-              <div class="mid">A / 42583</div>
-              <div class="en"><span class="lbl">Plate No.</span>A / 42583</div>
+              <div class="ar"><span class="lbl">اللون</span>أسود (سانتوريني)</div>
+              <div class="mid">BLACK</div>
+              <div class="en"><span class="lbl">Colour</span>Santorini Black</div>
             </div>
             <div class="data-row">
-              <div class="ar"><span class="lbl">نوع المركبة</span>خصوصي</div>
-              <div class="mid">PRIVATE</div>
-              <div class="en"><span class="lbl">Vehicle Type</span>Private</div>
+              <div class="ar"><span class="lbl">سنة الصنع / الطراز</span>٢٠٢٥</div>
+              <div class="mid">2025</div>
+              <div class="en"><span class="lbl">Year of Make</span>2025</div>
             </div>
             <div class="data-row">
-              <div class="ar"><span class="lbl">الماركة / الطراز</span>تويوتا / كامري</div>
-              <div class="mid">TOYOTA CAMRY</div>
-              <div class="en"><span class="lbl">Make / Model</span>Toyota / Camry</div>
+              <div class="ar"><span class="lbl">رقم الهيكل</span>SALEA7BW5S2123456</div>
+              <div class="mid">VIN</div>
+              <div class="en"><span class="lbl">Chassis No.</span>SALEA7BW5S2123456</div>
             </div>
             <div class="data-row">
-              <div class="ar"><span class="lbl">اللون</span>أبيض</div>
-              <div class="mid">WHITE</div>
-              <div class="en"><span class="lbl">Colour</span>White</div>
+              <div class="ar"><span class="lbl">رقم المحرك</span>306PS25A123456</div>
+              <div class="mid">2997 cc</div>
+              <div class="en"><span class="lbl">Engine No.</span>306PS25A123456</div>
             </div>
             <div class="data-row">
-              <div class="ar"><span class="lbl">سنة الصنع</span>٢٠٢٤</div>
-              <div class="mid">2024</div>
-              <div class="en"><span class="lbl">Year of Make</span>2024</div>
+              <div class="ar"><span class="lbl">عدد الركاب / المحاور</span>٥ ركاب — محاوران</div>
+              <div class="mid">5 / 2</div>
+              <div class="en"><span class="lbl">Seats / Axles</span>5 Seats / 2 Axles</div>
             </div>
             <div class="data-row">
-              <div class="ar"><span class="lbl">شركة التأمين</span>العمانية القطرية للتأمين</div>
-              <div class="mid">OQIC</div>
-              <div class="en"><span class="lbl">Insurance</span>Oman Qatar Insurance</div>
+              <div class="ar"><span class="lbl">التأمين</span>شامل — الخليج العربي (GIG)</div>
+              <div class="mid">102/0502/2026/P/005102</div>
+              <div class="en"><span class="lbl">Insurance</span>Comprehensive — GIG</div>
             </div>
             <div class="data-row">
-              <div class="ar"><span class="lbl">تاريخ الانتهاء</span>١٣ / ٠٥ / ٢٠٢٦</div>
-              <div class="mid">2026-05-13</div>
-              <div class="en"><span class="lbl">Expiry Date</span>13 / 05 / 2026</div>
+              <div class="ar"><span class="lbl">الصلاحية</span>من ٠٥/٠٧/٢٠٢٦ إلى ٠٥/٠٧/٢٠٢٧</div>
+              <div class="mid">05-07-2027</div>
+              <div class="en"><span class="lbl">Validity</span>05-07-2026 → 05-07-2027</div>
             </div>
           </div>
         </div>
       </div>
-      <p class="card-caption">الوجه الأمامي — معبّأ</p>
+      <p class="card-caption">الوجه الأمامي</p>
     </div>
 
-    <!-- ═══════ BACK (FILLED) ═══════ -->
+    <!-- BACK -->
     <div class="card-wrap">
       <div class="mulkiya mulkiya--back">
         <div class="back-body">
           <div class="ruled" aria-hidden="true"></div>
-
           <div class="back-wm" aria-hidden="true">
             <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
               <circle cx="60" cy="60" r="56" fill="none" stroke="#0c2d5e" stroke-width="1.2"/>
@@ -512,50 +524,50 @@
               <line x1="38" y1="50" x2="82" y2="78" stroke="#0c2d5e" stroke-width="2.8"/>
               <path d="M56 44 h8 l-1 22 l-3 6 l-3-6 Z" fill="#0c2d5e"/>
               <path d="M28 88 h64 a4 4 0 0 1 4 4 v6 a4 4 0 0 1-4 4 H28 a4 4 0 0 1-4-4 v-6 a4 4 0 0 1 4-4" fill="#0c2d5e"/>
-              <text x="60" y="99" text-anchor="middle" fill="#fff" font-size="5.8" font-family="Arial">شرطة عُمان السلطانية</text>
+              <text x="60" y="99" text-anchor="middle" fill="#fff" font-size="5.8">شرطة عُمان السلطانية</text>
             </svg>
           </div>
 
           <div class="fields">
             <div class="field-row">
               <span class="field-colon">:</span>
-              <span class="field-label">اسم المالك</span>
-              <span class="field-value ar-val">أحمد بن سعيد بن حمد البوسعيدي</span>
+              <span class="field-label">الماركة / الطراز</span>
+              <span class="field-value">LAND ROVER / DEFENDER 110 P400</span>
             </div>
             <div class="field-row">
               <span class="field-colon">:</span>
-              <span class="field-label">الرقم المدني</span>
-              <span class="field-value">12345678</span>
-            </div>
-            <div class="field-row">
-              <span class="field-colon">:</span>
-              <span class="field-label">رقم اللوحة</span>
-              <span class="field-value">أ / 42583</span>
-            </div>
-            <div class="field-row">
-              <span class="field-colon">:</span>
-              <span class="field-label">الماركة والطراز</span>
-              <span class="field-value">TOYOTA / CAMRY</span>
-            </div>
-            <div class="field-row">
-              <span class="field-colon">:</span>
-              <span class="field-label">نوع الهيكل / اللون</span>
-              <span class="field-value ar-val">صالون / أبيض</span>
+              <span class="field-label">نوع المركبة / اللون</span>
+              <span class="field-value ar-val">SUV / أسود سانتوريني</span>
             </div>
             <div class="field-row">
               <span class="field-colon">:</span>
               <span class="field-label">سنة الصنع</span>
-              <span class="field-value">2024</span>
-            </div>
-            <div class="field-row">
-              <span class="field-colon">:</span>
-              <span class="field-label">رقم المحرك</span>
-              <span class="field-value">2AR-FEA1234567</span>
+              <span class="field-value">2025</span>
             </div>
             <div class="field-row">
               <span class="field-colon">:</span>
               <span class="field-label">رقم الهيكل</span>
-              <span class="field-value">JTDBR32E240012345</span>
+              <span class="field-value">SALEA7BW5S2123456</span>
+            </div>
+            <div class="field-row">
+              <span class="field-colon">:</span>
+              <span class="field-label">رقم المحرك</span>
+              <span class="field-value">306PS25A123456</span>
+            </div>
+            <div class="field-row">
+              <span class="field-colon">:</span>
+              <span class="field-label">سعة المحرك / الركاب</span>
+              <span class="field-value">2997 cc / 5</span>
+            </div>
+            <div class="field-row">
+              <span class="field-colon">:</span>
+              <span class="field-label">أول تسجيل</span>
+              <span class="field-value">05-07-2026</span>
+            </div>
+            <div class="field-row">
+              <span class="field-colon">:</span>
+              <span class="field-label">التأمين (شامل)</span>
+              <span class="field-value">GIG — 102/0502/2026/P/005102</span>
             </div>
           </div>
 
@@ -564,26 +576,21 @@
               <svg id="barcode"></svg>
               <div class="doc-no">4258396</div>
             </div>
-
-            <div class="mortgage-inline">
-              الرهن (إن وجد) : <span class="val">لا يوجد</span>
-            </div>
-
+            <div class="mortgage-inline">الرهن (إن وجد) : <span>—</span></div>
             <div class="sig-box">
               <div class="sig-box__head">سلطة الترخيص</div>
               <div class="sig-box__sign" aria-hidden="true">
                 <svg viewBox="0 0 120 30" xmlns="http://www.w3.org/2000/svg">
                   <path d="M4 22 C12 8, 22 26, 32 14 S52 6, 62 18 S82 24, 92 12 S108 8, 116 16"
                         fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round"/>
-                  <path d="M18 20 Q28 12 38 18" fill="none" stroke="#111" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
                 </svg>
               </div>
-              <div class="sig-box__date">2026-05-13</div>
+              <div class="sig-box__date">05-07-2027</div>
             </div>
           </footer>
         </div>
       </div>
-      <p class="card-caption">الوجه الخلفي — معبّأ</p>
+      <p class="card-caption">الوجه الخلفي</p>
     </div>
 
   </div>
