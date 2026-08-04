@@ -4,7 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>رخصة مركبة — سلطنة عُمان</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@600;700&family=Libre+Baskerville:wght@700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #b9d9ea;
+      --bg-light: #c8e4f0;
+      --ink: #0c2d5e;
+      --red: #b91c1c;
+      --line: rgba(60, 120, 160, 0.55);
+      --line-dot: rgba(55, 115, 155, 0.65);
+      --card-w: 540px;
+      --card-h-front: 360px;
+      --card-h-back: 340px;
+      --radius: 16px;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -13,165 +29,159 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2.5rem;
-      padding: 2rem;
-      background: #e8eef4;
-      font-family: "Times New Roman", Georgia, serif;
+      gap: 2rem;
+      padding: 2rem 1rem;
+      background: #d5e3ed;
+      font-family: "Noto Naskh Arabic", "Traditional Arabic", serif;
     }
 
-    h1.page-title {
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      font-size: 1.1rem;
-      color: #555;
+    .page-title {
+      font-size: 0.95rem;
+      color: #4a6278;
       font-weight: 600;
     }
 
     .cards-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 2rem;
+      gap: 2.5rem;
       justify-content: center;
       align-items: flex-start;
     }
 
-    /* ── Card base ── */
-    .license-card {
-      width: 520px;
-      border-radius: 14px;
-      border: 2px solid #2a2a2a;
+    .card-wrap { text-align: center; }
+
+    .card-caption {
+      margin-top: 0.55rem;
+      font-size: 0.78rem;
+      color: #5a7085;
+    }
+
+    /* ── shared card shell ── */
+    .mulkiya {
+      width: var(--card-w);
+      border: 1.5px solid #1a1a1a;
+      border-radius: var(--radius);
       overflow: hidden;
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
       position: relative;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+      background: var(--bg-light);
     }
 
-    /* Wavy pattern (front) */
-    .license-card--front {
-      background-color: #c8e4f0;
-      background-image: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 5px,
-        rgba(100, 160, 200, 0.25) 5px,
-        rgba(100, 160, 200, 0.25) 6px
-      );
+    /* wavy security background (front) */
+    .mulkiya--front {
+      height: var(--card-h-front);
+      background-color: var(--bg);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='14' viewBox='0 0 120 14'%3E%3Cpath d='M0 7 Q15 2 30 7 T60 7 T90 7 T120 7' fill='none' stroke='%237eb8d4' stroke-width='0.65' opacity='0.45'/%3E%3C/svg%3E");
+      background-size: 120px 14px;
     }
 
-    /* Dotted ruled lines (back) */
-    .license-card--back {
-      background-color: #c8e4f0;
-      min-height: 340px;
+    .mulkiya--back {
+      height: var(--card-h-back);
+      background-color: var(--bg);
     }
 
-    /* ── Header (front) ── */
-    .card-header {
+    /* ── FRONT HEADER ── */
+    .front-header {
       display: grid;
-      grid-template-columns: 1fr auto 1fr;
+      grid-template-columns: 1fr 88px 1fr;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1rem 0.5rem;
-      background: rgba(200, 228, 240, 0.6);
+      gap: 6px;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid rgba(12, 45, 94, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0));
     }
 
-    .header-en {
-      text-align: left;
+    .hdr-en {
       direction: ltr;
-      line-height: 1.35;
+      text-align: left;
+      font-family: "Libre Baskerville", "Times New Roman", serif;
+      line-height: 1.28;
     }
 
-    .header-en .line {
-      font-size: 0.72rem;
+    .hdr-en span {
+      display: block;
+      font-size: 0.62rem;
       font-weight: 700;
-      color: #1a3b6e;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      white-space: nowrap;
     }
 
-    .header-en .line--red {
-      color: #c4262e;
-      margin-top: 2px;
-    }
+    .hdr-en .red { color: var(--red); margin-top: 1px; font-size: 0.58rem; }
 
-    .header-ar {
+    .hdr-ar {
       text-align: right;
-      direction: rtl;
-      line-height: 1.5;
-      font-family: "Traditional Arabic", "Arial", sans-serif;
+      line-height: 1.42;
     }
 
-    .header-ar .line {
-      font-size: 0.85rem;
+    .hdr-ar span {
+      display: block;
+      font-size: 0.78rem;
       font-weight: 700;
-      color: #1a3b6e;
+      color: var(--ink);
     }
 
-    .header-ar .line--red {
-      color: #c4262e;
-      margin-top: 2px;
-    }
+    .hdr-ar .red { color: var(--red); margin-top: 1px; font-size: 0.74rem; }
 
-    .header-emblem {
-      width: 72px;
-      height: 72px;
-      flex-shrink: 0;
-    }
+    .hdr-emblem { width: 88px; height: 88px; justify-self: center; }
 
-    /* ── Body (front) ── */
-    .card-body {
+    /* ── FRONT BODY ── */
+    .front-body {
       position: relative;
-      min-height: 220px;
-      padding: 1rem 1.25rem 1.5rem;
+      height: calc(var(--card-h-front) - 108px);
+      padding: 10px 18px 16px;
     }
 
-    .watermark {
+    .wm {
       position: absolute;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       pointer-events: none;
-      z-index: 0;
     }
 
-    .watermark svg {
-      width: 180px;
-      height: 180px;
-      opacity: 0.18;
-    }
+    .wm svg { width: 210px; height: 210px; opacity: 0.14; }
 
-    .writing-lines {
+    .front-lines {
       position: relative;
       z-index: 1;
+      height: 100%;
       display: flex;
       flex-direction: column;
-      gap: 1.65rem;
-      padding-top: 0.5rem;
+      justify-content: space-between;
+      padding: 6px 0 2px;
     }
 
-    .writing-line {
-      border-bottom: 1px dashed rgba(80, 140, 180, 0.55);
+    .front-lines .line {
+      border-bottom: 1px dashed var(--line);
       height: 0;
     }
 
-    /* ── Back card ── */
-    .back-inner {
+    /* ── BACK ── */
+    .back-body {
       position: relative;
-      min-height: 340px;
-      padding: 1rem 1.25rem;
+      height: 100%;
+      padding: 12px 16px 10px;
     }
 
-    .ruled-bg {
+    /* dotted ruled paper effect */
+    .ruled {
       position: absolute;
       inset: 0;
       background-image: repeating-linear-gradient(
         to bottom,
         transparent 0,
-        transparent 31px,
-        rgba(80, 140, 180, 0.45) 31px,
-        rgba(80, 140, 180, 0.45) 32px
+        transparent 29px,
+        var(--line-dot) 29px,
+        var(--line-dot) 30px
       );
+      opacity: 0.55;
       pointer-events: none;
     }
 
-    .back-watermark {
+    .back-wm {
       position: absolute;
       inset: 0;
       display: flex;
@@ -180,255 +190,305 @@
       pointer-events: none;
     }
 
-    .back-watermark svg {
-      width: 200px;
-      height: 200px;
-      opacity: 0.22;
-    }
+    .back-wm svg { width: 230px; height: 230px; opacity: 0.17; }
 
-    .field-colons {
-      position: absolute;
-      right: 1.5rem;
-      top: 1.2rem;
-      bottom: 5rem;
+    /* data rows */
+    .fields {
+      position: relative;
+      z-index: 2;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      z-index: 2;
-      font-size: 1rem;
-      font-weight: 700;
-      color: #333;
+      gap: 0;
+      padding-right: 4px;
+      height: calc(100% - 78px);
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      min-height: 30px;
+      padding: 1px 0;
       direction: rtl;
     }
 
-    .field-label-mortgage {
-      position: absolute;
-      right: 1.25rem;
-      bottom: 6.5rem;
-      z-index: 2;
-      font-family: "Traditional Arabic", "Arial", sans-serif;
-      font-size: 0.9rem;
+    .field-label {
+      font-size: 0.72rem;
       font-weight: 700;
       color: #111;
-      direction: rtl;
+      white-space: nowrap;
+      padding-left: 6px;
     }
 
-    .back-footer {
-      position: absolute;
-      bottom: 0.75rem;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 0 1rem;
-      z-index: 3;
-    }
-
-    .barcode-block {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.25rem;
-    }
-
-    .barcode {
-      display: flex;
-      gap: 1px;
-      height: 48px;
-      align-items: stretch;
-    }
-
-    .barcode span {
-      display: block;
-      background: #111;
-      width: 2px;
-    }
-
-    .barcode span.w2 { width: 3px; }
-    .barcode span.w3 { width: 4px; }
-    .barcode span.gap { background: transparent; width: 3px; }
-
-    .serial-number {
-      font-family: "Arial Black", Arial, sans-serif;
-      font-size: 1rem;
-      font-weight: 900;
-      color: #111;
-      letter-spacing: 0.05em;
-    }
-
-    .signature-box {
-      background: #fff;
-      border: 1.5px solid #7eb8d4;
-      border-radius: 4px;
-      padding: 0.4rem 0.75rem 0.5rem;
-      min-width: 150px;
-      text-align: center;
-    }
-
-    .signature-box__title {
-      font-family: "Traditional Arabic", "Arial", sans-serif;
+    .field-colon {
       font-size: 0.85rem;
       font-weight: 700;
       color: #111;
-      margin-bottom: 0.25rem;
+      width: 12px;
+      text-align: left;
     }
 
-    .signature-box__sig {
-      font-family: "Segoe Script", "Brush Script MT", cursive;
-      font-size: 1.4rem;
-      color: #111;
-      line-height: 1;
-      margin: 0.15rem 0;
-      transform: rotate(-4deg);
-    }
-
-    .signature-box__date {
-      font-family: Arial, sans-serif;
-      font-size: 0.8rem;
+    .field-value {
+      grid-column: 1;
+      font-size: 0.72rem;
       font-weight: 700;
-      color: #111;
-      margin-top: 0.2rem;
+      color: #0a0a0a;
+      font-family: "Arial", sans-serif;
+      letter-spacing: 0.02em;
+      padding-left: 8px;
+      min-height: 18px;
     }
 
-    .card-label {
+    .field-row--empty .field-value { color: transparent; }
+
+    /* footer */
+    .back-foot {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 3;
+    }
+
+    .barcode-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3px;
+    }
+
+    .barcode-wrap svg { display: block; height: 44px; width: auto; }
+
+    .doc-no {
+      font-family: "Arial Black", Arial, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      color: #000;
+      padding-left: 2px;
+    }
+
+    .sig-box {
+      background: #fff;
+      border: 1.5px solid #6aacc8;
+      border-radius: 3px;
+      width: 158px;
+      padding: 5px 8px 6px;
       text-align: center;
-      font-family: "Segoe UI", sans-serif;
-      font-size: 0.75rem;
-      color: #666;
-      margin-top: 0.4rem;
+    }
+
+    .sig-box__head {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 2px;
+    }
+
+    .sig-box__sign {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sig-box__sign svg { width: 100px; height: 26px; }
+
+    .sig-box__date {
+      font-family: Arial, sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #000;
+      margin-top: 1px;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page-title, .card-caption { display: none; }
+      .mulkiya { box-shadow: none; break-inside: avoid; }
     }
   </style>
 </head>
 <body>
 
-  <h1 class="page-title">نموذج رخصة مركبة — سلطنة عُمان</h1>
+  <p class="page-title">رخصة مركبة — نموذج مطابق للبطاقة الرسمية</p>
 
   <div class="cards-row">
 
-    <!-- ════════════ FRONT ════════════ -->
-    <div>
-      <div class="license-card license-card--front">
-        <header class="card-header">
-          <div class="header-en">
-            <div class="line">SULTANATE OF OMAN</div>
-            <div class="line">ROYAL OMAN POLICE</div>
-            <div class="line">DIR. GENERAL OF TRAFFIC</div>
-            <div class="line line--red">MOTOR VEHICLE LICENSE</div>
+    <!-- ═══════ FRONT ═══════ -->
+    <div class="card-wrap">
+      <div class="mulkiya mulkiya--front">
+        <header class="front-header">
+          <div class="hdr-en">
+            <span>SULTANATE OF OMAN</span>
+            <span>ROYAL OMAN POLICE</span>
+            <span>DIR. GENERAL OF TRAFFIC</span>
+            <span class="red">MOTOR VEHICLE LICENSE</span>
           </div>
 
-          <div class="header-emblem" aria-hidden="true">
-            <!-- Royal Oman Police emblem (simplified SVG) -->
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="50" cy="50" r="48" fill="none" stroke="#1a3b6e" stroke-width="1.5"/>
-              <!-- Crown -->
-              <path d="M30 22 L35 14 L42 20 L50 10 L58 20 L65 14 L70 22 L70 28 L30 28 Z" fill="#c4262e" stroke="#1a3b6e" stroke-width="0.8"/>
-              <!-- Wreath -->
-              <ellipse cx="50" cy="55" rx="32" ry="30" fill="none" stroke="#1a3b6e" stroke-width="2"/>
-              <!-- Crossed swords -->
-              <line x1="35" y1="65" x2="65" y2="45" stroke="#1a3b6e" stroke-width="2.5" stroke-linecap="round"/>
-              <line x1="35" y1="45" x2="65" y2="65" stroke="#1a3b6e" stroke-width="2.5" stroke-linecap="round"/>
-              <!-- Khanjar -->
-              <path d="M48 38 L52 38 L51 58 L50 62 L49 58 Z" fill="#c4262e" stroke="#1a3b6e" stroke-width="0.6"/>
-              <path d="M46 36 L54 36 L52 38 L48 38 Z" fill="#c4262e"/>
-              <!-- Banner -->
-              <rect x="28" y="72" width="44" height="10" rx="2" fill="#1a3b6e"/>
-              <text x="50" y="79.5" text-anchor="middle" fill="#fff" font-size="4.5" font-family="Arial">شرطة عُمان السلطانية</text>
+          <div class="hdr-emblem" aria-hidden="true">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="wreath" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#1a4a8a"/>
+                  <stop offset="100%" stop-color="#0c2d5e"/>
+                </linearGradient>
+              </defs>
+              <!-- outer ring -->
+              <circle cx="60" cy="60" r="56" fill="none" stroke="#0c2d5e" stroke-width="1.2"/>
+              <!-- crown -->
+              <path d="M32 28 L38 16 L46 24 L60 10 L74 24 L82 16 L88 28 L88 34 L32 34 Z" fill="#c41e3a" stroke="#0c2d5e" stroke-width="0.7"/>
+              <rect x="32" y="32" width="56" height="4" fill="#fff" stroke="#0c2d5e" stroke-width="0.4"/>
+              <!-- wreath -->
+              <ellipse cx="60" cy="62" rx="38" ry="36" fill="none" stroke="url(#wreath)" stroke-width="2.2"/>
+              <ellipse cx="60" cy="62" rx="34" ry="32" fill="none" stroke="#1a5490" stroke-width="0.8" opacity="0.5"/>
+              <!-- crossed swords -->
+              <g stroke="#0c2d5e" stroke-width="2.8" stroke-linecap="round">
+                <line x1="38" y1="78" x2="82" y2="50"/>
+                <line x1="38" y1="50" x2="82" y2="78"/>
+              </g>
+              <!-- khanjar -->
+              <path d="M56 44 h8 l-1 22 l-3 6 l-3-6 Z" fill="#c41e3a" stroke="#0c2d5e" stroke-width="0.6"/>
+              <path d="M54 41 h12 l-2 3 h-8 Z" fill="#c41e3a" stroke="#0c2d5e" stroke-width="0.5"/>
+              <circle cx="60" cy="43" r="1.2" fill="#ffd700"/>
+              <!-- scroll -->
+              <path d="M28 88 h64 a4 4 0 0 1 4 4 v6 a4 4 0 0 1-4 4 H28 a4 4 0 0 1-4-4 v-6 a4 4 0 0 1 4-4" fill="#0c2d5e"/>
+              <text x="60" y="99" text-anchor="middle" fill="#fff" font-size="5.8" font-family="Noto Naskh Arabic, Arial">شرطة عُمان السلطانية</text>
             </svg>
           </div>
 
-          <div class="header-ar">
-            <div class="line">سلطنة عُمان</div>
-            <div class="line">شرطة عُمان السلطانية</div>
-            <div class="line">الإدارة العامة للمرور</div>
-            <div class="line line--red">رخصة مركبة</div>
+          <div class="hdr-ar">
+            <span>سلطنة عُمان</span>
+            <span>شرطة عُمان السلطانية</span>
+            <span>الإدارة العامة للمرور</span>
+            <span class="red">رخصة مركبة</span>
           </div>
         </header>
 
-        <div class="card-body">
-          <div class="watermark" aria-hidden="true">
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="50" cy="50" r="48" fill="none" stroke="#1a3b6e" stroke-width="1.5"/>
-              <path d="M30 22 L35 14 L42 20 L50 10 L58 20 L65 14 L70 22 L70 28 L30 28 Z" fill="#1a3b6e"/>
-              <ellipse cx="50" cy="55" rx="32" ry="30" fill="none" stroke="#1a3b6e" stroke-width="2"/>
-              <line x1="35" y1="65" x2="65" y2="45" stroke="#1a3b6e" stroke-width="2.5"/>
-              <line x1="35" y1="45" x2="65" y2="65" stroke="#1a3b6e" stroke-width="2.5"/>
-              <path d="M48 38 L52 38 L51 58 L50 62 L49 58 Z" fill="#1a3b6e"/>
+        <div class="front-body">
+          <div class="wm" aria-hidden="true">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="60" cy="60" r="56" fill="none" stroke="#0c2d5e" stroke-width="1.2"/>
+              <path d="M32 28 L38 16 L46 24 L60 10 L74 24 L82 16 L88 28 L88 34 L32 34 Z" fill="#0c2d5e"/>
+              <ellipse cx="60" cy="62" rx="38" ry="36" fill="none" stroke="#0c2d5e" stroke-width="2"/>
+              <line x1="38" y1="78" x2="82" y2="50" stroke="#0c2d5e" stroke-width="2.8"/>
+              <line x1="38" y1="50" x2="82" y2="78" stroke="#0c2d5e" stroke-width="2.8"/>
+              <path d="M56 44 h8 l-1 22 l-3 6 l-3-6 Z" fill="#0c2d5e"/>
             </svg>
           </div>
-          <div class="writing-lines">
-            <div class="writing-line"></div>
-            <div class="writing-line"></div>
-            <div class="writing-line"></div>
-            <div class="writing-line"></div>
-            <div class="writing-line"></div>
-            <div class="writing-line"></div>
-            <div class="writing-line"></div>
+          <div class="front-lines">
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
           </div>
         </div>
       </div>
-      <p class="card-label">الوجه الأمامي</p>
+      <p class="card-caption">الوجه الأمامي</p>
     </div>
 
-    <!-- ════════════ BACK ════════════ -->
-    <div>
-      <div class="license-card license-card--back">
-        <div class="back-inner">
-          <div class="ruled-bg" aria-hidden="true"></div>
+    <!-- ═══════ BACK ═══════ -->
+    <div class="card-wrap">
+      <div class="mulkiya mulkiya--back">
+        <div class="back-body">
+          <div class="ruled" aria-hidden="true"></div>
 
-          <div class="back-watermark" aria-hidden="true">
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="50" cy="50" r="48" fill="none" stroke="#1a3b6e" stroke-width="1.5"/>
-              <path d="M30 22 L35 14 L42 20 L50 10 L58 20 L65 14 L70 22 L70 28 L30 28 Z" fill="#1a3b6e"/>
-              <ellipse cx="50" cy="55" rx="32" ry="30" fill="none" stroke="#1a3b6e" stroke-width="2"/>
-              <line x1="35" y1="65" x2="65" y2="45" stroke="#1a3b6e" stroke-width="2.5"/>
-              <line x1="35" y1="45" x2="65" y2="65" stroke="#1a3b6e" stroke-width="2.5"/>
-              <path d="M48 38 L52 38 L51 58 L50 62 L49 58 Z" fill="#1a3b6e"/>
-              <rect x="28" y="72" width="44" height="10" rx="2" fill="#1a3b6e"/>
-              <text x="50" y="79.5" text-anchor="middle" fill="#fff" font-size="4.5" font-family="Arial">شرطة عُمان السلطانية</text>
+          <div class="back-wm" aria-hidden="true">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="60" cy="60" r="56" fill="none" stroke="#0c2d5e" stroke-width="1.2"/>
+              <path d="M32 28 L38 16 L46 24 L60 10 L74 24 L82 16 L88 28 L88 34 L32 34 Z" fill="#0c2d5e"/>
+              <ellipse cx="60" cy="62" rx="38" ry="36" fill="none" stroke="#0c2d5e" stroke-width="2"/>
+              <line x1="38" y1="78" x2="82" y2="50" stroke="#0c2d5e" stroke-width="2.8"/>
+              <line x1="38" y1="50" x2="82" y2="78" stroke="#0c2d5e" stroke-width="2.8"/>
+              <path d="M56 44 h8 l-1 22 l-3 6 l-3-6 Z" fill="#0c2d5e"/>
+              <path d="M28 88 h64 a4 4 0 0 1 4 4 v6 a4 4 0 0 1-4 4 H28 a4 4 0 0 1-4-4 v-6 a4 4 0 0 1 4-4" fill="#0c2d5e"/>
+              <text x="60" y="99" text-anchor="middle" fill="#fff" font-size="5.8" font-family="Arial">شرطة عُمان السلطانية</text>
             </svg>
           </div>
 
-          <div class="field-colons" aria-hidden="true">
-            <span>:</span>
-            <span>:</span>
-            <span>:</span>
-            <span>:</span>
-            <span>:</span>
-            <span>:</span>
-            <span>:</span>
-            <span>:</span>
+          <div class="fields">
+            <div class="field-row">
+              <span class="field-label">رقم اللوحة</span>
+              <span class="field-colon">:</span>
+              <span class="field-value">أ / 42583</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label">نوع المركبة</span>
+              <span class="field-colon">:</span>
+              <span class="field-value">خصوصي</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label">الماركة / الطراز</span>
+              <span class="field-colon">:</span>
+              <span class="field-value">TOYOTA / CAMRY</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label">اللون</span>
+              <span class="field-colon">:</span>
+              <span class="field-value">أبيض</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label">سنة الصنع</span>
+              <span class="field-colon">:</span>
+              <span class="field-value">2024</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label">رقم المحرك</span>
+              <span class="field-colon">:</span>
+              <span class="field-value">2AR-A123456</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label">رقم الهيكل</span>
+              <span class="field-colon">:</span>
+              <span class="field-value">JTDBR32E240012345</span>
+            </div>
+            <div class="field-row field-row--empty">
+              <span class="field-label">(الرهن (إن وجد</span>
+              <span class="field-colon">:</span>
+              <span class="field-value">—</span>
+            </div>
           </div>
 
-          <div class="field-label-mortgage">(الرهن (إن وجد :</div>
-
-          <footer class="back-footer">
-            <div class="barcode-block">
-              <div class="barcode" aria-label="باركود">
-                <span class="w2"></span><span></span><span class="w2"></span><span></span><span class="w3"></span>
-                <span></span><span class="w2"></span><span></span><span class="gap"></span>
-                <span class="w2"></span><span></span><span class="w3"></span><span></span><span class="w2"></span>
-                <span></span><span class="w2"></span><span class="gap"></span>
-                <span></span><span class="w3"></span><span></span><span class="w2"></span><span></span>
-                <span class="w2"></span><span></span><span class="w3"></span><span class="gap"></span>
-                <span></span><span class="w2"></span><span></span><span class="w2"></span><span class="w3"></span>
-                <span></span><span class="w2"></span><span></span><span class="w2"></span>
-              </div>
-              <div class="serial-number">4258396</div>
+          <footer class="back-foot">
+            <div class="barcode-wrap">
+              <svg id="barcode"></svg>
+              <div class="doc-no">4258396</div>
             </div>
 
-            <div class="signature-box">
-              <div class="signature-box__title">سلطة الترخيص</div>
-              <div class="signature-box__sig">&#x2713;</div>
-              <div class="signature-box__date">2026-05-13</div>
+            <div class="sig-box">
+              <div class="sig-box__head">سلطة الترخيص</div>
+              <div class="sig-box__sign" aria-hidden="true">
+                <svg viewBox="0 0 120 30" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 22 C12 8, 22 26, 32 14 S52 6, 62 18 S82 24, 92 12 S108 8, 116 16"
+                        fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M18 20 Q28 12 38 18" fill="none" stroke="#111" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+                </svg>
+              </div>
+              <div class="sig-box__date">2026-05-13</div>
             </div>
           </footer>
         </div>
       </div>
-      <p class="card-label">الوجه الخلفي</p>
+      <p class="card-caption">الوجه الخلفي</p>
     </div>
 
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script>
+    JsBarcode("#barcode", "4258396", {
+      format: "CODE128",
+      width: 1.35,
+      height: 44,
+      displayValue: false,
+      margin: 0,
+      lineColor: "#000"
+    });
+  </script>
 </body>
 </html>
