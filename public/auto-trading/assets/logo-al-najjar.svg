@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="'DF,'1 H'D3EHE">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a5fb4"/>
+      <stop offset="100%" stop-color="#0d2847"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c8942e"/>
+      <stop offset="100%" stop-color="#f0d48a"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="48" fill="url(#g)"/>
+  <rect x="18" y="18" width="284" height="284" rx="38" fill="none" stroke="url(#gold)" stroke-width="3" opacity=".85"/>
+  <path d="M72 198h176l-18-52H90l-18 52z" fill="#fff" opacity=".95"/>
+  <path d="M98 146h124l14 40H84l14-40z" fill="#dce8f7"/>
+  <circle cx="108" cy="198" r="18" fill="#0d2847" stroke="#fff" stroke-width="4"/>
+  <circle cx="212" cy="198" r="18" fill="#0d2847" stroke="#fff" stroke-width="4"/>
+  <path d="M118 146h84c8 0 14-6 14-14v-8H104v8c0 8 6 14 14 14z" fill="#fff"/>
+  <text x="160" y="248" text-anchor="middle" fill="#fff" font-family="Tahoma,Arial,sans-serif" font-size="22" font-weight="700">'DF,'1</text>
+  <text x="160" y="276" text-anchor="middle" fill="url(#gold)" font-family="Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="1.5">AL NAJJAR TRADING</text>
+</svg>

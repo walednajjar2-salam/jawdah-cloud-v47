@@ -10,6 +10,9 @@ let currentSection = 'dashboard';
 let vehiclesCache = [];
 let statusFilter = '';
 let makeFilter = '';
+let companyProfile = null;
+
+const LOGO_URL = '/auto-trading/assets/logo-al-najjar.svg?v=at2';
 
 function readToken() {
   try {
@@ -135,6 +138,72 @@ function stat(label, value, cls = '') {
   return `<div class="stat-card ${cls}"><span class="label">${e(label)}</span><strong>${e(value)}</strong></div>`;
 }
 
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => toast('تم النسخ')).catch(() => toast('تعذر النسخ', 'error'));
+}
+
+function renderCompanyCard(c) {
+  if (!c) return '';
+  const bank = c.bank || {};
+  const contacts = c.contacts || [];
+  return `
+    <div class="company-hero">
+      <img src="${e(c.logo_url || LOGO_URL)}" alt="${e(c.name_ar)}">
+      <div>
+        <h2 style="margin:0;color:var(--navy)">${e(c.name_ar)}</h2>
+        <p class="mini">${e(c.name_en || '')}</p>
+        <p class="mini">${e(c.address_ar || '')} · ${e(c.country_ar || 'سلطنة عُمان')}</p>
+        <p class="mini">ساعات العمل: ${e(c.hours || '')}</p>
+      </div>
+    </div>
+    <div class="split-grid">
+      <section class="card">
+        <div class="card-header"><h3>📞 التواصل</h3></div>
+        <div class="card-body contact-grid">
+          ${contacts.map(x => `
+            <div class="contact-card">
+              <strong>${e(x.label_ar)}</strong>
+              <a href="tel:${e(String(x.phone).replace(/\s/g, ''))}">${e(x.phone)}</a>
+              ${x.note ? `<p class="mini">${e(x.note)}</p>` : ''}
+            </div>`).join('')}
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-header"><h3>🏦 الحساب البنكي — ${e(bank.name_ar || '')}</h3></div>
+        <div class="card-body">
+          <div class="detail-list">
+            <div class="detail-row"><span>اسم صاحب الحساب</span><strong>${e(bank.account_name_en || '')}</strong></div>
+            <div class="detail-row copy-row"><span>رقم الحساب</span><span><strong class="number">${e(bank.account_number || '')}</strong> <button type="button" class="btn secondary copy" data-copy="${e(bank.account_number || '')}">نسخ</button></span></div>
+            <div class="detail-row copy-row"><span>IBAN</span><span><strong class="number">${e(bank.iban || '')}</strong> <button type="button" class="btn secondary copy" data-copy="${e(bank.iban || '')}">نسخ</button></span></div>
+            <div class="detail-row copy-row"><span>SWIFT</span><span><strong class="number">${e(bank.swift || '')}</strong> <button type="button" class="btn secondary copy" data-copy="${e(bank.swift || '')}">نسخ</button></span></div>
+            <div class="detail-row"><span>البنك</span><strong>${e(bank.name_ar || '')} · ${e(bank.name_en || '')}</strong></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <p class="mini" style="margin-top:12px">لاستبدال الشعار: ارفع صورة PNG باسم <code>logo-al-najjar.png</code> في <code>/auto-trading/assets/</code></p>`;
+}
+
+function bindCopyButtons(root) {
+  (root || document).querySelectorAll('[data-copy]').forEach(btn => {
+    btn.onclick = () => copyText(btn.getAttribute('data-copy') || '');
+  });
+}
+
+async function ensureCompany() {
+  if (companyProfile) return companyProfile;
+  const data = await api('/company');
+  companyProfile = data.company || {};
+  return companyProfile;
+}
+
+async function loadCompany() {
+  setTitle('بيانات الشركة', 'التواصل والحساب البنكي — Al Najjar Trading');
+  const c = await ensureCompany();
+  content.innerHTML = renderCompanyCard(c);
+  bindCopyButtons(content);
+}
+
 async function loadSection(section) {
   currentSection = section;
   content.classList.add('section-updating');
@@ -143,6 +212,7 @@ async function loadSection(section) {
     if (section === 'vehicles') return await loadVehicles();
     if (section === 'sales') return await loadSales();
     if (section === 'imports') return await loadImports();
+    if (section === 'company') return await loadCompany();
   } catch (err) {
     content.innerHTML = `<div class="alert error">${e(err.message)}</div>`;
   } finally {
@@ -153,6 +223,8 @@ async function loadSection(section) {
 async function loadDashboard() {
   setTitle('لوحة التحكم', 'ملخص مخزون السيارات والمبيعات والاستيراد');
   const data = await api('/dashboard');
+  const c = data.company || {};
+  companyProfile = c;
   const s = data.stats;
   content.innerHTML = `
     <div class="stats-grid">
@@ -188,12 +260,26 @@ async function loadDashboard() {
         </div>
       </section>
     </div>
-    <div class="card" style="margin-top:16px">
+    <section class="card" style="margin-top:16px">
+      <div class="card-header"><h3>النجار والسموم — ${e(c.address_ar || 'نزوى')}</h3></div>
       <div class="card-body">
-        <p class="mini">${e((data.company || {}).motto_ar || '')}</p>
-        <p class="mini">${e((data.company || {}).activity_ar || '')}</p>
+        <div class="contact-grid" style="margin-bottom:14px">
+          ${(c.contacts || []).map(x => `
+            <div class="contact-card">
+              <strong>${e(x.label_ar)}</strong>
+              <a href="tel:${e(String(x.phone).replace(/\s/g, ''))}">${e(x.phone)}</a>
+            </div>`).join('')}
+        </div>
+        <div class="detail-list">
+          <div class="detail-row copy-row"><span>IBAN — ${e((c.bank || {}).name_ar || 'صحار')}</span>
+            <span><strong class="number">${e((c.bank || {}).iban || '')}</strong>
+            <button type="button" class="btn secondary copy" data-copy="${e((c.bank || {}).iban || '')}">نسخ</button></span>
+          </div>
+        </div>
+        <p class="mini" style="margin-top:10px">${e(c.motto_ar || '')}</p>
       </div>
-    </div>`;
+    </section>`;
+  bindCopyButtons(content);
 }
 
 async function loadVehicles() {

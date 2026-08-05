@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>النجار والسموم | تجارة واستيراد السيارات</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at1">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at2">
   <style>
     html, body.app-body.theme-autotrading {
       background: #eef2f6 !important;
@@ -31,7 +31,7 @@
   <div class="app-shell">
     <aside class="sidebar open">
       <div class="sidebar-brand">
-        <div class="at-logo" aria-hidden="true">🚗</div>
+        <img id="sidebarLogo" class="at-logo-img" src="/auto-trading/assets/logo-al-najjar.svg?v=at2" alt="النجار والسموم">
         <div>
           <strong>النجار والسموم</strong>
           <small>تجارة واستيراد السيارات</small>
@@ -42,6 +42,7 @@
         <button class="nav-item" data-section="vehicles"><span class="nav-inner"><span class="nav-icon">🚘</span><span class="nav-label">المخزون</span></span></button>
         <button class="nav-item" data-section="sales"><span class="nav-inner"><span class="nav-icon">💰</span><span class="nav-label">المبيعات</span></span></button>
         <button class="nav-item" data-section="imports"><span class="nav-inner"><span class="nav-icon">🌍</span><span class="nav-label">الاستيراد</span></span></button>
+        <button class="nav-item" data-section="company"><span class="nav-inner"><span class="nav-icon">🏢</span><span class="nav-label">بيانات الشركة</span></span></button>
       </nav>
       <div class="sidebar-foot">
         <a class="btn secondary qe-back" data-back-platforms href="/portal-select.html">رجوع للمنصات</a>
@@ -82,6 +83,6 @@
     window.APP_USER = { role: 'operations', display_name: '', username: '' };
     try { localStorage.setItem('jawdah_portal_choice', 'autotrading'); } catch (_) {}
   </script>
-  <script src="/auto-trading/app.js?v=at1"></script>
+  <script src="/auto-trading/app.js?v=at2"></script>
 </body>
 </html>

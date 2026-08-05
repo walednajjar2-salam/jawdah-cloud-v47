@@ -13,11 +13,33 @@ SEED_PATH = BASE_DIR / "public" / "auto-trading" / "seed_vehicles.json"
 COMPANY_PROFILE: Dict[str, Any] = {
     "name_ar": "النجار والسموم لتجارة واستيراد السيارات",
     "name_en": "Al-Najjar & Al-Sumoom Auto Trading & Import",
+    "bank_account_name_en": "Al Najjar Trading",
     "activity_ar": "تجارة واستيراد السيارات — بيع جديد ومستعمل",
     "motto_ar": "سيارتك بثقة — من الاستيراد إلى التسليم",
-    "address_ar": "سلطنة عُمان",
+    "address_ar": "محافظة الداخلية — نزوى — حي التراث",
+    "country_ar": "سلطنة عُمان",
     "hours": "08:00 — 20:00",
-    "phones": {"whatsapp": "98203088", "mobile_1": "92120205", "mobile_2": "92269656"},
+    "logo_url": "/auto-trading/assets/logo-al-najjar.svg",
+    "phones": {
+        "owner": "71924089",
+        "hamad": "77548482",
+        "hamad_intl": "+96877548482",
+        "office": "95551994",
+        "whatsapp": "71924089",
+    },
+    "contacts": [
+        {"label_ar": "وليد / المالك", "phone": "71924089", "note": ""},
+        {"label_ar": "حمد", "phone": "77548482", "note": "+968 7754 8482"},
+        {"label_ar": "المكتب", "phone": "95551994", "note": ""},
+    ],
+    "bank": {
+        "name_ar": "بنك صحار الدولي",
+        "name_en": "Sohar International Bank",
+        "account_name_en": "Al Najjar Trading",
+        "account_number": "234020022484",
+        "swift": "BSHROMRUXXX",
+        "iban": "OM070300000234020022484",
+    },
 }
 
 VALID_STATUSES = {"متاحة", "محجوزة", "مباعة", "قيد الاستيراد", "صيانة"}
@@ -198,6 +220,9 @@ def handle_api(
         }) or True
 
     head = parts[0]
+
+    if head == "company" and method == "GET":
+        return send_json({"ok": True, "company": COMPANY_PROFILE}) or True
 
     if head == "dashboard" and method == "GET":
         stats = {
