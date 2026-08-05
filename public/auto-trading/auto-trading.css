@@ -1,0 +1,87 @@
+@import url('/quick-estate/quick-estate.css');
+
+:root {
+  --blue: #1a5fb4;
+  --blue2: #3584e4;
+  --navy: #0d1b2a;
+  --bg: #eef2f6;
+}
+
+.theme-autotrading {
+  --blue: #1a5fb4;
+  --blue2: #3584e4;
+  --navy: #0d1b2a;
+}
+
+.theme-autotrading .sidebar {
+  background: linear-gradient(180deg, #0d1b2a, #1b2838);
+}
+
+.theme-autotrading .nav-item.active {
+  background: linear-gradient(135deg, #1a5fb4, #3584e4);
+}
+
+.at-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #1a5fb4, #3584e4);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  flex: 0 0 auto;
+}
+
+.vehicle-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  background: #fff;
+  transition: 0.2s;
+}
+
+.vehicle-card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 8px 24px rgba(26, 95, 180, 0.12);
+}
+
+.vehicle-card h4 {
+  margin: 0 0 6px;
+  color: var(--navy);
+}
+
+.vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.module-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.module-tab {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.module-tab.active {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+.pill.sold { background: #e7f7ef; color: #178b57; }
+.pill.available { background: #e8f0fe; color: #1a5fb4; }
+.pill.reserved { background: #fff4db; color: #b7791f; }
+.pill.importing { background: #f1eafe; color: #7647a8; }
+.pill.service { background: #fdecec; color: #c94040; }

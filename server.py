@@ -38,6 +38,7 @@ import lq_payroll_import
 import lq_postgres
 import lq_business_catalog
 import lq_quick_estate
+import lq_auto_trading
 from lq_expand.openapi import build_openapi_spec
 from lq_expand.security import (
     device_trust_days,
@@ -99,11 +100,11 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v70.5-estate-nizwa"
+APP_VERSION = "Launch-Quality-LLC-v70.6-auto-trading-najjar"
 # Production baseline family: v70. Ops-complete = full 42-item requirements closure.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
-STABLE_TAG = "v70.5-estate-nizwa"
+STABLE_TAG = "v70.6-auto-trading-najjar"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -2080,6 +2081,7 @@ def init_db() -> None:
             ensure_column(db, "users", col, definition)
         ensure_security_runtime_tables(db)
         lq_quick_estate.ensure_tables(db)
+        lq_auto_trading.ensure_tables(db)
         try:
             import lq_nizwa_estate_copy
 
@@ -4569,6 +4571,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         payload = self.read_json() or {}
                     qmap = urllib.parse.parse_qs(query or "")
                     return lq_quick_estate.handle_api(
+                        db, method, parts[1:], qmap, payload, user, self.send_json
+                    )
+                if parts[0] == "auto-trading":
+                    user = self.require_user(db, "dashboard")
+                    if not user:
+                        return None
+                    payload = {}
+                    if method in ("POST", "PUT", "PATCH"):
+                        payload = self.read_json() or {}
+                    qmap = urllib.parse.parse_qs(query or "")
+                    return lq_auto_trading.handle_api(
                         db, method, parts[1:], qmap, payload, user, self.send_json
                     )
                 if parts[0] == "health" and method == "GET":

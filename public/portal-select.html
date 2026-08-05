@@ -26,7 +26,7 @@
       </div>
       <h1 class="op-brand-name">Launch Quality</h1>
       <p class="op-brand-ar">جودة الانطلاقة</p>
-      <p class="op-support" data-i18n="choosePlatformSub">ست منصات متكاملة — اختر مسار عملك</p>
+      <p class="op-support" data-i18n="choosePlatformSub">سبع منصات متكاملة — اختر مسار عملك</p>
     </header>
 
     <section class="op-choices" id="portalChoices" aria-label="أقسام العمل">
@@ -48,6 +48,13 @@
         <div class="op-mark op-mark-photo" aria-hidden="true"><img src="/assets/portals/hospitality.jpg?v=day7" alt=""></div>
         <h2 data-i18n="hospitality">الضيافة</h2>
         <p data-i18n="hospitalityDesc">المجالس، الحجوزات، الخدمات، والمخزن</p>
+        <span class="op-enter" data-i18n="enter">دخول</span>
+      </button>
+
+      <button class="op-choice" type="button" data-enter="autotrading" data-portal="autotrading">
+        <div class="op-mark op-mark-photo" aria-hidden="true"><span style="font-size:2.4rem;line-height:1">🚗</span></div>
+        <h2 data-i18n="autotrading">النجار والسموم</h2>
+        <p data-i18n="autotradingDesc">تجارة واستيراد السيارات — مخزون، مبيعات، واستيراد</p>
         <span class="op-enter" data-i18n="enter">دخول</span>
       </button>
 
@@ -106,7 +113,7 @@
     function normalizePortal(choice) {
       const c = String(choice || "").toLowerCase();
       if (c === "quickestate") return "nizwaestate";
-      if (["hospitality", "products", "overview", "accounting", "realestate", "nizwaestate"].includes(c)) return c;
+      if (["hospitality", "products", "overview", "accounting", "realestate", "nizwaestate", "autotrading"].includes(c)) return c;
       return "realestate";
     }
 
@@ -119,6 +126,12 @@
         let qUrl = "/quick-estate.html?portal=nizwaestate&t=" + Date.now();
         if (token) qUrl += "&token=" + encodeURIComponent(token);
         location.replace(qUrl);
+        return;
+      }
+      if (c === "autotrading") {
+        let aUrl = "/auto-trading.html?portal=autotrading&t=" + Date.now();
+        if (token) aUrl += "&token=" + encodeURIComponent(token);
+        location.replace(aUrl);
         return;
       }
       let url = "/app.html?fresh=20260802v706day3&portal=" + encodeURIComponent(c) + "&t=" + Date.now();
