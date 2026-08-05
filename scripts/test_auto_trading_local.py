@@ -33,15 +33,19 @@ def main() -> int:
 
     assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)
     stats = out[-1][1]["stats"]
-    assert stats["total_vehicles"] >= 1
+    assert stats["total_vehicles"] >= 2
 
     assert lq_auto_trading.handle_api(db, "GET", ["vehicles"], {}, {}, user, send)
     vehicles = out[-1][1]["vehicles"]
-    lr = next((v for v in vehicles if v.get("vin") == "SALEA7BW5S2123456"), None)
-    assert lr is not None, "Land Rover Defender seed missing"
-    assert lr["stock_no"] == "NT-LR-001"
+    assert vehicles[0]["stock_no"] == "NT-LR-001"
+    assert vehicles[1]["stock_no"] == "NT-MB-002"
+    lr = vehicles[0]
+    assert lr["vin"] == "SALEA7BW5S2123456"
     assert lr["license_doc_no"] == "4258396"
-    assert lr["insurance_policy"] == "102/0502/2026/P/005102"
+    mb = vehicles[1]
+    assert mb["vin"] == "4JGFD6BB1TB591167"
+    assert mb["status"] == "قيد الاستيراد"
+    assert "Salalah" in (mb.get("import_ref") or "")
 
     assert lq_auto_trading.handle_api(
         db, "POST", ["imports"], {}, {"origin_country": "UAE", "vehicle_count": 2}, user, send

@@ -43,6 +43,15 @@ function vehicleWhatsAppText(v, c) {
   ].filter(Boolean).join('\n');
 }
 
+function vehicleDocLink(v) {
+  if (!v.license_source) return '';
+  const href = String(v.license_source).startsWith('/') ? v.license_source : '/' + v.license_source;
+  const label = href.includes('bill-of-sale') ? 'عرض Bill of Sale'
+    : href.includes('license') ? 'عرض رخصة المركبة'
+    : 'عرض الوثيقة';
+  return `<a class="btn secondary" href="${e(href)}" target="_blank" rel="noopener" style="margin-top:12px;display:inline-block">${label}</a>`;
+}
+
 function licenseDetailRows(v) {
   return `
     <div class="detail-row"><span>سعة المحرك</span><strong>${e(v.engine_cc ? v.engine_cc + ' cc' : '—')}</strong></div>
@@ -463,6 +472,7 @@ function vehicleCard(v) {
       <p><strong>${price}</strong></p>
       <p class="mini">مخزون: ${e(v.stock_no)}${v.vin ? ' · VIN: ' + e(v.vin.slice(-8)) : ''}</p>
       ${v.license_doc_no ? `<p class="mini">رخصة: ${e(v.license_doc_no)} · حتى ${dmy(v.license_valid_until)}</p>` : ''}
+      ${v.status === 'قيد الاستيراد' && v.import_ref ? `<p class="mini">${e(v.import_ref)}</p>` : ''}
     </div>`;
 }
 
@@ -470,9 +480,7 @@ async function openVehicleDetail(id) {
   const data = await api('/vehicles/' + id);
   const v = data.vehicle;
   const priceDisplay = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
-  const licenseLink = v.license_source === 'oman-vehicle-license.html'
-    ? `<a class="btn secondary" href="/oman-vehicle-license.html" target="_blank" rel="noopener" style="margin-top:12px;display:inline-block">عرض رخصة المركبة</a>`
-    : '';
+  const licenseLink = vehicleDocLink(v);
   openDrawer(`
     <div class="drawer-title"><h2>${e(v.make)} ${e(v.model)}</h2><p>${e(v.stock_no)} · ${pill(v.status)}</p></div>
     <div class="detail-list" style="margin:16px 0">

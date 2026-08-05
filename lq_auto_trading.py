@@ -348,7 +348,7 @@ def handle_api(
         if make_filter:
             sql += " AND make=?"
             params.append(make_filter)
-        sql += " ORDER BY status, make, model, year DESC"
+        sql += " ORDER BY stock_no ASC"
         rows = db.execute(sql, params).fetchall()
         makes = [r[0] for r in db.execute("SELECT DISTINCT make FROM at_vehicles ORDER BY make").fetchall()]
         return send_json({"ok": True, "vehicles": [dict(r) for r in rows], "makes": makes}) or True
