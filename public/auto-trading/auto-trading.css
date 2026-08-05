@@ -192,7 +192,28 @@
   border-color: var(--blue);
 }
 
-.pill.sold { background: #e7f7ef; color: #178b57; }
+.import-status-select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  min-width: 110px;
+}
+
+.btn.small {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.sidebar-foot .wa-quick {
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+  color: #128c7e;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 13px;
+}
 .pill.available { background: #e8f0fe; color: #1a5fb4; }
 .pill.reserved { background: #fff4db; color: #b7791f; }
 .pill.importing { background: #f1eafe; color: #7647a8; }

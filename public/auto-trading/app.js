@@ -21,6 +21,93 @@ function waLink(phone) {
   return `https://wa.me/${full}`;
 }
 
+function vehicleWhatsAppText(v, c) {
+  const co = c || companyProfile || {};
+  return [
+    'NAJJAR TRADING — USED & IMPORTED CARS',
+    `${v.make} ${v.model} ${v.variant || ''}`.trim(),
+    `السنة: ${v.year || '—'} · اللون: ${v.color || '—'}`,
+    `السعر: ${money(v.list_price)}`,
+    `مخزون: ${v.stock_no}`,
+    v.vin ? `VIN: ${v.vin}` : '',
+    co.address_ar || 'نزوى — الفلج',
+    'للاستفسار: +968 71924089',
+  ].filter(Boolean).join('\n');
+}
+
+function openPrintWindow(title, bodyHtml) {
+  const w = window.open('', '_blank');
+  if (!w) { toast('فعّل النوافذ المنبثقة للطباعة', 'error'); return; }
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${e(title)}</title>
+    <style>
+      body{font-family:Tahoma,Arial,sans-serif;padding:24px;color:#111}
+      .head{text-align:center;border-bottom:3px solid #d4af37;padding-bottom:14px;margin-bottom:18px}
+      .head h1{margin:0;color:#111;letter-spacing:2px}
+      .head p{margin:6px 0 0;color:#666;font-size:13px}
+      table{width:100%;border-collapse:collapse;margin:14px 0}
+      th,td{border:1px solid #ddd;padding:8px;text-align:right;font-size:13px}
+      th{background:#f7f7f7}
+      .bank{margin-top:18px;padding:12px;border:1px solid #d4af37;border-radius:8px;background:#fffaf0}
+      .foot{margin-top:24px;font-size:12px;color:#666;text-align:center}
+      @media print{body{padding:0}}
+    </style></head><body>${bodyHtml}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 350);
+}
+
+async function printVehicleOffer(v) {
+  const c = await ensureCompany();
+  const bank = c.bank || {};
+  openPrintWindow('عرض سيارة — NAJJAR TRADING', `
+    <div class="head">
+      <h1>NAJJAR TRADING</h1>
+      <p>USED & IMPORTED CARS · ${e(c.address_ar || '')}</p>
+      <p>${e(c.address_en || '')}</p>
+    </div>
+    <h2>عرض مركبة — ${e(v.stock_no)}</h2>
+    <table>
+      <tr><th>الماركة / الطراز</th><td>${e(v.make)} ${e(v.model)} ${e(v.variant || '')}</td></tr>
+      <tr><th>السنة / اللون</th><td>${e(v.year || '—')} · ${e(v.color || '—')}</td></tr>
+      <tr><th>النوع</th><td>${e(v.vehicle_type || '—')}</td></tr>
+      <tr><th>رقم الهيكل</th><td dir="ltr">${e(v.vin || '—')}</td></tr>
+      <tr><th>سعر البيع</th><td><b>${money(v.list_price)}</b></td></tr>
+      <tr><th>بلد المنشأ</th><td>${e(v.origin_country || '—')}</td></tr>
+    </table>
+    <div class="bank">
+      <b>للتحويل البنكي — ${e(bank.name_ar || '')}</b><br>
+      ${e(bank.account_name_en || '')}<br>
+      IBAN: <span dir="ltr">${e(bank.iban || '')}</span><br>
+      SWIFT: <span dir="ltr">${e(bank.swift || '')}</span>
+    </div>
+    <p>واتساب: +968 71924089 · +968 93391994</p>
+    <div class="foot">NAJJAR TRADING · Nizwa · Falaj</div>`);
+}
+
+function printSaleReceipt(sale, c) {
+  const bank = (c || {}).bank || {};
+  openPrintWindow('إيصال بيع — ' + (sale.sale_no || ''), `
+    <div class="head">
+      <h1>NAJJAR TRADING</h1>
+      <p>USED & IMPORTED CARS</p>
+    </div>
+    <h2>إيصال بيع — ${e(sale.sale_no || '')}</h2>
+    <table>
+      <tr><th>التاريخ</th><td>${dmy(sale.sale_date)}</td></tr>
+      <tr><th>المشتري</th><td>${e(sale.buyer_name)} ${sale.buyer_phone ? '· ' + e(sale.buyer_phone) : ''}</td></tr>
+      <tr><th>المركبة</th><td>${e(sale.make || '')} ${e(sale.model || '')} · ${e(sale.stock_no || '')}</td></tr>
+      <tr><th>سعر البيع</th><td><b>${money(sale.sale_price)}</b></td></tr>
+      <tr><th>العربون</th><td>${money(sale.deposit_amount || 0)}</td></tr>
+      <tr><th>طريقة الدفع</th><td>${e(sale.payment_method || '—')}</td></tr>
+    </table>
+    <div class="bank">
+      <b>حساب التحويل</b><br>
+      ${e(bank.account_name_en || 'Al Najjar Trading')}<br>
+      IBAN: <span dir="ltr">${e(bank.iban || '')}</span>
+    </div>
+    <div class="foot">${e((c || {}).address_ar || 'نزوى — الفلج')}</div>`);
+}
+
 function readToken() {
   try {
     const qs = new URLSearchParams(location.search || '');
@@ -364,11 +451,56 @@ async function openVehicleDetail(id) {
     </div>
     <div class="form-actions">
       ${v.status !== 'مباعة' ? `<button class="btn success" type="button" id="btnSellVehicle">تسجيل بيع</button>` : ''}
+      ${v.status === 'متاحة' ? `<button class="btn secondary" type="button" id="btnReserveVehicle">حجز</button>` : ''}
+      <button class="btn secondary" type="button" id="btnWaVehicle">واتساب</button>
+      <button class="btn ghost" type="button" id="btnPrintVehicle">طباعة عرض</button>
       <button class="btn secondary" type="button" id="btnEditVehicle">تعديل</button>
     </div>`);
   const sellBtn = document.getElementById('btnSellVehicle');
   if (sellBtn) sellBtn.onclick = () => showSaleForm(v);
+  document.getElementById('btnWaVehicle').onclick = async () => {
+    const c = await ensureCompany();
+    const msg = encodeURIComponent(vehicleWhatsAppText(v, c));
+    window.open(waLink('71924089') + '?text=' + msg, '_blank', 'noopener');
+  };
+  document.getElementById('btnPrintVehicle').onclick = () => printVehicleOffer(v);
+  const reserveBtn = document.getElementById('btnReserveVehicle');
+  if (reserveBtn) reserveBtn.onclick = () => showReserveForm(v);
   document.getElementById('btnEditVehicle').onclick = () => showEditVehicleForm(v);
+}
+
+function showReserveForm(v) {
+  closeDrawer();
+  openModal(`
+    <h2>حجز مركبة — ${e(v.make)} ${e(v.model)}</h2>
+    <div class="form-grid">
+      <label class="field"><span>اسم العميل *</span><input id="rName"></label>
+      <label class="field"><span>الهاتف</span><input id="rPhone"></label>
+      <label class="field full"><span>ملاحظات</span><textarea id="rNotes" rows="2"></textarea></label>
+    </div>
+    <div class="form-actions">
+      <button class="btn primary" type="button" id="btnConfirmReserve">تأكيد الحجز</button>
+      <button class="btn ghost" type="button" onclick="closeModal()">إلغاء</button>
+    </div>`);
+  document.getElementById('btnConfirmReserve').onclick = async () => {
+    const name = document.getElementById('rName').value.trim();
+    if (!name) return toast('اسم العميل مطلوب', 'error');
+    try {
+      await api('/vehicles/' + v.id, {
+        method: 'POST',
+        body: {
+          status: 'محجوزة',
+          reserved_by: name,
+          buyer_name: name,
+          buyer_phone: document.getElementById('rPhone').value.trim(),
+          notes: (v.notes ? v.notes + '\n' : '') + 'حجز: ' + (document.getElementById('rNotes').value.trim() || name),
+        },
+      });
+      closeModal();
+      toast('تم حجز المركبة');
+      loadVehicles();
+    } catch (err) { toast(err.message, 'error'); }
+  };
 }
 
 function showAddVehicleForm() {
@@ -495,6 +627,10 @@ function showSaleForm(v) {
       });
       closeModal();
       toast('تم تسجيل البيع — ' + (res.sale?.sale_no || ''));
+      if (confirm('طباعة إيصال البيع؟')) {
+        const c = await ensureCompany();
+        printSaleReceipt({ ...res.sale, make: v.make, model: v.model, variant: v.variant }, c);
+      }
       loadVehicles();
     } catch (err) { toast(err.message, 'error'); }
   };
@@ -509,10 +645,10 @@ async function loadSales() {
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
-          <th>رقم البيع</th><th>المركبة</th><th>المشتري</th><th>السعر</th><th>التاريخ</th><th>الحالة</th>
+          <th>رقم البيع</th><th>المركبة</th><th>المشتري</th><th>السعر</th><th>التاريخ</th><th>الحالة</th><th>إجراء</th>
         </tr></thead>
         <tbody>
-          ${rows.length ? rows.map(r => `
+          ${rows.length ? rows.map((r, i) => `
             <tr>
               <td><b>${e(r.sale_no)}</b></td>
               <td>${e(r.make || '')} ${e(r.model || '')} <span class="mini">${e(r.stock_no)}</span></td>
@@ -520,10 +656,18 @@ async function loadSales() {
               <td class="money">${money(r.sale_price)}</td>
               <td>${dmy(r.sale_date)}</td>
               <td>${pill(r.status)}</td>
-            </tr>`).join('') : '<tr><td colspan="6" class="empty-state">لا مبيعات بعد</td></tr>'}
+              <td><button type="button" class="btn secondary small" data-print-sale="${i}">طباعة</button></td>
+            </tr>`).join('') : '<tr><td colspan="7" class="empty-state">لا مبيعات بعد</td></tr>'}
         </tbody>
       </table>
     </div>`;
+  content.querySelectorAll('[data-print-sale]').forEach(btn => {
+    btn.onclick = async () => {
+      const r = rows[Number(btn.getAttribute('data-print-sale'))];
+      const c = await ensureCompany();
+      printSaleReceipt(r, c);
+    };
+  });
 }
 
 async function loadImports() {
@@ -540,7 +684,7 @@ async function loadImports() {
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
-          <th>رقم الطلب</th><th>بلد المنشأ</th><th>المورد</th><th>عدد المركبات</th><th>التكلفة</th><th>الحالة</th><th>ETA</th>
+          <th>رقم الطلب</th><th>بلد المنشأ</th><th>المورد</th><th>عدد</th><th>التكلفة</th><th>الحالة</th><th>ETA</th><th>تحديث</th>
         </tr></thead>
         <tbody>
           ${rows.length ? rows.map(r => `
@@ -552,11 +696,29 @@ async function loadImports() {
               <td class="money">${money(r.total_cost)}</td>
               <td>${pill(r.status, r.status)}</td>
               <td>${dmy(r.eta_date)}</td>
-            </tr>`).join('') : '<tr><td colspan="7" class="empty-state">لا طلبات استيراد — أضف طلباً جديداً</td></tr>'}
+              <td>
+                <select data-import-id="${r.id}" class="import-status-select">
+                  ${['قيد الشحن', 'في الميناء', 'قيد التخليص', 'مستلم', 'ملغي'].map(s =>
+                    `<option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+                </select>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="8" class="empty-state">لا طلبات استيراد — أضف طلباً جديداً</td></tr>'}
         </tbody>
       </table>
     </div>`;
   document.getElementById('btnAddImport').onclick = showAddImportForm;
+  content.querySelectorAll('.import-status-select').forEach(sel => {
+    sel.onchange = async () => {
+      const id = sel.getAttribute('data-import-id');
+      try {
+        await api('/imports/' + id, { method: 'POST', body: { status: sel.value } });
+        toast('تم تحديث حالة الاستيراد');
+      } catch (err) {
+        toast(err.message, 'error');
+        loadImports();
+      }
+    };
+  });
 }
 
 function showAddImportForm() {

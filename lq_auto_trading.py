@@ -416,7 +416,36 @@ def handle_api(
         rows = db.execute("SELECT * FROM at_import_orders ORDER BY id DESC").fetchall()
         return send_json({"ok": True, "imports": [dict(r) for r in rows]}) or True
 
-    if head == "imports" and method == "POST":
+    if head == "imports" and len(parts) == 2 and method == "POST":
+        try:
+            import_id = int(parts[1])
+        except ValueError:
+            return send_json({"ok": False, "error": "رقم الطلب غير صحيح"}, 400) or True
+        current = db.execute("SELECT * FROM at_import_orders WHERE id=?", (import_id,)).fetchone()
+        if not current:
+            return send_json({"ok": False, "error": "الطلب غير موجود"}, 404) or True
+        updates: Dict[str, Any] = {}
+        for field in ("status", "eta_date", "arrival_date", "notes", "supplier", "total_cost", "vehicle_count"):
+            if field in payload:
+                val = payload[field]
+                if field in ("total_cost",):
+                    val = float(val or 0)
+                if field == "vehicle_count":
+                    val = int(val or 1)
+                updates[field] = val
+        if not updates:
+            return send_json({"ok": False, "error": "لا توجد حقول للتحديث"}, 400) or True
+        sets = ", ".join(f"{k}=?" for k in updates)
+        db.execute(
+            f"UPDATE at_import_orders SET {sets}, updated_at=? WHERE id=?",
+            (*updates.values(), now_iso(), import_id),
+        )
+        _audit(db, user, "import_updated", "import", str(import_id), updates)
+        db.commit()
+        row = db.execute("SELECT * FROM at_import_orders WHERE id=?", (import_id,)).fetchone()
+        return send_json({"ok": True, "import": dict(row)}) or True
+
+    if head == "imports" and method == "POST" and len(parts) == 1:
         origin = str(payload.get("origin_country") or "").strip()
         if not origin:
             return send_json({"ok": False, "error": "بلد المنشأ مطلوب"}, 400) or True
