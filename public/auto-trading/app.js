@@ -12,7 +12,14 @@ let statusFilter = '';
 let makeFilter = '';
 let companyProfile = null;
 
-const LOGO_URL = '/auto-trading/assets/logo-al-najjar.svg?v=at2';
+const LOGO_URL = '/auto-trading/assets/logo-al-najjar.svg?v=at3';
+const LOGO_MARK = '/auto-trading/assets/logo-mark.svg?v=at3';
+
+function waLink(phone) {
+  const p = String(phone || '').replace(/\D/g, '');
+  const full = p.startsWith('968') ? p : ('968' + p);
+  return `https://wa.me/${full}`;
+}
 
 function readToken() {
   try {
@@ -147,13 +154,13 @@ function renderCompanyCard(c) {
   const bank = c.bank || {};
   const contacts = c.contacts || [];
   return `
-    <div class="company-hero">
-      <img src="${e(c.logo_url || LOGO_URL)}" alt="${e(c.name_ar)}">
+    <div class="company-hero-wide">
+      <img class="sign-banner" src="${e(c.logo_url || LOGO_URL)}" alt="${e(c.name_en || 'NAJJAR TRADING')}">
       <div>
-        <h2 style="margin:0;color:var(--navy)">${e(c.name_ar)}</h2>
-        <p class="mini">${e(c.name_en || '')}</p>
-        <p class="mini">${e(c.address_ar || '')} · ${e(c.country_ar || 'سلطنة عُمان')}</p>
-        <p class="mini">ساعات العمل: ${e(c.hours || '')}</p>
+        <h2 style="margin:0;color:var(--navy)">${e(c.name_en || 'NAJJAR TRADING')}</h2>
+        <p class="mini" style="letter-spacing:1px">${e(c.tagline_en || 'USED & IMPORTED CARS')}</p>
+        <p class="mini">${e(c.name_ar || '')}</p>
+        <p class="mini">${e(c.address_ar || '')} · ${e(c.address_en || '')}</p>
       </div>
     </div>
     <div class="split-grid">
@@ -163,8 +170,8 @@ function renderCompanyCard(c) {
           ${contacts.map(x => `
             <div class="contact-card">
               <strong>${e(x.label_ar)}</strong>
-              <a href="tel:${e(String(x.phone).replace(/\s/g, ''))}">${e(x.phone)}</a>
-              ${x.note ? `<p class="mini">${e(x.note)}</p>` : ''}
+              ${x.whatsapp ? `<span class="wa-badge">WhatsApp</span>` : ''}
+              <a href="${x.whatsapp ? waLink(x.phone) : ('tel:' + e(String(x.phone).replace(/\s/g, '')))}" ${x.whatsapp ? 'target="_blank" rel="noopener"' : ''}>${e(x.note || x.phone)}</a>
             </div>`).join('')}
         </div>
       </section>
@@ -181,7 +188,7 @@ function renderCompanyCard(c) {
         </div>
       </section>
     </div>
-    <p class="mini" style="margin-top:12px">لاستبدال الشعار: ارفع صورة PNG باسم <code>logo-al-najjar.png</code> في <code>/auto-trading/assets/</code></p>`;
+    <p class="mini" style="margin-top:12px">الشعار مطابق للافتة الخارجية — NAJJAR TRADING · Nizwa · Falaj</p>`;
 }
 
 function bindCopyButtons(root) {
@@ -261,13 +268,14 @@ async function loadDashboard() {
       </section>
     </div>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>النجار والسموم — ${e(c.address_ar || 'نزوى')}</h3></div>
+      <div class="card-header"><h3>NAJJAR TRADING — ${e(c.address_ar || 'نزوى الفلج')}</h3></div>
       <div class="card-body">
         <div class="contact-grid" style="margin-bottom:14px">
-          ${(c.contacts || []).map(x => `
+          ${(c.contacts || []).slice(0, 2).map(x => `
             <div class="contact-card">
               <strong>${e(x.label_ar)}</strong>
-              <a href="tel:${e(String(x.phone).replace(/\s/g, ''))}">${e(x.phone)}</a>
+              <span class="wa-badge">WhatsApp</span>
+              <a href="${waLink(x.phone)}" target="_blank" rel="noopener">${e(x.note || x.phone)}</a>
             </div>`).join('')}
         </div>
         <div class="detail-list">

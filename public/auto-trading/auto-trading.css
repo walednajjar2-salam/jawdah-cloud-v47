@@ -1,34 +1,85 @@
 @import url('/quick-estate/quick-estate.css');
 
 :root {
-  --blue: #1a5fb4;
-  --blue2: #3584e4;
-  --navy: #0d1b2a;
-  --bg: #eef2f6;
+  --gold: #d4af37;
+  --gold2: #f0d070;
+  --gold-dark: #9a681e;
+  --blue: #c8942e;
+  --blue2: #f0d070;
+  --navy: #0a0a0a;
+  --bg: #121212;
 }
 
 .theme-autotrading {
-  --blue: #1a5fb4;
-  --blue2: #3584e4;
-  --navy: #0d1b2a;
+  --blue: var(--gold);
+  --blue2: var(--gold2);
+  --navy: #0a0a0a;
+  --bg: #141414;
 }
 
 .theme-autotrading .sidebar {
-  background: linear-gradient(180deg, #0d1b2a, #1b2838);
+  background: linear-gradient(180deg, #0a0a0a, #151515);
+  border-left: 1px solid rgba(212, 175, 55, 0.25);
 }
 
 .theme-autotrading .nav-item.active {
-  background: linear-gradient(135deg, #1a5fb4, #3584e4);
+  background: linear-gradient(135deg, #9a681e, #d4af37);
+  color: #111;
+}
+
+.theme-autotrading .nav-item.active .nav-label,
+.theme-autotrading .nav-item.active .nav-icon {
+  color: #111 !important;
+  -webkit-text-fill-color: #111 !important;
+}
+
+.theme-autotrading .btn.primary {
+  background: linear-gradient(135deg, #9a681e, #d4af37);
+  color: #111;
+}
+
+.theme-autotrading .stat-card.highlight strong {
+  color: var(--gold-dark);
 }
 
 .at-logo-img {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: 12px;
   object-fit: cover;
-  background: #fff;
-  border: 2px solid rgba(255,255,255,.2);
+  background: #0a0a0a;
+  border: 2px solid rgba(212, 175, 55, 0.45);
   flex: 0 0 auto;
+}
+
+.sign-banner {
+  width: 100%;
+  max-width: 520px;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.35);
+}
+
+.company-hero-wide {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.company-hero-wide img.sign-banner {
+  max-width: 100%;
+}
+
+.wa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #128c7e;
+  font-weight: 700;
+}
+
+.wa-badge::before {
+  content: "💬";
 }
 
 .company-hero {
