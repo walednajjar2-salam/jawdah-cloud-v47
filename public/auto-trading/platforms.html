@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>منصات NAJJAR TRADING</title>
+  <link rel="icon" href="/assets/app-icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at5">
+</head>
+<body class="nt-hub">
+  <div class="nt-watermark" aria-hidden="true"></div>
+  <main class="nt-hub-wrap">
+    <header class="nt-hub-head">
+      <img class="nt-hub-logo" src="/auto-trading/assets/logo-mark.svg?v=at5" alt="NAJJAR TRADING">
+      <div>
+        <p class="nt-kicker">NAJJAR TRADING</p>
+        <h1>منصات السيارات</h1>
+        <p class="nt-sub">اختر الدولة أو المنصة — المزادات، الاستيراد، والمخزون المحلي</p>
+      </div>
+      <div class="nt-hub-actions">
+        <a class="nt-btn ghost" href="/auto-trading/customer.html">بوابة الزبائن</a>
+        <a class="nt-btn ghost" id="backLq" href="/portal-select.html">جودة الانطلاقة</a>
+        <button class="nt-btn primary" type="button" id="btnLogout">خروج</button>
+      </div>
+    </header>
+
+    <section class="nt-plat-grid" aria-label="المنصات">
+      <article class="nt-plat nt-plat--america" data-platform="america">
+        <div class="nt-plat-icon nt-plat-icon--circle" aria-hidden="true">🇺🇸</div>
+        <h2>أمريكا</h2>
+        <p>مزادات السيارات — Copart و IAAI</p>
+        <div class="nt-plat-tags">
+          <span class="nt-chip">Copart</span>
+          <span class="nt-chip">IAAI</span>
+          <span class="nt-chip">RoRo</span>
+        </div>
+        <span class="nt-plat-enter">دخول المزادات</span>
+      </article>
+
+      <article class="nt-plat nt-plat--salam" data-platform="salam">
+        <div class="nt-plat-icon nt-plat-icon--circle" aria-hidden="true">🚗</div>
+        <h2>سلام أوتو كار</h2>
+        <p>Salam Auto Car — شريك استيراد وتوريد</p>
+        <span class="nt-plat-enter">دخول المنصة</span>
+      </article>
+
+      <article class="nt-plat nt-plat--oman" data-platform="oman">
+        <div class="nt-plat-icon nt-plat-icon--flag" aria-hidden="true">🇴🇲</div>
+        <h2>عُمان</h2>
+        <p>إدخال السيارات والمخزون المحلي — نزوى الفلج</p>
+        <span class="nt-plat-enter">دخول السيارات</span>
+      </article>
+
+      <article class="nt-plat" data-platform="dubai">
+        <div class="nt-plat-icon nt-plat-icon--circle" aria-hidden="true">🇦🇪</div>
+        <h2>دبي</h2>
+        <p>استيراد وشراء من أسواق الإمارات</p>
+        <span class="nt-plat-enter">دخول</span>
+      </article>
+
+      <article class="nt-plat" data-platform="jordan">
+        <div class="nt-plat-icon nt-plat-icon--circle" aria-hidden="true">🇯🇴</div>
+        <h2>الأردن</h2>
+        <p>استيراد مركبات من السوق الأردني</p>
+        <span class="nt-plat-enter">دخول</span>
+      </article>
+
+      <article class="nt-plat" data-platform="iran">
+        <div class="nt-plat-icon nt-plat-icon--circle" aria-hidden="true">🇮🇷</div>
+        <h2>إيران</h2>
+        <p>مصادر وتوريد من إيران</p>
+        <span class="nt-plat-enter">دخول</span>
+      </article>
+
+      <article class="nt-plat" data-platform="india">
+        <div class="nt-plat-icon nt-plat-icon--circle" aria-hidden="true">🇮🇳</div>
+        <h2>الهند</h2>
+        <p>استيراد وقطع غيار من الهند</p>
+        <span class="nt-plat-enter">دخول</span>
+      </article>
+
+      <article class="nt-plat" data-platform="saudi">
+        <div class="nt-plat-icon nt-plat-icon--circle" aria-hidden="true">🇸🇦</div>
+        <h2>السعودية</h2>
+        <p>استيراد وشراء من السوق السعودي</p>
+        <span class="nt-plat-enter">دخول</span>
+      </article>
+    </section>
+
+    <footer class="nt-hub-foot">NAJJAR TRADING · USED &amp; IMPORTED CARS · نزوى — الفلج</footer>
+  </main>
+
+  <script>
+    function readToken() {
+      try {
+        const qs = new URLSearchParams(location.search || '');
+        const qTok = (qs.get('token') || '').trim();
+        if (qTok) {
+          localStorage.setItem('jawdah_cloud_token', qTok);
+          qs.delete('token');
+          history.replaceState({}, '', location.pathname + (qs.toString() ? '?' + qs.toString() : ''));
+          return qTok;
+        }
+      } catch (_) {}
+      return (localStorage.getItem('jawdah_cloud_token') || '').trim();
+    }
+
+    function withToken(url) {
+      const t = readToken();
+      if (!t) return url;
+      const sep = url.includes('?') ? '&' : '?';
+      return url + sep + 'token=' + encodeURIComponent(t);
+    }
+
+    const token = readToken();
+    if (!token) location.replace('/auto-trading/login.html');
+
+    document.getElementById('backLq').href = withToken('/portal-select.html?from=autotrading');
+    document.getElementById('btnLogout').onclick = () => {
+      localStorage.removeItem('jawdah_cloud_token');
+      location.replace('/auto-trading/login.html');
+    };
+
+    const routes = {
+      america: '/auto-trading.html?platform=america&view=imports',
+      salam: '/auto-trading.html?platform=salam&view=imports',
+      oman: '/auto-trading.html?platform=oman&view=vehicles',
+      dubai: '/auto-trading.html?platform=dubai&view=imports',
+      jordan: '/auto-trading.html?platform=jordan&view=imports',
+      iran: '/auto-trading.html?platform=iran&view=imports',
+      india: '/auto-trading.html?platform=india&view=imports',
+      saudi: '/auto-trading.html?platform=saudi&view=imports',
+    };
+
+    document.querySelectorAll('[data-platform]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const key = el.getAttribute('data-platform');
+        localStorage.setItem('najjar_platform', key);
+        location.href = withToken(routes[key] || '/auto-trading.html');
+      });
+      el.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); el.click(); }
+      });
+      el.tabIndex = 0;
+      el.setAttribute('role', 'button');
+    });
+  </script>
+</body>
+</html>

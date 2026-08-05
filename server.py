@@ -4223,13 +4223,15 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
     team = [
         ("owner", "يعقوب فاضل الخصيبي", "owner", "001970"),
         ("yaqoub", "يعقوب فاضل الخصيبي", "owner", "owner2015"),
-        ("waleed", "وليد محمد عبد الهادي", "owner", "111111"),
-        ("waleed.najjar", "وليد محمد عبد الهادي", "owner", "Waleed2026!"),
+        ("waleed", "وليد نجار", "owner", "111111"),
+        ("waleed.najjar", "وليد نجار", "owner", "Waleed2026!"),
         ("ahmed", "احمد محمد عبد الهادي", "admin", "Ahmed2026!"),
         ("ahmed.najjar", "احمد محمد عبد الهادي", "admin", "Ahmed2026!"),
         ("admin", "System Admin", "admin", "555555"),
-        ("razan", "رزان سالم الشعيلي", "reception", "222222"),
-        ("razan.shuaili", "رزان سالم الشعيلي", "reception", "Razan2026!"),
+        ("razan", "رزان الشعيلي", "reception", "222222"),
+        ("razan.shuaili", "رزان الشعيلي", "reception", "Razan2026!"),
+        ("waya.shuaili", "واية الشعيلي", "operations", "Waya2026!"),
+        ("hamad.sumoom", "حمد السموم", "owner", "Hamad2026!"),
         ("amjad", "امجد", "operations", "333333"),
         ("ali", "علي محمد علي النديش", "operations", "444444"),
         ("mohammed.siraj", "محمد صالح سراج النور", "operations", "Siraj2026!"),
@@ -4260,7 +4262,13 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
         "UPDATE users SET role='admin', active=1, name='احمد محمد عبد الهادي' WHERE lower(username) IN ('ahmed.najjar','ahmed')"
     )
     db.execute(
-        "UPDATE users SET role='owner', active=1, name='وليد محمد عبد الهادي' WHERE lower(username) IN ('waleed','waleed.najjar')"
+        "UPDATE users SET role='owner', active=1, name='وليد نجار' WHERE lower(username) IN ('waleed','waleed.najjar')"
+    )
+    db.execute(
+        "UPDATE users SET role='owner', active=1, name='حمد السموم' WHERE lower(username)='hamad.sumoom'"
+    )
+    db.execute(
+        "UPDATE users SET role='operations', active=1, name='واية الشعيلي' WHERE lower(username)='waya.shuaili'"
     )
     db.execute(
         "UPDATE users SET role='owner', active=1, name=COALESCE(NULLIF(name,''), 'يعقوب فاضل الخصيبي') "
@@ -4270,7 +4278,7 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
         "UPDATE users SET role='owner', active=1, name='يعقوب فاضل الخصيبي' WHERE lower(username)='yaqoub'"
     )
     db.execute(
-        "UPDATE users SET role='reception', active=1, name='رزان سالم الشعيلي' "
+        "UPDATE users SET role='reception', active=1, name='رزان الشعيلي' "
         "WHERE lower(username) IN ('razan','razan.shuaili','razan.accounting')"
     )
     db.execute(

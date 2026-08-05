@@ -129,7 +129,7 @@
         return;
       }
       if (c === "autotrading") {
-        let aUrl = "/auto-trading.html?portal=autotrading&t=" + Date.now();
+        let aUrl = "/auto-trading/platforms.html?from=portal&t=" + Date.now();
         if (token) aUrl += "&token=" + encodeURIComponent(token);
         location.replace(aUrl);
         return;

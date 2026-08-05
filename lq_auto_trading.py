@@ -46,6 +46,22 @@ COMPANY_PROFILE: Dict[str, Any] = {
         "swift": "BSHROMRUXXX",
         "iban": "OM070300000234020022484",
     },
+    "staff": [
+        {"name_ar": "وليد نجار", "username": "waleed.najjar", "role": "owner", "role_ar": "مالك", "phone": "71924089"},
+        {"name_ar": "حمد السموم", "username": "hamad.sumoom", "role": "owner", "role_ar": "مالك", "phone": "77548482"},
+        {"name_ar": "واية الشعيلي", "username": "waya.shuaili", "role": "sales", "role_ar": "مبيعات", "phone": ""},
+        {"name_ar": "رزان الشعيلي", "username": "razan.shuaili", "role": "user", "role_ar": "مستخدم", "phone": ""},
+    ],
+    "platforms": [
+        {"id": "america", "label_ar": "أمريكا", "icon": "🇺🇸", "kind": "auctions", "tags": ["Copart", "IAAI"]},
+        {"id": "salam", "label_ar": "سلام أوتو كار", "icon": "🚗", "kind": "partner"},
+        {"id": "oman", "label_ar": "عُمان", "icon": "🇴🇲", "kind": "inventory"},
+        {"id": "dubai", "label_ar": "دبي", "icon": "🇦🇪", "kind": "import"},
+        {"id": "jordan", "label_ar": "الأردن", "icon": "🇯🇴", "kind": "import"},
+        {"id": "iran", "label_ar": "إيران", "icon": "🇮🇷", "kind": "import"},
+        {"id": "india", "label_ar": "الهند", "icon": "🇮🇳", "kind": "import"},
+        {"id": "saudi", "label_ar": "السعودية", "icon": "🇸🇦", "kind": "import"},
+    ],
 }
 
 VALID_STATUSES = {"متاحة", "محجوزة", "مباعة", "قيد الاستيراد", "صيانة"}

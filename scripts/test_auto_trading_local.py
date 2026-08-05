@@ -30,6 +30,11 @@ def main() -> int:
     company = out[-1][1]["company"]
     assert company["name_en"] == "NAJJAR TRADING"
     assert company["bank"]["iban"].startswith("OM07")
+    assert any(s.get("name_ar") == "وليد نجار" for s in company.get("staff") or [])
+    assert any(s.get("name_ar") == "حمد السموم" for s in company.get("staff") or [])
+    assert any(s.get("name_ar") == "واية الشعيلي" for s in company.get("staff") or [])
+    assert any(s.get("name_ar") == "رزان الشعيلي" for s in company.get("staff") or [])
+    assert len(company.get("platforms") or []) >= 8
 
     assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)
     stats = out[-1][1]["stats"]

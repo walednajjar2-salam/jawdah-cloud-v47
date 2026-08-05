@@ -5,16 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>NAJJAR TRADING | USED &amp; IMPORTED CARS</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at4">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at5">
   <style>
-    html, body.app-body.theme-autotrading {
-      background: #eef2f6 !important;
-      background-image: none !important;
-    }
-    body.section-dashboard .content.dashboard-page {
-      background: #f7f8fa !important;
-    }
-    .qe-topbar-actions { display: flex; gap: 8px; align-items: center; }
+    .qe-topbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .qe-back { text-decoration: none; }
     #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 9999; padding: 12px 18px; border-radius: 12px; background: #123; color: #fff; opacity: 0; pointer-events: none; transition: .25s; }
     #toast.show { opacity: 1; }
@@ -22,7 +15,7 @@
     #toast.success { background: #0f5c3b; }
     .drawer, .modal { position: fixed; inset: 0; background: rgba(8,16,32,.45); display: none; z-index: 1000; }
     .drawer.open, .modal.open { display: grid; place-items: center; padding: 16px; }
-    .drawer-panel, .modal-panel { width: min(760px,100%); max-height: 90vh; overflow: auto; background: #fff; border-radius: 18px; padding: 18px; position: relative; }
+    .drawer-panel, .modal-panel { width: min(760px,100%); max-height: 90vh; overflow: auto; background: #fffdf8; border-radius: 18px; padding: 18px; position: relative; border: 1px solid rgba(212,175,55,.25); }
     .drawer-close, .modal-close { position: absolute; left: 12px; top: 12px; }
     .hidden { display: none !important; }
   </style>
@@ -31,7 +24,7 @@
   <div class="app-shell">
     <aside class="sidebar open">
       <div class="sidebar-brand">
-        <img id="sidebarLogo" class="at-logo-img" src="/auto-trading/assets/logo-mark.svg?v=at4" alt="NAJJAR TRADING">
+        <img id="sidebarLogo" class="at-logo-img" src="/auto-trading/assets/logo-mark.svg?v=at5" alt="NAJJAR TRADING">
         <div>
           <strong>NAJJAR TRADING</strong>
           <small>USED &amp; IMPORTED CARS</small>
@@ -42,11 +35,13 @@
         <button class="nav-item" data-section="vehicles"><span class="nav-inner"><span class="nav-icon">🚘</span><span class="nav-label">المخزون</span></span></button>
         <button class="nav-item" data-section="sales"><span class="nav-inner"><span class="nav-icon">💰</span><span class="nav-label">المبيعات</span></span></button>
         <button class="nav-item" data-section="imports"><span class="nav-inner"><span class="nav-icon">🌍</span><span class="nav-label">الاستيراد</span></span></button>
+        <button class="nav-item" data-section="staff"><span class="nav-inner"><span class="nav-icon">👥</span><span class="nav-label">الموظفون</span></span></button>
         <button class="nav-item" data-section="company"><span class="nav-inner"><span class="nav-icon">🏢</span><span class="nav-label">بيانات الشركة</span></span></button>
       </nav>
       <div class="sidebar-foot">
         <a class="wa-quick" href="https://wa.me/96871924089" target="_blank" rel="noopener">💬 واتساب 71924089</a>
-        <a class="btn secondary qe-back" data-back-platforms href="/portal-select.html">رجوع للمنصات</a>
+        <a class="btn secondary qe-back" href="/auto-trading/customer.html">بوابة الزبائن</a>
+        <a class="btn secondary qe-back" data-back-platforms href="/auto-trading/platforms.html">رجوع للمنصات</a>
       </div>
     </aside>
     <section class="workspace">
@@ -57,7 +52,7 @@
           <p id="pageSubtitle">NAJJAR TRADING — USED &amp; IMPORTED CARS · نزوى الفلج</p>
         </div>
         <div class="qe-topbar-actions">
-          <a class="btn secondary qe-back qe-back-top" data-back-platforms href="/portal-select.html">رجوع للمنصات</a>
+          <a class="btn secondary qe-back qe-back-top" data-back-platforms href="/auto-trading/platforms.html">المنصات</a>
           <button id="refreshPage" class="btn secondary" type="button">تحديث</button>
           <span id="userChip" class="pill approved">—</span>
         </div>
@@ -84,6 +79,6 @@
     window.APP_USER = { role: 'operations', display_name: '', username: '' };
     try { localStorage.setItem('jawdah_portal_choice', 'autotrading'); } catch (_) {}
   </script>
-  <script src="/auto-trading/app.js?v=at4"></script>
+  <script src="/auto-trading/app.js?v=at5"></script>
 </body>
 </html>

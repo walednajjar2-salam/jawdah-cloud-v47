@@ -166,10 +166,30 @@ function readToken() {
   return (localStorage.getItem('jawdah_cloud_token') || '').trim();
 }
 
+const PLATFORM_LABELS = {
+  america: '🇺🇸 أمريكا — مزادات Copart / IAAI',
+  salam: '🚗 سلام أوتو كار',
+  oman: '🇴🇲 عُمان — مخزون السيارات',
+  dubai: '🇦🇪 دبي',
+  jordan: '🇯🇴 الأردن',
+  iran: '🇮🇷 إيران',
+  india: '🇮🇳 الهند',
+  saudi: '🇸🇦 السعودية',
+};
+
+function currentPlatform() {
+  try {
+    const qs = new URLSearchParams(location.search || '');
+    return (qs.get('platform') || localStorage.getItem('najjar_platform') || 'oman').trim();
+  } catch (_) {
+    return 'oman';
+  }
+}
+
 function goToPlatforms(event) {
   if (event) event.preventDefault();
   const token = readToken();
-  let url = '/portal-select.html?from=autotrading&t=' + Date.now();
+  let url = '/auto-trading/platforms.html?from=dashboard&t=' + Date.now();
   if (token) url += '&token=' + encodeURIComponent(token);
   location.href = url;
 }
@@ -202,7 +222,7 @@ const statusClass = {
 
 async function api(url, options = {}) {
   const token = readToken();
-  if (!token) { location.replace('/app.html?v=need-login'); return; }
+  if (!token) { location.replace('/auto-trading/login.html'); return; }
   const opts = { ...options };
   opts.headers = {
     'Content-Type': 'application/json',
@@ -212,7 +232,7 @@ async function api(url, options = {}) {
   if (opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
   const res = await fetch(url.startsWith('/api/') ? url : (API_BASE + url), opts);
   const data = await res.json().catch(() => ({ ok: false, error: 'تعذر قراءة رد الخادم' }));
-  if (res.status === 401) { location.replace('/app.html?v=need-login'); return; }
+  if (res.status === 401) { location.replace('/auto-trading/login.html'); return; }
   if (!res.ok || data.ok === false) throw new Error(data.error || 'حدث خطأ');
   return data;
 }
@@ -350,6 +370,7 @@ async function loadSection(section) {
     if (section === 'vehicles') return await loadVehicles();
     if (section === 'sales') return await loadSales();
     if (section === 'imports') return await loadImports();
+    if (section === 'staff') return await loadStaff();
     if (section === 'company') return await loadCompany();
   } catch (err) {
     content.innerHTML = `<div class="alert error">${e(err.message)}</div>`;
@@ -358,13 +379,54 @@ async function loadSection(section) {
   }
 }
 
+async function loadStaff() {
+  setTitle('الموظفون', 'فريق NAJJAR TRADING — صلاحيات الدخول');
+  const c = await ensureCompany();
+  const staff = c.staff || [];
+  content.innerHTML = `
+    <div class="nt-dash-banner">
+      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR">
+      <div>
+        <h2>فريق العمل</h2>
+        <p>ملاك · مبيعات · مستخدمون — صلاحيات المنصة</p>
+      </div>
+    </div>
+    <div class="nt-staff-grid">
+      ${staff.map(s => `
+        <article class="nt-staff-card">
+          <span class="nt-staff-role ${e(s.role)}">${e(s.role_ar || s.role)}</span>
+          <strong>${e(s.name_ar)}</strong>
+          <div class="mini">المستخدم: <span dir="ltr">${e(s.username)}</span></div>
+          ${s.phone ? `<div class="mini" dir="ltr">+968 ${e(s.phone)}</div>` : ''}
+        </article>`).join('')}
+    </div>
+    <section class="card" style="margin-top:16px">
+      <div class="card-header"><h3>الصلاحيات</h3></div>
+      <div class="card-body detail-list">
+        <div class="detail-row"><span>مالك (Owner)</span><strong>وليد نجار · حمد السموم — كامل الصلاحيات</strong></div>
+        <div class="detail-row"><span>مبيعات (Sales)</span><strong>واية الشعيلي — مخزون، مبيعات، زبائن</strong></div>
+        <div class="detail-row"><span>مستخدم (User)</span><strong>رزان الشعيلي — عرض ومتابعة</strong></div>
+      </div>
+    </section>`;
+}
+
 async function loadDashboard() {
-  setTitle('لوحة التحكم', 'ملخص مخزون السيارات والمبيعات والاستيراد');
+  setTitle('لوحة التحكم', 'داشبورد احترافي — مخزون · مبيعات · استيراد · فريق');
   const data = await api('/dashboard');
   const c = data.company || {};
   companyProfile = c;
   const s = data.stats;
+  const plat = currentPlatform();
+  const staff = c.staff || [];
   content.innerHTML = `
+    <div class="nt-dash-banner">
+      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR TRADING">
+      <div>
+        <h2>NAJJAR TRADING</h2>
+        <p>USED &amp; IMPORTED CARS · ${e(c.address_ar || 'نزوى — الفلج')}</p>
+        <p class="nt-platform-chip" style="margin-top:10px">${e(PLATFORM_LABELS[plat] || plat)}</p>
+      </div>
+    </div>
     <div class="stats-grid">
       ${stat('إجمالي المركبات', s.total_vehicles)}
       ${stat('متاحة للبيع', s.available, 'highlight')}
@@ -373,14 +435,19 @@ async function loadDashboard() {
       ${stat('قيد الاستيراد', s.importing)}
       ${stat('قيمة المخزون', money(s.stock_value))}
     </div>
-    <div class="split-grid">
+    <div class="split-grid" style="margin-top:16px">
       <section class="card">
-        <div class="card-header"><h3>المبيعات</h3></div>
+        <div class="card-header"><h3>المبيعات والاستيراد</h3></div>
         <div class="card-body">
           <div class="detail-list">
             <div class="detail-row"><span>عدد المبيعات</span><strong>${s.sales_count}</strong></div>
             <div class="detail-row"><span>إجمالي المبيعات</span><strong>${money(s.sales_total)}</strong></div>
             <div class="detail-row"><span>طلبات استيراد نشطة</span><strong>${s.pending_imports}</strong></div>
+          </div>
+          <div class="actions-row" style="margin-top:14px">
+            <button class="btn primary" type="button" id="dashGoVehicles">عرض المخزون</button>
+            <button class="btn secondary" type="button" id="dashGoPlatforms">المنصات والدول</button>
+            <a class="btn ghost" href="/auto-trading/customer.html">بوابة الزبائن</a>
           </div>
         </div>
       </section>
@@ -399,14 +466,27 @@ async function loadDashboard() {
       </section>
     </div>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>NAJJAR TRADING — ${e(c.address_ar || 'نزوى الفلج')}</h3></div>
+      <div class="card-header"><h3>فريق NAJJAR TRADING</h3></div>
+      <div class="card-body">
+        <div class="nt-staff-grid">
+          ${staff.map(x => `
+            <div class="nt-staff-card">
+              <span class="nt-staff-role ${e(x.role)}">${e(x.role_ar || x.role)}</span>
+              <strong>${e(x.name_ar)}</strong>
+              <div class="mini" dir="ltr">${e(x.username)}${x.phone ? ' · +968 ' + e(x.phone) : ''}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </section>
+    <section class="card" style="margin-top:16px">
+      <div class="card-header"><h3>التواصل والحساب</h3></div>
       <div class="card-body">
         <div class="contact-grid" style="margin-bottom:14px">
-          ${(c.contacts || []).slice(0, 2).map(x => `
+          ${(c.contacts || []).slice(0, 3).map(x => `
             <div class="contact-card">
               <strong>${e(x.label_ar)}</strong>
-              <span class="wa-badge">WhatsApp</span>
-              <a href="${waLink(x.phone)}" target="_blank" rel="noopener">${e(x.note || x.phone)}</a>
+              ${x.whatsapp ? '<span class="wa-badge">WhatsApp</span>' : ''}
+              <a href="${x.whatsapp ? waLink(x.phone) : ('tel:+968' + e(String(x.phone).replace(/\D/g, '')))}" ${x.whatsapp ? 'target="_blank" rel="noopener"' : ''}>${e(x.note || x.phone)}</a>
             </div>`).join('')}
         </div>
         <div class="detail-list">
@@ -419,6 +499,13 @@ async function loadDashboard() {
       </div>
     </section>`;
   bindCopyButtons(content);
+  const goV = document.getElementById('dashGoVehicles');
+  if (goV) goV.onclick = () => {
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === 'vehicles'));
+    loadSection('vehicles');
+  };
+  const goP = document.getElementById('dashGoPlatforms');
+  if (goP) goP.onclick = goToPlatforms;
 }
 
 async function loadVehicles() {
@@ -461,21 +548,39 @@ async function loadVehicles() {
   });
 }
 
+function vehicleAccent(v) {
+  if ((v.make || '').includes('Land')) return 'lr';
+  if ((v.model || '').includes('GLE')) return 'gle';
+  if ((v.model || '').includes('G-Class') || (v.variant || '').includes('G63')) return 'g63';
+  if ((v.make || '').includes('BMW')) return 'bmw';
+  return 'def';
+}
+
 function vehicleCard(v) {
   const price = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
+  const accent = vehicleAccent(v);
   return `
-    <div class="vehicle-card" data-vehicle-id="${v.id}" role="button" tabindex="0">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <h4>${e(v.make)} ${e(v.model)}</h4>
+    <article class="vehicle-card nt-vcard nt-vcard--${accent}" data-vehicle-id="${v.id}" role="button" tabindex="0">
+      <div class="nt-vcard-top">
+        <span class="nt-vcard-stock">${e(v.stock_no)}</span>
         ${pill(v.status)}
       </div>
-      <p class="mini">${e(v.variant || '')} · ${e(v.year || '—')} · ${e(v.color || '')}</p>
-      <p><strong>${price}</strong></p>
-      <p class="mini">مخزون: ${e(v.stock_no)}${v.plate_no ? ' · لوحة: ' + e(v.plate_no) : ''}${!v.plate_no && v.vin ? ' · VIN: ' + e(v.vin.slice(-8)) : ''}</p>
-      ${v.license_doc_no && v.license_valid_until ? `<p class="mini">رخصة: ${e(v.license_doc_no)} · حتى ${dmy(v.license_valid_until)}</p>` : ''}
-      ${v.license_doc_no && !v.license_valid_until ? `<p class="mini">ملصق: ${e(v.license_doc_no)}</p>` : ''}
-      ${v.status === 'قيد الاستيراد' && v.import_ref ? `<p class="mini">${e(v.import_ref)}</p>` : ''}
-    </div>`;
+      <h4>${e(v.make)} ${e(v.model)}</h4>
+      <p class="nt-vcard-var">${e(v.variant || '')} · ${e(v.year || '—')} · ${e(v.color || '')}</p>
+      <ul class="nt-vcard-meta">
+        ${v.vin ? `<li><span>VIN</span><strong dir="ltr">${e(v.vin)}</strong></li>` : ''}
+        ${v.plate_no ? `<li><span>اللوحة</span><strong>${e(v.plate_no)}</strong></li>` : ''}
+        ${v.engine_cc ? `<li><span>المحرك</span><strong>${e(v.engine_cc)} cc</strong></li>` : ''}
+        ${v.origin_country ? `<li><span>المنشأ</span><strong>${e(v.origin_country)}</strong></li>` : ''}
+        ${v.license_doc_no && v.license_valid_until ? `<li><span>الرخصة</span><strong>${e(v.license_doc_no)} · ${dmy(v.license_valid_until)}</strong></li>` : ''}
+        ${v.license_doc_no && !v.license_valid_until ? `<li><span>ملصق شحن</span><strong>${e(v.license_doc_no)}</strong></li>` : ''}
+        ${v.import_ref ? `<li><span>الشحن</span><strong>${e(v.import_ref)}</strong></li>` : ''}
+      </ul>
+      <div class="nt-vcard-foot">
+        <strong>${price}</strong>
+        <span class="mini">تفاصيل →</span>
+      </div>
+    </article>`;
 }
 
 async function openVehicleDetail(id) {
@@ -813,14 +918,20 @@ function showAddImportForm() {
 
 async function boot() {
   const token = readToken();
-  if (!token) { location.replace('/app.html?v=need-login'); return; }
+  if (!token) { location.replace('/auto-trading/login.html'); return; }
   try {
     const me = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
     const user = me.user || me;
     document.getElementById('userChip').textContent = user.name || user.username || '—';
     window.APP_USER = user;
   } catch (_) {}
-  loadSection('dashboard');
+  const qs = new URLSearchParams(location.search || '');
+  const view = (qs.get('view') || '').trim();
+  const start = ['vehicles', 'imports', 'sales', 'staff', 'company', 'dashboard'].includes(view) ? view : 'dashboard';
+  if (start !== 'dashboard') {
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === start));
+  }
+  loadSection(start);
 }
 
 boot();
