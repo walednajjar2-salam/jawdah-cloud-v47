@@ -68,6 +68,7 @@ def _ensure_vehicle_columns(db: sqlite3.Connection) -> None:
         ("insurance_type", "TEXT"),
         ("license_source", "TEXT"),
         ("mortgage", "TEXT"),
+        ("sort_order", "INTEGER NOT NULL DEFAULT 999"),
     ):
         try:
             db.execute(f"ALTER TABLE at_vehicles ADD COLUMN {col} {typ}")
@@ -104,6 +105,7 @@ def _vehicle_row_from_seed(item: Dict[str, Any]) -> Dict[str, Any]:
         "license_source": item.get("license_source", ""),
         "mortgage": item.get("mortgage", ""),
         "notes": item.get("notes", ""),
+        "sort_order": int(item.get("sort_order") or 999),
     }
 
 
@@ -116,9 +118,11 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
         return
     seed_stocks = {str(r.get("stock_no") or "") for r in rows if r.get("stock_no")}
     seed_vins = {str(r.get("vin") or "") for r in rows if r.get("vin")}
-    for item in rows:
+    for idx, item in enumerate(rows, start=1):
         if not item.get("stock_no") or not item.get("make") or not item.get("model"):
             continue
+        if not item.get("sort_order"):
+            item["sort_order"] = idx
         row = _vehicle_row_from_seed(item)
         existing = None
         if row["vin"]:
@@ -135,7 +139,7 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
                     engine_cc=?, seats=?, axles=?, origin_country=?, import_ref=?, purchase_cost=?, list_price=?,
                     status=?, plate_no=?, license_valid_until=?, first_registration=?, license_doc_no=?,
                     insurance_company=?, insurance_policy=?, insurance_type=?, license_source=?, mortgage=?, notes=?,
-                    updated_at=?
+                    sort_order=?, updated_at=?
                 WHERE id=?""",
                 (
                     row["stock_no"], row["make"], row["model"], row["variant"], row["vehicle_type"], row["color"],
@@ -143,7 +147,7 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
                     row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["status"],
                     row["plate_no"], row["license_valid_until"], row["first_registration"], row["license_doc_no"],
                     row["insurance_company"], row["insurance_policy"], row["insurance_type"], row["license_source"],
-                    row["mortgage"], row["notes"], now_iso(), existing[0],
+                    row["mortgage"], row["notes"], row["sort_order"], now_iso(), existing[0],
                 ),
             )
         else:
@@ -153,15 +157,15 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
                     engine_cc, seats, axles, origin_country, import_ref, purchase_cost, list_price,
                     status, plate_no, license_valid_until, first_registration, license_doc_no,
                     insurance_company, insurance_policy, insurance_type, license_source, mortgage, notes,
-                    created_at, updated_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    sort_order, created_at, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     row["stock_no"], row["make"], row["model"], row["variant"], row["vehicle_type"], row["color"],
                     row["year"], row["vin"], row["engine_no"], row["engine_cc"], row["seats"], row["axles"],
                     row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["status"],
                     row["plate_no"], row["license_valid_until"], row["first_registration"], row["license_doc_no"],
                     row["insurance_company"], row["insurance_policy"], row["insurance_type"], row["license_source"],
-                    row["mortgage"], row["notes"], now_iso(), now_iso(),
+                    row["mortgage"], row["notes"], row["sort_order"], now_iso(), now_iso(),
                 ),
             )
     # Remove old demo stock rows not in official seed (keep sold history).
@@ -348,7 +352,7 @@ def handle_api(
         if make_filter:
             sql += " AND make=?"
             params.append(make_filter)
-        sql += " ORDER BY stock_no ASC"
+        sql += " ORDER BY sort_order ASC, stock_no ASC"
         rows = db.execute(sql, params).fetchall()
         makes = [r[0] for r in db.execute("SELECT DISTINCT make FROM at_vehicles ORDER BY make").fetchall()]
         return send_json({"ok": True, "vehicles": [dict(r) for r in rows], "makes": makes}) or True

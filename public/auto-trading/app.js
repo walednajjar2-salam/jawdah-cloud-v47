@@ -47,6 +47,7 @@ function vehicleDocLink(v) {
   if (!v.license_source) return '';
   const href = String(v.license_source).startsWith('/') ? v.license_source : '/' + v.license_source;
   const label = href.includes('bill-of-sale') ? 'عرض Bill of Sale'
+    : href.includes('port-shipment') ? 'عرض بيانات الشحن'
     : href.includes('license') ? 'عرض رخصة المركبة'
     : 'عرض الوثيقة';
   return `<a class="btn secondary" href="${e(href)}" target="_blank" rel="noopener" style="margin-top:12px;display:inline-block">${label}</a>`;
@@ -470,8 +471,9 @@ function vehicleCard(v) {
       </div>
       <p class="mini">${e(v.variant || '')} · ${e(v.year || '—')} · ${e(v.color || '')}</p>
       <p><strong>${price}</strong></p>
-      <p class="mini">مخزون: ${e(v.stock_no)}${v.vin ? ' · VIN: ' + e(v.vin.slice(-8)) : ''}</p>
-      ${v.license_doc_no ? `<p class="mini">رخصة: ${e(v.license_doc_no)} · حتى ${dmy(v.license_valid_until)}</p>` : ''}
+      <p class="mini">مخزون: ${e(v.stock_no)}${v.plate_no ? ' · لوحة: ' + e(v.plate_no) : ''}${!v.plate_no && v.vin ? ' · VIN: ' + e(v.vin.slice(-8)) : ''}</p>
+      ${v.license_doc_no && v.license_valid_until ? `<p class="mini">رخصة: ${e(v.license_doc_no)} · حتى ${dmy(v.license_valid_until)}</p>` : ''}
+      ${v.license_doc_no && !v.license_valid_until ? `<p class="mini">ملصق: ${e(v.license_doc_no)}</p>` : ''}
       ${v.status === 'قيد الاستيراد' && v.import_ref ? `<p class="mini">${e(v.import_ref)}</p>` : ''}
     </div>`;
 }

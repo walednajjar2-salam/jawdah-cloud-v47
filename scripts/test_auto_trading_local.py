@@ -33,19 +33,20 @@ def main() -> int:
 
     assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)
     stats = out[-1][1]["stats"]
-    assert stats["total_vehicles"] >= 2
+    assert stats["total_vehicles"] >= 4
 
     assert lq_auto_trading.handle_api(db, "GET", ["vehicles"], {}, {}, user, send)
     vehicles = out[-1][1]["vehicles"]
-    assert vehicles[0]["stock_no"] == "NT-LR-001"
-    assert vehicles[1]["stock_no"] == "NT-MB-002"
-    lr = vehicles[0]
-    assert lr["vin"] == "SALEA7BW5S2123456"
-    assert lr["license_doc_no"] == "4258396"
-    mb = vehicles[1]
-    assert mb["vin"] == "4JGFD6BB1TB591167"
-    assert mb["status"] == "قيد الاستيراد"
-    assert "Salalah" in (mb.get("import_ref") or "")
+    assert [v["stock_no"] for v in vehicles[:4]] == [
+        "NT-LR-001", "NT-MB-002", "NT-MB-003", "NT-BMW-004"
+    ]
+    assert vehicles[0]["vin"] == "SALEA7BW5S2123456"
+    assert vehicles[1]["vin"] == "4JGFD6BB1TB591167"
+    assert vehicles[1]["status"] == "قيد الاستيراد"
+    assert vehicles[2]["variant"] == "G63 AMG"
+    assert vehicles[2]["license_doc_no"] == "72863679"
+    assert vehicles[3]["vin"] == "WBAFR9C55DD226932"
+    assert vehicles[3]["plate_no"] == "61265 / د د"
 
     assert lq_auto_trading.handle_api(
         db, "POST", ["imports"], {}, {"origin_country": "UAE", "vehicle_count": 2}, user, send
