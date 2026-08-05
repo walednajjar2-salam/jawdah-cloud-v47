@@ -51,7 +51,7 @@ COMPANY_PROFILE: Dict[str, Any] = {
 VALID_STATUSES = {"متاحة", "محجوزة", "مباعة", "قيد الاستيراد", "صيانة"}
 EDITABLE_VEHICLE_FIELDS = (
     "status", "list_price", "purchase_cost", "plate_no", "license_valid_until",
-    "insurance_company", "insurance_policy", "buyer_name", "buyer_phone",
+    "insurance_company", "insurance_policy", "insurance_type", "buyer_name", "buyer_phone",
     "import_ref", "origin_country", "notes", "reserved_by", "reserved_until",
 )
 LOCKED_VEHICLE_FIELDS = ("stock_no", "make", "model", "variant", "vin", "engine_no", "year")
@@ -59,6 +59,129 @@ LOCKED_VEHICLE_FIELDS = ("stock_no", "make", "model", "variant", "vin", "engine_
 
 def now_iso() -> str:
     return datetime.now().replace(microsecond=0).isoformat()
+
+
+def _ensure_vehicle_columns(db: sqlite3.Connection) -> None:
+    for col, typ in (
+        ("first_registration", "TEXT"),
+        ("license_doc_no", "TEXT"),
+        ("insurance_type", "TEXT"),
+        ("license_source", "TEXT"),
+        ("mortgage", "TEXT"),
+    ):
+        try:
+            db.execute(f"ALTER TABLE at_vehicles ADD COLUMN {col} {typ}")
+        except sqlite3.OperationalError:
+            pass
+
+
+def _vehicle_row_from_seed(item: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "stock_no": item["stock_no"],
+        "make": item["make"],
+        "model": item["model"],
+        "variant": item.get("variant", ""),
+        "vehicle_type": item.get("vehicle_type", ""),
+        "color": item.get("color", ""),
+        "year": item.get("year"),
+        "vin": item.get("vin", ""),
+        "engine_no": item.get("engine_no", ""),
+        "engine_cc": item.get("engine_cc", ""),
+        "seats": item.get("seats"),
+        "axles": item.get("axles"),
+        "origin_country": item.get("origin_country", ""),
+        "import_ref": item.get("import_ref", ""),
+        "purchase_cost": float(item.get("purchase_cost") or 0),
+        "list_price": float(item.get("list_price") or 0),
+        "status": item.get("status", "متاحة"),
+        "plate_no": item.get("plate_no", ""),
+        "license_valid_until": item.get("license_valid_until", ""),
+        "first_registration": item.get("first_registration", ""),
+        "license_doc_no": item.get("license_doc_no", ""),
+        "insurance_company": item.get("insurance_company", ""),
+        "insurance_policy": item.get("insurance_policy", ""),
+        "insurance_type": item.get("insurance_type", ""),
+        "license_source": item.get("license_source", ""),
+        "mortgage": item.get("mortgage", ""),
+        "notes": item.get("notes", ""),
+    }
+
+
+def sync_seed_vehicles(db: sqlite3.Connection) -> None:
+    """Upsert reference vehicles from seed file (license / office data)."""
+    if not SEED_PATH.exists():
+        return
+    rows = json.loads(SEED_PATH.read_text(encoding="utf-8"))
+    if not isinstance(rows, list):
+        return
+    seed_stocks = {str(r.get("stock_no") or "") for r in rows if r.get("stock_no")}
+    seed_vins = {str(r.get("vin") or "") for r in rows if r.get("vin")}
+    for item in rows:
+        if not item.get("stock_no") or not item.get("make") or not item.get("model"):
+            continue
+        row = _vehicle_row_from_seed(item)
+        existing = None
+        if row["vin"]:
+            existing = db.execute("SELECT id, stock_no FROM at_vehicles WHERE vin=?", (row["vin"],)).fetchone()
+        if not existing:
+            existing = db.execute(
+                "SELECT id, stock_no FROM at_vehicles WHERE stock_no=?",
+                (row["stock_no"],),
+            ).fetchone()
+        if existing:
+            db.execute(
+                """UPDATE at_vehicles SET
+                    stock_no=?, make=?, model=?, variant=?, vehicle_type=?, color=?, year=?, vin=?, engine_no=?,
+                    engine_cc=?, seats=?, axles=?, origin_country=?, import_ref=?, purchase_cost=?, list_price=?,
+                    status=?, plate_no=?, license_valid_until=?, first_registration=?, license_doc_no=?,
+                    insurance_company=?, insurance_policy=?, insurance_type=?, license_source=?, mortgage=?, notes=?,
+                    updated_at=?
+                WHERE id=?""",
+                (
+                    row["stock_no"], row["make"], row["model"], row["variant"], row["vehicle_type"], row["color"],
+                    row["year"], row["vin"], row["engine_no"], row["engine_cc"], row["seats"], row["axles"],
+                    row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["status"],
+                    row["plate_no"], row["license_valid_until"], row["first_registration"], row["license_doc_no"],
+                    row["insurance_company"], row["insurance_policy"], row["insurance_type"], row["license_source"],
+                    row["mortgage"], row["notes"], now_iso(), existing[0],
+                ),
+            )
+        else:
+            db.execute(
+                """INSERT INTO at_vehicles(
+                    stock_no, make, model, variant, vehicle_type, color, year, vin, engine_no,
+                    engine_cc, seats, axles, origin_country, import_ref, purchase_cost, list_price,
+                    status, plate_no, license_valid_until, first_registration, license_doc_no,
+                    insurance_company, insurance_policy, insurance_type, license_source, mortgage, notes,
+                    created_at, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    row["stock_no"], row["make"], row["model"], row["variant"], row["vehicle_type"], row["color"],
+                    row["year"], row["vin"], row["engine_no"], row["engine_cc"], row["seats"], row["axles"],
+                    row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["status"],
+                    row["plate_no"], row["license_valid_until"], row["first_registration"], row["license_doc_no"],
+                    row["insurance_company"], row["insurance_policy"], row["insurance_type"], row["license_source"],
+                    row["mortgage"], row["notes"], now_iso(), now_iso(),
+                ),
+            )
+    # Remove old demo stock rows not in official seed (keep sold history).
+    demo_stocks = ("AT-001", "AT-002", "AT-003", "AT-004", "AT-005")
+    for code in demo_stocks:
+        if code in seed_stocks:
+            continue
+        db.execute(
+            "DELETE FROM at_vehicles WHERE stock_no=? AND lower(status) NOT IN ('مباعة','sold')",
+            (code,),
+        )
+    # Drop duplicate VIN rows that are not in seed file (demo duplicates).
+    if seed_vins:
+        placeholders = ",".join("?" for _ in seed_vins)
+        db.execute(
+            f"DELETE FROM at_vehicles WHERE vin != '' AND vin NOT IN ({placeholders}) "
+            f"AND stock_no LIKE 'AT-%' AND lower(status) NOT IN ('مباعة','sold')",
+            tuple(seed_vins),
+        )
+    db.commit()
 
 
 def ensure_tables(db: sqlite3.Connection) -> None:
@@ -139,44 +262,8 @@ def ensure_tables(db: sqlite3.Connection) -> None:
         );
         """
     )
-    if db.execute("SELECT COUNT(*) FROM at_vehicles").fetchone()[0] == 0 and SEED_PATH.exists():
-        rows = json.loads(SEED_PATH.read_text(encoding="utf-8"))
-        for item in rows:
-            db.execute(
-                """INSERT INTO at_vehicles(
-                    stock_no, make, model, variant, vehicle_type, color, year, vin, engine_no,
-                    engine_cc, seats, axles, origin_country, import_ref, purchase_cost, list_price,
-                    status, plate_no, license_valid_until, insurance_company, insurance_policy,
-                    notes, created_at, updated_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    item["stock_no"],
-                    item["make"],
-                    item["model"],
-                    item.get("variant", ""),
-                    item.get("vehicle_type", ""),
-                    item.get("color", ""),
-                    item.get("year"),
-                    item.get("vin", ""),
-                    item.get("engine_no", ""),
-                    item.get("engine_cc", ""),
-                    item.get("seats"),
-                    item.get("axles"),
-                    item.get("origin_country", ""),
-                    item.get("import_ref", ""),
-                    item.get("purchase_cost", 0),
-                    item.get("list_price", 0),
-                    item.get("status", "متاحة"),
-                    item.get("plate_no", ""),
-                    item.get("license_valid_until", ""),
-                    item.get("insurance_company", ""),
-                    item.get("insurance_policy", ""),
-                    item.get("notes", ""),
-                    now_iso(),
-                    now_iso(),
-                ),
-            )
-    db.commit()
+    _ensure_vehicle_columns(db)
+    sync_seed_vehicles(db)
 
 
 def _audit(db: sqlite3.Connection, user: Dict[str, Any], action: str, entity_type: str, entity_id: str = "", details: Any = None) -> None:

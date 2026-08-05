@@ -23,16 +23,37 @@ function waLink(phone) {
 
 function vehicleWhatsAppText(v, c) {
   const co = c || companyProfile || {};
+  const priceLine = Number(v.list_price) > 0 ? `السعر: ${money(v.list_price)}` : 'السعر: حسب الاتفاق';
   return [
     'NAJJAR TRADING — USED & IMPORTED CARS',
     `${v.make} ${v.model} ${v.variant || ''}`.trim(),
+    v.vehicle_type ? `النوع: ${v.vehicle_type}` : '',
     `السنة: ${v.year || '—'} · اللون: ${v.color || '—'}`,
-    `السعر: ${money(v.list_price)}`,
+    priceLine,
     `مخزون: ${v.stock_no}`,
     v.vin ? `VIN: ${v.vin}` : '',
+    v.engine_no ? `المحرك: ${v.engine_no}${v.engine_cc ? ' · ' + v.engine_cc + ' cc' : ''}` : '',
+    v.first_registration ? `أول تسجيل: ${dmy(v.first_registration)}` : '',
+    v.license_valid_until ? `صلاحية الرخصة: ${dmy(v.license_valid_until)}` : '',
+    v.license_doc_no ? `رقم الوثيقة: ${v.license_doc_no}` : '',
+    v.insurance_company ? `التأمين: ${v.insurance_type || 'شامل'} — ${v.insurance_company}` : '',
+    v.insurance_policy ? `وثيقة التأمين: ${v.insurance_policy}` : '',
     co.address_ar || 'نزوى — الفلج',
-    'للاستفسار: +968 71924089',
+    'للاستفسار: +968 71924089 · +968 93391994',
   ].filter(Boolean).join('\n');
+}
+
+function licenseDetailRows(v) {
+  return `
+    <div class="detail-row"><span>سعة المحرك</span><strong>${e(v.engine_cc ? v.engine_cc + ' cc' : '—')}</strong></div>
+    <div class="detail-row"><span>المقاعد / المحاور</span><strong>${e(v.seats || '—')} · ${e(v.axles || '—')}</strong></div>
+    <div class="detail-row"><span>أول تسجيل</span><strong>${dmy(v.first_registration)}</strong></div>
+    <div class="detail-row"><span>صلاحية الرخصة</span><strong>${dmy(v.license_valid_until)}</strong></div>
+    <div class="detail-row"><span>رقم الوثيقة</span><strong class="number">${e(v.license_doc_no || '—')}</strong></div>
+    <div class="detail-row"><span>نوع التأمين</span><strong>${e(v.insurance_type || '—')}</strong></div>
+    <div class="detail-row"><span>شركة التأمين</span><strong>${e(v.insurance_company || '—')}</strong></div>
+    <div class="detail-row"><span>وثيقة التأمين</span><strong class="number">${e(v.insurance_policy || '—')}</strong></div>
+    <div class="detail-row"><span>الرهن</span><strong>${e(v.mortgage || '—')}</strong></div>`;
 }
 
 function openPrintWindow(title, bodyHtml) {
@@ -59,6 +80,7 @@ function openPrintWindow(title, bodyHtml) {
 async function printVehicleOffer(v) {
   const c = await ensureCompany();
   const bank = c.bank || {};
+  const priceCell = Number(v.list_price) > 0 ? `<b>${money(v.list_price)}</b>` : 'حسب الاتفاق';
   openPrintWindow('عرض سيارة — NAJJAR TRADING', `
     <div class="head">
       <h1>NAJJAR TRADING</h1>
@@ -71,8 +93,20 @@ async function printVehicleOffer(v) {
       <tr><th>السنة / اللون</th><td>${e(v.year || '—')} · ${e(v.color || '—')}</td></tr>
       <tr><th>النوع</th><td>${e(v.vehicle_type || '—')}</td></tr>
       <tr><th>رقم الهيكل</th><td dir="ltr">${e(v.vin || '—')}</td></tr>
-      <tr><th>سعر البيع</th><td><b>${money(v.list_price)}</b></td></tr>
+      <tr><th>رقم المحرك</th><td dir="ltr">${e(v.engine_no || '—')}${v.engine_cc ? ' · ' + e(v.engine_cc) + ' cc' : ''}</td></tr>
+      <tr><th>المقاعد / المحاور</th><td>${e(v.seats || '—')} · ${e(v.axles || '—')}</td></tr>
       <tr><th>بلد المنشأ</th><td>${e(v.origin_country || '—')}</td></tr>
+      <tr><th>سعر البيع</th><td>${priceCell}</td></tr>
+    </table>
+    <h3 style="margin-top:18px">بيانات الرخصة والتأمين</h3>
+    <table>
+      <tr><th>أول تسجيل</th><td>${dmy(v.first_registration)}</td></tr>
+      <tr><th>صلاحية الرخصة</th><td>${dmy(v.license_valid_until)}</td></tr>
+      <tr><th>رقم الوثيقة</th><td dir="ltr">${e(v.license_doc_no || '—')}</td></tr>
+      <tr><th>اللوحة</th><td>${e(v.plate_no || '—')}</td></tr>
+      <tr><th>التأمين</th><td>${e(v.insurance_type || '—')} — ${e(v.insurance_company || '—')}</td></tr>
+      <tr><th>وثيقة التأمين</th><td dir="ltr">${e(v.insurance_policy || '—')}</td></tr>
+      <tr><th>الرهن</th><td>${e(v.mortgage || '—')}</td></tr>
     </table>
     <div class="bank">
       <b>للتحويل البنكي — ${e(bank.name_ar || '')}</b><br>
@@ -81,7 +115,7 @@ async function printVehicleOffer(v) {
       SWIFT: <span dir="ltr">${e(bank.swift || '')}</span>
     </div>
     <p>واتساب: +968 71924089 · +968 93391994</p>
-    <div class="foot">NAJJAR TRADING · Nizwa · Falaj</div>`);
+    <div class="foot">NAJJAR TRADING · Nizwa · Falaj · ${e(v.license_source ? 'بيانات الرخصة: ' + v.license_source : '')}</div>`);
 }
 
 function printSaleReceipt(sale, c) {
@@ -378,7 +412,7 @@ async function loadDashboard() {
 }
 
 async function loadVehicles() {
-  setTitle('مخزون السيارات', 'جميع المركبات — متاحة، محجوزة، ومباعة');
+  setTitle('مخزون السيارات', 'بيانات المركبات من رخصة المركبة — NAJJAR TRADING');
   const qs = new URLSearchParams();
   if (statusFilter) qs.set('status', statusFilter);
   if (makeFilter) qs.set('make', makeFilter);
@@ -418,6 +452,7 @@ async function loadVehicles() {
 }
 
 function vehicleCard(v) {
+  const price = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
   return `
     <div class="vehicle-card" data-vehicle-id="${v.id}" role="button" tabindex="0">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
@@ -425,14 +460,19 @@ function vehicleCard(v) {
         ${pill(v.status)}
       </div>
       <p class="mini">${e(v.variant || '')} · ${e(v.year || '—')} · ${e(v.color || '')}</p>
-      <p><strong>${money(v.list_price)}</strong></p>
-      <p class="mini">مخزون: ${e(v.stock_no)}${v.plate_no ? ' · لوحة: ' + e(v.plate_no) : ''}</p>
+      <p><strong>${price}</strong></p>
+      <p class="mini">مخزون: ${e(v.stock_no)}${v.vin ? ' · VIN: ' + e(v.vin.slice(-8)) : ''}</p>
+      ${v.license_doc_no ? `<p class="mini">رخصة: ${e(v.license_doc_no)} · حتى ${dmy(v.license_valid_until)}</p>` : ''}
     </div>`;
 }
 
 async function openVehicleDetail(id) {
   const data = await api('/vehicles/' + id);
   const v = data.vehicle;
+  const priceDisplay = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
+  const licenseLink = v.license_source === 'oman-vehicle-license.html'
+    ? `<a class="btn secondary" href="/oman-vehicle-license.html" target="_blank" rel="noopener" style="margin-top:12px;display:inline-block">عرض رخصة المركبة</a>`
+    : '';
   openDrawer(`
     <div class="drawer-title"><h2>${e(v.make)} ${e(v.model)}</h2><p>${e(v.stock_no)} · ${pill(v.status)}</p></div>
     <div class="detail-list" style="margin:16px 0">
@@ -441,14 +481,15 @@ async function openVehicleDetail(id) {
       <div class="detail-row"><span>اللون / السنة</span><strong>${e(v.color || '—')} · ${e(v.year || '—')}</strong></div>
       <div class="detail-row"><span>رقم الهيكل</span><strong class="number">${e(v.vin || '—')}</strong></div>
       <div class="detail-row"><span>رقم المحرك</span><strong class="number">${e(v.engine_no || '—')}</strong></div>
-      <div class="detail-row"><span>سعر الشراء</span><strong>${money(v.purchase_cost)}</strong></div>
-      <div class="detail-row"><span>سعر البيع</span><strong>${money(v.list_price)}</strong></div>
+      ${licenseDetailRows(v)}
+      <div class="detail-row"><span>سعر الشراء</span><strong>${Number(v.purchase_cost) > 0 ? money(v.purchase_cost) : '—'}</strong></div>
+      <div class="detail-row"><span>سعر البيع</span><strong>${priceDisplay}</strong></div>
       <div class="detail-row"><span>بلد المنشأ</span><strong>${e(v.origin_country || '—')}</strong></div>
       <div class="detail-row"><span>مرجع الاستيراد</span><strong>${e(v.import_ref || '—')}</strong></div>
-      <div class="detail-row"><span>اللوحة / الرخصة</span><strong>${e(v.plate_no || '—')} · ${dmy(v.license_valid_until)}</strong></div>
-      <div class="detail-row"><span>التأمين</span><strong>${e(v.insurance_company || '—')}</strong></div>
+      <div class="detail-row"><span>اللوحة</span><strong>${e(v.plate_no || '—')}</strong></div>
       ${v.notes ? `<div class="detail-row"><span>ملاحظات</span><strong>${e(v.notes)}</strong></div>` : ''}
     </div>
+    ${licenseLink}
     <div class="form-actions">
       ${v.status !== 'مباعة' ? `<button class="btn success" type="button" id="btnSellVehicle">تسجيل بيع</button>` : ''}
       ${v.status === 'متاحة' ? `<button class="btn secondary" type="button" id="btnReserveVehicle">حجز</button>` : ''}
@@ -507,7 +548,7 @@ function showAddVehicleForm() {
   openModal(`
     <h2>إضافة مركبة جديدة</h2>
     <div class="form-grid">
-      <label class="field"><span>رقم المخزون *</span><input id="fStockNo" placeholder="AT-006"></label>
+      <label class="field"><span>رقم المخزون *</span><input id="fStockNo" placeholder="NT-LR-002"></label>
       <label class="field"><span>الماركة *</span><input id="fMake" placeholder="Toyota"></label>
       <label class="field"><span>الطراز *</span><input id="fModel" placeholder="Camry"></label>
       <label class="field"><span>الفئة</span><input id="fVariant" placeholder="LE"></label>
@@ -563,6 +604,8 @@ function showEditVehicleForm(v) {
       <label class="field"><span>رقم اللوحة</span><input id="ePlate" value="${e(v.plate_no || '')}"></label>
       <label class="field"><span>صلاحية الرخصة</span><input id="eLicense" type="date" value="${e(v.license_valid_until || '')}"></label>
       <label class="field"><span>شركة التأمين</span><input id="eInsurance" value="${e(v.insurance_company || '')}"></label>
+      <label class="field"><span>وثيقة التأمين</span><input id="ePolicy" value="${e(v.insurance_policy || '')}"></label>
+      <label class="field"><span>نوع التأمين</span><input id="eInsType" value="${e(v.insurance_type || '')}"></label>
       <label class="field full"><span>ملاحظات</span><textarea id="eNotes" rows="2">${e(v.notes || '')}</textarea></label>
     </div>
     <div class="form-actions">
@@ -580,6 +623,8 @@ function showEditVehicleForm(v) {
           plate_no: document.getElementById('ePlate').value.trim(),
           license_valid_until: document.getElementById('eLicense').value,
           insurance_company: document.getElementById('eInsurance').value.trim(),
+          insurance_policy: document.getElementById('ePolicy').value.trim(),
+          insurance_type: document.getElementById('eInsType').value.trim(),
           notes: document.getElementById('eNotes').value.trim(),
         },
       });
