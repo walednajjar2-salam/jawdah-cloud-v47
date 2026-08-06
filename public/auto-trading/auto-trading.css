@@ -1093,6 +1093,127 @@ body.section-dashboard .content.dashboard-page {
 }
 .nt-cust-intro h2 { margin: 0 0 6px; color: var(--navy); font-family: "Playfair Display", Georgia, serif; }
 .nt-cust-intro p { margin: 0; color: var(--muted); }
+.nt-show-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.nt-show-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.nt-show-sort select {
+  appearance: none;
+  background: rgba(14, 11, 6, 0.75);
+  color: var(--navy);
+  border: 1px solid rgba(202, 161, 74, 0.45);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-family: inherit;
+  min-width: 150px;
+  cursor: pointer;
+}
+
+/* Real vehicle photos */
+.nt-photo-media {
+  position: relative;
+  width: 100%;
+  min-height: 210px;
+  background: #050403;
+  overflow: hidden;
+}
+.nt-photo-media--hero { min-height: 280px; }
+.nt-photo-main {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 210px;
+  object-fit: cover;
+  object-position: center;
+}
+.nt-photo-media--hero .nt-photo-main { min-height: 280px; }
+.nt-photo-caption {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 2;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #f3ecd9;
+  text-shadow: 0 2px 8px rgba(0,0,0,.8);
+}
+.nt-photo-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(202, 161, 74, 0.55);
+  color: var(--gold2);
+}
+.nt-photo-thumbs {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+}
+.nt-photo-thumb {
+  width: 52px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid rgba(202, 161, 74, 0.45);
+  background: #000;
+  cursor: pointer;
+}
+.nt-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nt-photo-thumb.active { border-color: #f0d98a; box-shadow: 0 0 0 1px #caa14a; }
+
+.nt-price-block { display: grid; gap: 4px; }
+.nt-price-fx {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+.nt-price-fx-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.nt-price-fx-list li {
+  display: flex;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.nt-price-fx-list b { color: var(--gold-dark); }
+.nt-vcard-foot--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.nt-vcard-foot--stack .nt-show-actions {
+  justify-content: space-between;
+}
 
 /* Customer car showroom — professional listings (not social feed) */
 .nt-showroom-shell { display: grid; gap: 8px; }

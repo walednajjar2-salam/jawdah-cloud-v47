@@ -582,10 +582,26 @@ async function loadVehicles() {
   };
 }
 
+function vehiclePhotos(v) {
+  let photos = v.photos || [];
+  if (typeof photos === 'string') {
+    try { photos = JSON.parse(photos); } catch (_) { photos = photos ? [photos] : []; }
+  }
+  return Array.isArray(photos) ? photos.filter(Boolean) : [];
+}
+
 function vehicleCard(v) {
   const price = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
+  const photos = vehiclePhotos(v);
+  const media = photos[0]
+    ? `<div class="nt-show-media"><img class="nt-photo-main" src="${e(photos[0])}" alt="${e(v.make)} ${e(v.model)}" loading="lazy"></div>`
+    : '';
+  const usd = Number(v.price_usd || 0) > 0
+    ? `<span class="nt-price-fx" dir="ltr">${Number(v.price_usd).toLocaleString('en-US')} USD</span>`
+    : '';
   return `
-    <article class="vehicle-card nt-vcard" data-vehicle-id="${v.id}" role="button" tabindex="0">
+    <article class="vehicle-card nt-vcard nt-show-card" data-vehicle-id="${v.id}" role="button" tabindex="0">
+      ${media}
       <div class="nt-vcard-top">
         <span class="nt-vcard-stock">${e(v.stock_no)}</span>
         ${pill(v.status)}
@@ -600,8 +616,8 @@ function vehicleCard(v) {
         ${v.buyer_name ? `<li><span>المشتري</span><strong>${e(v.buyer_name)}</strong></li>` : ''}
         ${v.origin_country ? `<li><span>المنشأ</span><strong>${e(v.origin_country)}</strong></li>` : ''}
       </ul>
-      <div class="nt-vcard-foot">
-        <strong>${price}</strong>
+      <div class="nt-vcard-foot nt-vcard-foot--stack">
+        <div class="nt-price-block"><strong class="nt-show-price">${price}</strong>${usd}</div>
         <span class="mini">تفاصيل →</span>
       </div>
     </article>`;
