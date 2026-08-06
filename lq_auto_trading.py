@@ -53,6 +53,22 @@ COMPANY_PROFILE: Dict[str, Any] = {
         {"name_ar": "واية الشعيلي", "username": "waya.shuaili", "role": "sales", "role_ar": "مبيعات", "phone": ""},
         {"name_ar": "رزان الشعيلي", "username": "razan.shuaili", "role": "user", "role_ar": "مستخدم", "phone": ""},
     ],
+    "partners": [
+        {
+            "code": "waleed",
+            "name_ar": "وليد النجار",
+            "username": "waleed.najjar",
+            "phone": "71924089",
+            "ownership_pct": 50.0,
+        },
+        {
+            "code": "hamad",
+            "name_ar": "حمد السموم",
+            "username": "hamad.sumoom",
+            "phone": "77548482",
+            "ownership_pct": 50.0,
+        },
+    ],
     "platforms": [
         {"id": "america", "label_ar": "أمريكا", "icon": "🇺🇸", "kind": "auctions", "tags": ["Copart", "IAAI"]},
         {"id": "salam", "label_ar": "سلام أوتو كار", "icon": "🚗", "kind": "partner"},
@@ -76,6 +92,29 @@ LOCKED_VEHICLE_FIELDS = ("stock_no", "make", "model", "variant", "vin", "engine_
 EXPENSE_CATEGORIES = (
     "شحن واستيراد", "جمارك وترخيص", "صيانة وتجهيز", "تنظيف وتجميل", "عمولات ووسطاء",
     "إيجار ومكتب", "رواتب", "وقود وتنقل", "تأمين", "أخرى",
+)
+CAPITAL_ENTRY_TYPES = {
+    "opening": "مساهمة افتتاحية",
+    "contribution": "زيادة رأس مال",
+    "withdrawal": "سحب من رأس المال",
+    "distribution": "توزيع أرباح",
+    "adjustment": "تسوية",
+}
+DEFAULT_PARTNERS = (
+    {
+        "code": "waleed",
+        "name_ar": "وليد النجار",
+        "username": "waleed.najjar",
+        "phone": "71924089",
+        "ownership_pct": 50.0,
+    },
+    {
+        "code": "hamad",
+        "name_ar": "حمد السموم",
+        "username": "hamad.sumoom",
+        "phone": "77548482",
+        "ownership_pct": 50.0,
+    },
 )
 
 
@@ -332,10 +371,49 @@ def ensure_tables(db: sqlite3.Connection) -> None:
             details TEXT,
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS at_partners (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL UNIQUE,
+            name_ar TEXT NOT NULL,
+            username TEXT,
+            phone TEXT,
+            ownership_pct REAL NOT NULL DEFAULT 50,
+            active INTEGER NOT NULL DEFAULT 1,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS at_capital_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entry_no TEXT NOT NULL UNIQUE,
+            partner_id INTEGER NOT NULL REFERENCES at_partners(id),
+            entry_type TEXT NOT NULL,
+            amount REAL NOT NULL DEFAULT 0,
+            entry_date TEXT NOT NULL,
+            method TEXT,
+            reference_no TEXT,
+            notes TEXT,
+            distribution_id INTEGER,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS at_capital_distributions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dist_no TEXT NOT NULL UNIQUE,
+            period_label TEXT,
+            total_amount REAL NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'مسودة',
+            dist_date TEXT NOT NULL,
+            paid_at TEXT,
+            notes TEXT,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
         """
     )
     _ensure_vehicle_columns(db)
     sync_seed_vehicles(db)
+    _ensure_partners(db)
 
 
 def _audit(db: sqlite3.Connection, user: Dict[str, Any], action: str, entity_type: str, entity_id: str = "", details: Any = None) -> None:
@@ -373,6 +451,100 @@ def _next_purchase_no(db: sqlite3.Connection) -> str:
 def _next_expense_no(db: sqlite3.Connection) -> str:
     n = db.execute("SELECT COUNT(*) FROM at_expenses").fetchone()[0] + 1
     return f"AT-E-{datetime.now().year}-{n:04d}"
+
+
+def _next_capital_entry_no(db: sqlite3.Connection) -> str:
+    n = db.execute("SELECT COUNT(*) FROM at_capital_entries").fetchone()[0] + 1
+    return f"AT-C-{datetime.now().year}-{n:04d}"
+
+
+def _next_distribution_no(db: sqlite3.Connection) -> str:
+    n = db.execute("SELECT COUNT(*) FROM at_capital_distributions").fetchone()[0] + 1
+    return f"AT-D-{datetime.now().year}-{n:04d}"
+
+
+def _ensure_partners(db: sqlite3.Connection) -> None:
+    for p in DEFAULT_PARTNERS:
+        existing = db.execute("SELECT id FROM at_partners WHERE code=?", (p["code"],)).fetchone()
+        if existing:
+            db.execute(
+                """UPDATE at_partners SET name_ar=?, username=?, phone=?, ownership_pct=?, active=1, updated_at=?
+                   WHERE code=?""",
+                (
+                    p["name_ar"], p["username"], p["phone"], float(p["ownership_pct"]),
+                    now_iso(), p["code"],
+                ),
+            )
+        else:
+            db.execute(
+                """INSERT INTO at_partners(code, name_ar, username, phone, ownership_pct, active, notes, created_at, updated_at)
+                   VALUES(?,?,?,?,?,1,'',?,?)""",
+                (
+                    p["code"], p["name_ar"], p["username"], p["phone"], float(p["ownership_pct"]),
+                    now_iso(), now_iso(),
+                ),
+            )
+    db.commit()
+
+
+def _partner_capital_balance(db: sqlite3.Connection, partner_id: int) -> float:
+    """Capital in company: contributions minus withdrawals. Profit distributions tracked separately."""
+    row = db.execute(
+        """SELECT COALESCE(SUM(
+               CASE
+                 WHEN entry_type IN ('opening','contribution','adjustment') THEN amount
+                 WHEN entry_type='withdrawal' THEN -amount
+                 ELSE 0
+               END
+           ), 0) AS bal
+           FROM at_capital_entries WHERE partner_id=?""",
+        (partner_id,),
+    ).fetchone()
+    return float(row["bal"] if row else 0)
+
+
+def _partner_distributions_total(db: sqlite3.Connection, partner_id: int) -> float:
+    row = db.execute(
+        """SELECT COALESCE(SUM(amount),0) AS tot FROM at_capital_entries
+           WHERE partner_id=? AND entry_type='distribution'""",
+        (partner_id,),
+    ).fetchone()
+    return float(row["tot"] if row else 0)
+
+
+def _capital_summary(db: sqlite3.Connection) -> Dict[str, Any]:
+    partners = [dict(r) for r in db.execute(
+        "SELECT * FROM at_partners WHERE active=1 ORDER BY id ASC"
+    ).fetchall()]
+    for p in partners:
+        pid = int(p["id"])
+        p["capital_balance"] = _partner_capital_balance(db, pid)
+        p["distributions_total"] = _partner_distributions_total(db, pid)
+        p["ownership_pct"] = float(p.get("ownership_pct") or 0)
+    total_capital = sum(float(p["capital_balance"]) for p in partners)
+    total_contrib = float(db.execute(
+        "SELECT COALESCE(SUM(amount),0) FROM at_capital_entries WHERE entry_type IN ('opening','contribution')"
+    ).fetchone()[0])
+    total_withdrawals = float(db.execute(
+        "SELECT COALESCE(SUM(amount),0) FROM at_capital_entries WHERE entry_type='withdrawal'"
+    ).fetchone()[0])
+    total_distributed = float(db.execute(
+        "SELECT COALESCE(SUM(total_amount),0) FROM at_capital_distributions WHERE status IN ('معتمد','مدفوع')"
+    ).fetchone()[0])
+    sales_total = float(db.execute("SELECT COALESCE(SUM(sale_price),0) FROM at_sales").fetchone()[0])
+    purchases_total = float(db.execute("SELECT COALESCE(SUM(purchase_price),0) FROM at_purchases").fetchone()[0])
+    expenses_total = float(db.execute("SELECT COALESCE(SUM(amount),0) FROM at_expenses").fetchone()[0])
+    net_profit = sales_total - purchases_total - expenses_total
+    return {
+        "partners": partners,
+        "total_capital": total_capital,
+        "total_contributions": total_contrib,
+        "total_withdrawals": total_withdrawals,
+        "total_distributed": total_distributed,
+        "net_profit": net_profit,
+        "distributable_estimate": max(0.0, net_profit - total_distributed),
+        "entry_types": CAPITAL_ENTRY_TYPES,
+    }
 
 
 def handle_api(
@@ -421,6 +593,11 @@ def handle_api(
             "expenses_total": db.execute("SELECT COALESCE(SUM(amount),0) FROM at_expenses").fetchone()[0],
         }
         stats["net_profit"] = float(stats["sales_total"]) - float(stats["purchases_total"]) - float(stats["expenses_total"])
+        capital = _capital_summary(db)
+        stats["total_capital"] = capital["total_capital"]
+        stats["total_distributed"] = capital["total_distributed"]
+        stats["distributable_estimate"] = capital["distributable_estimate"]
+        stats["partners"] = capital["partners"]
         today = datetime.now().strftime("%Y-%m-%d")
         stats["today_purchases"] = db.execute(
             "SELECT COUNT(*) FROM at_purchases WHERE purchase_date=?", (today,)
@@ -432,7 +609,7 @@ def handle_api(
             "SELECT COUNT(*) FROM at_expenses WHERE expense_date=?", (today,)
         ).fetchone()[0]
         recent = db.execute("SELECT * FROM at_audit ORDER BY id DESC LIMIT 12").fetchall()
-        return send_json({"ok": True, "stats": stats, "recent": [dict(r) for r in recent], "company": COMPANY_PROFILE}) or True
+        return send_json({"ok": True, "stats": stats, "recent": [dict(r) for r in recent], "company": COMPANY_PROFILE, "capital": capital}) or True
 
     if head == "vehicles" and method == "GET" and len(parts) == 1:
         status_filter = (query.get("status") or [""])[0].strip()
@@ -814,10 +991,216 @@ def handle_api(
                        COALESCE(ex.stock_no, '') AS stock_no, COALESCE(ex.payee, ex.category) AS party,
                        ex.amount AS amount, ex.notes AS notes, ex.created_by AS created_by, ex.created_at AS created_at
                 FROM at_expenses ex
+                UNION ALL
+                SELECT 'رأس مال' AS kind, ce.entry_date AS tx_date, ce.entry_no AS ref_no,
+                       '' AS stock_no, pr.name_ar AS party, ce.amount AS amount,
+                       ce.notes AS notes, ce.created_by AS created_by, ce.created_at AS created_at
+                FROM at_capital_entries ce
+                LEFT JOIN at_partners pr ON pr.id=ce.partner_id
             )
             ORDER BY tx_date DESC, created_at DESC LIMIT {limit}
             """
         ).fetchall()
         return send_json({"ok": True, "transactions": [dict(r) for r in rows]}) or True
+
+    if head == "capital" and method == "GET":
+        summary = _capital_summary(db)
+        entries = db.execute(
+            """SELECT ce.*, p.name_ar AS partner_name, p.code AS partner_code
+               FROM at_capital_entries ce
+               LEFT JOIN at_partners p ON p.id=ce.partner_id
+               ORDER BY ce.id DESC LIMIT 300"""
+        ).fetchall()
+        dists = db.execute(
+            "SELECT * FROM at_capital_distributions ORDER BY id DESC LIMIT 100"
+        ).fetchall()
+        return send_json({
+            "ok": True,
+            "summary": summary,
+            "entries": [dict(r) for r in entries],
+            "distributions": [dict(r) for r in dists],
+            "entry_types": CAPITAL_ENTRY_TYPES,
+        }) or True
+
+    if head == "capital" and method == "POST" and len(parts) == 1:
+        partner_id = None
+        try:
+            partner_id = int(payload.get("partner_id") or 0) or None
+        except (TypeError, ValueError):
+            partner_id = None
+        partner_code = str(payload.get("partner_code") or "").strip().lower()
+        if not partner_id and partner_code:
+            prow = db.execute("SELECT id FROM at_partners WHERE code=?", (partner_code,)).fetchone()
+            partner_id = int(prow["id"]) if prow else None
+        if not partner_id:
+            return send_json({"ok": False, "error": "اختر الشريك (وليد النجار أو حمد السموم)"}, 400) or True
+        partner = db.execute("SELECT * FROM at_partners WHERE id=?", (partner_id,)).fetchone()
+        if not partner:
+            return send_json({"ok": False, "error": "الشريك غير موجود"}, 404) or True
+        entry_type = str(payload.get("entry_type") or "contribution").strip().lower()
+        if entry_type not in CAPITAL_ENTRY_TYPES:
+            return send_json({"ok": False, "error": "نوع حركة رأس المال غير معتمد"}, 400) or True
+        amount = float(payload.get("amount") or 0)
+        if amount <= 0:
+            return send_json({"ok": False, "error": "المبلغ يجب أن يكون أكبر من صفر"}, 400) or True
+        entry_no = _next_capital_entry_no(db)
+        entry_date = str(payload.get("entry_date") or datetime.now().strftime("%Y-%m-%d"))
+        db.execute(
+            """INSERT INTO at_capital_entries(
+                entry_no, partner_id, entry_type, amount, entry_date, method, reference_no,
+                notes, distribution_id, created_by, created_at
+            ) VALUES(?,?,?,?,?,?,?,?,NULL,?,?)""",
+            (
+                entry_no, partner_id, entry_type, amount, entry_date,
+                str(payload.get("method") or "تحويل بنكي"),
+                str(payload.get("reference_no") or ""),
+                str(payload.get("notes") or ""),
+                str(user.get("username") or ""),
+                now_iso(),
+            ),
+        )
+        eid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        _audit(db, user, "capital_entry", "capital", str(eid), {
+            "entry_no": entry_no, "partner": partner["name_ar"], "type": entry_type, "amount": amount,
+        })
+        db.commit()
+        row = db.execute("SELECT * FROM at_capital_entries WHERE id=?", (eid,)).fetchone()
+        return send_json({"ok": True, "entry": dict(row), "summary": _capital_summary(db)}, 201) or True
+
+    if head == "distributions" and method == "GET":
+        rows = db.execute("SELECT * FROM at_capital_distributions ORDER BY id DESC LIMIT 100").fetchall()
+        return send_json({"ok": True, "distributions": [dict(r) for r in rows], "summary": _capital_summary(db)}) or True
+
+    if head == "distributions" and method == "POST" and len(parts) == 1:
+        total_amount = float(payload.get("total_amount") or 0)
+        if total_amount <= 0:
+            return send_json({"ok": False, "error": "مبلغ التوزيع مطلوب"}, 400) or True
+        partners = [dict(r) for r in db.execute(
+            "SELECT * FROM at_partners WHERE active=1 ORDER BY id ASC"
+        ).fetchall()]
+        if len(partners) < 1:
+            return send_json({"ok": False, "error": "لا يوجد شركاء مسجلون"}, 400) or True
+        # Optional custom split: {partner_code: amount}
+        custom = payload.get("splits") if isinstance(payload.get("splits"), dict) else {}
+        pct_sum = sum(float(p.get("ownership_pct") or 0) for p in partners) or 100.0
+        splits: List[Dict[str, Any]] = []
+        assigned = 0.0
+        for i, p in enumerate(partners):
+            if p["code"] in custom:
+                share = float(custom[p["code"]] or 0)
+            elif i == len(partners) - 1:
+                share = round(total_amount - assigned, 3)
+            else:
+                share = round(total_amount * (float(p["ownership_pct"] or 0) / pct_sum), 3)
+                assigned += share
+            if share < 0:
+                return send_json({"ok": False, "error": "حصص التوزيع غير صحيحة"}, 400) or True
+            splits.append({"partner_id": int(p["id"]), "partner_code": p["code"], "partner_name": p["name_ar"], "amount": share})
+        status = str(payload.get("status") or "معتمد").strip() or "معتمد"
+        if status not in ("مسودة", "معتمد", "مدفوع"):
+            status = "معتمد"
+        dist_no = _next_distribution_no(db)
+        dist_date = str(payload.get("dist_date") or datetime.now().strftime("%Y-%m-%d"))
+        period_label = str(payload.get("period_label") or "").strip() or f"توزيع {dist_date}"
+        paid_at = now_iso() if status == "مدفوع" else None
+        db.execute(
+            """INSERT INTO at_capital_distributions(
+                dist_no, period_label, total_amount, status, dist_date, paid_at, notes, created_by, created_at
+            ) VALUES(?,?,?,?,?,?,?,?,?)""",
+            (
+                dist_no, period_label, total_amount, status, dist_date, paid_at,
+                str(payload.get("notes") or ""),
+                str(user.get("username") or ""),
+                now_iso(),
+            ),
+        )
+        dist_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        if status in ("معتمد", "مدفوع"):
+            for sp in splits:
+                if float(sp["amount"]) <= 0:
+                    continue
+                entry_no = _next_capital_entry_no(db)
+                db.execute(
+                    """INSERT INTO at_capital_entries(
+                        entry_no, partner_id, entry_type, amount, entry_date, method, reference_no,
+                        notes, distribution_id, created_by, created_at
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        entry_no, sp["partner_id"], "distribution", float(sp["amount"]), dist_date,
+                        str(payload.get("method") or "تحويل بنكي"),
+                        dist_no,
+                        f"توزيع أرباح — {period_label}",
+                        dist_id,
+                        str(user.get("username") or ""),
+                        now_iso(),
+                    ),
+                )
+        _audit(db, user, "capital_distribution", "distribution", str(dist_id), {
+            "dist_no": dist_no, "total": total_amount, "status": status, "splits": splits,
+        })
+        db.commit()
+        row = db.execute("SELECT * FROM at_capital_distributions WHERE id=?", (dist_id,)).fetchone()
+        return send_json({
+            "ok": True,
+            "distribution": dict(row),
+            "splits": splits,
+            "summary": _capital_summary(db),
+        }, 201) or True
+
+    if head == "distributions" and len(parts) == 2 and method == "POST":
+        try:
+            dist_id = int(parts[1])
+        except ValueError:
+            return send_json({"ok": False, "error": "رقم التوزيع غير صحيح"}, 400) or True
+        current = db.execute("SELECT * FROM at_capital_distributions WHERE id=?", (dist_id,)).fetchone()
+        if not current:
+            return send_json({"ok": False, "error": "التوزيع غير موجود"}, 404) or True
+        status = str(payload.get("status") or "").strip()
+        if status not in ("مسودة", "معتمد", "مدفوع"):
+            return send_json({"ok": False, "error": "حالة التوزيع غير معتمدة"}, 400) or True
+        paid_at = current["paid_at"]
+        if status == "مدفوع" and not paid_at:
+            paid_at = now_iso()
+        db.execute(
+            "UPDATE at_capital_distributions SET status=?, paid_at=? WHERE id=?",
+            (status, paid_at, dist_id),
+        )
+        # If approving a draft that has no capital entries yet, create them.
+        if status in ("معتمد", "مدفوع"):
+            existing_entries = db.execute(
+                "SELECT COUNT(*) FROM at_capital_entries WHERE distribution_id=?", (dist_id,)
+            ).fetchone()[0]
+            if not existing_entries:
+                partners = [dict(r) for r in db.execute(
+                    "SELECT * FROM at_partners WHERE active=1 ORDER BY id ASC"
+                ).fetchall()]
+                pct_sum = sum(float(p.get("ownership_pct") or 0) for p in partners) or 100.0
+                total_amount = float(current["total_amount"] or 0)
+                assigned = 0.0
+                for i, p in enumerate(partners):
+                    if i == len(partners) - 1:
+                        share = round(total_amount - assigned, 3)
+                    else:
+                        share = round(total_amount * (float(p["ownership_pct"] or 0) / pct_sum), 3)
+                        assigned += share
+                    if share <= 0:
+                        continue
+                    entry_no = _next_capital_entry_no(db)
+                    db.execute(
+                        """INSERT INTO at_capital_entries(
+                            entry_no, partner_id, entry_type, amount, entry_date, method, reference_no,
+                            notes, distribution_id, created_by, created_at
+                        ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            entry_no, int(p["id"]), "distribution", share, current["dist_date"],
+                            "تحويل بنكي", current["dist_no"],
+                            f"توزيع أرباح — {current['period_label']}",
+                            dist_id, str(user.get("username") or ""), now_iso(),
+                        ),
+                    )
+        _audit(db, user, "capital_distribution_status", "distribution", str(dist_id), {"status": status})
+        db.commit()
+        row = db.execute("SELECT * FROM at_capital_distributions WHERE id=?", (dist_id,)).fetchone()
+        return send_json({"ok": True, "distribution": dict(row), "summary": _capital_summary(db)}) or True
 
     return send_json({"ok": False, "error": "المسار غير موجود"}, 404) or True

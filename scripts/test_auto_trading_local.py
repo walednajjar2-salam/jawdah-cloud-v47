@@ -126,14 +126,55 @@ def main() -> int:
     assert lq_auto_trading.handle_api(db, "GET", ["transactions"], {}, {}, user, send)
     tx = out[-1][1]["transactions"]
     kinds = {t["kind"] for t in tx}
-    assert kinds == {"شراء", "بيع", "مصروف"}
+    assert {"شراء", "بيع", "مصروف"}.issubset(kinds)
 
-    # Dashboard now reflects purchases/expenses/net profit
+    # Partner capital — وليد النجار / حمد السموم
+    assert lq_auto_trading.handle_api(db, "GET", ["capital"], {}, {}, user, send)
+    capital = out[-1][1]
+    partners = capital["summary"]["partners"]
+    assert len(partners) == 2
+    assert {p["name_ar"] for p in partners} == {"وليد النجار", "حمد السموم"}
+    waleed_id = next(p["id"] for p in partners if p["code"] == "waleed")
+    hamad_id = next(p["id"] for p in partners if p["code"] == "hamad")
+
+    assert lq_auto_trading.handle_api(
+        db, "POST", ["capital"], {},
+        {"partner_id": waleed_id, "entry_type": "opening", "amount": 10000, "entry_date": "2026-01-01"},
+        user, send,
+    )
+    assert out[-1][0] == 201
+    assert lq_auto_trading.handle_api(
+        db, "POST", ["capital"], {},
+        {"partner_id": hamad_id, "entry_type": "opening", "amount": 10000, "entry_date": "2026-01-01"},
+        user, send,
+    )
+    assert out[-1][0] == 201
+
+    assert lq_auto_trading.handle_api(
+        db, "POST", ["distributions"], {},
+        {"total_amount": 2000, "period_label": "اختبار Q1", "status": "معتمد", "dist_date": "2026-03-31"},
+        user, send,
+    )
+    assert out[-1][0] == 201
+    splits = out[-1][1]["splits"]
+    assert len(splits) == 2
+    assert abs(sum(float(s["amount"]) for s in splits) - 2000) < 0.01
+    assert all(abs(float(s["amount"]) - 1000) < 0.01 for s in splits)
+
+    assert lq_auto_trading.handle_api(db, "GET", ["capital"], {}, {}, user, send)
+    summary = out[-1][1]["summary"]
+    assert summary["total_capital"] >= 20000
+    assert summary["total_distributed"] >= 2000
+    for p in summary["partners"]:
+        assert abs(float(p["distributions_total"]) - 1000) < 0.01
+
+    # Dashboard now reflects purchases/expenses/net profit + capital
     assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)
     stats2 = out[-1][1]["stats"]
     assert stats2["purchases_total"] >= 8500
     assert stats2["expenses_total"] >= 250
     assert "net_profit" in stats2
+    assert stats2["total_capital"] >= 20000
 
     print("auto-trading API smoke test: OK")
     return 0

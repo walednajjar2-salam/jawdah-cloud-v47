@@ -215,6 +215,9 @@ const actionLabel = {
   expense_created: 'تسجيل مصروف',
   import_created: 'طلب استيراد',
   import_updated: 'تحديث استيراد',
+  capital_entry: 'حركة رأس مال',
+  capital_distribution: 'توزيع أرباح',
+  capital_distribution_status: 'تحديث توزيع',
 };
 
 const statusClass = {
@@ -376,6 +379,7 @@ async function loadSection(section) {
     if (section === 'purchases') return await loadPurchases();
     if (section === 'sales') return await loadSales();
     if (section === 'expenses') return await loadExpenses();
+    if (section === 'capital') return await loadCapital();
     if (section === 'transactions') return await loadTransactions();
     if (section === 'imports') return await loadImports();
     if (section === 'staff') return await loadStaff();
@@ -411,8 +415,8 @@ async function loadStaff() {
     <section class="card" style="margin-top:16px">
       <div class="card-header"><h3>الصلاحيات</h3></div>
       <div class="card-body detail-list">
-        <div class="detail-row"><span>مالك (Owner)</span><strong>وليد نجار · حمد السموم — كامل الصلاحيات</strong></div>
-        <div class="detail-row"><span>مبيعات (Sales)</span><strong>واية الشعيلي — مخزون، مبيعات، زبائن</strong></div>
+        <div class="detail-row"><span>مالك (Owner)</span><strong>وليد النجار · حمد السموم — كامل الصلاحيات + رأس المال والتوزيعات</strong></div>
+        <div class="detail-row"><span>مبيعات (Sales)</span><strong>واية الشعيلي — مخزون، مبيعات، مصاريف، زبائن</strong></div>
         <div class="detail-row"><span>مستخدم (User)</span><strong>رزان الشعيلي — عرض ومتابعة</strong></div>
       </div>
     </section>`;
@@ -434,18 +438,19 @@ function kpi(icon, label, value, cls = '') {
 }
 
 async function loadDashboard() {
-  setTitle('لوحة التحكم', 'نظام محاسبي متكامل — مخزون · مشتريات · مبيعات · مصاريف');
+  setTitle('لوحة التحكم', 'برنامج الموظفين — مبيعات · مصاريف · رأس مال الشريكين');
   const data = await api('/dashboard');
   const c = data.company || {};
   companyProfile = c;
   const s = data.stats;
   const staff = c.staff || [];
+  const partners = s.partners || (data.capital || {}).partners || [];
   const netCls = Number(s.net_profit) >= 0 ? 'highlight' : '';
   content.innerHTML = `
     <div class="nt-dash-banner nt-dash-banner--logo">
       <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
-        <p>${e(c.address_ar || 'نزوى — الفلج')} · نظام محاسبي متكامل</p>
+        <p>${e(c.address_ar || 'نزوى — الفلج')} · شريكان: وليد النجار · حمد السموم</p>
       </div>
     </div>
     <div class="stats-grid">
@@ -455,6 +460,12 @@ async function loadDashboard() {
       ${kpi(ICO('sale'), 'إجمالي المبيعات', money(s.sales_total))}
       ${kpi(ICO('exp'), 'إجمالي المصاريف', money(s.expenses_total))}
       ${kpi(ICO('chart'), 'صافي الربح', money(s.net_profit), netCls)}
+    </div>
+    <div class="stats-grid" style="margin-top:14px">
+      ${kpi(ICO('chart'), 'رأس المال الحالي', money(s.total_capital || 0), 'highlight')}
+      ${kpi(ICO('sale'), 'توزيعات معتمدة', money(s.total_distributed || 0))}
+      ${kpi(ICO('ok'), 'قابل للتوزيع (تقديري)', money(s.distributable_estimate || 0))}
+      ${partners.map(p => kpi(ICO('staff'), e(p.name_ar) + ' · ' + Number(p.ownership_pct||0) + '%', money(p.capital_balance || 0))).join('')}
     </div>
     <div class="stats-grid" style="margin-top:14px">
       ${stat('محجوزة', s.reserved)}
@@ -473,6 +484,7 @@ async function loadDashboard() {
             <button class="btn secondary" type="button" id="dashGoPurchases">تسجيل شراء</button>
             <button class="btn secondary" type="button" id="dashGoSales">المبيعات</button>
             <button class="btn secondary" type="button" id="dashGoExpenses">تسجيل مصروف</button>
+            <button class="btn secondary" type="button" id="dashGoCapital">رأس المال والتوزيعات</button>
             <button class="btn secondary" type="button" id="dashGoTransactions">الحركة اليومية</button>
           </div>
         </div>
@@ -533,8 +545,194 @@ async function loadDashboard() {
   if (goS) goS.onclick = () => goToSection('sales');
   const goEx = document.getElementById('dashGoExpenses');
   if (goEx) goEx.onclick = () => goToSection('expenses');
+  const goCap = document.getElementById('dashGoCapital');
+  if (goCap) goCap.onclick = () => goToSection('capital');
   const goTx = document.getElementById('dashGoTransactions');
   if (goTx) goTx.onclick = () => goToSection('transactions');
+}
+
+const CAPITAL_TYPE_LABEL = {
+  opening: 'مساهمة افتتاحية',
+  contribution: 'زيادة رأس مال',
+  withdrawal: 'سحب من رأس المال',
+  distribution: 'توزيع أرباح',
+  adjustment: 'تسوية',
+};
+
+async function loadCapital() {
+  setTitle('رأس المال والتوزيعات', 'وليد النجار · حمد السموم — مساهمات · سحوبات · توزيع أرباح');
+  const data = await api('/capital');
+  const summary = data.summary || {};
+  const partners = summary.partners || [];
+  const entries = data.entries || [];
+  const dists = data.distributions || [];
+  const partnerOptions = partners.map(p => `<option value="${e(p.id)}">${e(p.name_ar)} · ${Number(p.ownership_pct||0)}%</option>`).join('');
+  content.innerHTML = `
+    <div class="nt-dash-banner">
+      <div>
+        <h2>محاسبة رأس مال الشريكين</h2>
+        <p>وليد النجار 50% · حمد السموم 50% — تسجيل المساهمات والسحوبات وتوزيع الأرباح</p>
+      </div>
+    </div>
+    <div class="stats-grid">
+      ${kpi(ICO('chart'), 'إجمالي رأس المال', money(summary.total_capital || 0), 'highlight')}
+      ${kpi(ICO('buy'), 'إجمالي المساهمات', money(summary.total_contributions || 0))}
+      ${kpi(ICO('exp'), 'إجمالي السحوبات', money(summary.total_withdrawals || 0))}
+      ${kpi(ICO('sale'), 'توزيعات معتمدة', money(summary.total_distributed || 0))}
+      ${kpi(ICO('ok'), 'صافي الربح', money(summary.net_profit || 0))}
+      ${kpi(ICO('ledger'), 'قابل للتوزيع', money(summary.distributable_estimate || 0))}
+    </div>
+    <div class="nt-staff-grid" style="margin-top:14px">
+      ${partners.map(p => `
+        <article class="nt-staff-card">
+          <span class="nt-staff-role owner">${Number(p.ownership_pct||0)}%</span>
+          <strong>${e(p.name_ar)}</strong>
+          <div class="mini">رصيد رأس المال: <strong>${money(p.capital_balance || 0)}</strong></div>
+          <div class="mini">توزيعات مستلمة: <strong>${money(p.distributions_total || 0)}</strong></div>
+          ${p.phone ? `<div class="mini" dir="ltr">+968 ${e(p.phone)}</div>` : ''}
+        </article>`).join('')}
+    </div>
+    <div class="split-grid" style="margin-top:16px">
+      <section class="card">
+        <div class="card-header"><h3>تسجيل حركة رأس مال</h3></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <label class="field"><span>الشريك</span><select id="capPartner">${partnerOptions}</select></label>
+            <label class="field"><span>النوع</span><select id="capType">
+              <option value="opening">مساهمة افتتاحية</option>
+              <option value="contribution" selected>زيادة رأس مال</option>
+              <option value="withdrawal">سحب من رأس المال</option>
+              <option value="adjustment">تسوية</option>
+            </select></label>
+            <label class="field"><span>المبلغ (OMR)</span><input id="capAmount" type="number" min="0" step="0.001" placeholder="0.000"></label>
+            <label class="field"><span>التاريخ</span><input id="capDate" type="date"></label>
+            <label class="field"><span>طريقة الدفع</span><select id="capMethod"><option>تحويل بنكي</option><option>نقد</option><option>شيك</option></select></label>
+            <label class="field"><span>مرجع / إيصال</span><input id="capRef" placeholder="رقم التحويل أو الإيصال"></label>
+            <label class="field full"><span>ملاحظات</span><input id="capNotes" placeholder="اختياري"></label>
+          </div>
+          <div class="actions-row" style="margin-top:12px">
+            <button class="btn primary" type="button" id="capSaveEntry">حفظ الحركة</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-header"><h3>توزيع أرباح على الشريكين</h3></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <label class="field"><span>إجمالي التوزيع (OMR)</span><input id="distAmount" type="number" min="0" step="0.001" placeholder="0.000"></label>
+            <label class="field"><span>تاريخ التوزيع</span><input id="distDate" type="date"></label>
+            <label class="field"><span>الفترة / البيان</span><input id="distPeriod" placeholder="مثال: أرباح الربع الأول 2026"></label>
+            <label class="field"><span>الحالة</span><select id="distStatus"><option value="معتمد">معتمد</option><option value="مدفوع">مدفوع</option><option value="مسودة">مسودة</option></select></label>
+            <label class="field full"><span>ملاحظات</span><input id="distNotes" placeholder="اختياري"></label>
+          </div>
+          <p class="mini" style="margin-top:8px">يُقسَّم تلقائياً 50% لوليد النجار و 50% لحمد السموم حسب نسبة الملكية.</p>
+          <div class="actions-row" style="margin-top:12px">
+            <button class="btn primary" type="button" id="distSave">تنفيذ التوزيع</button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <section class="card" style="margin-top:16px">
+      <div class="card-header"><h3>سجل حركات رأس المال</h3></div>
+      <div class="card-body table-wrap">
+        <table class="data-table">
+          <thead><tr><th>الرقم</th><th>التاريخ</th><th>الشريك</th><th>النوع</th><th>المبلغ</th><th>الطريقة</th><th>ملاحظات</th></tr></thead>
+          <tbody>
+            ${entries.length ? entries.map(r => `
+              <tr>
+                <td dir="ltr">${e(r.entry_no)}</td>
+                <td>${e(r.entry_date || '')}</td>
+                <td>${e(r.partner_name || '')}</td>
+                <td>${e(CAPITAL_TYPE_LABEL[r.entry_type] || r.entry_type)}</td>
+                <td>${money(r.amount)}</td>
+                <td>${e(r.method || '—')}</td>
+                <td>${e(r.notes || '—')}</td>
+              </tr>`).join('') : '<tr><td colspan="7" class="empty-state">لا حركات رأس مال بعد</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card" style="margin-top:16px">
+      <div class="card-header"><h3>سجل التوزيعات</h3></div>
+      <div class="card-body table-wrap">
+        <table class="data-table">
+          <thead><tr><th>الرقم</th><th>الفترة</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>إجراء</th></tr></thead>
+          <tbody>
+            ${dists.length ? dists.map(r => `
+              <tr>
+                <td dir="ltr">${e(r.dist_no)}</td>
+                <td>${e(r.period_label || '—')}</td>
+                <td>${e(r.dist_date || '')}</td>
+                <td>${money(r.total_amount)}</td>
+                <td>${pill(r.status, r.status)}</td>
+                <td>${r.status === 'مسودة' ? `<button class="btn secondary" type="button" data-approve-dist="${r.id}">اعتماد</button>` : (r.status === 'معتمد' ? `<button class="btn secondary" type="button" data-pay-dist="${r.id}">تعليم مدفوع</button>` : '—')}</td>
+              </tr>`).join('') : '<tr><td colspan="6" class="empty-state">لا توزيعات بعد</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </section>`;
+  const today = new Date().toISOString().slice(0, 10);
+  const capDate = document.getElementById('capDate');
+  const distDate = document.getElementById('distDate');
+  if (capDate) capDate.value = today;
+  if (distDate) distDate.value = today;
+  document.getElementById('capSaveEntry').onclick = async () => {
+    try {
+      const amount = Number(document.getElementById('capAmount').value || 0);
+      if (!(amount > 0)) return toast('أدخل مبلغاً صحيحاً', 'error');
+      await api('/capital', {
+        method: 'POST',
+        body: {
+          partner_id: Number(document.getElementById('capPartner').value),
+          entry_type: document.getElementById('capType').value,
+          amount,
+          entry_date: document.getElementById('capDate').value || today,
+          method: document.getElementById('capMethod').value,
+          reference_no: document.getElementById('capRef').value,
+          notes: document.getElementById('capNotes').value,
+        },
+      });
+      toast('تم حفظ حركة رأس المال');
+      await loadCapital();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+  document.getElementById('distSave').onclick = async () => {
+    try {
+      const total_amount = Number(document.getElementById('distAmount').value || 0);
+      if (!(total_amount > 0)) return toast('أدخل مبلغ التوزيع', 'error');
+      const res = await api('/distributions', {
+        method: 'POST',
+        body: {
+          total_amount,
+          dist_date: document.getElementById('distDate').value || today,
+          period_label: document.getElementById('distPeriod').value,
+          status: document.getElementById('distStatus').value,
+          notes: document.getElementById('distNotes').value,
+        },
+      });
+      const splits = (res.splits || []).map(s => `${s.partner_name}: ${money(s.amount)}`).join(' · ');
+      toast('تم التوزيع — ' + splits);
+      await loadCapital();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+  content.querySelectorAll('[data-approve-dist]').forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        await api('/distributions/' + btn.dataset.approveDist, { method: 'POST', body: { status: 'معتمد' } });
+        toast('تم اعتماد التوزيع');
+        await loadCapital();
+      } catch (err) { toast(err.message, 'error'); }
+    };
+  });
+  content.querySelectorAll('[data-pay-dist]').forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        await api('/distributions/' + btn.dataset.payDist, { method: 'POST', body: { status: 'مدفوع' } });
+        toast('تم تعليم التوزيع كمدفوع');
+        await loadCapital();
+      } catch (err) { toast(err.message, 'error'); }
+    };
+  });
 }
 
 async function loadVehicles() {
