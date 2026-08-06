@@ -49,8 +49,8 @@ body.theme-autotrading::before {
     linear-gradient(160deg, #040403 0%, #0b0805 45%, #060503 100%);
 }
 
-/* Logo mark pinned near the top-right of the page, fixed so it never scrolls away —
-   a soft, transparent crystal watermark. On the dashboard it clears the right-hand sidebar. */
+/* Logo mark centered on screen, fixed so it never scrolls away — a soft, transparent
+   crystal watermark sized consistently with the page regardless of viewport. */
 .nt-watermark::after,
 body.theme-autotrading::after {
   content: "";
@@ -60,20 +60,9 @@ body.theme-autotrading::after {
   z-index: 0;
   background-image: url('/auto-trading/assets/logo-watermark.svg?v=at10');
   background-repeat: no-repeat;
-  background-size: min(20vw, 190px);
-  opacity: 0.12;
-}
-
-.nt-watermark::after { background-position: right 26px top 22px; }
-body.theme-autotrading::after { background-position: right 300px top 22px; }
-
-@media (max-width: 1180px) {
-  body.theme-autotrading::after { background-position: right 258px top 18px; background-size: min(24vw, 160px); }
-}
-
-@media (max-width: 820px) {
-  .nt-watermark::after,
-  body.theme-autotrading::after { background-position: right 16px top 16px; background-size: min(30vw, 130px); }
+  background-position: center;
+  background-size: min(42vw, 460px);
+  opacity: 0.1;
 }
 
 body.theme-autotrading .app-shell,
