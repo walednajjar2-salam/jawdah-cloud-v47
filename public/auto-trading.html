@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>NAJJAR & AL SAMOOM TRADING | USED &amp; IMPORTED CARS</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at15">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at16">
   <style>
     .qe-topbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .qe-back { text-decoration: none; }
@@ -24,21 +24,21 @@
   <div class="app-shell">
     <aside class="sidebar open">
       <div class="sidebar-brand at-brand-stack">
-        <img id="sidebarLogo" class="at-logo-official" src="/auto-trading/assets/logo-official.svg?v=at11" alt="NAJJAR & AL SAMOOM TRADING">
+        <img id="sidebarLogo" class="at-logo-official" src="/auto-trading/assets/logo-official.svg?v=at12" alt="NAJJAR & AL SAMOOM TRADING">
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-item active" data-section="dashboard"><span class="nav-inner"><span class="nav-icon">▣</span><span class="nav-label">لوحة التحكم</span></span></button>
-        <button class="nav-item" data-section="vehicles"><span class="nav-inner"><span class="nav-icon">🚘</span><span class="nav-label">المخزون</span></span></button>
-        <button class="nav-item" data-section="purchases"><span class="nav-inner"><span class="nav-icon">🧾</span><span class="nav-label">المشتريات</span></span></button>
-        <button class="nav-item" data-section="sales"><span class="nav-inner"><span class="nav-icon">💰</span><span class="nav-label">المبيعات</span></span></button>
-        <button class="nav-item" data-section="expenses"><span class="nav-inner"><span class="nav-icon">📤</span><span class="nav-label">المصاريف</span></span></button>
-        <button class="nav-item" data-section="transactions"><span class="nav-inner"><span class="nav-icon">📒</span><span class="nav-label">الحركة اليومية</span></span></button>
-        <button class="nav-item" data-section="imports"><span class="nav-inner"><span class="nav-icon">🌍</span><span class="nav-label">الاستيراد</span></span></button>
-        <button class="nav-item" data-section="staff"><span class="nav-inner"><span class="nav-icon">👥</span><span class="nav-label">الموظفون</span></span></button>
-        <button class="nav-item" data-section="company"><span class="nav-inner"><span class="nav-icon">🏢</span><span class="nav-label">بيانات الشركة</span></span></button>
+        <button class="nav-item active" data-section="dashboard"><span class="nav-inner"><span class="nav-icon" data-ico="dash"></span><span class="nav-label">لوحة التحكم</span></span></button>
+        <button class="nav-item" data-section="vehicles"><span class="nav-inner"><span class="nav-icon" data-ico="car"></span><span class="nav-label">المخزون</span></span></button>
+        <button class="nav-item" data-section="purchases"><span class="nav-inner"><span class="nav-icon" data-ico="buy"></span><span class="nav-label">المشتريات</span></span></button>
+        <button class="nav-item" data-section="sales"><span class="nav-inner"><span class="nav-icon" data-ico="sale"></span><span class="nav-label">المبيعات</span></span></button>
+        <button class="nav-item" data-section="expenses"><span class="nav-inner"><span class="nav-icon" data-ico="exp"></span><span class="nav-label">المصاريف</span></span></button>
+        <button class="nav-item" data-section="transactions"><span class="nav-inner"><span class="nav-icon" data-ico="ledger"></span><span class="nav-label">الحركة اليومية</span></span></button>
+        <button class="nav-item" data-section="imports"><span class="nav-inner"><span class="nav-icon" data-ico="world"></span><span class="nav-label">الاستيراد</span></span></button>
+        <button class="nav-item" data-section="staff"><span class="nav-inner"><span class="nav-icon" data-ico="staff"></span><span class="nav-label">الموظفون</span></span></button>
+        <button class="nav-item" data-section="company"><span class="nav-inner"><span class="nav-icon" data-ico="company"></span><span class="nav-label">بيانات الشركة</span></span></button>
       </nav>
       <div class="sidebar-foot">
-        <a class="wa-quick" href="https://wa.me/96871924089" target="_blank" rel="noopener">💬 واتساب 71924089</a>
+        <a class="wa-quick" href="https://wa.me/96871924089" target="_blank" rel="noopener"><span data-ico="wa"></span> واتساب 71924089</a>
         <a class="btn secondary qe-back" href="/auto-trading/customer.html">بوابة الزبائن</a>
         <a class="btn secondary qe-back" data-back-platforms href="/auto-trading/platforms.html">رجوع للمنصات</a>
       </div>
@@ -78,6 +78,8 @@
     window.APP_USER = { role: 'operations', display_name: '', username: '' };
     try { localStorage.setItem('jawdah_portal_choice', 'autotrading'); } catch (_) {}
   </script>
-  <script src="/auto-trading/app.js?v=at11"></script>
+  <script src="/auto-trading/icons.js?v=at12"></script>
+  <script src="/auto-trading/app.js?v=at12"></script>
+  <script>if (window.NajjarIcons) NajjarIcons.paint(document);</script>
 </body>
 </html>

@@ -12,9 +12,10 @@ let statusFilter = '';
 let makeFilter = '';
 let companyProfile = null;
 
-const LOGO_URL = '/auto-trading/assets/logo-official.svg?v=at11';
-const LOGO_MARK = '/auto-trading/assets/logo-mark.svg?v=at11';
-const LOGO_CARD = '/auto-trading/assets/logo-al-najjar.svg?v=at11';
+const LOGO_URL = '/auto-trading/assets/logo-official.svg?v=at12';
+const LOGO_MARK = '/auto-trading/assets/logo-mark.svg?v=at12';
+const LOGO_CARD = '/auto-trading/assets/logo-al-najjar.svg?v=at12';
+const ICO = (name) => (window.NajjarIcons ? NajjarIcons.get(name) : '');
 
 function waLink(phone) {
   const p = String(phone || '').replace(/\D/g, '');
@@ -448,12 +449,12 @@ async function loadDashboard() {
       </div>
     </div>
     <div class="stats-grid">
-      ${kpi('🚘', 'إجمالي المركبات', s.total_vehicles)}
-      ${kpi('✅', 'متاحة للبيع', s.available, 'highlight')}
-      ${kpi('🧾', 'إجمالي المشتريات', money(s.purchases_total))}
-      ${kpi('💰', 'إجمالي المبيعات', money(s.sales_total))}
-      ${kpi('📤', 'إجمالي المصاريف', money(s.expenses_total))}
-      ${kpi('📊', 'صافي الربح', money(s.net_profit), netCls)}
+      ${kpi(ICO('car'), 'إجمالي المركبات', s.total_vehicles)}
+      ${kpi(ICO('ok'), 'متاحة للبيع', s.available, 'highlight')}
+      ${kpi(ICO('buy'), 'إجمالي المشتريات', money(s.purchases_total))}
+      ${kpi(ICO('sale'), 'إجمالي المبيعات', money(s.sales_total))}
+      ${kpi(ICO('exp'), 'إجمالي المصاريف', money(s.expenses_total))}
+      ${kpi(ICO('chart'), 'صافي الربح', money(s.net_profit), netCls)}
     </div>
     <div class="stats-grid" style="margin-top:14px">
       ${stat('محجوزة', s.reserved)}

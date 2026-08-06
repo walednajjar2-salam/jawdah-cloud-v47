@@ -58,12 +58,43 @@ body.theme-autotrading::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at11');
+  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at12');
   background-repeat: no-repeat;
   background-position: center;
   background-size: min(58vw, 560px);
   opacity: 0.11;
 }
+
+/* Modern gold crystal SVG icons */
+.nt-ico {
+  width: 1.35em;
+  height: 1.35em;
+  display: inline-block;
+  vertical-align: -0.2em;
+  color: var(--gold2);
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 3px rgba(202, 161, 74, 0.35));
+}
+.theme-autotrading .nav-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.14), rgba(202, 161, 74, 0.1));
+  border: 1px solid rgba(202, 161, 74, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.theme-autotrading .nav-icon .nt-ico { width: 18px; height: 18px; }
+.theme-autotrading .nav-item.active .nav-icon {
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.22), rgba(202, 161, 74, 0.28));
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.theme-autotrading .nav-item.active .nav-icon .nt-ico,
+.theme-autotrading .nav-item.active .nt-ico { color: #fff; }
+.nt-kpi-icon .nt-ico { width: 20px; height: 20px; }
+.wa-quick .nt-ico { width: 1.1em; height: 1.1em; margin-left: 4px; }
+.nt-plat-icon .nt-ico { width: 42px; height: 42px; }
 
 body.theme-autotrading .app-shell,
 body.theme-autotrading .workspace,
@@ -799,21 +830,33 @@ body.section-dashboard .content.dashboard-page {
 .nt-plat p { margin: 0; color: var(--muted); font-size: 0.9rem; min-height: 2.6em; }
 
 .nt-plat-icon {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   display: grid;
   place-items: center;
-  font-size: 1.85rem;
+  font-size: 2.05rem;
   background: #0a0a0a;
   color: #fff;
   box-shadow: var(--edge);
 }
 
 .nt-plat-icon--circle { border-radius: 50%; }
-.nt-plat-icon--flag {
-  border-radius: 16px;
-  background: linear-gradient(180deg, #fff 0 35%, #c8102e 35% 70%, #00843d 70% 100%);
-  font-size: 1.6rem;
+.nt-plat-icon--flag { border-radius: 18px; }
+.nt-plat-icon--glass {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(202, 161, 74, 0.1) 45%, rgba(10, 10, 10, 0.92));
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  border: 1.8px solid rgba(202, 161, 74, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 0 3px rgba(0, 0, 0, 0.45),
+    0 10px 24px rgba(0, 0, 0, 0.4);
+}
+.nt-flag {
+  font-size: 1.85rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
 }
 
 .nt-plat-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
