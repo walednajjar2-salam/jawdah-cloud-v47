@@ -2,21 +2,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap');
 
 :root {
-  /* Red · Black · Crystal palette — النجار والسموم */
-  --gold: #e11d2e;
-  --gold2: #ff6b6b;
-  --gold-dark: #ff4d5e;
-  --red-deep: #6e0f18;
-  --navy: #f6ecec;
-  --ink: #f1e2e3;
+  /* Gold · Black · Crystal palette — NAJJAR &amp; AL SAMOOM TRADING (official card colors) */
+  --gold: #caa14a;
+  --gold2: #f0d98a;
+  --gold-dark: #e3b64f;
+  --red-deep: #4a3208;
+  --navy: #f3ecd9;
+  --ink: #f1e7cf;
   --bg: #060607;
-  --bg2: #0c0708;
-  --panel: rgba(22, 10, 12, 0.58);
-  --panel-solid: rgba(16, 8, 9, 0.86);
-  --line: rgba(225, 29, 46, 0.4);
-  --muted: #c9b3b5;
+  --bg2: #0c0906;
+  --panel: rgba(20, 16, 8, 0.58);
+  --panel-solid: rgba(14, 11, 6, 0.86);
+  --line: rgba(202, 161, 74, 0.4);
+  --muted: #cbb98a;
   --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
-  --edge: 0 0 0 2px rgba(225, 29, 46, 0.85), 0 0 0 4px rgba(0, 0, 0, 0.55);
+  --edge: 0 0 0 2px rgba(202, 161, 74, 0.85), 0 0 0 4px rgba(0, 0, 0, 0.55);
 }
 
 /* Wrapped in a cascade layer so these !important theme rules always win over the
@@ -29,13 +29,13 @@
 .theme-autotrading {
   --blue: var(--gold);
   --blue2: var(--gold2);
-  --navy: #f6ecec;
+  --navy: #f3ecd9;
   --bg: #060607;
   font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
   color: var(--navy);
 }
 
-/* Fixed transparent crystal background — black merged with a light red glow */
+/* Fixed transparent crystal background — black merged with a soft gold glow */
 .nt-watermark,
 body.theme-autotrading::before {
   content: "";
@@ -44,9 +44,9 @@ body.theme-autotrading::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 15% 8%, rgba(225, 29, 46, 0.16), transparent 55%),
-    radial-gradient(ellipse 70% 55% at 92% 85%, rgba(110, 15, 24, 0.22), transparent 50%),
-    linear-gradient(160deg, #050405 0%, #0b0506 45%, #070405 100%);
+    radial-gradient(ellipse 80% 60% at 15% 8%, rgba(202, 161, 74, 0.16), transparent 55%),
+    radial-gradient(ellipse 70% 55% at 92% 85%, rgba(74, 55, 15, 0.22), transparent 50%),
+    linear-gradient(160deg, #040403 0%, #0b0805 45%, #060503 100%);
 }
 
 .nt-watermark::after,
@@ -56,7 +56,7 @@ body.theme-autotrading::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at8');
+  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at9');
   background-repeat: no-repeat;
   background-position: center 42%;
   background-size: min(58vw, 520px);
@@ -97,8 +97,8 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .theme-autotrading .sidebar {
-  background: linear-gradient(180deg, #050405 0%, #120708 100%) !important;
-  border-left: 1px solid rgba(225, 29, 46, 0.3) !important;
+  background: linear-gradient(180deg, #040403 0%, #141008 100%) !important;
+  border-left: 1px solid rgba(202, 161, 74, 0.3) !important;
   box-shadow: 8px 0 30px rgba(0, 0, 0, 0.5) !important;
 }
 
@@ -121,14 +121,14 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .theme-autotrading .nav-item:hover {
-  background: rgba(225, 29, 46, 0.12) !important;
+  background: rgba(202, 161, 74, 0.12) !important;
 }
 
 .theme-autotrading .nav-item.active,
 .theme-autotrading .nav-item.active:hover {
-  background: linear-gradient(135deg, #4a0a10, #e11d2e) !important;
+  background: linear-gradient(135deg, #332208, #caa14a) !important;
   color: #fff !important;
-  border-color: #e11d2e !important;
+  border-color: #caa14a !important;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4) !important;
 }
 
@@ -141,11 +141,11 @@ body.section-dashboard .content.dashboard-page {
 
 .theme-autotrading .btn.primary,
 .nt-btn.primary {
-  background: linear-gradient(135deg, #6e0f18, #e11d2e) !important;
+  background: linear-gradient(135deg, #4a3208, #caa14a) !important;
   color: #fff !important;
   border: 1px solid rgba(0, 0, 0, 0.5) !important;
   font-weight: 800;
-  box-shadow: 0 8px 22px rgba(225, 29, 46, 0.28) !important;
+  box-shadow: 0 8px 22px rgba(202, 161, 74, 0.28) !important;
 }
 
 .theme-autotrading .btn.secondary {
@@ -157,7 +157,7 @@ body.section-dashboard .content.dashboard-page {
 .theme-autotrading .btn.ghost {
   background: transparent !important;
   color: var(--navy) !important;
-  border: 1px solid rgba(225, 29, 46, 0.3) !important;
+  border: 1px solid rgba(202, 161, 74, 0.3) !important;
 }
 
 .theme-autotrading .btn.success {
@@ -252,7 +252,7 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .theme-autotrading .data-table th {
-  background: rgba(225, 29, 46, 0.1) !important;
+  background: rgba(202, 161, 74, 0.1) !important;
   color: var(--muted) !important;
   border-bottom: 1px solid var(--line) !important;
 }
@@ -260,12 +260,12 @@ body.section-dashboard .content.dashboard-page {
 .theme-autotrading .data-table td {
   background: transparent !important;
   color: var(--navy) !important;
-  border-bottom: 1px solid rgba(225, 29, 46, 0.14) !important;
+  border-bottom: 1px solid rgba(202, 161, 74, 0.14) !important;
 }
 
 .theme-autotrading .data-table tbody tr:hover td,
 .theme-autotrading .data-table tbody tr:hover {
-  background: rgba(225, 29, 46, 0.12) !important;
+  background: rgba(202, 161, 74, 0.12) !important;
 }
 
 .theme-autotrading .field input,
@@ -288,7 +288,7 @@ body.section-dashboard .content.dashboard-page {
 
 .theme-autotrading .drawer-close,
 .theme-autotrading .modal-close {
-  background: rgba(225, 29, 46, 0.14) !important;
+  background: rgba(202, 161, 74, 0.14) !important;
   color: var(--navy) !important;
 }
 
@@ -298,7 +298,7 @@ body.section-dashboard .content.dashboard-page {
   border-radius: 12px;
   object-fit: cover;
   background: #0a0a0a;
-  border: 2px solid #e11d2e;
+  border: 2px solid #caa14a;
   box-shadow: var(--edge);
   flex: 0 0 auto;
 }
@@ -407,13 +407,13 @@ body.section-dashboard .content.dashboard-page {
   right: 0;
   left: 0;
   height: 4px;
-  background: linear-gradient(90deg, #0a0a0a, #e11d2e, #0a0a0a);
+  background: linear-gradient(90deg, #0a0a0a, #caa14a, #0a0a0a);
 }
 
 .vehicle-card:hover,
 .nt-vcard:hover {
   transform: translateY(-4px);
-  border-color: rgba(225, 29, 46, 0.6);
+  border-color: rgba(202, 161, 74, 0.6);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
 }
 
@@ -437,7 +437,7 @@ body.section-dashboard .content.dashboard-page {
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--gold-dark);
-  background: rgba(225, 29, 46, 0.16);
+  background: rgba(202, 161, 74, 0.16);
   padding: 4px 10px;
   border-radius: 999px;
 }
@@ -461,7 +461,7 @@ body.section-dashboard .content.dashboard-page {
   justify-content: space-between;
   gap: 10px;
   font-size: 0.85rem;
-  border-bottom: 1px dashed rgba(225, 29, 46, 0.2);
+  border-bottom: 1px dashed rgba(202, 161, 74, 0.2);
   padding-bottom: 6px;
 }
 
@@ -480,13 +480,13 @@ body.section-dashboard .content.dashboard-page {
 .nt-vcard--lr::before,
 .nt-vcard--gle::before,
 .nt-vcard--g63::before,
-.nt-vcard--bmw::before { background: linear-gradient(90deg, #0a0a0a, #e11d2e, #0a0a0a); }
+.nt-vcard--bmw::before { background: linear-gradient(90deg, #0a0a0a, #caa14a, #0a0a0a); }
 
 .pill.available { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
 .pill.reserved { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-.pill.sold { background: rgba(225, 29, 46, 0.2); color: #ff6b6b; }
+.pill.sold { background: rgba(202, 161, 74, 0.2); color: #f0d98a; }
 .pill.importing { background: rgba(147, 51, 234, 0.2); color: #c084fc; }
-.pill.service { background: rgba(225, 29, 46, 0.16); color: #f87171; }
+.pill.service { background: rgba(202, 161, 74, 0.16); color: #e8c06a; }
 
 .import-status-select {
   border: 1px solid var(--line);
@@ -519,7 +519,7 @@ body.section-dashboard .content.dashboard-page {
   background: linear-gradient(120deg, rgba(5, 3, 4, 0.95), rgba(30, 8, 11, 0.92));
   color: #f6ecec;
   margin-bottom: 18px;
-  border: 1px solid rgba(225, 29, 46, 0.4);
+  border: 1px solid rgba(202, 161, 74, 0.4);
   box-shadow: var(--shadow);
   animation: ntFadeUp 0.55s ease both;
 }
@@ -528,7 +528,7 @@ body.section-dashboard .content.dashboard-page {
   width: 72px;
   height: 72px;
   border-radius: 16px;
-  border: 2px solid #e11d2e;
+  border: 2px solid #caa14a;
   box-shadow: var(--edge);
 }
 
@@ -564,7 +564,7 @@ body.section-dashboard .content.dashboard-page {
   border-radius: 999px;
   margin-bottom: 8px;
 }
-.nt-staff-role.owner { background: #0a0a0a; color: var(--gold2); border: 1px solid rgba(225, 29, 46, 0.5); }
+.nt-staff-role.owner { background: #0a0a0a; color: var(--gold2); border: 1px solid rgba(202, 161, 74, 0.5); }
 .nt-staff-role.sales { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
 .nt-staff-role.user { background: rgba(147, 51, 234, 0.18); color: #c084fc; }
 
@@ -572,7 +572,7 @@ body.section-dashboard .content.dashboard-page {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(225, 29, 46, 0.18);
+  background: rgba(202, 161, 74, 0.18);
   color: var(--gold-dark);
   font-weight: 800;
   font-size: 12px;
@@ -588,8 +588,8 @@ body.section-dashboard .content.dashboard-page {
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: rgba(225, 29, 46, 0.14);
-  border: 1.5px solid #e11d2e;
+  background: rgba(202, 161, 74, 0.14);
+  border: 1.5px solid #caa14a;
   box-shadow: var(--edge);
   font-size: 1.1rem;
   flex: 0 0 auto;
@@ -633,7 +633,7 @@ body.section-dashboard .content.dashboard-page {
   width: 72px;
   height: 72px;
   border-radius: 18px;
-  border: 2px solid #e11d2e;
+  border: 2px solid #caa14a;
   box-shadow: var(--edge);
   background: #0a0a0a;
 }
@@ -676,7 +676,7 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .nt-btn.primary {
-  background: linear-gradient(135deg, #6e0f18, #e11d2e);
+  background: linear-gradient(135deg, #4a3208, #caa14a);
   color: #fff;
 }
 
@@ -705,7 +705,7 @@ body.section-dashboard .content.dashboard-page {
 
 .nt-plat:hover {
   transform: translateY(-5px);
-  border-color: rgba(225, 29, 46, 0.6);
+  border-color: rgba(202, 161, 74, 0.6);
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.55);
 }
 
@@ -736,7 +736,7 @@ body.section-dashboard .content.dashboard-page {
   font-weight: 800;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(225, 29, 46, 0.16);
+  background: rgba(202, 161, 74, 0.16);
   color: var(--gold-dark);
 }
 
@@ -806,7 +806,7 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .nt-login-card .nt-btn { width: 100%; margin-top: 8px; padding: 13px; }
-.nt-err { color: #ff6b6b; font-weight: 700; margin-top: 10px; }
+.nt-err { color: #f0d98a; font-weight: 700; margin-top: 10px; }
 .nt-login-links {
   display: flex;
   justify-content: space-between;

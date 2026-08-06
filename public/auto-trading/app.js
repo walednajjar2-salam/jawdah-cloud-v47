@@ -25,7 +25,7 @@ function vehicleWhatsAppText(v, c) {
   const co = c || companyProfile || {};
   const priceLine = Number(v.list_price) > 0 ? `السعر: ${money(v.list_price)}` : 'السعر: حسب الاتفاق';
   return [
-    'NAJJAR TRADING — USED & IMPORTED CARS',
+    'NAJJAR & AL SAMOOM TRADING — USED & IMPORTED CARS',
     `${v.make} ${v.model} ${v.variant || ''}`.trim(),
     v.vehicle_type ? `النوع: ${v.vehicle_type}` : '',
     `السنة: ${v.year || '—'} · اللون: ${v.color || '—'}`,
@@ -91,9 +91,9 @@ async function printVehicleOffer(v) {
   const c = await ensureCompany();
   const bank = c.bank || {};
   const priceCell = Number(v.list_price) > 0 ? `<b>${money(v.list_price)}</b>` : 'حسب الاتفاق';
-  openPrintWindow('عرض سيارة — NAJJAR TRADING', `
+  openPrintWindow('عرض سيارة — NAJJAR & AL SAMOOM TRADING', `
     <div class="head">
-      <h1>NAJJAR TRADING</h1>
+      <h1>NAJJAR & AL SAMOOM TRADING</h1>
       <p>USED & IMPORTED CARS · ${e(c.address_ar || '')}</p>
       <p>${e(c.address_en || '')}</p>
     </div>
@@ -125,14 +125,14 @@ async function printVehicleOffer(v) {
       SWIFT: <span dir="ltr">${e(bank.swift || '')}</span>
     </div>
     <p>واتساب: +968 71924089 · +968 93391994</p>
-    <div class="foot">NAJJAR TRADING · Nizwa · Falaj · ${e(v.license_source ? 'بيانات الرخصة: ' + v.license_source : '')}</div>`);
+    <div class="foot">NAJJAR & AL SAMOOM TRADING · Nizwa · Falaj · ${e(v.license_source ? 'بيانات الرخصة: ' + v.license_source : '')}</div>`);
 }
 
 function printSaleReceipt(sale, c) {
   const bank = (c || {}).bank || {};
   openPrintWindow('إيصال بيع — ' + (sale.sale_no || ''), `
     <div class="head">
-      <h1>NAJJAR TRADING</h1>
+      <h1>NAJJAR & AL SAMOOM TRADING</h1>
       <p>USED & IMPORTED CARS</p>
     </div>
     <h2>إيصال بيع — ${e(sale.sale_no || '')}</h2>
@@ -309,9 +309,9 @@ function renderCompanyCard(c) {
   const contacts = c.contacts || [];
   return `
     <div class="company-hero-wide">
-      <img class="sign-banner" src="${e(c.logo_url || LOGO_URL)}" alt="${e(c.name_en || 'NAJJAR TRADING')}">
+      <img class="sign-banner" src="${e(c.logo_url || LOGO_URL)}" alt="${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}">
       <div>
-        <h2 style="margin:0;color:var(--navy)">${e(c.name_en || 'NAJJAR TRADING')}</h2>
+        <h2 style="margin:0;color:var(--navy)">${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}</h2>
         <p class="mini" style="letter-spacing:1px">${e(c.tagline_en || 'USED & IMPORTED CARS')}</p>
         <p class="mini">${e(c.name_ar || '')}</p>
         <p class="mini">${e(c.address_ar || '')} · ${e(c.address_en || '')}</p>
@@ -342,7 +342,7 @@ function renderCompanyCard(c) {
         </div>
       </section>
     </div>
-    <p class="mini" style="margin-top:12px">الشعار مطابق للافتة الخارجية — NAJJAR TRADING · Nizwa · Falaj</p>`;
+    <p class="mini" style="margin-top:12px">الشعار مطابق للافتة الخارجية — NAJJAR & AL SAMOOM TRADING · Nizwa · Falaj</p>`;
 }
 
 function bindCopyButtons(root) {
@@ -386,12 +386,12 @@ async function loadSection(section) {
 }
 
 async function loadStaff() {
-  setTitle('الموظفون', 'فريق NAJJAR TRADING — صلاحيات الدخول');
+  setTitle('الموظفون', 'فريق NAJJAR & AL SAMOOM TRADING — صلاحيات الدخول');
   const c = await ensureCompany();
   const staff = c.staff || [];
   content.innerHTML = `
     <div class="nt-dash-banner">
-      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR">
+      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
         <h2>فريق العمل</h2>
         <p>ملاك · مبيعات · مستخدمون — صلاحيات المنصة</p>
@@ -441,9 +441,9 @@ async function loadDashboard() {
   const netCls = Number(s.net_profit) >= 0 ? 'highlight' : '';
   content.innerHTML = `
     <div class="nt-dash-banner">
-      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR TRADING">
+      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
-        <h2>NAJJAR TRADING</h2>
+        <h2>NAJJAR & AL SAMOOM TRADING</h2>
         <p>USED &amp; IMPORTED CARS · ${e(c.address_ar || 'نزوى — الفلج')}</p>
       </div>
     </div>
@@ -491,7 +491,7 @@ async function loadDashboard() {
       </section>
     </div>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>فريق NAJJAR TRADING</h3></div>
+      <div class="card-header"><h3>فريق NAJJAR & AL SAMOOM TRADING</h3></div>
       <div class="card-body">
         <div class="nt-staff-grid">
           ${staff.map(x => `

@@ -1,4 +1,4 @@
-/* NAJJAR TRADING — Cinematic 3D cars + Instagram / Reels / Stories */
+/* NAJJAR & AL SAMOOM TRADING — Cinematic 3D cars + Instagram / Reels / Stories */
 (function (global) {
   const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
@@ -92,7 +92,7 @@
 
   function waHref(v) {
     return `https://wa.me/96871924089?text=${encodeURIComponent([
-      'مرحباً NAJJAR TRADING',
+      'مرحباً NAJJAR & AL SAMOOM TRADING',
       'أرغب بالاستفسار عن:',
       `${v.make} ${v.model} ${v.variant || ''}`.trim(),
       `مخزون: ${v.stock_no || ''}`,

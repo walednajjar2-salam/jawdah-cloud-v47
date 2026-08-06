@@ -1,40 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 280" role="img" aria-label="NAJJAR TRADING">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 340" role="img" aria-label="NAJJAR &amp; AL SAMOOM TRADING">
   <defs>
     <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#6e0f18"/>
-      <stop offset="45%" stop-color="#e11d2e"/>
-      <stop offset="100%" stop-color="#7a0f16"/>
+      <stop offset="0%" stop-color="#8a6a1c"/>
+      <stop offset="45%" stop-color="#e3c46a"/>
+      <stop offset="100%" stop-color="#8a6a1c"/>
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="2" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <rect width="480" height="280" rx="8" fill="#0a0a0a"/>
-  <rect x="6" y="6" width="468" height="268" rx="4" fill="none" stroke="url(#gold)" stroke-width="3" filter="url(#glow)"/>
-  <!-- speed lines -->
-  <g stroke="url(#gold)" stroke-width="3" stroke-linecap="round" opacity=".95">
-    <line x1="58" y1="72" x2="88" y2="72"/>
-    <line x1="48" y1="84" x2="86" y2="84"/>
-    <line x1="54" y1="96" x2="84" y2="96"/>
+  <rect width="560" height="340" rx="10" fill="#0a0a0a"/>
+  <rect x="6" y="6" width="548" height="328" rx="6" fill="none" stroke="url(#gold)" stroke-width="3" filter="url(#glow)"/>
+  <!-- speed lines + sports car silhouette, nudged up for breathing room above the title -->
+  <g transform="translate(0,-18)">
+    <g stroke="url(#gold)" stroke-width="3" stroke-linecap="round" opacity=".95">
+      <line x1="188" y1="66" x2="218" y2="66"/>
+      <line x1="178" y1="78" x2="216" y2="78"/>
+      <line x1="184" y1="90" x2="214" y2="90"/>
+    </g>
+    <path fill="none" stroke="url(#gold)" stroke-width="3.2" stroke-linejoin="round" filter="url(#glow)"
+      d="M228 92c18-8 34-10 52-8 14 2 28 8 38 16 8 6 14 14 18 24 2 5 2 10 0 14-4 8-12 12-22 12H242c-8 0-14-6-14-14v-8c0-12 0-24 0-36z"/>
+    <circle cx="258" cy="112" r="7" fill="none" stroke="url(#gold)" stroke-width="2.5"/>
+    <circle cx="298" cy="112" r="7" fill="none" stroke="url(#gold)" stroke-width="2.5"/>
+    <path fill="none" stroke="url(#gold)" stroke-width="2.5" d="M248 86h36l8 10"/>
   </g>
-  <!-- sports car silhouette -->
-  <path fill="none" stroke="url(#gold)" stroke-width="3.2" stroke-linejoin="round" filter="url(#glow)"
-    d="M98 98c18-8 34-10 52-8 14 2 28 8 38 16 8 6 14 14 18 24 2 5 2 10 0 14-4 8-12 12-22 12H112c-8 0-14-6-14-14v-8c0-12 0-24 0-36z"/>
-  <circle cx="128" cy="118" r="7" fill="none" stroke="url(#gold)" stroke-width="2.5"/>
-  <circle cx="168" cy="118" r="7" fill="none" stroke="url(#gold)" stroke-width="2.5"/>
-  <path fill="none" stroke="url(#gold)" stroke-width="2.5" d="M118 92h36l8 10"/>
   <!-- title -->
-  <text x="240" y="118" text-anchor="middle" fill="url(#gold)" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" letter-spacing="3" filter="url(#glow)">NAJJAR TRADING</text>
-  <text x="240" y="148" text-anchor="middle" fill="url(#gold)" font-family="Arial,Helvetica,sans-serif" font-size="13" letter-spacing="2.5" opacity=".95">— USED &amp; IMPORTED CARS —</text>
-  <!-- whatsapp row -->
-  <g font-family="Arial,sans-serif" font-size="13" fill="url(#gold)" font-weight="700">
-    <text x="150" y="188" text-anchor="middle">+968 71924089</text>
-    <line x1="240" y1="176" x2="240" y2="196" stroke="url(#gold)" stroke-width="1.5" opacity=".6"/>
-    <text x="330" y="188" text-anchor="middle">+968 93391994</text>
+  <text x="280" y="150" text-anchor="middle" fill="url(#gold)" font-family="Georgia,'Times New Roman',serif" font-size="26" font-weight="700" letter-spacing="1.5" filter="url(#glow)">NAJJAR &amp; AL SAMOOM</text>
+  <text x="280" y="175" text-anchor="middle" fill="url(#gold)" font-family="Georgia,'Times New Roman',serif" font-size="20" font-weight="700" letter-spacing="4">TRADING</text>
+  <text x="280" y="198" text-anchor="middle" fill="url(#gold)" font-family="Arial,Helvetica,sans-serif" font-size="12" letter-spacing="2.5" opacity=".95">— USED &amp; IMPORTED CARS —</text>
+  <line x1="60" y1="214" x2="500" y2="214" stroke="url(#gold)" stroke-width="1" opacity=".45"/>
+  <!-- owners row: WALED / HAMAD -->
+  <g font-family="Arial,sans-serif" fill="url(#gold)">
+    <text x="170" y="240" text-anchor="middle" font-size="12" font-weight="800" letter-spacing="1.5">WALED</text>
+    <text x="170" y="260" text-anchor="middle" font-size="13" font-weight="700">+968 71924089</text>
+    <line x1="280" y1="228" x2="280" y2="266" stroke="url(#gold)" stroke-width="1.5" opacity=".5"/>
+    <text x="390" y="240" text-anchor="middle" font-size="12" font-weight="800" letter-spacing="1.5">HAMAD</text>
+    <text x="390" y="260" text-anchor="middle" font-size="13" font-weight="700">+968 7754 8482</text>
+  </g>
+  <line x1="60" y1="278" x2="500" y2="278" stroke="url(#gold)" stroke-width="1" opacity=".3"/>
+  <!-- sales row -->
+  <g font-family="Arial,sans-serif" fill="url(#gold)">
+    <text x="280" y="296" text-anchor="middle" font-size="12" font-weight="800" letter-spacing="2">SALES</text>
+    <text x="205" y="314" text-anchor="middle" font-size="12" font-weight="700">+968 93391994</text>
+    <line x1="280" y1="303" x2="280" y2="319" stroke="url(#gold)" stroke-width="1.2" opacity=".5"/>
+    <text x="355" y="314" text-anchor="middle" font-size="12" font-weight="700">+968 9555 1994</text>
   </g>
   <!-- location -->
-  <circle cx="118" cy="218" r="5" fill="none" stroke="url(#gold)" stroke-width="1.8"/>
-  <path fill="url(#gold)" d="M118 226c4-6 8-10 8-14a8 8 0 1 0-16 0c0 4 4 8 8 14z"/>
-  <text x="240" y="222" text-anchor="middle" fill="url(#gold)" font-family="Arial,sans-serif" font-size="12" letter-spacing=".5">Al-Dakhilia Governorate · Nizwa · Falaj</text>
+  <circle cx="70" cy="330" r="0" fill="none"/>
 </svg>

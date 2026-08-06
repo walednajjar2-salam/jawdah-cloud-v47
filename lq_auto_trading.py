@@ -11,8 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent
 SEED_PATH = BASE_DIR / "public" / "auto-trading" / "seed_vehicles.json"
 
 COMPANY_PROFILE: Dict[str, Any] = {
-    "name_ar": "النجار للتجارة — سيارات مستعملة ومستوردة",
-    "name_en": "NAJJAR TRADING",
+    "name_ar": "النجار والسموم للتجارة — سيارات مستعملة ومستوردة",
+    "name_en": "NAJJAR & AL SAMOOM TRADING",
     "tagline_en": "USED & IMPORTED CARS",
     "bank_account_name_en": "Al Najjar Trading",
     "activity_ar": "تجارة واستيراد السيارات — مستعمل ومستورد",
@@ -33,10 +33,10 @@ COMPANY_PROFILE: Dict[str, Any] = {
         "office": "95551994",
     },
     "contacts": [
-        {"label_ar": "واتساب — NAJJAR TRADING", "phone": "71924089", "note": "+968 71924089", "whatsapp": True},
-        {"label_ar": "واتساب — NAJJAR TRADING", "phone": "93391994", "note": "+968 93391994", "whatsapp": True},
+        {"label_ar": "وليد — واتساب", "phone": "71924089", "note": "+968 71924089", "whatsapp": True},
+        {"label_ar": "المبيعات — واتساب", "phone": "93391994", "note": "+968 93391994", "whatsapp": True},
         {"label_ar": "حمد", "phone": "77548482", "note": "+968 7754 8482"},
-        {"label_ar": "المكتب", "phone": "95551994", "note": ""},
+        {"label_ar": "المكتب", "phone": "95551994", "note": "+968 9555 1994"},
     ],
     "bank": {
         "name_ar": "بنك صحار الدولي",

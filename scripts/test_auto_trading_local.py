@@ -28,7 +28,7 @@ def main() -> int:
 
     assert lq_auto_trading.handle_api(db, "GET", ["company"], {}, {}, user, send)
     company = out[-1][1]["company"]
-    assert company["name_en"] == "NAJJAR TRADING"
+    assert company["name_en"] == "NAJJAR & AL SAMOOM TRADING"
     assert company["bank"]["iban"].startswith("OM07")
     assert any(s.get("name_ar") == "وليد نجار" for s in company.get("staff") or [])
     assert any(s.get("name_ar") == "حمد السموم" for s in company.get("staff") or [])
