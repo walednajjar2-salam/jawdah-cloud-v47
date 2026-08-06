@@ -12,9 +12,9 @@ let statusFilter = '';
 let makeFilter = '';
 let companyProfile = null;
 
-const LOGO_URL = '/auto-trading/assets/logo-official.svg?v=at12';
-const LOGO_MARK = '/auto-trading/assets/logo-mark.svg?v=at12';
-const LOGO_CARD = '/auto-trading/assets/logo-al-najjar.svg?v=at12';
+const LOGO_URL = '/auto-trading/assets/logo-official-clear.png?v=at13';
+const LOGO_MARK = '/auto-trading/assets/logo-mark.png?v=at13';
+const LOGO_CARD = '/auto-trading/assets/logo-official.png?v=at13';
 const ICO = (name) => (window.NajjarIcons ? NajjarIcons.get(name) : '');
 
 function waLink(phone) {
