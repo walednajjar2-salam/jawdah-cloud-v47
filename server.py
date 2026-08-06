@@ -4461,6 +4461,29 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if not head_only:
                 self.wfile.write(raw)
 
+        # NAJJAR TRADING short entry points (public customer + staff login)
+        if path in ("/najjar", "/najjar/", "/النجار", "/سيارات", "/auto", "/autotrading"):
+            self.send_response(302)
+            self.send_header("Location", "/auto-trading/customer.html")
+            self.end_headers()
+            return
+        if path in ("/najjar-login", "/najjar/login", "/دخول-النجار", "/auto-trading/login"):
+            # keep /auto-trading/login as folder-friendly alias → login.html
+            if path != "/auto-trading/login.html":
+                self.send_response(302)
+                self.send_header("Location", "/auto-trading/login.html")
+                self.end_headers()
+                return
+        if path in ("/najjar-platforms", "/najjar/platforms", "/منصات-النجار"):
+            self.send_response(302)
+            self.send_header("Location", "/auto-trading/platforms.html")
+            self.end_headers()
+            return
+        if path in ("/najjar-admin", "/najjar/dashboard", "/لوحة-النجار"):
+            self.send_response(302)
+            self.send_header("Location", "/auto-trading.html")
+            self.end_headers()
+            return
         if path in ("/", ""):
             self.send_response(302)
             self.send_header("Location", "/app.html")
