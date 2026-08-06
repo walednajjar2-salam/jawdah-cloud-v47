@@ -37,15 +37,15 @@ body.nt-lock { overflow: hidden; }
   margin: 0 auto 6px;
   border-radius: 50%;
   padding: 3px;
-  background: conic-gradient(from 210deg, #f0d070, #9a681e, #d4af37, #fff1b0, #9a681e, #f0d070);
+  background: conic-gradient(from 210deg, #ff6b6b, #7a0f16, #e11d2e, #ff9a9a, #7a0f16, #ff6b6b);
   display: grid;
   place-items: center;
-  box-shadow: 0 8px 20px rgba(154, 104, 30, 0.22);
+  box-shadow: 0 8px 20px rgba(120, 12, 16, 0.22);
   transition: transform 0.55s var(--car-ease);
   animation: ringSpin 12s linear infinite;
 }
 .ig-story--live .ig-story-ring {
-  background: conic-gradient(from 120deg, #ff4d6d, #d4af37, #ff4d6d);
+  background: conic-gradient(from 120deg, #ff4d6d, #e11d2e, #ff4d6d);
 }
 .ig-story:hover .ig-story-ring { transform: scale(1.08) rotate(-6deg); animation-play-state: paused; }
 
@@ -86,7 +86,7 @@ body.nt-lock { overflow: hidden; }
   border-radius: 28px;
   overflow: hidden;
   box-shadow: 0 24px 60px rgba(10, 10, 14, 0.28);
-  border: 1px solid rgba(212, 175, 55, 0.28);
+  border: 1px solid rgba(225, 29, 46, 0.28);
 }
 .nt-cinema-stage .car3d-scene { position: absolute; inset: 0; }
 .nt-cinema-copy {
@@ -94,7 +94,7 @@ body.nt-lock { overflow: hidden; }
   color: #f8f1e2;
   border-radius: 28px;
   padding: 28px 22px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  border: 1px solid rgba(225, 29, 46, 0.3);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -104,7 +104,7 @@ body.nt-lock { overflow: hidden; }
   margin: 6px 0 10px;
   font-family: "Playfair Display", Georgia, serif;
   font-size: clamp(1.5rem, 3vw, 2.1rem);
-  color: #f0d070;
+  color: #ff6b6b;
 }
 .nt-cinema-copy p { margin: 0; color: rgba(248,241,226,.78); line-height: 1.7; }
 .nt-cinema-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
@@ -149,7 +149,7 @@ body.nt-lock { overflow: hidden; }
 .ig-view-toggle {
   display: inline-flex;
   background: rgba(255,252,245,.8);
-  border: 1px solid rgba(154,104,30,.2);
+  border: 1px solid rgba(120, 12, 16,.2);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -163,7 +163,7 @@ body.nt-lock { overflow: hidden; }
   color: #6b6558;
 }
 .ig-view-toggle button.active {
-  background: linear-gradient(135deg, #9a681e, #d4af37);
+  background: linear-gradient(135deg, #7a0f16, #e11d2e);
   color: #111;
 }
 
@@ -171,7 +171,7 @@ body.nt-lock { overflow: hidden; }
 .ig-post {
   width: min(100%, var(--ig-max));
   background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(154, 104, 30, 0.18);
+  border: 1px solid rgba(120, 12, 16, 0.18);
   border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 18px 48px rgba(24, 18, 8, 0.1);
@@ -197,13 +197,13 @@ body.nt-lock { overflow: hidden; }
   height: 38px;
   border-radius: 50%;
   background: linear-gradient(145deg, #1a1a1a, #3a2a10);
-  border: 2px solid #d4af37;
+  border: 2px solid #e11d2e;
   flex: 0 0 auto;
 }
 .ig-avatar--g63 { background: linear-gradient(145deg, #1e4d8c, #7eb6e8); }
 .ig-avatar--gle { background: linear-gradient(145deg, #1b4d2e, #8fbc8f); }
 .ig-avatar--bmw { background: linear-gradient(145deg, #1c69d4, #9ca3af); }
-.ig-avatar--lr { background: linear-gradient(145deg, #111, #d4af37); }
+.ig-avatar--lr { background: linear-gradient(145deg, #111, #e11d2e); }
 
 .ig-user { flex: 1; min-width: 0; }
 .ig-user strong { display: block; font-size: 0.92rem; }
@@ -211,8 +211,8 @@ body.nt-lock { overflow: hidden; }
 
 .ig-open-story {
   border: 0;
-  background: rgba(212,175,55,.16);
-  color: #9a681e;
+  background: rgba(225, 29, 46,.16);
+  color: #7a0f16;
   font-weight: 800;
   font-size: 0.72rem;
   border-radius: 999px;
@@ -284,7 +284,7 @@ body.nt-lock { overflow: hidden; }
   font-size: 1.05rem;
   font-family: "Playfair Display", Georgia, serif;
 }
-.ig-body h3 em { font-style: normal; color: #9a681e; font-size: 0.92em; }
+.ig-body h3 em { font-style: normal; color: #7a0f16; font-size: 0.92em; }
 .ig-meta { margin: 0 0 10px; color: #6b6558; font-size: 0.86rem; }
 .ig-facts { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
 .ig-facts li {
@@ -292,16 +292,16 @@ body.nt-lock { overflow: hidden; }
   justify-content: space-between;
   gap: 10px;
   font-size: 0.82rem;
-  border-bottom: 1px dashed rgba(154, 104, 30, 0.16);
+  border-bottom: 1px dashed rgba(120, 12, 16, 0.16);
   padding-bottom: 5px;
 }
 .ig-facts span { color: #7a7468; }
 .ig-facts b { font-weight: 800; color: #1a1712; text-align: left; }
 .ig-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-.ig-price { font-size: 1.05rem; color: #9a681e; }
+.ig-price { font-size: 1.05rem; color: #7a0f16; }
 .ig-wa {
   text-decoration: none;
-  background: linear-gradient(135deg, #9a681e, #d4af37);
+  background: linear-gradient(135deg, #7a0f16, #e11d2e);
   color: #111;
   font-weight: 800;
   font-size: 0.82rem;
@@ -318,7 +318,7 @@ body.nt-lock { overflow: hidden; }
   scroll-snap-type: y mandatory;
   border-radius: 28px;
   box-shadow: 0 24px 60px rgba(0,0,0,.28);
-  border: 1px solid rgba(212,175,55,.25);
+  border: 1px solid rgba(225, 29, 46,.25);
   background: #0a0c10;
 }
 .ig-reels.is-on { display: block; }
@@ -371,15 +371,15 @@ body.nt-lock { overflow: hidden; }
   perspective: 980px;
   overflow: hidden;
   --body: #222;
-  --accent: #d4af37;
+  --accent: #e11d2e;
   --glass: rgba(180, 210, 240, 0.35);
-  --floor: rgba(212, 175, 55, 0.12);
+  --floor: rgba(225, 29, 46, 0.12);
 }
-.car3d-scene--lr { --body: #141414; --accent: #d4af37; --floor: rgba(212,175,55,.16); }
+.car3d-scene--lr { --body: #141414; --accent: #e11d2e; --floor: rgba(225, 29, 46,.16); }
 .car3d-scene--gle { --body: #1f4a2e; --accent: #c5a059; --floor: rgba(46,125,70,.18); }
 .car3d-scene--g63 { --body: #5a9fd4; --accent: #0c2d5e; --floor: rgba(30,77,140,.2); }
 .car3d-scene--bmw { --body: #6b7280; --accent: #1c69d4; --floor: rgba(28,105,212,.16); }
-.car3d-scene--def { --body: #2a2a2a; --accent: #d4af37; }
+.car3d-scene--def { --body: #2a2a2a; --accent: #e11d2e; }
 
 .car3d-glow {
   position: absolute;
@@ -411,7 +411,7 @@ body.nt-lock { overflow: hidden; }
   width: var(--ss);
   height: var(--ss);
   border-radius: 50%;
-  background: radial-gradient(circle, #fff7cc, #d4af37 40%, transparent 70%);
+  background: radial-gradient(circle, #ffd9d9, #e11d2e 40%, transparent 70%);
   opacity: 0;
   animation: sparkFloat 7s var(--car-ease) infinite;
   animation-delay: var(--sd);
@@ -529,7 +529,7 @@ body.nt-lock { overflow: hidden; }
   height: 16%;
   background: repeating-linear-gradient(180deg, var(--accent) 0 2px, #111 2px 4px);
   border-radius: 3px;
-  box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+  box-shadow: 0 0 12px rgba(225, 29, 46, 0.4);
 }
 .car3d-car--bmw .car3d-grille {
   background: linear-gradient(90deg, var(--accent) 0 46%, transparent 46% 54%, var(--accent) 54%);
@@ -543,7 +543,7 @@ body.nt-lock { overflow: hidden; }
   width: 11px;
   height: 9px;
   border-radius: 50%;
-  background: radial-gradient(circle, #fff7cc, #f0d070 60%, transparent);
+  background: radial-gradient(circle, #ffd9d9, #ff6b6b 60%, transparent);
   box-shadow: 0 0 14px rgba(240, 208, 112, 0.8);
   animation: carBlink 5.5s ease-in-out infinite;
   animation-delay: var(--car-delay, 0s);
@@ -611,7 +611,7 @@ body.nt-lock { overflow: hidden; }
   position: absolute;
   inset: 7px;
   border-radius: 50%;
-  border: 1px dashed rgba(212,175,55,.5);
+  border: 1px dashed rgba(225, 29, 46,.5);
   animation: wheelSpin 3.6s linear infinite;
   animation-delay: var(--car-delay, 0s);
 }
@@ -658,7 +658,7 @@ body.nt-lock { overflow: hidden; }
   right: 22%;
   bottom: 22%;
   height: 28%;
-  border: 1px solid rgba(212,175,55,.18);
+  border: 1px solid rgba(225, 29, 46,.18);
   border-radius: 50%;
   transform: rotateX(72deg);
   animation: ringPulse 8s var(--car-ease) infinite;
@@ -702,7 +702,7 @@ body.nt-lock { overflow: hidden; }
   top: 12px;
   right: 12px;
   z-index: 4;
-  background: linear-gradient(135deg, rgba(255,77,109,.9), rgba(212,175,55,.9));
+  background: linear-gradient(135deg, rgba(255,77,109,.9), rgba(225, 29, 46,.9));
   color: #111;
   font-size: 0.68rem;
   font-weight: 900;
@@ -832,7 +832,7 @@ body.nt-lock { overflow: hidden; }
   background: #0a0c10;
   border-radius: 28px;
   overflow: hidden;
-  border: 1px solid rgba(212,175,55,.28);
+  border: 1px solid rgba(225, 29, 46,.28);
   box-shadow: 0 30px 90px rgba(0,0,0,.5);
   position: relative;
   animation: igRise .5s var(--car-ease) both;

@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="NAJJAR TRADING">
   <defs>
     <linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#b8892f"/>
-      <stop offset="50%" stop-color="#f0d070"/>
-      <stop offset="100%" stop-color="#c8942e"/>
+      <stop offset="0%" stop-color="#3a0a0e"/>
+      <stop offset="50%" stop-color="#e11d2e"/>
+      <stop offset="100%" stop-color="#3a0a0e"/>
     </linearGradient>
   </defs>
   <rect x="4" y="4" width="112" height="112" rx="12" fill="none" stroke="url(#wg)" stroke-width="2"/>

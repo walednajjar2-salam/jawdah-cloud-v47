@@ -75,6 +75,66 @@ def main() -> int:
     )
     assert out[-1][0] == 201
 
+    # Purchases (seller info) ledger
+    assert lq_auto_trading.handle_api(
+        db,
+        "POST",
+        ["purchases"],
+        {},
+        {
+            "vehicle_id": vehicle_id,
+            "seller_name": "أحمد الكندي",
+            "seller_phone": "99112233",
+            "seller_id": "12345678",
+            "source_country": "سلطنة عُمان",
+            "purchase_price": 8500,
+            "purchase_date": "2026-01-05",
+        },
+        user,
+        send,
+    )
+    assert out[-1][0] == 201
+    purchase = out[-1][1]["purchase"]
+    assert purchase["seller_name"] == "أحمد الكندي"
+    assert purchase["purchase_price"] == 8500
+
+    updated_vehicle = db.execute("SELECT seller_name, purchase_cost FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
+    assert updated_vehicle["seller_name"] == "أحمد الكندي"
+    assert updated_vehicle["purchase_cost"] == 8500
+
+    assert lq_auto_trading.handle_api(db, "GET", ["purchases"], {}, {}, user, send)
+    assert len(out[-1][1]["purchases"]) >= 1
+
+    # Expenses
+    assert lq_auto_trading.handle_api(
+        db,
+        "POST",
+        ["expenses"],
+        {},
+        {"category": "شحن واستيراد", "amount": 250, "payee": "شركة الشحن", "expense_date": "2026-01-06"},
+        user,
+        send,
+    )
+    assert out[-1][0] == 201
+    assert out[-1][1]["expense"]["category"] == "شحن واستيراد"
+
+    assert lq_auto_trading.handle_api(db, "GET", ["expenses"], {}, {}, user, send)
+    assert len(out[-1][1]["expenses"]) >= 1
+    assert len(out[-1][1]["categories"]) >= 5
+
+    # Daily transactions ledger (purchases + sales + expenses)
+    assert lq_auto_trading.handle_api(db, "GET", ["transactions"], {}, {}, user, send)
+    tx = out[-1][1]["transactions"]
+    kinds = {t["kind"] for t in tx}
+    assert kinds == {"شراء", "بيع", "مصروف"}
+
+    # Dashboard now reflects purchases/expenses/net profit
+    assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)
+    stats2 = out[-1][1]["stats"]
+    assert stats2["purchases_total"] >= 8500
+    assert stats2["expenses_total"] >= 250
+    assert "net_profit" in stats2
+
     print("auto-trading API smoke test: OK")
     return 0
 
