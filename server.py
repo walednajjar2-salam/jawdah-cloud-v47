@@ -4431,6 +4431,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def serve_static(self, path: str, head_only: bool = False) -> None:
         # Short stable aliases so old/cached 404 bookmarks still fail less often.
         download_name: Optional[str] = None
+        # Public site face = NAJJAR & AL SAMOOM TRADING (Launch Quality ERP entry points stay hidden).
+        NAJJAR_HOME = "/auto-trading/customer.html"
+        NAJJAR_LOGIN = "/auto-trading/login.html"
         if path in ("/go", "/دخول", "/start"):
             path = "/go.html"
         if path in ("/fresh", "/تحديث", "/clear-cache"):
@@ -4461,17 +4464,23 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if not head_only:
                 self.wfile.write(raw)
 
-        # NAJJAR & AL SAMOOM TRADING short entry points (public customer + staff login)
-        if path in ("/najjar", "/najjar/", "/النجار", "/سيارات", "/auto", "/autotrading"):
+        # NAJJAR & AL SAMOOM TRADING — primary published site + short aliases
+        if path in ("/", "", "/index.html", "/najjar", "/najjar/", "/النجار", "/سيارات", "/auto", "/autotrading"):
             self.send_response(302)
-            self.send_header("Location", "/auto-trading/customer.html")
+            self.send_header("Location", NAJJAR_HOME)
             self.end_headers()
             return
-        if path in ("/najjar-login", "/najjar/login", "/دخول-النجار", "/auto-trading/login"):
-            # keep /auto-trading/login as folder-friendly alias → login.html
+        if path in (
+            "/najjar-login", "/najjar/login", "/دخول-النجار", "/auto-trading/login",
+            "/app", "/app/", "/app.html", "/app/app.html",
+            "/portal-select", "/portal-select.html",
+            "/go.html", "/start.html",
+            "/login", "/login.html",
+        ):
+            # Folder-friendly /auto-trading/login still resolves to login.html below.
             if path != "/auto-trading/login.html":
                 self.send_response(302)
-                self.send_header("Location", "/auto-trading/login.html")
+                self.send_header("Location", NAJJAR_LOGIN)
                 self.end_headers()
                 return
         if path in ("/najjar-platforms", "/najjar/platforms", "/منصات-النجار"):
@@ -4482,21 +4491,6 @@ class JawdahHandler(BaseHTTPRequestHandler):
         if path in ("/najjar-admin", "/najjar/dashboard", "/لوحة-النجار"):
             self.send_response(302)
             self.send_header("Location", "/auto-trading.html")
-            self.end_headers()
-            return
-        if path in ("/", ""):
-            self.send_response(302)
-            self.send_header("Location", "/app.html")
-            self.end_headers()
-            return
-        if path in ("/app", "/app/", "/app/app.html"):
-            self.send_response(302)
-            self.send_header("Location", "/app.html")
-            self.end_headers()
-            return
-        if path == "/index.html":
-            self.send_response(302)
-            self.send_header("Location", "/app.html")
             self.end_headers()
             return
         if path == "/favicon.ico":
