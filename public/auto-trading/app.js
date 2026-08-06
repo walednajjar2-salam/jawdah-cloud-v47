@@ -427,6 +427,17 @@ async function loadDashboard() {
         <p class="nt-platform-chip" style="margin-top:10px">${e(PLATFORM_LABELS[plat] || plat)}</p>
       </div>
     </div>
+    ${window.NajjarCar3D ? `
+      <section class="card" style="margin-bottom:16px;overflow:hidden;padding:0">
+        <div class="ig-media" style="position:relative;aspect-ratio:21/9;min-height:220px">
+          ${window.NajjarCar3D.renderCar3D({ make: 'Mercedes-Benz', model: 'G-Class', variant: 'G63 AMG' }, { accent: 'g63', delay: 0 })}
+          <div class="ig-media-badge">3D Slow Motion</div>
+        </div>
+        <div class="card-body" style="padding:12px 16px">
+          <strong>معرض تفاعلي</strong>
+          <p class="mini" style="margin:4px 0 0">سيارات ثلاثية الأبعاد بحركة بطيئة مريحة — افتح المخزون أو بوابة الزبائن</p>
+        </div>
+      </section>` : ''}
     <div class="stats-grid">
       ${stat('إجمالي المركبات', s.total_vehicles)}
       ${stat('متاحة للبيع', s.available, 'highlight')}
@@ -508,18 +519,29 @@ async function loadDashboard() {
   if (goP) goP.onclick = goToPlatforms;
 }
 
+let vehiclesViewMode = 'feed';
+
 async function loadVehicles() {
-  setTitle('مخزون السيارات', 'بيانات المركبات من رخصة المركبة — NAJJAR TRADING');
+  setTitle('مخزون السيارات', 'معرض 3D بطيء الحركة — ترتيب إنستغرام');
+  await ensureCompany().catch(() => null);
   const qs = new URLSearchParams();
   if (statusFilter) qs.set('status', statusFilter);
   if (makeFilter) qs.set('make', makeFilter);
   const data = await api('/vehicles' + (qs.toString() ? '?' + qs.toString() : ''));
   vehiclesCache = data.vehicles || [];
   const makes = data.makes || [];
+  const C3 = window.NajjarCar3D;
   content.innerHTML = `
-    <div class="page-head">
-      <div><h2>مخزون السيارات</h2><p>${vehiclesCache.length} مركبة</p></div>
+    <div class="ig-toolbar">
+      <div>
+        <h2>معرض المخزون</h2>
+        <p>${vehiclesCache.length} مركبة · حركة ثلاثية الأبعاد مريحة للعين</p>
+      </div>
       <div class="actions-row">
+        <div class="ig-view-toggle" role="group">
+          <button type="button" data-vmode="feed" class="${vehiclesViewMode === 'feed' ? 'active' : ''}">فيد</button>
+          <button type="button" data-vmode="grid" class="${vehiclesViewMode === 'grid' ? 'active' : ''}">شبكة</button>
+        </div>
         <button class="btn primary" type="button" id="btnAddVehicle">+ إضافة مركبة</button>
       </div>
     </div>
@@ -533,22 +555,49 @@ async function loadVehicles() {
         ${makes.map(m => `<option value="${e(m)}" ${makeFilter === m ? 'selected' : ''}>${e(m)}</option>`).join('')}
       </select>
       <button class="btn secondary" type="button" id="btnApplyFilter">تصفية</button>
+      <a class="btn ghost" href="/auto-trading/customer.html" target="_blank" rel="noopener">بوابة الزبائن</a>
     </div>
-    <div class="vehicle-grid">
-      ${vehiclesCache.length ? vehiclesCache.map(v => vehicleCard(v)).join('') : '<div class="empty-state">لا توجد مركبات — أضف مركبة جديدة</div>'}
+    <div id="vehiclesShowcase">
+      ${vehiclesCache.length && C3
+        ? C3.renderFeed(vehiclesCache, { stories: true, platforms: (companyProfile && companyProfile.platforms) || null })
+        : (vehiclesCache.length ? `<div class="vehicle-grid">${vehiclesCache.map(v => vehicleCard(v)).join('')}</div>` : '<div class="empty-state">لا توجد مركبات — أضف مركبة جديدة</div>')}
     </div>`;
+  const feed = content.querySelector('.ig-feed');
+  if (feed) feed.classList.toggle('ig-feed--grid', vehiclesViewMode === 'grid');
   document.getElementById('btnAddVehicle').onclick = showAddVehicleForm;
   document.getElementById('btnApplyFilter').onclick = () => {
     statusFilter = document.getElementById('filterStatus').value;
     makeFilter = document.getElementById('filterMake').value;
     loadVehicles();
   };
-  content.querySelectorAll('[data-vehicle-id]').forEach(el => {
+  content.querySelectorAll('[data-vmode]').forEach((btn) => {
+    btn.onclick = () => {
+      vehiclesViewMode = btn.getAttribute('data-vmode');
+      content.querySelectorAll('[data-vmode]').forEach((b) => b.classList.toggle('active', b === btn));
+      const f = content.querySelector('.ig-feed');
+      if (f) f.classList.toggle('ig-feed--grid', vehiclesViewMode === 'grid');
+    };
+  });
+  content.querySelectorAll('.ig-story').forEach((btn) => {
+    btn.onclick = (ev) => {
+      ev.stopPropagation();
+      localStorage.setItem('najjar_platform', btn.getAttribute('data-platform') || 'oman');
+      goToPlatforms();
+    };
+  });
+  content.querySelectorAll('[data-vehicle-id]').forEach((el) => {
     el.onclick = () => openVehicleDetail(Number(el.dataset.vehicleId));
+    el.onkeydown = (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        openVehicleDetail(Number(el.dataset.vehicleId));
+      }
+    };
   });
 }
 
 function vehicleAccent(v) {
+  if (window.NajjarCar3D) return window.NajjarCar3D.accentOf(v);
   if ((v.make || '').includes('Land')) return 'lr';
   if ((v.model || '').includes('GLE')) return 'gle';
   if ((v.model || '').includes('G-Class') || (v.variant || '').includes('G63')) return 'g63';
@@ -559,8 +608,12 @@ function vehicleAccent(v) {
 function vehicleCard(v) {
   const price = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
   const accent = vehicleAccent(v);
+  const scene = window.NajjarCar3D
+    ? `<div class="nt-vcard-media">${window.NajjarCar3D.renderCar3D(v, { accent })}</div>`
+    : '';
   return `
     <article class="vehicle-card nt-vcard nt-vcard--${accent}" data-vehicle-id="${v.id}" role="button" tabindex="0">
+      ${scene}
       <div class="nt-vcard-top">
         <span class="nt-vcard-stock">${e(v.stock_no)}</span>
         ${pill(v.status)}
@@ -572,8 +625,6 @@ function vehicleCard(v) {
         ${v.plate_no ? `<li><span>اللوحة</span><strong>${e(v.plate_no)}</strong></li>` : ''}
         ${v.engine_cc ? `<li><span>المحرك</span><strong>${e(v.engine_cc)} cc</strong></li>` : ''}
         ${v.origin_country ? `<li><span>المنشأ</span><strong>${e(v.origin_country)}</strong></li>` : ''}
-        ${v.license_doc_no && v.license_valid_until ? `<li><span>الرخصة</span><strong>${e(v.license_doc_no)} · ${dmy(v.license_valid_until)}</strong></li>` : ''}
-        ${v.license_doc_no && !v.license_valid_until ? `<li><span>ملصق شحن</span><strong>${e(v.license_doc_no)}</strong></li>` : ''}
         ${v.import_ref ? `<li><span>الشحن</span><strong>${e(v.import_ref)}</strong></li>` : ''}
       </ul>
       <div class="nt-vcard-foot">
@@ -588,8 +639,12 @@ async function openVehicleDetail(id) {
   const v = data.vehicle;
   const priceDisplay = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
   const licenseLink = vehicleDocLink(v);
+  const scene3d = window.NajjarCar3D
+    ? `<div class="nt-vcard-media" style="margin:12px 0 4px">${window.NajjarCar3D.renderCar3D(v)}</div>`
+    : '';
   openDrawer(`
     <div class="drawer-title"><h2>${e(v.make)} ${e(v.model)}</h2><p>${e(v.stock_no)} · ${pill(v.status)}</p></div>
+    ${scene3d}
     <div class="detail-list" style="margin:16px 0">
       <div class="detail-row"><span>الطراز</span><strong>${e(v.variant || '—')}</strong></div>
       <div class="detail-row"><span>النوع</span><strong>${e(v.vehicle_type || '—')}</strong></div>

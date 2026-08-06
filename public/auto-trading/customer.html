@@ -3,21 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>بوابة الزبائن | NAJJAR TRADING</title>
+  <title>معرض NAJJAR | بوابة الزبائن</title>
   <link rel="icon" href="/assets/app-icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at5">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at6">
+  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at6">
 </head>
 <body class="nt-customer">
   <div class="nt-watermark" aria-hidden="true"></div>
   <header class="nt-cust-hero">
-    <img src="/auto-trading/assets/logo-mark.svg?v=at5" alt="NAJJAR TRADING" class="nt-cust-mark">
+    <img src="/auto-trading/assets/logo-mark.svg?v=at6" alt="NAJJAR TRADING" class="nt-cust-mark">
     <div>
       <p class="nt-kicker">NAJJAR TRADING</p>
-      <h1>بوابة الزبائن</h1>
-      <p class="nt-sub">معرض السيارات المستعملة والمستوردة — نزوى الفلج</p>
+      <h1>معرض السيارات</h1>
+      <p class="nt-sub">تجربة عرض ثلاثية الأبعاد — حركة بطيئة مريحة · ترتيب إنستغرام</p>
     </div>
     <div class="nt-hub-actions">
       <a class="nt-btn primary" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب</a>
@@ -26,11 +27,17 @@
   </header>
 
   <main class="nt-cust-main">
-    <section class="nt-cust-intro">
-      <h2>سيارات معروضة للزبائن</h2>
-      <p>اختر مركبة وتواصل معنا مباشرة عبر واتساب — بدون تسجيل دخول</p>
-    </section>
-    <div id="custGrid" class="nt-showroom" aria-live="polite">جاري التحميل…</div>
+    <div class="ig-toolbar">
+      <div>
+        <h2>القصص والمنشورات</h2>
+        <p>مرّر القصص · شاهد السيارات بتقنية 3D بطيئة الحركة</p>
+      </div>
+      <div class="ig-view-toggle" role="group" aria-label="طريقة العرض">
+        <button type="button" class="active" data-view="feed">فيد</button>
+        <button type="button" data-view="grid">شبكة</button>
+      </div>
+    </div>
+    <div id="custRoot" aria-live="polite">جاري تحميل المعرض…</div>
   </main>
 
   <footer class="nt-hub-foot">
@@ -38,59 +45,41 @@
     بنك صحار الدولي · IBAN OM070300000234020022484
   </footer>
 
+  <script src="/auto-trading/car-3d.js?v=at6"></script>
   <script>
-    const money = (v) => Number(v || 0) > 0
-      ? Number(v).toLocaleString('en-US', { maximumFractionDigits: 3 }) + ' ر.ع'
-      : 'حسب الاتفاق';
-    const e = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-    const statusLabel = { 'متاحة': 'متاحة', 'قيد الاستيراد': 'قادمة / استيراد', 'محجوزة': 'محجوزة', 'مباعة': 'مباعة' };
+    const root = document.getElementById('custRoot');
+    let vehicles = [];
+    let viewMode = 'feed';
 
-    function waText(v) {
-      return encodeURIComponent([
-        'مرحباً NAJJAR TRADING',
-        'أرغب بالاستفسار عن:',
-        `${v.make} ${v.model} ${v.variant || ''}`.trim(),
-        `مخزون: ${v.stock_no}`,
-        v.vin ? `VIN: ${v.vin}` : '',
-        v.plate_no ? `لوحة: ${v.plate_no}` : '',
-      ].filter(Boolean).join('\n'));
+    function paint() {
+      root.innerHTML = NajjarCar3D.renderFeed(vehicles, { whatsapp: true, stories: true });
+      const feed = root.querySelector('.ig-feed');
+      if (feed) feed.classList.toggle('ig-feed--grid', viewMode === 'grid');
+      root.querySelectorAll('.ig-story').forEach((btn) => {
+        btn.onclick = () => {
+          const id = btn.getAttribute('data-platform');
+          localStorage.setItem('najjar_platform', id);
+          location.href = '/auto-trading/login.html';
+        };
+      });
     }
 
-    function card(v) {
-      const accent = (v.make || '').includes('Land') ? 'lr'
-        : (v.model || '').includes('GLE') ? 'gle'
-        : (v.model || '').includes('G-Class') || (v.variant || '').includes('G63') ? 'g63'
-        : (v.make || '').includes('BMW') ? 'bmw' : 'def';
-      return `
-        <article class="nt-vcard nt-vcard--${accent}">
-          <div class="nt-vcard-top">
-            <span class="nt-vcard-stock">${e(v.stock_no)}</span>
-            <span class="pill ${v.status === 'متاحة' ? 'available' : v.status === 'قيد الاستيراد' ? 'importing' : 'draft'}">${e(statusLabel[v.status] || v.status)}</span>
-          </div>
-          <h3>${e(v.make)} ${e(v.model)}</h3>
-          <p class="nt-vcard-var">${e(v.variant || '')} · ${e(v.year || '—')} · ${e(v.color || '')}</p>
-          <ul class="nt-vcard-meta">
-            ${v.vin ? `<li><span>VIN</span><strong dir="ltr">${e(v.vin)}</strong></li>` : ''}
-            ${v.plate_no ? `<li><span>اللوحة</span><strong>${e(v.plate_no)}</strong></li>` : ''}
-            ${v.engine_cc ? `<li><span>المحرك</span><strong>${e(v.engine_cc)} cc</strong></li>` : ''}
-            ${v.origin_country ? `<li><span>المنشأ</span><strong>${e(v.origin_country)}</strong></li>` : ''}
-            ${v.import_ref ? `<li><span>الشحن</span><strong>${e(v.import_ref)}</strong></li>` : ''}
-          </ul>
-          <div class="nt-vcard-foot">
-            <strong>${money(v.list_price)}</strong>
-            <a class="nt-btn primary" href="https://wa.me/96871924089?text=${waText(v)}" target="_blank" rel="noopener">استفسر واتساب</a>
-          </div>
-        </article>`;
-    }
+    document.querySelectorAll('[data-view]').forEach((btn) => {
+      btn.onclick = () => {
+        viewMode = btn.getAttribute('data-view');
+        document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', b === btn));
+        const feed = root.querySelector('.ig-feed');
+        if (feed) feed.classList.toggle('ig-feed--grid', viewMode === 'grid');
+      };
+    });
 
     (async () => {
-      const grid = document.getElementById('custGrid');
       try {
-        const rows = await fetch('/auto-trading/seed_vehicles.json?v=at5').then(r => r.json());
-        const shown = (rows || []).filter(v => v.status !== 'مباعة');
-        grid.innerHTML = shown.length ? shown.map(card).join('') : '<p class="empty-state">لا توجد سيارات معروضة حالياً</p>';
+        const rows = await fetch('/auto-trading/seed_vehicles.json?v=at6').then((r) => r.json());
+        vehicles = (rows || []).filter((v) => v.status !== 'مباعة');
+        paint();
       } catch (_) {
-        grid.innerHTML = '<p class="empty-state">تعذر تحميل المعرض</p>';
+        root.innerHTML = '<p class="empty-state">تعذر تحميل المعرض</p>';
       }
     })();
   </script>
