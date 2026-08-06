@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>تسجيل الدخول | NAJJAR TRADING</title>
+  <link rel="icon" href="/assets/app-icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at7">
+  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at7">
+</head>
+<body class="nt-login">
+  <div class="nt-watermark" aria-hidden="true"></div>
+  <main class="nt-login-stage">
+    <section class="nt-login-brand">
+      <img src="/auto-trading/assets/logo-al-najjar.svg?v=at6" alt="NAJJAR TRADING" class="nt-login-sign">
+      <div class="ig-media" id="loginCarWrap" style="position:relative;aspect-ratio:16/10;border-radius:18px;margin:14px auto 10px;max-width:420px;overflow:hidden"></div>
+      <h1>NAJJAR TRADING</h1>
+      <p>USED &amp; IMPORTED CARS</p>
+      <p class="nt-login-loc">محافظة الداخلية — نزوى — الفلج</p>
+    </section>
+    <section class="nt-login-card">
+      <h2>تسجيل الدخول</h2>
+      <p class="nt-login-hint">بعد الدخول تنتقل إلى صفحة المنصات حسب الدول</p>
+      <label class="nt-field">
+        <span>اسم المستخدم</span>
+        <input id="loginUser" autocomplete="username" placeholder="مثال: waleed.najjar">
+      </label>
+      <label class="nt-field">
+        <span>كلمة المرور</span>
+        <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••">
+      </label>
+      <button class="nt-btn primary" type="button" id="loginBtn">دخول → المنصات</button>
+      <p id="loginErr" class="nt-err" hidden></p>
+      <div class="nt-login-links">
+        <a href="/auto-trading/customer.html">بوابة الزبائن</a>
+        <a href="/portal-select.html">جودة الانطلاقة</a>
+      </div>
+      <div class="nt-staff-mini">
+        <span>ملاك: وليد نجار · حمد السموم</span>
+        <span>مبيعات: واية الشعيلي · مستخدم: رزان الشعيلي</span>
+      </div>
+    </section>
+  </main>
+  <script src="/auto-trading/car-3d.js?v=at7"></script>
+  <script>
+    document.getElementById('loginCarWrap').innerHTML = NajjarCar3D.renderCar3D(
+      { make: 'Land Rover', model: 'Defender', variant: '110 P400' },
+      { accent: 'lr', delay: 0.4, cinema: true, hero: true, badge: 'SLOW MOTION' }
+    );
+
+    async function doLogin() {
+      const err = document.getElementById('loginErr');
+      err.hidden = true;
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPass').value;
+      if (!username || !password) {
+        err.textContent = 'أدخل اسم المستخدم وكلمة المرور';
+        err.hidden = false;
+        return;
+      }
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'فشل تسجيل الدخول');
+        const token = data.token || data.access_token || '';
+        if (!token) throw new Error('لم يُرجع الخادم رمز الدخول');
+        localStorage.setItem('jawdah_cloud_token', token);
+        localStorage.setItem('jawdah_portal_choice', 'autotrading');
+        location.replace('/auto-trading/platforms.html?from=login&token=' + encodeURIComponent(token));
+      } catch (e) {
+        err.textContent = e.message || 'تعذر الدخول';
+        err.hidden = false;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    document.getElementById('loginBtn').onclick = doLogin;
+    document.getElementById('loginPass').addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') doLogin();
+    });
+    document.getElementById('loginUser').addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') document.getElementById('loginPass').focus();
+    });
+    if ((localStorage.getItem('jawdah_cloud_token') || '').trim()) {
+      location.replace('/auto-trading/platforms.html');
+    }
+  </script>
+</body>
+</html>

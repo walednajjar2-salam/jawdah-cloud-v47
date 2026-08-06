@@ -1,0 +1,633 @@
+@import url('/quick-estate/quick-estate.css');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap');
+
+:root {
+  --gold: #d4af37;
+  --gold2: #f0d070;
+  --gold-dark: #9a681e;
+  --navy: #0b0d12;
+  --ink: #12141a;
+  --bg: #ece7dc;
+  --bg2: #f4efe4;
+  --panel: rgba(255, 252, 245, 0.88);
+  --line: rgba(154, 104, 30, 0.22);
+  --muted: #5c584e;
+  --shadow: 0 14px 40px rgba(20, 16, 8, 0.12);
+}
+
+.theme-autotrading {
+  --blue: var(--gold);
+  --blue2: var(--gold2);
+  --navy: #0b0d12;
+  --bg: #ece7dc;
+  font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
+}
+
+/* Fixed transparent logo watermark */
+.nt-watermark,
+body.theme-autotrading::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(212, 175, 55, 0.14), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 80%, rgba(154, 104, 30, 0.1), transparent 50%),
+    linear-gradient(160deg, #f3eee3 0%, #e7e0d1 45%, #efe8d8 100%);
+}
+
+.nt-watermark::after,
+body.theme-autotrading::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at5');
+  background-repeat: no-repeat;
+  background-position: center 42%;
+  background-size: min(58vw, 520px);
+  opacity: 0.07;
+}
+
+body.theme-autotrading .app-shell,
+body.theme-autotrading .workspace,
+.nt-hub-wrap,
+.nt-login-stage,
+.nt-cust-main,
+.nt-cust-hero {
+  position: relative;
+  z-index: 1;
+}
+
+html, body.app-body.theme-autotrading {
+  background: transparent !important;
+  background-image: none !important;
+  min-height: 100%;
+}
+
+body.section-dashboard .content.dashboard-page {
+  background: transparent !important;
+}
+
+.theme-autotrading .sidebar {
+  background: linear-gradient(180deg, #0b0d12 0%, #171a22 100%);
+  border-left: 1px solid rgba(212, 175, 55, 0.28);
+  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.18);
+}
+
+.theme-autotrading .sidebar-brand strong {
+  letter-spacing: 0.08em;
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+.theme-autotrading .nav-item.active {
+  background: linear-gradient(135deg, #9a681e, #d4af37);
+  color: #111;
+}
+
+.theme-autotrading .nav-item.active .nav-label,
+.theme-autotrading .nav-item.active .nav-icon {
+  color: #111 !important;
+  -webkit-text-fill-color: #111 !important;
+}
+
+.theme-autotrading .btn.primary,
+.nt-btn.primary {
+  background: linear-gradient(135deg, #9a681e, #d4af37);
+  color: #111;
+  border: none;
+  font-weight: 800;
+}
+
+.theme-autotrading .topbar,
+.theme-autotrading .content {
+  background: transparent;
+}
+
+.theme-autotrading .card,
+.theme-autotrading .stat-card,
+.theme-autotrading .contact-card {
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.theme-autotrading .stat-card.highlight strong {
+  color: var(--gold-dark);
+}
+
+.at-logo-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #0a0a0a;
+  border: 2px solid rgba(212, 175, 55, 0.45);
+  flex: 0 0 auto;
+}
+
+.sign-banner {
+  width: 100%;
+  max-width: 520px;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.company-hero-wide {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.wa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #128c7e;
+  font-weight: 700;
+}
+
+.wa-badge::before { content: "💬"; }
+
+.company-hero {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.copy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.copy-row .number {
+  font-family: "Roboto Mono", monospace;
+  direction: ltr;
+  font-size: 13px;
+}
+
+.btn.copy { padding: 6px 10px; font-size: 12px; }
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.contact-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.contact-card strong {
+  display: block;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.contact-card a {
+  color: var(--gold-dark);
+  text-decoration: none;
+  font-weight: 700;
+  direction: ltr;
+  display: inline-block;
+}
+
+/* Professional vehicle showroom cards */
+.vehicle-grid,
+.nt-showroom {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.vehicle-card,
+.nt-vcard {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px 18px 16px;
+  background:
+    linear-gradient(165deg, rgba(255, 252, 245, 0.95), rgba(248, 241, 226, 0.9));
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  cursor: pointer;
+}
+
+.vehicle-card::before,
+.nt-vcard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #9a681e, #f0d070, #9a681e);
+}
+
+.vehicle-card:hover,
+.nt-vcard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow: 0 20px 48px rgba(20, 16, 8, 0.16);
+}
+
+.vehicle-card h4,
+.nt-vcard h3 {
+  margin: 8px 0 4px;
+  color: var(--navy);
+  font-size: 1.15rem;
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+.nt-vcard-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.nt-vcard-stock {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--gold-dark);
+  background: rgba(212, 175, 55, 0.14);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.nt-vcard-var,
+.vehicle-card .mini {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.nt-vcard-meta {
+  list-style: none;
+  margin: 14px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.nt-vcard-meta li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.85rem;
+  border-bottom: 1px dashed rgba(154, 104, 30, 0.18);
+  padding-bottom: 6px;
+}
+
+.nt-vcard-meta span { color: var(--muted); }
+.nt-vcard-meta strong { color: var(--ink); text-align: left; }
+
+.nt-vcard-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.nt-vcard--lr::before { background: linear-gradient(90deg, #1a1a1a, #d4af37); }
+.nt-vcard--gle::before { background: linear-gradient(90deg, #1b4d2e, #c5a059); }
+.nt-vcard--g63::before { background: linear-gradient(90deg, #1e4d8c, #7eb6e8); }
+.nt-vcard--bmw::before { background: linear-gradient(90deg, #1c69d4, #6b7280); }
+
+.pill.available { background: #e8f0fe; color: #1a5fb4; }
+.pill.reserved { background: #fff4db; color: #b7791f; }
+.pill.importing { background: #f1eafe; color: #7647a8; }
+.pill.service { background: #fdecec; color: #c94040; }
+
+.import-status-select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  min-width: 110px;
+}
+
+.btn.small { padding: 6px 10px; font-size: 12px; }
+
+.sidebar-foot .wa-quick {
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+  color: #7ddea8;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+/* Dashboard polish */
+.nt-dash-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: linear-gradient(120deg, rgba(11, 13, 18, 0.95), rgba(26, 22, 12, 0.92));
+  color: #f8f1e2;
+  margin-bottom: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  box-shadow: var(--shadow);
+  animation: ntFadeUp 0.55s ease both;
+}
+
+.nt-dash-banner img {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  border: 2px solid rgba(212, 175, 55, 0.5);
+}
+
+.nt-dash-banner h2 {
+  margin: 0;
+  font-family: "Playfair Display", Georgia, serif;
+  letter-spacing: 0.06em;
+  color: var(--gold2);
+}
+
+.nt-dash-banner p { margin: 4px 0 0; color: rgba(248, 241, 226, 0.75); font-size: 0.92rem; }
+
+.nt-staff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.nt-staff-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.nt-staff-card strong { display: block; color: var(--navy); margin-bottom: 4px; }
+.nt-staff-role {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+.nt-staff-role.owner { background: #111; color: var(--gold2); }
+.nt-staff-role.sales { background: #e8f7ef; color: #0f5c3b; }
+.nt-staff-role.user { background: #eef2ff; color: #3730a3; }
+
+.nt-platform-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(212, 175, 55, 0.16);
+  color: var(--gold-dark);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+@keyframes ntFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.stats-grid > * { animation: ntFadeUp 0.5s ease both; }
+.stats-grid > *:nth-child(2) { animation-delay: 0.05s; }
+.stats-grid > *:nth-child(3) { animation-delay: 0.1s; }
+.stats-grid > *:nth-child(4) { animation-delay: 0.15s; }
+.vehicle-card { animation: ntFadeUp 0.45s ease both; }
+
+/* Login / Platforms / Customer hubs */
+.nt-login, .nt-hub, .nt-customer {
+  min-height: 100vh;
+  margin: 0;
+  font-family: "Cairo", Tahoma, sans-serif;
+  color: var(--ink);
+}
+
+.nt-hub-wrap, .nt-login-stage {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 18px 40px;
+}
+
+.nt-hub-head, .nt-cust-hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.nt-hub-logo, .nt-cust-mark {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  border: 2px solid rgba(212, 175, 55, 0.45);
+  background: #0b0d12;
+}
+
+.nt-kicker {
+  margin: 0;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--gold-dark);
+}
+
+.nt-hub-head h1, .nt-cust-hero h1, .nt-login-brand h1 {
+  margin: 4px 0;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.nt-sub { margin: 0; color: var(--muted); }
+
+.nt-hub-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.nt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 800;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.nt-btn.ghost {
+  background: rgba(255, 252, 245, 0.7);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.nt-plat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.nt-plat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 22px 18px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  animation: ntFadeUp 0.5s ease both;
+}
+
+.nt-plat:hover {
+  transform: translateY(-5px);
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow: 0 22px 50px rgba(20, 16, 8, 0.16);
+}
+
+.nt-plat h2 { margin: 10px 0 6px; font-size: 1.2rem; }
+.nt-plat p { margin: 0; color: var(--muted); font-size: 0.9rem; min-height: 2.6em; }
+
+.nt-plat-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  font-size: 1.85rem;
+  background: #0b0d12;
+  color: #fff;
+  box-shadow: inset 0 0 0 2px rgba(212, 175, 55, 0.35);
+}
+
+.nt-plat-icon--circle { border-radius: 50%; }
+.nt-plat-icon--flag {
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fff 0 35%, #c8102e 35% 70%, #00843d 70% 100%);
+  font-size: 1.6rem;
+}
+
+.nt-plat-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.nt-chip {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--gold-dark);
+}
+
+.nt-plat-enter {
+  display: inline-block;
+  margin-top: 14px;
+  font-weight: 800;
+  color: var(--gold-dark);
+}
+
+.nt-plat--america { border-color: rgba(30, 64, 175, 0.25); }
+.nt-plat--oman { border-color: rgba(0, 132, 61, 0.3); }
+.nt-plat--salam { border-color: rgba(180, 83, 9, 0.28); }
+
+.nt-hub-foot {
+  margin-top: 28px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+/* Login */
+.nt-login-stage {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 28px;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.nt-login-brand { text-align: center; }
+.nt-login-sign {
+  width: min(100%, 420px);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+.nt-login-loc { color: var(--muted); }
+
+.nt-login-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.nt-login-card h2 { margin: 0 0 6px; }
+.nt-login-hint { color: var(--muted); margin: 0 0 18px; font-size: 0.9rem; }
+
+.nt-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.nt-field input {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  background: #fff;
+}
+
+.nt-login-card .nt-btn { width: 100%; margin-top: 8px; padding: 13px; }
+.nt-err { color: #8b1e1e; font-weight: 700; margin-top: 10px; }
+.nt-login-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 0.9rem;
+}
+.nt-login-links a { color: var(--gold-dark); font-weight: 700; text-decoration: none; }
+.nt-staff-mini {
+  margin-top: 16px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.nt-cust-main { max-width: 1180px; margin: 0 auto; padding: 0 18px 40px; }
+.nt-cust-intro { margin-bottom: 18px; }
+.nt-cust-intro h2 { margin: 0 0 6px; }
+.nt-cust-intro p { margin: 0; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .nt-login-stage { grid-template-columns: 1fr; padding-top: 20px; }
+  .nt-login-sign { width: min(100%, 320px); }
+  .nt-dash-banner { grid-template-columns: 1fr; text-align: center; }
+  .nt-dash-banner img { margin: 0 auto; }
+}

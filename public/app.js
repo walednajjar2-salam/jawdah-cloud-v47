@@ -166,7 +166,7 @@ const SECTION_TITLES = {
 function currentPortalChoice(){
   const c = String(localStorage.getItem('jawdah_portal_choice')||'realestate').trim().toLowerCase();
   if(c==='quickestate') return 'nizwaestate';
-  if(['hospitality','accounting','products','overview','realestate','nizwaestate'].includes(c)) return c;
+  if(['hospitality','accounting','products','overview','realestate','nizwaestate','autotrading'].includes(c)) return c;
   return 'realestate';
 }
 function portalAllowsNavId(id){
@@ -1112,7 +1112,7 @@ async function checkSession(){
       qs.delete('token');
     }
     if(qPortal==='quickestate') qPortal='nizwaestate';
-    if(['hospitality','accounting','realestate','products','overview','nizwaestate'].includes(qPortal)){
+    if(['hospitality','accounting','realestate','products','overview','nizwaestate','autotrading'].includes(qPortal)){
       localStorage.setItem('jawdah_portal_choice', qPortal);
       qs.delete('portal');
     }
@@ -1157,6 +1157,11 @@ async function checkSession(){
     localStorage.setItem('jawdah_portal_choice', 'nizwaestate');
     const tok = encodeURIComponent(Jawdah.token||'');
     location.replace('/quick-estate.html?portal=nizwaestate&t=' + Date.now() + '&token=' + tok);
+    return;
+  }
+  if(String(portalChoice).toLowerCase() === 'autotrading'){
+    const tok = encodeURIComponent(Jawdah.token||'');
+    location.replace('/auto-trading.html?portal=autotrading&t=' + Date.now() + '&token=' + tok);
     return;
   }
 

@@ -38,6 +38,7 @@ import lq_payroll_import
 import lq_postgres
 import lq_business_catalog
 import lq_quick_estate
+import lq_auto_trading
 from lq_expand.openapi import build_openapi_spec
 from lq_expand.security import (
     device_trust_days,
@@ -99,11 +100,11 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v70.5-estate-nizwa"
+APP_VERSION = "Launch-Quality-LLC-v70.7-auto-trading-najjar"
 # Production baseline family: v70. Ops-complete = full 42-item requirements closure.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
-STABLE_TAG = "v70.5-estate-nizwa"
+STABLE_TAG = "v70.7-auto-trading-najjar"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -2080,6 +2081,7 @@ def init_db() -> None:
             ensure_column(db, "users", col, definition)
         ensure_security_runtime_tables(db)
         lq_quick_estate.ensure_tables(db)
+        lq_auto_trading.ensure_tables(db)
         try:
             import lq_nizwa_estate_copy
 
@@ -4221,13 +4223,15 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
     team = [
         ("owner", "يعقوب فاضل الخصيبي", "owner", "001970"),
         ("yaqoub", "يعقوب فاضل الخصيبي", "owner", "owner2015"),
-        ("waleed", "وليد محمد عبد الهادي", "owner", "111111"),
-        ("waleed.najjar", "وليد محمد عبد الهادي", "owner", "Waleed2026!"),
+        ("waleed", "وليد نجار", "owner", "111111"),
+        ("waleed.najjar", "وليد نجار", "owner", "Waleed2026!"),
         ("ahmed", "احمد محمد عبد الهادي", "admin", "Ahmed2026!"),
         ("ahmed.najjar", "احمد محمد عبد الهادي", "admin", "Ahmed2026!"),
         ("admin", "System Admin", "admin", "555555"),
-        ("razan", "رزان سالم الشعيلي", "reception", "222222"),
-        ("razan.shuaili", "رزان سالم الشعيلي", "reception", "Razan2026!"),
+        ("razan", "رزان الشعيلي", "reception", "222222"),
+        ("razan.shuaili", "رزان الشعيلي", "reception", "Razan2026!"),
+        ("waya.shuaili", "واية الشعيلي", "operations", "Waya2026!"),
+        ("hamad.sumoom", "حمد السموم", "owner", "Hamad2026!"),
         ("amjad", "امجد", "operations", "333333"),
         ("ali", "علي محمد علي النديش", "operations", "444444"),
         ("mohammed.siraj", "محمد صالح سراج النور", "operations", "Siraj2026!"),
@@ -4258,7 +4262,13 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
         "UPDATE users SET role='admin', active=1, name='احمد محمد عبد الهادي' WHERE lower(username) IN ('ahmed.najjar','ahmed')"
     )
     db.execute(
-        "UPDATE users SET role='owner', active=1, name='وليد محمد عبد الهادي' WHERE lower(username) IN ('waleed','waleed.najjar')"
+        "UPDATE users SET role='owner', active=1, name='وليد نجار' WHERE lower(username) IN ('waleed','waleed.najjar')"
+    )
+    db.execute(
+        "UPDATE users SET role='owner', active=1, name='حمد السموم' WHERE lower(username)='hamad.sumoom'"
+    )
+    db.execute(
+        "UPDATE users SET role='operations', active=1, name='واية الشعيلي' WHERE lower(username)='waya.shuaili'"
     )
     db.execute(
         "UPDATE users SET role='owner', active=1, name=COALESCE(NULLIF(name,''), 'يعقوب فاضل الخصيبي') "
@@ -4268,7 +4278,7 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
         "UPDATE users SET role='owner', active=1, name='يعقوب فاضل الخصيبي' WHERE lower(username)='yaqoub'"
     )
     db.execute(
-        "UPDATE users SET role='reception', active=1, name='رزان سالم الشعيلي' "
+        "UPDATE users SET role='reception', active=1, name='رزان الشعيلي' "
         "WHERE lower(username) IN ('razan','razan.shuaili','razan.accounting')"
     )
     db.execute(
@@ -4569,6 +4579,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         payload = self.read_json() or {}
                     qmap = urllib.parse.parse_qs(query or "")
                     return lq_quick_estate.handle_api(
+                        db, method, parts[1:], qmap, payload, user, self.send_json
+                    )
+                if parts[0] == "auto-trading":
+                    user = self.require_user(db, "dashboard")
+                    if not user:
+                        return None
+                    payload = {}
+                    if method in ("POST", "PUT", "PATCH"):
+                        payload = self.read_json() or {}
+                    qmap = urllib.parse.parse_qs(query or "")
+                    return lq_auto_trading.handle_api(
                         db, method, parts[1:], qmap, payload, user, self.send_json
                     )
                 if parts[0] == "health" and method == "GET":
