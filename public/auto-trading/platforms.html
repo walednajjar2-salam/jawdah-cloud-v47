@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at14">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at15">
   <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at9">
 </head>
 <body class="nt-hub">
@@ -22,7 +22,7 @@
       </div>
       <div class="nt-hub-actions">
         <a class="nt-btn ghost" href="/auto-trading/customer.html">بوابة الزبائن</a>
-        <a class="nt-btn ghost" id="backLq" href="/portal-select.html">جودة الانطلاقة</a>
+        <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب</a>
         <button class="nt-btn primary" type="button" id="btnLogout">خروج</button>
       </div>
     </header>
@@ -127,7 +127,6 @@
       btn.onclick = () => { location.href = withToken('/auto-trading.html?platform=oman&view=vehicles'); };
     });
 
-    document.getElementById('backLq').href = withToken('/portal-select.html?from=autotrading');
     document.getElementById('btnLogout').onclick = () => {
       localStorage.removeItem('jawdah_cloud_token');
       location.replace('/auto-trading/login.html');
