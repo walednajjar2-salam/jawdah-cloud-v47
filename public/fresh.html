@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>تحديث النظام…</title>
+  <title>تحديث NAJJAR &amp; AL SAMOOM TRADING…</title>
   <style>
-    body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Tajawal,Segoe UI,sans-serif;background:#0b1b33;color:#fff}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Cairo,Segoe UI,sans-serif;background:#0a0a0a;color:#f0d98a}
     .box{text-align:center;padding:28px}
-    a,button{display:inline-block;margin-top:16px;padding:12px 18px;border-radius:12px;background:#2f6fec;color:#fff;text-decoration:none;border:0;font:800 15px Tajawal,sans-serif;cursor:pointer}
+    a,button{display:inline-block;margin-top:16px;padding:12px 18px;border-radius:12px;background:linear-gradient(135deg,#4a3208,#caa14a);color:#fff;text-decoration:none;border:0;font:800 15px Cairo,sans-serif;cursor:pointer}
   </style>
 </head>
 <body>
   <div class="box">
-    <h1>جاري تحديث النظام…</h1>
+    <h1>جاري تحديث نظام النجار والسموم…</h1>
     <p>نمسح النسخة القديمة من جهازك الآن</p>
     <button type="button" id="go">افتح النظام الآن</button>
   </div>
@@ -32,10 +32,10 @@
       }catch(e){}
       try{
         localStorage.removeItem('jawdah_portal_choice');
-        localStorage.setItem('lq_hub_expanded','1');
+        localStorage.removeItem('lq_hub_expanded');
         localStorage.removeItem('lq_workspace_collapsed');
       }catch(e){}
-      const url = '/app.html?fresh=20260725v54role&t=' + Date.now();
+      const url = '/auto-trading/login.html?fresh=' + Date.now();
       document.getElementById('go').onclick = function(){ location.replace(url); };
       setTimeout(function(){ location.replace(url); }, 600);
     })();
