@@ -2,28 +2,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap');
 
 :root {
-  --gold: #d4af37;
-  --gold2: #f0d070;
-  --gold-dark: #9a681e;
-  --navy: #0b0d12;
-  --ink: #12141a;
-  --bg: #ece7dc;
-  --bg2: #f4efe4;
-  --panel: rgba(255, 252, 245, 0.88);
-  --line: rgba(154, 104, 30, 0.22);
-  --muted: #5c584e;
-  --shadow: 0 14px 40px rgba(20, 16, 8, 0.12);
+  /* Gold · Black · Crystal palette — NAJJAR &amp; AL SAMOOM TRADING (official card colors) */
+  --gold: #caa14a;
+  --gold2: #f0d98a;
+  --gold-dark: #e3b64f;
+  --red-deep: #4a3208;
+  --navy: #f3ecd9;
+  --ink: #f1e7cf;
+  --bg: #060607;
+  --bg2: #0c0906;
+  --panel: rgba(20, 16, 8, 0.58);
+  --panel-solid: rgba(14, 11, 6, 0.86);
+  --line: rgba(202, 161, 74, 0.4);
+  --muted: #cbb98a;
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  --edge: 0 0 0 2px rgba(202, 161, 74, 0.85), 0 0 0 4px rgba(0, 0, 0, 0.55);
 }
+
+/* Wrapped in a cascade layer so these !important theme rules always win over the
+   shared quick-estate.css (which is unlayered and has many deep, highly-specific
+   !important selectors for its other theme skins). Per the CSS cascade-layers spec,
+   !important declarations in any named layer beat !important declarations in
+   unlayered stylesheets, regardless of selector specificity or source order. */
+@layer nt_theme {
 
 .theme-autotrading {
   --blue: var(--gold);
   --blue2: var(--gold2);
-  --navy: #0b0d12;
-  --bg: #ece7dc;
+  --navy: #f3ecd9;
+  --bg: #060607;
   font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
+  color: var(--navy);
 }
 
-/* Fixed transparent logo watermark */
+/* Fixed transparent crystal background — black merged with a soft gold glow */
 .nt-watermark,
 body.theme-autotrading::before {
   content: "";
@@ -32,11 +44,13 @@ body.theme-autotrading::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(212, 175, 55, 0.14), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 90% 80%, rgba(154, 104, 30, 0.1), transparent 50%),
-    linear-gradient(160deg, #f3eee3 0%, #e7e0d1 45%, #efe8d8 100%);
+    radial-gradient(ellipse 80% 60% at 15% 8%, rgba(202, 161, 74, 0.16), transparent 55%),
+    radial-gradient(ellipse 70% 55% at 92% 85%, rgba(74, 55, 15, 0.22), transparent 50%),
+    linear-gradient(160deg, #040403 0%, #0b0805 45%, #060503 100%);
 }
 
+/* Logo mark centered on screen, fixed so it never scrolls away — a soft, transparent
+   crystal watermark sized consistently with the page regardless of viewport. */
 .nt-watermark::after,
 body.theme-autotrading::after {
   content: "";
@@ -44,11 +58,11 @@ body.theme-autotrading::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at5');
+  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at11');
   background-repeat: no-repeat;
-  background-position: center 42%;
-  background-size: min(58vw, 520px);
-  opacity: 0.07;
+  background-position: center;
+  background-size: min(58vw, 560px);
+  opacity: 0.11;
 }
 
 body.theme-autotrading .app-shell,
@@ -64,59 +78,245 @@ body.theme-autotrading .workspace,
 html, body.app-body.theme-autotrading {
   background: transparent !important;
   background-image: none !important;
+  color: var(--navy) !important;
   min-height: 100%;
+}
+
+body.app-body.theme-autotrading,
+body.app-body.theme-autotrading button,
+body.app-body.theme-autotrading input,
+body.app-body.theme-autotrading select,
+body.app-body.theme-autotrading textarea {
+  color: var(--navy) !important;
 }
 
 body.section-dashboard .content.dashboard-page {
   background: transparent !important;
 }
 
+.theme-autotrading .app-shell {
+  background: transparent !important;
+}
+
 .theme-autotrading .sidebar {
-  background: linear-gradient(180deg, #0b0d12 0%, #171a22 100%);
-  border-left: 1px solid rgba(212, 175, 55, 0.28);
-  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.18);
+  background: linear-gradient(180deg, #040403 0%, #141008 100%) !important;
+  border-left: 1px solid rgba(202, 161, 74, 0.3) !important;
+  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.5) !important;
 }
 
 .theme-autotrading .sidebar-brand strong {
   letter-spacing: 0.08em;
   font-family: "Playfair Display", Georgia, serif;
+  color: var(--navy) !important;
 }
 
-.theme-autotrading .nav-item.active {
-  background: linear-gradient(135deg, #9a681e, #d4af37);
-  color: #111;
+.theme-autotrading .sidebar-brand small {
+  color: var(--muted) !important;
+}
+
+.theme-autotrading .nav-item,
+.theme-autotrading .nav-item span {
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.theme-autotrading .nav-item:hover {
+  background: rgba(202, 161, 74, 0.12) !important;
+}
+
+.theme-autotrading .nav-item.active,
+.theme-autotrading .nav-item.active:hover {
+  background: linear-gradient(135deg, #332208, #caa14a) !important;
+  color: #fff !important;
+  border-color: #caa14a !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(202, 161, 74, 0.3) !important;
 }
 
 .theme-autotrading .nav-item.active .nav-label,
-.theme-autotrading .nav-item.active .nav-icon {
-  color: #111 !important;
-  -webkit-text-fill-color: #111 !important;
+.theme-autotrading .nav-item.active .nav-icon,
+.theme-autotrading .nav-item.active span {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
 }
 
 .theme-autotrading .btn.primary,
 .nt-btn.primary {
-  background: linear-gradient(135deg, #9a681e, #d4af37);
-  color: #111;
-  border: none;
+  background: linear-gradient(135deg, #4a3208, #caa14a) !important;
+  color: #fff !important;
+  border: 1px solid rgba(0, 0, 0, 0.5) !important;
   font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 22px rgba(202, 161, 74, 0.28) !important;
+}
+
+.theme-autotrading .btn.secondary {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(202, 161, 74, 0.05)) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(202, 161, 74, 0.5) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  color: var(--navy) !important;
+}
+
+.theme-autotrading .btn.ghost {
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(8px);
+  color: var(--navy) !important;
+  border: 1px solid rgba(202, 161, 74, 0.4) !important;
+}
+
+.theme-autotrading .btn.success {
+  background: linear-gradient(135deg, #0f5c3b, #1f9d5f) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Glassy icon buttons in the topbar (refresh, menu, version chip) — golden crystal edge */
+.theme-autotrading .icon-btn,
+.theme-autotrading .mobile-menu,
+.theme-autotrading .version {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(202, 161, 74, 0.08)) !important;
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border: 1.5px solid rgba(202, 161, 74, 0.6) !important;
+  color: var(--navy) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
 }
 
 .theme-autotrading .topbar,
-.theme-autotrading .content {
-  background: transparent;
+.theme-autotrading .content,
+.theme-autotrading .workspace {
+  background: transparent !important;
+  color: var(--navy);
+}
+
+.theme-autotrading .topbar h1,
+.theme-autotrading .topbar p,
+.theme-autotrading .page-head h2 {
+  color: var(--navy) !important;
+}
+
+.theme-autotrading .page-head p,
+.theme-autotrading .mini,
+.theme-autotrading .empty-state {
+  color: var(--muted) !important;
 }
 
 .theme-autotrading .card,
 .theme-autotrading .stat-card,
-.theme-autotrading .contact-card {
-  background: var(--panel);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
+.theme-autotrading .contact-card,
+.theme-autotrading .vehicle-card,
+.theme-autotrading .nt-vcard,
+.theme-autotrading .drawer-panel,
+.theme-autotrading .modal-panel {
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(202, 161, 74, 0.05) 45%, transparent 75%),
+    var(--panel) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(202, 161, 74, 0.5) !important;
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(202, 161, 74, 0.16);
+  color: var(--navy) !important;
+}
+
+.theme-autotrading .card-header {
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.theme-autotrading .card-header h3,
+.theme-autotrading .drawer-title h2 {
+  color: var(--navy) !important;
+}
+
+.theme-autotrading .drawer-title p,
+.theme-autotrading .card-body,
+.theme-autotrading .detail-row,
+.theme-autotrading .contract-card,
+.theme-autotrading .audit-list,
+.theme-autotrading .audit-item,
+.theme-autotrading .data-table {
+  color: var(--navy) !important;
+}
+
+.theme-autotrading .muted {
+  color: var(--muted) !important;
+}
+
+.theme-autotrading .detail-row span:first-child,
+.theme-autotrading .contract-card .meta,
+.theme-autotrading .field-note {
+  color: var(--muted) !important;
+}
+
+.theme-autotrading .detail-list,
+.theme-autotrading .detail-row,
+.theme-autotrading .contract-card {
+  border-color: var(--line) !important;
+}
+
+.theme-autotrading .stat-card .label {
+  color: var(--muted) !important;
+}
+
+.theme-autotrading .stat-card strong {
+  color: var(--navy) !important;
 }
 
 .theme-autotrading .stat-card.highlight strong {
-  color: var(--gold-dark);
+  color: var(--gold-dark) !important;
+}
+
+.theme-autotrading .table-wrap {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.04), transparent 50%), var(--panel-solid) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(202, 161, 74, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.theme-autotrading .data-table th {
+  background: rgba(202, 161, 74, 0.1) !important;
+  color: var(--muted) !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.theme-autotrading .data-table td {
+  background: transparent !important;
+  color: var(--navy) !important;
+  border-bottom: 1px solid rgba(202, 161, 74, 0.14) !important;
+}
+
+.theme-autotrading .data-table tbody tr:hover td,
+.theme-autotrading .data-table tbody tr:hover {
+  background: rgba(202, 161, 74, 0.12) !important;
+}
+
+.theme-autotrading .field input,
+.theme-autotrading .field select,
+.theme-autotrading .field textarea,
+.theme-autotrading input,
+.theme-autotrading select,
+.theme-autotrading textarea,
+.theme-autotrading .filters input,
+.theme-autotrading .filters select {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--navy) !important;
+}
+
+.theme-autotrading .field span,
+.theme-autotrading .field label {
+  color: var(--muted) !important;
+}
+
+.theme-autotrading .drawer-close,
+.theme-autotrading .modal-close {
+  background: rgba(202, 161, 74, 0.14) !important;
+  color: var(--navy) !important;
 }
 
 .at-logo-img {
@@ -125,8 +325,30 @@ body.section-dashboard .content.dashboard-page {
   border-radius: 12px;
   object-fit: cover;
   background: #0a0a0a;
-  border: 2px solid rgba(212, 175, 55, 0.45);
+  border: 2px solid #caa14a;
+  box-shadow: var(--edge);
   flex: 0 0 auto;
+}
+
+/* Official horizontal logo — top of the right sidebar (brand home) */
+.theme-autotrading .sidebar-brand.at-brand-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  padding: 8px 4px 18px !important;
+  border-bottom: 1px solid rgba(202, 161, 74, 0.28) !important;
+}
+
+.at-logo-official {
+  width: 100%;
+  height: auto;
+  max-height: 110px;
+  object-fit: contain;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  filter: drop-shadow(0 2px 10px rgba(202, 161, 74, 0.25));
 }
 
 .sign-banner {
@@ -218,7 +440,7 @@ body.section-dashboard .content.dashboard-page {
   border-radius: 20px;
   padding: 18px 18px 16px;
   background:
-    linear-gradient(165deg, rgba(255, 252, 245, 0.95), rgba(248, 241, 226, 0.9));
+    linear-gradient(165deg, rgba(22, 10, 12, 0.72), rgba(8, 4, 5, 0.78));
   box-shadow: var(--shadow);
   overflow: hidden;
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
@@ -233,14 +455,14 @@ body.section-dashboard .content.dashboard-page {
   right: 0;
   left: 0;
   height: 4px;
-  background: linear-gradient(90deg, #9a681e, #f0d070, #9a681e);
+  background: linear-gradient(90deg, #0a0a0a, #caa14a, #0a0a0a);
 }
 
 .vehicle-card:hover,
 .nt-vcard:hover {
   transform: translateY(-4px);
-  border-color: rgba(212, 175, 55, 0.55);
-  box-shadow: 0 20px 48px rgba(20, 16, 8, 0.16);
+  border-color: rgba(202, 161, 74, 0.6);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
 }
 
 .vehicle-card h4,
@@ -263,7 +485,7 @@ body.section-dashboard .content.dashboard-page {
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--gold-dark);
-  background: rgba(212, 175, 55, 0.14);
+  background: rgba(202, 161, 74, 0.16);
   padding: 4px 10px;
   border-radius: 999px;
 }
@@ -287,7 +509,7 @@ body.section-dashboard .content.dashboard-page {
   justify-content: space-between;
   gap: 10px;
   font-size: 0.85rem;
-  border-bottom: 1px dashed rgba(154, 104, 30, 0.18);
+  border-bottom: 1px dashed rgba(202, 161, 74, 0.2);
   padding-bottom: 6px;
 }
 
@@ -303,15 +525,16 @@ body.section-dashboard .content.dashboard-page {
   margin-top: 8px;
 }
 
-.nt-vcard--lr::before { background: linear-gradient(90deg, #1a1a1a, #d4af37); }
-.nt-vcard--gle::before { background: linear-gradient(90deg, #1b4d2e, #c5a059); }
-.nt-vcard--g63::before { background: linear-gradient(90deg, #1e4d8c, #7eb6e8); }
-.nt-vcard--bmw::before { background: linear-gradient(90deg, #1c69d4, #6b7280); }
+.nt-vcard--lr::before,
+.nt-vcard--gle::before,
+.nt-vcard--g63::before,
+.nt-vcard--bmw::before { background: linear-gradient(90deg, #0a0a0a, #caa14a, #0a0a0a); }
 
-.pill.available { background: #e8f0fe; color: #1a5fb4; }
-.pill.reserved { background: #fff4db; color: #b7791f; }
-.pill.importing { background: #f1eafe; color: #7647a8; }
-.pill.service { background: #fdecec; color: #c94040; }
+.pill.available { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
+.pill.reserved { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.pill.sold { background: rgba(202, 161, 74, 0.2); color: #f0d98a; }
+.pill.importing { background: rgba(147, 51, 234, 0.2); color: #c084fc; }
+.pill.service { background: rgba(202, 161, 74, 0.16); color: #e8c06a; }
 
 .import-status-select {
   border: 1px solid var(--line);
@@ -341,10 +564,10 @@ body.section-dashboard .content.dashboard-page {
   align-items: center;
   padding: 18px 20px;
   border-radius: 20px;
-  background: linear-gradient(120deg, rgba(11, 13, 18, 0.95), rgba(26, 22, 12, 0.92));
-  color: #f8f1e2;
+  background: linear-gradient(120deg, rgba(5, 3, 4, 0.95), rgba(30, 8, 11, 0.92));
+  color: #f6ecec;
   margin-bottom: 18px;
-  border: 1px solid rgba(212, 175, 55, 0.35);
+  border: 1px solid rgba(202, 161, 74, 0.4);
   box-shadow: var(--shadow);
   animation: ntFadeUp 0.55s ease both;
 }
@@ -353,7 +576,24 @@ body.section-dashboard .content.dashboard-page {
   width: 72px;
   height: 72px;
   border-radius: 16px;
-  border: 2px solid rgba(212, 175, 55, 0.5);
+  border: 2px solid #caa14a;
+  box-shadow: var(--edge);
+}
+
+.nt-dash-banner--logo {
+  grid-template-columns: minmax(220px, 320px) 1fr;
+}
+
+.nt-dash-banner--logo img {
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 2px 10px rgba(202, 161, 74, 0.28));
 }
 
 .nt-dash-banner h2 {
@@ -363,7 +603,7 @@ body.section-dashboard .content.dashboard-page {
   color: var(--gold2);
 }
 
-.nt-dash-banner p { margin: 4px 0 0; color: rgba(248, 241, 226, 0.75); font-size: 0.92rem; }
+.nt-dash-banner p { margin: 4px 0 0; color: rgba(246, 236, 236, 0.75); font-size: 0.92rem; }
 
 .nt-staff-grid {
   display: grid;
@@ -372,11 +612,13 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .nt-staff-card {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(202, 161, 74, 0.5);
   border-radius: 16px;
   padding: 14px;
-  background: var(--panel);
-  box-shadow: var(--shadow);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(202, 161, 74, 0.05)), var(--panel);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .nt-staff-card strong { display: block; color: var(--navy); margin-bottom: 4px; }
@@ -387,22 +629,43 @@ body.section-dashboard .content.dashboard-page {
   padding: 3px 8px;
   border-radius: 999px;
   margin-bottom: 8px;
+  backdrop-filter: blur(6px);
 }
-.nt-staff-role.owner { background: #111; color: var(--gold2); }
-.nt-staff-role.sales { background: #e8f7ef; color: #0f5c3b; }
-.nt-staff-role.user { background: #eef2ff; color: #3730a3; }
+.nt-staff-role.owner { background: linear-gradient(150deg, rgba(255, 255, 255, 0.14), rgba(10, 10, 10, 0.9)); color: var(--gold2); border: 1px solid rgba(202, 161, 74, 0.6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.nt-staff-role.sales { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
+.nt-staff-role.user { background: rgba(147, 51, 234, 0.18); color: #c084fc; }
 
 .nt-platform-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(212, 175, 55, 0.16);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.16), rgba(202, 161, 74, 0.14));
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  border: 1px solid rgba(202, 161, 74, 0.5);
   color: var(--gold-dark);
   font-weight: 800;
   font-size: 12px;
   padding: 6px 12px;
   border-radius: 999px;
   margin-bottom: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* KPI icons — glassy badge with a golden crystal edge merged with a slight black ring */
+.nt-kpi-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.2), rgba(202, 161, 74, 0.12));
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
+  border: 1.5px solid #caa14a;
+  box-shadow: var(--edge), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  font-size: 1.1rem;
+  flex: 0 0 auto;
 }
 
 @keyframes ntFadeUp {
@@ -443,8 +706,22 @@ body.section-dashboard .content.dashboard-page {
   width: 72px;
   height: 72px;
   border-radius: 18px;
-  border: 2px solid rgba(212, 175, 55, 0.45);
-  background: #0b0d12;
+  border: 2px solid #caa14a;
+  box-shadow: var(--edge);
+  background: #0a0a0a;
+}
+
+.nt-hub-logo--official,
+.nt-cust-mark--official {
+  width: min(280px, 42vw);
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 2px 12px rgba(202, 161, 74, 0.3));
 }
 
 .nt-kicker {
@@ -479,7 +756,18 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .nt-btn.ghost {
-  background: rgba(255, 252, 245, 0.7);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.nt-btn.primary {
+  background: linear-gradient(135deg, #4a3208, #caa14a);
+  color: #fff;
+}
+
+.nt-btn.secondary {
+  background: rgba(255, 255, 255, 0.04);
   border-color: var(--line);
   color: var(--ink);
 }
@@ -503,11 +791,11 @@ body.section-dashboard .content.dashboard-page {
 
 .nt-plat:hover {
   transform: translateY(-5px);
-  border-color: rgba(212, 175, 55, 0.55);
-  box-shadow: 0 22px 50px rgba(20, 16, 8, 0.16);
+  border-color: rgba(202, 161, 74, 0.6);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.55);
 }
 
-.nt-plat h2 { margin: 10px 0 6px; font-size: 1.2rem; }
+.nt-plat h2 { margin: 10px 0 6px; font-size: 1.2rem; color: var(--navy); }
 .nt-plat p { margin: 0; color: var(--muted); font-size: 0.9rem; min-height: 2.6em; }
 
 .nt-plat-icon {
@@ -516,9 +804,9 @@ body.section-dashboard .content.dashboard-page {
   display: grid;
   place-items: center;
   font-size: 1.85rem;
-  background: #0b0d12;
+  background: #0a0a0a;
   color: #fff;
-  box-shadow: inset 0 0 0 2px rgba(212, 175, 55, 0.35);
+  box-shadow: var(--edge);
 }
 
 .nt-plat-icon--circle { border-radius: 50%; }
@@ -534,7 +822,7 @@ body.section-dashboard .content.dashboard-page {
   font-weight: 800;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(212, 175, 55, 0.15);
+  background: rgba(202, 161, 74, 0.16);
   color: var(--gold-dark);
 }
 
@@ -568,10 +856,12 @@ body.section-dashboard .content.dashboard-page {
 
 .nt-login-brand { text-align: center; }
 .nt-login-sign {
-  width: min(100%, 420px);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
+  width: min(100%, 480px);
+  border-radius: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 4px 18px rgba(202, 161, 74, 0.28));
   margin-bottom: 16px;
+  background: transparent;
 }
 .nt-login-loc { color: var(--muted); }
 
@@ -599,11 +889,12 @@ body.section-dashboard .content.dashboard-page {
   border-radius: 12px;
   padding: 12px 14px;
   font: inherit;
-  background: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--navy);
 }
 
 .nt-login-card .nt-btn { width: 100%; margin-top: 8px; padding: 13px; }
-.nt-err { color: #8b1e1e; font-weight: 700; margin-top: 10px; }
+.nt-err { color: #f0d98a; font-weight: 700; margin-top: 10px; }
 .nt-login-links {
   display: flex;
   justify-content: space-between;
@@ -631,3 +922,5 @@ body.section-dashboard .content.dashboard-page {
   .nt-dash-banner { grid-template-columns: 1fr; text-align: center; }
   .nt-dash-banner img { margin: 0 auto; }
 }
+
+} /* end @layer nt_theme */

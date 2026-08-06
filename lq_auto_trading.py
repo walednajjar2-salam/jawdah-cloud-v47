@@ -11,8 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent
 SEED_PATH = BASE_DIR / "public" / "auto-trading" / "seed_vehicles.json"
 
 COMPANY_PROFILE: Dict[str, Any] = {
-    "name_ar": "النجار للتجارة — سيارات مستعملة ومستوردة",
-    "name_en": "NAJJAR TRADING",
+    "name_ar": "النجار والسموم للتجارة — سيارات مستعملة ومستوردة",
+    "name_en": "NAJJAR & AL SAMOOM TRADING",
     "tagline_en": "USED & IMPORTED CARS",
     "bank_account_name_en": "Al Najjar Trading",
     "activity_ar": "تجارة واستيراد السيارات — مستعمل ومستورد",
@@ -22,8 +22,9 @@ COMPANY_PROFILE: Dict[str, Any] = {
     "address_en": "Al-Dakhilia Governorate · Nizwa · Falaj",
     "country_ar": "سلطنة عُمان",
     "hours": "08:00 — 20:00",
-    "logo_url": "/auto-trading/assets/logo-al-najjar.svg",
+    "logo_url": "/auto-trading/assets/logo-official.svg",
     "logo_mark_url": "/auto-trading/assets/logo-mark.svg",
+    "logo_card_url": "/auto-trading/assets/logo-al-najjar.svg",
     "phones": {
         "owner": "71924089",
         "whatsapp_1": "71924089",
@@ -33,10 +34,10 @@ COMPANY_PROFILE: Dict[str, Any] = {
         "office": "95551994",
     },
     "contacts": [
-        {"label_ar": "واتساب — NAJJAR TRADING", "phone": "71924089", "note": "+968 71924089", "whatsapp": True},
-        {"label_ar": "واتساب — NAJJAR TRADING", "phone": "93391994", "note": "+968 93391994", "whatsapp": True},
+        {"label_ar": "وليد — واتساب", "phone": "71924089", "note": "+968 71924089", "whatsapp": True},
+        {"label_ar": "المبيعات — واتساب", "phone": "93391994", "note": "+968 93391994", "whatsapp": True},
         {"label_ar": "حمد", "phone": "77548482", "note": "+968 7754 8482"},
-        {"label_ar": "المكتب", "phone": "95551994", "note": ""},
+        {"label_ar": "المكتب", "phone": "95551994", "note": "+968 9555 1994"},
     ],
     "bank": {
         "name_ar": "بنك صحار الدولي",
@@ -69,8 +70,13 @@ EDITABLE_VEHICLE_FIELDS = (
     "status", "list_price", "purchase_cost", "plate_no", "license_valid_until",
     "insurance_company", "insurance_policy", "insurance_type", "buyer_name", "buyer_phone",
     "import_ref", "origin_country", "notes", "reserved_by", "reserved_until",
+    "seller_name", "seller_phone", "seller_id", "purchase_date",
 )
 LOCKED_VEHICLE_FIELDS = ("stock_no", "make", "model", "variant", "vin", "engine_no", "year")
+EXPENSE_CATEGORIES = (
+    "شحن واستيراد", "جمارك وترخيص", "صيانة وتجهيز", "تنظيف وتجميل", "عمولات ووسطاء",
+    "إيجار ومكتب", "رواتب", "وقود وتنقل", "تأمين", "أخرى",
+)
 
 
 def now_iso() -> str:
@@ -85,6 +91,10 @@ def _ensure_vehicle_columns(db: sqlite3.Connection) -> None:
         ("license_source", "TEXT"),
         ("mortgage", "TEXT"),
         ("sort_order", "INTEGER NOT NULL DEFAULT 999"),
+        ("seller_name", "TEXT"),
+        ("seller_phone", "TEXT"),
+        ("seller_id", "TEXT"),
+        ("purchase_date", "TEXT"),
     ):
         try:
             db.execute(f"ALTER TABLE at_vehicles ADD COLUMN {col} {typ}")
@@ -270,6 +280,37 @@ def ensure_tables(db: sqlite3.Connection) -> None:
             created_by TEXT NOT NULL,
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS at_purchases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            purchase_no TEXT NOT NULL UNIQUE,
+            vehicle_id INTEGER REFERENCES at_vehicles(id),
+            stock_no TEXT,
+            seller_name TEXT NOT NULL,
+            seller_phone TEXT,
+            seller_id TEXT,
+            source_country TEXT,
+            purchase_price REAL NOT NULL DEFAULT 0,
+            paid_amount REAL NOT NULL DEFAULT 0,
+            payment_method TEXT,
+            purchase_date TEXT NOT NULL,
+            notes TEXT,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS at_expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            expense_no TEXT NOT NULL UNIQUE,
+            category TEXT NOT NULL,
+            vehicle_id INTEGER REFERENCES at_vehicles(id),
+            stock_no TEXT,
+            amount REAL NOT NULL DEFAULT 0,
+            payee TEXT,
+            expense_date TEXT NOT NULL,
+            payment_method TEXT,
+            notes TEXT,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS at_audit (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT,
@@ -313,6 +354,16 @@ def _next_import_no(db: sqlite3.Connection) -> str:
     return f"AT-I-{datetime.now().year}-{n:04d}"
 
 
+def _next_purchase_no(db: sqlite3.Connection) -> str:
+    n = db.execute("SELECT COUNT(*) FROM at_purchases").fetchone()[0] + 1
+    return f"AT-P-{datetime.now().year}-{n:04d}"
+
+
+def _next_expense_no(db: sqlite3.Connection) -> str:
+    n = db.execute("SELECT COUNT(*) FROM at_expenses").fetchone()[0] + 1
+    return f"AT-E-{datetime.now().year}-{n:04d}"
+
+
 def handle_api(
     db: sqlite3.Connection,
     method: str,
@@ -353,7 +404,22 @@ def handle_api(
             "pending_imports": db.execute(
                 "SELECT COUNT(*) FROM at_import_orders WHERE status NOT IN ('مستلم','ملغي')"
             ).fetchone()[0],
+            "purchases_count": db.execute("SELECT COUNT(*) FROM at_purchases").fetchone()[0],
+            "purchases_total": db.execute("SELECT COALESCE(SUM(purchase_price),0) FROM at_purchases").fetchone()[0],
+            "expenses_count": db.execute("SELECT COUNT(*) FROM at_expenses").fetchone()[0],
+            "expenses_total": db.execute("SELECT COALESCE(SUM(amount),0) FROM at_expenses").fetchone()[0],
         }
+        stats["net_profit"] = float(stats["sales_total"]) - float(stats["purchases_total"]) - float(stats["expenses_total"])
+        today = datetime.now().strftime("%Y-%m-%d")
+        stats["today_purchases"] = db.execute(
+            "SELECT COUNT(*) FROM at_purchases WHERE purchase_date=?", (today,)
+        ).fetchone()[0]
+        stats["today_sales"] = db.execute(
+            "SELECT COUNT(*) FROM at_sales WHERE sale_date=?", (today,)
+        ).fetchone()[0]
+        stats["today_expenses"] = db.execute(
+            "SELECT COUNT(*) FROM at_expenses WHERE expense_date=?", (today,)
+        ).fetchone()[0]
         recent = db.execute("SELECT * FROM at_audit ORDER BY id DESC LIMIT 12").fetchall()
         return send_json({"ok": True, "stats": stats, "recent": [dict(r) for r in recent], "company": COMPANY_PROFILE}) or True
 
@@ -428,13 +494,19 @@ def handle_api(
         status = str(payload.get("status") or "متاحة")
         if status not in VALID_STATUSES:
             status = "متاحة"
+        seller_name = str(payload.get("seller_name") or "").strip()
+        seller_phone = str(payload.get("seller_phone") or "").strip()
+        seller_id = str(payload.get("seller_id") or "").strip()
+        purchase_date = str(payload.get("purchase_date") or "").strip()
+        purchase_cost = float(payload.get("purchase_cost") or 0)
         db.execute(
             """INSERT INTO at_vehicles(
                 stock_no, make, model, variant, vehicle_type, color, year, vin, engine_no,
                 engine_cc, seats, axles, origin_country, import_ref, purchase_cost, list_price,
                 status, plate_no, license_valid_until, insurance_company, insurance_policy, notes,
+                seller_name, seller_phone, seller_id, purchase_date,
                 created_at, updated_at
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 stock_no, make, model,
                 str(payload.get("variant") or ""),
@@ -448,7 +520,7 @@ def handle_api(
                 int(payload.get("axles") or 0) or None,
                 str(payload.get("origin_country") or ""),
                 str(payload.get("import_ref") or ""),
-                float(payload.get("purchase_cost") or 0),
+                purchase_cost,
                 float(payload.get("list_price") or 0),
                 status,
                 str(payload.get("plate_no") or ""),
@@ -456,11 +528,29 @@ def handle_api(
                 str(payload.get("insurance_company") or ""),
                 str(payload.get("insurance_policy") or ""),
                 str(payload.get("notes") or ""),
+                seller_name, seller_phone, seller_id, purchase_date,
                 now_iso(), now_iso(),
             ),
         )
         vid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
         _audit(db, user, "vehicle_created", "vehicle", str(vid), {"stock_no": stock_no, "make": make, "model": model})
+        if seller_name and purchase_cost > 0:
+            purchase_no = _next_purchase_no(db)
+            db.execute(
+                """INSERT INTO at_purchases(
+                    purchase_no, vehicle_id, stock_no, seller_name, seller_phone, seller_id,
+                    source_country, purchase_price, paid_amount, payment_method, purchase_date,
+                    notes, created_by, created_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    purchase_no, vid, stock_no, seller_name, seller_phone, seller_id,
+                    str(payload.get("origin_country") or ""), purchase_cost, purchase_cost,
+                    str(payload.get("purchase_payment_method") or "نقد"),
+                    purchase_date or datetime.now().strftime("%Y-%m-%d"),
+                    "شراء تلقائي عند إضافة المركبة", str(user.get("username") or ""), now_iso(),
+                ),
+            )
+            _audit(db, user, "purchase_created", "purchase", purchase_no, {"stock_no": stock_no, "seller": seller_name})
         db.commit()
         row = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vid,)).fetchone()
         return send_json({"ok": True, "vehicle": dict(row)}, 201) or True
@@ -580,5 +670,143 @@ def handle_api(
         db.commit()
         row = db.execute("SELECT * FROM at_import_orders WHERE id=?", (iid,)).fetchone()
         return send_json({"ok": True, "import": dict(row)}, 201) or True
+
+    if head == "purchases" and method == "GET":
+        rows = db.execute(
+            """SELECT p.*, v.make, v.model, v.variant, v.color, v.year
+               FROM at_purchases p LEFT JOIN at_vehicles v ON v.id=p.vehicle_id
+               ORDER BY p.id DESC LIMIT 200"""
+        ).fetchall()
+        return send_json({"ok": True, "purchases": [dict(r) for r in rows]}) or True
+
+    if head == "purchases" and method == "POST":
+        seller_name = str(payload.get("seller_name") or "").strip()
+        if not seller_name:
+            return send_json({"ok": False, "error": "اسم البائع مطلوب"}, 400) or True
+        purchase_price = float(payload.get("purchase_price") or 0)
+        if purchase_price <= 0:
+            return send_json({"ok": False, "error": "سعر الشراء مطلوب"}, 400) or True
+        vehicle_id = None
+        stock_no = str(payload.get("stock_no") or "").strip()
+        try:
+            vehicle_id = int(payload.get("vehicle_id") or 0) or None
+        except (TypeError, ValueError):
+            vehicle_id = None
+        vehicle_row = None
+        if vehicle_id:
+            vehicle_row = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
+        elif stock_no:
+            vehicle_row = db.execute("SELECT * FROM at_vehicles WHERE stock_no=?", (stock_no,)).fetchone()
+            if vehicle_row:
+                vehicle_id = vehicle_row["id"]
+        if vehicle_row:
+            stock_no = vehicle_row["stock_no"]
+        purchase_no = _next_purchase_no(db)
+        purchase_date = str(payload.get("purchase_date") or datetime.now().strftime("%Y-%m-%d"))
+        db.execute(
+            """INSERT INTO at_purchases(
+                purchase_no, vehicle_id, stock_no, seller_name, seller_phone, seller_id,
+                source_country, purchase_price, paid_amount, payment_method, purchase_date,
+                notes, created_by, created_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                purchase_no, vehicle_id, stock_no, seller_name,
+                str(payload.get("seller_phone") or ""),
+                str(payload.get("seller_id") or ""),
+                str(payload.get("source_country") or ""),
+                purchase_price,
+                float(payload.get("paid_amount") or purchase_price),
+                str(payload.get("payment_method") or "نقد"),
+                purchase_date,
+                str(payload.get("notes") or ""),
+                str(user.get("username") or ""),
+                now_iso(),
+            ),
+        )
+        if vehicle_id:
+            db.execute(
+                """UPDATE at_vehicles SET purchase_cost=?, seller_name=?, seller_phone=?, seller_id=?,
+                   purchase_date=?, updated_at=? WHERE id=?""",
+                (
+                    purchase_price, seller_name, str(payload.get("seller_phone") or ""),
+                    str(payload.get("seller_id") or ""), purchase_date, now_iso(), vehicle_id,
+                ),
+            )
+        pid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        _audit(db, user, "purchase_created", "purchase", str(pid), {"purchase_no": purchase_no, "seller": seller_name, "stock_no": stock_no})
+        db.commit()
+        row = db.execute("SELECT * FROM at_purchases WHERE id=?", (pid,)).fetchone()
+        return send_json({"ok": True, "purchase": dict(row)}, 201) or True
+
+    if head == "expenses" and method == "GET":
+        rows = db.execute(
+            """SELECT ex.*, v.make, v.model
+               FROM at_expenses ex LEFT JOIN at_vehicles v ON v.id=ex.vehicle_id
+               ORDER BY ex.id DESC LIMIT 200"""
+        ).fetchall()
+        return send_json({"ok": True, "expenses": [dict(r) for r in rows], "categories": list(EXPENSE_CATEGORIES)}) or True
+
+    if head == "expenses" and method == "POST":
+        amount = float(payload.get("amount") or 0)
+        if amount <= 0:
+            return send_json({"ok": False, "error": "قيمة المصروف مطلوبة"}, 400) or True
+        category = str(payload.get("category") or "أخرى").strip() or "أخرى"
+        vehicle_id = None
+        stock_no = str(payload.get("stock_no") or "").strip()
+        try:
+            vehicle_id = int(payload.get("vehicle_id") or 0) or None
+        except (TypeError, ValueError):
+            vehicle_id = None
+        if vehicle_id and not stock_no:
+            v_row = db.execute("SELECT stock_no FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
+            if v_row:
+                stock_no = v_row["stock_no"]
+        expense_no = _next_expense_no(db)
+        expense_date = str(payload.get("expense_date") or datetime.now().strftime("%Y-%m-%d"))
+        db.execute(
+            """INSERT INTO at_expenses(
+                expense_no, category, vehicle_id, stock_no, amount, payee, expense_date,
+                payment_method, notes, created_by, created_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                expense_no, category, vehicle_id, stock_no, amount,
+                str(payload.get("payee") or ""),
+                expense_date,
+                str(payload.get("payment_method") or "نقد"),
+                str(payload.get("notes") or ""),
+                str(user.get("username") or ""),
+                now_iso(),
+            ),
+        )
+        eid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        _audit(db, user, "expense_created", "expense", str(eid), {"expense_no": expense_no, "category": category, "amount": amount})
+        db.commit()
+        row = db.execute("SELECT * FROM at_expenses WHERE id=?", (eid,)).fetchone()
+        return send_json({"ok": True, "expense": dict(row)}, 201) or True
+
+    if head == "transactions" and method == "GET":
+        limit = 300
+        rows = db.execute(
+            f"""
+            SELECT * FROM (
+                SELECT 'شراء' AS kind, p.purchase_date AS tx_date, p.purchase_no AS ref_no,
+                       p.stock_no AS stock_no, p.seller_name AS party, p.purchase_price AS amount,
+                       p.notes AS notes, p.created_by AS created_by, p.created_at AS created_at
+                FROM at_purchases p
+                UNION ALL
+                SELECT 'بيع' AS kind, s.sale_date AS tx_date, s.sale_no AS ref_no,
+                       s.stock_no AS stock_no, s.buyer_name AS party, s.sale_price AS amount,
+                       s.notes AS notes, s.created_by AS created_by, s.created_at AS created_at
+                FROM at_sales s
+                UNION ALL
+                SELECT 'مصروف' AS kind, ex.expense_date AS tx_date, ex.expense_no AS ref_no,
+                       COALESCE(ex.stock_no, '') AS stock_no, COALESCE(ex.payee, ex.category) AS party,
+                       ex.amount AS amount, ex.notes AS notes, ex.created_by AS created_by, ex.created_at AS created_at
+                FROM at_expenses ex
+            )
+            ORDER BY tx_date DESC, created_at DESC LIMIT {limit}
+            """
+        ).fetchall()
+        return send_json({"ok": True, "transactions": [dict(r) for r in rows]}) or True
 
     return send_json({"ok": False, "error": "المسار غير موجود"}, 404) or True

@@ -4461,7 +4461,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if not head_only:
                 self.wfile.write(raw)
 
-        # NAJJAR TRADING short entry points (public customer + staff login)
+        # NAJJAR & AL SAMOOM TRADING short entry points (public customer + staff login)
         if path in ("/najjar", "/najjar/", "/النجار", "/سيارات", "/auto", "/autotrading"):
             self.send_response(302)
             self.send_header("Location", "/auto-trading/customer.html")

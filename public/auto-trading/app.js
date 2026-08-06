@@ -12,8 +12,9 @@ let statusFilter = '';
 let makeFilter = '';
 let companyProfile = null;
 
-const LOGO_URL = '/auto-trading/assets/logo-al-najjar.svg?v=at3';
-const LOGO_MARK = '/auto-trading/assets/logo-mark.svg?v=at3';
+const LOGO_URL = '/auto-trading/assets/logo-official.svg?v=at11';
+const LOGO_MARK = '/auto-trading/assets/logo-mark.svg?v=at11';
+const LOGO_CARD = '/auto-trading/assets/logo-al-najjar.svg?v=at11';
 
 function waLink(phone) {
   const p = String(phone || '').replace(/\D/g, '');
@@ -25,7 +26,7 @@ function vehicleWhatsAppText(v, c) {
   const co = c || companyProfile || {};
   const priceLine = Number(v.list_price) > 0 ? `السعر: ${money(v.list_price)}` : 'السعر: حسب الاتفاق';
   return [
-    'NAJJAR TRADING — USED & IMPORTED CARS',
+    'NAJJAR & AL SAMOOM TRADING — USED & IMPORTED CARS',
     `${v.make} ${v.model} ${v.variant || ''}`.trim(),
     v.vehicle_type ? `النوع: ${v.vehicle_type}` : '',
     `السنة: ${v.year || '—'} · اللون: ${v.color || '—'}`,
@@ -91,9 +92,9 @@ async function printVehicleOffer(v) {
   const c = await ensureCompany();
   const bank = c.bank || {};
   const priceCell = Number(v.list_price) > 0 ? `<b>${money(v.list_price)}</b>` : 'حسب الاتفاق';
-  openPrintWindow('عرض سيارة — NAJJAR TRADING', `
+  openPrintWindow('عرض سيارة — NAJJAR & AL SAMOOM TRADING', `
     <div class="head">
-      <h1>NAJJAR TRADING</h1>
+      <h1>NAJJAR & AL SAMOOM TRADING</h1>
       <p>USED & IMPORTED CARS · ${e(c.address_ar || '')}</p>
       <p>${e(c.address_en || '')}</p>
     </div>
@@ -125,14 +126,14 @@ async function printVehicleOffer(v) {
       SWIFT: <span dir="ltr">${e(bank.swift || '')}</span>
     </div>
     <p>واتساب: +968 71924089 · +968 93391994</p>
-    <div class="foot">NAJJAR TRADING · Nizwa · Falaj · ${e(v.license_source ? 'بيانات الرخصة: ' + v.license_source : '')}</div>`);
+    <div class="foot">NAJJAR & AL SAMOOM TRADING · Nizwa · Falaj · ${e(v.license_source ? 'بيانات الرخصة: ' + v.license_source : '')}</div>`);
 }
 
 function printSaleReceipt(sale, c) {
   const bank = (c || {}).bank || {};
   openPrintWindow('إيصال بيع — ' + (sale.sale_no || ''), `
     <div class="head">
-      <h1>NAJJAR TRADING</h1>
+      <h1>NAJJAR & AL SAMOOM TRADING</h1>
       <p>USED & IMPORTED CARS</p>
     </div>
     <h2>إيصال بيع — ${e(sale.sale_no || '')}</h2>
@@ -209,7 +210,10 @@ const actionLabel = {
   vehicle_created: 'إضافة مركبة',
   vehicle_updated: 'تحديث مركبة',
   sale_created: 'تسجيل بيع',
+  purchase_created: 'تسجيل شراء',
+  expense_created: 'تسجيل مصروف',
   import_created: 'طلب استيراد',
+  import_updated: 'تحديث استيراد',
 };
 
 const statusClass = {
@@ -306,9 +310,9 @@ function renderCompanyCard(c) {
   const contacts = c.contacts || [];
   return `
     <div class="company-hero-wide">
-      <img class="sign-banner" src="${e(c.logo_url || LOGO_URL)}" alt="${e(c.name_en || 'NAJJAR TRADING')}">
+      <img class="sign-banner" src="${e(c.logo_card_url || LOGO_CARD)}" alt="${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}">
       <div>
-        <h2 style="margin:0;color:var(--navy)">${e(c.name_en || 'NAJJAR TRADING')}</h2>
+        <h2 style="margin:0;color:var(--navy)">${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}</h2>
         <p class="mini" style="letter-spacing:1px">${e(c.tagline_en || 'USED & IMPORTED CARS')}</p>
         <p class="mini">${e(c.name_ar || '')}</p>
         <p class="mini">${e(c.address_ar || '')} · ${e(c.address_en || '')}</p>
@@ -339,7 +343,7 @@ function renderCompanyCard(c) {
         </div>
       </section>
     </div>
-    <p class="mini" style="margin-top:12px">الشعار مطابق للافتة الخارجية — NAJJAR TRADING · Nizwa · Falaj</p>`;
+    <p class="mini" style="margin-top:12px">الشعار مطابق للافتة الخارجية — NAJJAR & AL SAMOOM TRADING · Nizwa · Falaj</p>`;
 }
 
 function bindCopyButtons(root) {
@@ -368,7 +372,10 @@ async function loadSection(section) {
   try {
     if (section === 'dashboard') return await loadDashboard();
     if (section === 'vehicles') return await loadVehicles();
+    if (section === 'purchases') return await loadPurchases();
     if (section === 'sales') return await loadSales();
+    if (section === 'expenses') return await loadExpenses();
+    if (section === 'transactions') return await loadTransactions();
     if (section === 'imports') return await loadImports();
     if (section === 'staff') return await loadStaff();
     if (section === 'company') return await loadCompany();
@@ -380,12 +387,12 @@ async function loadSection(section) {
 }
 
 async function loadStaff() {
-  setTitle('الموظفون', 'فريق NAJJAR TRADING — صلاحيات الدخول');
+  setTitle('الموظفون', 'فريق NAJJAR & AL SAMOOM TRADING — صلاحيات الدخول');
   const c = await ensureCompany();
   const staff = c.staff || [];
   content.innerHTML = `
-    <div class="nt-dash-banner">
-      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR">
+    <div class="nt-dash-banner nt-dash-banner--logo">
+      <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
         <h2>فريق العمل</h2>
         <p>ملاك · مبيعات · مستخدمون — صلاحيات المنصة</p>
@@ -410,45 +417,62 @@ async function loadStaff() {
     </section>`;
 }
 
+function goToSection(name) {
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === name));
+  loadSection(name);
+}
+
+function kpi(icon, label, value, cls = '') {
+  return `<div class="stat-card ${cls}">
+    <div class="actions-row" style="justify-content:space-between;align-items:flex-start">
+      <span class="label">${e(label)}</span>
+      <span class="nt-kpi-icon" aria-hidden="true">${icon}</span>
+    </div>
+    <strong>${value}</strong>
+  </div>`;
+}
+
 async function loadDashboard() {
-  setTitle('لوحة التحكم', 'داشبورد احترافي — مخزون · مبيعات · استيراد · فريق');
+  setTitle('لوحة التحكم', 'نظام محاسبي متكامل — مخزون · مشتريات · مبيعات · مصاريف');
   const data = await api('/dashboard');
   const c = data.company || {};
   companyProfile = c;
   const s = data.stats;
-  const plat = currentPlatform();
   const staff = c.staff || [];
+  const netCls = Number(s.net_profit) >= 0 ? 'highlight' : '';
   content.innerHTML = `
-    <div class="nt-dash-banner">
-      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR TRADING">
+    <div class="nt-dash-banner nt-dash-banner--logo">
+      <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
-        <h2>NAJJAR TRADING</h2>
-        <p>USED &amp; IMPORTED CARS · ${e(c.address_ar || 'نزوى — الفلج')}</p>
-        <p class="nt-platform-chip" style="margin-top:10px">${e(PLATFORM_LABELS[plat] || plat)}</p>
+        <p>${e(c.address_ar || 'نزوى — الفلج')} · نظام محاسبي متكامل</p>
       </div>
     </div>
-    ${window.NajjarCar3D ? `<div id="dashCinemaHero" style="margin-bottom:16px">${window.NajjarCar3D.renderHero([{ make: 'Mercedes-Benz', model: 'G-Class', variant: 'G63 AMG', stock_no: 'SHOW', status: 'متاحة', list_price: 0 }])}</div>` : ''}
     <div class="stats-grid">
-      ${stat('إجمالي المركبات', s.total_vehicles)}
-      ${stat('متاحة للبيع', s.available, 'highlight')}
+      ${kpi('🚘', 'إجمالي المركبات', s.total_vehicles)}
+      ${kpi('✅', 'متاحة للبيع', s.available, 'highlight')}
+      ${kpi('🧾', 'إجمالي المشتريات', money(s.purchases_total))}
+      ${kpi('💰', 'إجمالي المبيعات', money(s.sales_total))}
+      ${kpi('📤', 'إجمالي المصاريف', money(s.expenses_total))}
+      ${kpi('📊', 'صافي الربح', money(s.net_profit), netCls)}
+    </div>
+    <div class="stats-grid" style="margin-top:14px">
       ${stat('محجوزة', s.reserved)}
       ${stat('مباعة', s.sold)}
       ${stat('قيد الاستيراد', s.importing)}
-      ${stat('قيمة المخزون', money(s.stock_value))}
+      ${stat('قيمة المخزون الحالي', money(s.stock_value))}
+      ${stat('حركات اليوم', (Number(s.today_purchases) + Number(s.today_sales) + Number(s.today_expenses)))}
+      ${stat('طلبات استيراد نشطة', s.pending_imports)}
     </div>
     <div class="split-grid" style="margin-top:16px">
       <section class="card">
-        <div class="card-header"><h3>المبيعات والاستيراد</h3></div>
+        <div class="card-header"><h3>الوصول السريع</h3></div>
         <div class="card-body">
-          <div class="detail-list">
-            <div class="detail-row"><span>عدد المبيعات</span><strong>${s.sales_count}</strong></div>
-            <div class="detail-row"><span>إجمالي المبيعات</span><strong>${money(s.sales_total)}</strong></div>
-            <div class="detail-row"><span>طلبات استيراد نشطة</span><strong>${s.pending_imports}</strong></div>
-          </div>
-          <div class="actions-row" style="margin-top:14px">
-            <button class="btn primary" type="button" id="dashGoVehicles">عرض المخزون</button>
-            <button class="btn secondary" type="button" id="dashGoPlatforms">المنصات والدول</button>
-            <a class="btn ghost" href="/auto-trading/customer.html">بوابة الزبائن</a>
+          <div class="actions-row">
+            <button class="btn primary" type="button" id="dashGoVehicles">المخزون</button>
+            <button class="btn secondary" type="button" id="dashGoPurchases">تسجيل شراء</button>
+            <button class="btn secondary" type="button" id="dashGoSales">المبيعات</button>
+            <button class="btn secondary" type="button" id="dashGoExpenses">تسجيل مصروف</button>
+            <button class="btn secondary" type="button" id="dashGoTransactions">الحركة اليومية</button>
           </div>
         </div>
       </section>
@@ -467,7 +491,7 @@ async function loadDashboard() {
       </section>
     </div>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>فريق NAJJAR TRADING</h3></div>
+      <div class="card-header"><h3>فريق NAJJAR & AL SAMOOM TRADING</h3></div>
       <div class="card-body">
         <div class="nt-staff-grid">
           ${staff.map(x => `
@@ -501,36 +525,19 @@ async function loadDashboard() {
     </section>`;
   bindCopyButtons(content);
   const goV = document.getElementById('dashGoVehicles');
-  if (goV) goV.onclick = () => {
-    document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === 'vehicles'));
-    loadSection('vehicles');
-  };
-  const goP = document.getElementById('dashGoPlatforms');
-  if (goP) goP.onclick = goToPlatforms;
-  const hero = document.getElementById('dashCinemaHero');
-  if (hero && window.NajjarCar3D) {
-    hero.querySelectorAll('[data-open-gallery]').forEach((btn) => {
-      btn.onclick = () => {
-        document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === 'vehicles'));
-        loadSection('vehicles').then(() => {
-          if (window.NajjarCar3D && vehiclesCache.length) window.NajjarCar3D.openStoryViewer(vehiclesCache, 0);
-        });
-      };
-    });
-    hero.querySelectorAll('[data-view-jump]').forEach((btn) => {
-      btn.onclick = () => {
-        vehiclesViewMode = btn.getAttribute('data-view-jump') || 'reels';
-        document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === 'vehicles'));
-        loadSection('vehicles');
-      };
-    });
-  }
+  if (goV) goV.onclick = () => goToSection('vehicles');
+  const goPu = document.getElementById('dashGoPurchases');
+  if (goPu) goPu.onclick = () => goToSection('purchases');
+  const goS = document.getElementById('dashGoSales');
+  if (goS) goS.onclick = () => goToSection('sales');
+  const goEx = document.getElementById('dashGoExpenses');
+  if (goEx) goEx.onclick = () => goToSection('expenses');
+  const goTx = document.getElementById('dashGoTransactions');
+  if (goTx) goTx.onclick = () => goToSection('transactions');
 }
 
-let vehiclesViewMode = 'feed';
-
 async function loadVehicles() {
-  setTitle('مخزون السيارات', 'معرض سينمائي 3D — قصص · ريلز · إنستغرام');
+  setTitle('مخزون السيارات', 'المركبات · بيانات الشراء والبيع والترخيص');
   await ensureCompany().catch(() => null);
   const qs = new URLSearchParams();
   if (statusFilter) qs.set('status', statusFilter);
@@ -538,20 +545,14 @@ async function loadVehicles() {
   const data = await api('/vehicles' + (qs.toString() ? '?' + qs.toString() : ''));
   vehiclesCache = data.vehicles || [];
   const makes = data.makes || [];
-  const C3 = window.NajjarCar3D;
   content.innerHTML = `
-    <div class="ig-toolbar">
+    <div class="page-head">
       <div>
-        <h2>معرض المخزون السينمائي</h2>
-        <p>${vehiclesCache.length} مركبة · حركة بطيئة مريحة · قصص وريلز</p>
+        <h2>مخزون السيارات</h2>
+        <p>${vehiclesCache.length} مركبة</p>
       </div>
       <div class="actions-row">
-        <div class="ig-view-toggle" role="group">
-          <button type="button" data-vmode="feed" class="${vehiclesViewMode === 'feed' ? 'active' : ''}">فيد</button>
-          <button type="button" data-vmode="grid" class="${vehiclesViewMode === 'grid' ? 'active' : ''}">شبكة</button>
-          <button type="button" data-vmode="reels" class="${vehiclesViewMode === 'reels' ? 'active' : ''}">ريلز</button>
-        </div>
-        <button class="btn secondary" type="button" id="btnPlayStories">▶ قصص</button>
+        <a class="btn ghost" href="/auto-trading/customer.html" target="_blank" rel="noopener">بوابة الزبائن</a>
         <button class="btn primary" type="button" id="btnAddVehicle">+ إضافة مركبة</button>
       </div>
     </div>
@@ -565,64 +566,25 @@ async function loadVehicles() {
         ${makes.map(m => `<option value="${e(m)}" ${makeFilter === m ? 'selected' : ''}>${e(m)}</option>`).join('')}
       </select>
       <button class="btn secondary" type="button" id="btnApplyFilter">تصفية</button>
-      <a class="btn ghost" href="/auto-trading/customer.html" target="_blank" rel="noopener">بوابة الزبائن</a>
     </div>
     <div id="vehiclesShowcase">
-      ${vehiclesCache.length && C3
-        ? C3.renderFeed(vehiclesCache, {
-            stories: true,
-            hero: true,
-            mode: vehiclesViewMode,
-            platforms: (companyProfile && companyProfile.platforms) || null,
-          })
-        : (vehiclesCache.length ? `<div class="vehicle-grid">${vehiclesCache.map(v => vehicleCard(v)).join('')}</div>` : '<div class="empty-state">لا توجد مركبات — أضف مركبة جديدة</div>')}
+      ${vehiclesCache.length ? `<div class="vehicle-grid">${vehiclesCache.map(v => vehicleCard(v)).join('')}</div>` : '<div class="empty-state">لا توجد مركبات — أضف مركبة جديدة</div>'}
     </div>`;
-  const showcase = document.getElementById('vehiclesShowcase');
-  if (C3 && showcase) {
-    C3.setMode(showcase, vehiclesViewMode);
-    C3.bindGallery(showcase, vehiclesCache, {
-      onPlatform: (id) => {
-        localStorage.setItem('najjar_platform', id || 'oman');
-        goToPlatforms();
-      },
-      onVehicle: (id) => openVehicleDetail(id),
-    });
-  }
+  document.getElementById('vehiclesShowcase').querySelectorAll('[data-vehicle-id]').forEach((card) => {
+    card.onclick = () => openVehicleDetail(card.getAttribute('data-vehicle-id'));
+  });
   document.getElementById('btnAddVehicle').onclick = showAddVehicleForm;
-  const playBtn = document.getElementById('btnPlayStories');
-  if (playBtn && C3) playBtn.onclick = () => C3.openStoryViewer(vehiclesCache, 0);
   document.getElementById('btnApplyFilter').onclick = () => {
     statusFilter = document.getElementById('filterStatus').value;
     makeFilter = document.getElementById('filterMake').value;
     loadVehicles();
   };
-  content.querySelectorAll('[data-vmode]').forEach((btn) => {
-    btn.onclick = () => {
-      vehiclesViewMode = btn.getAttribute('data-vmode');
-      content.querySelectorAll('[data-vmode]').forEach((b) => b.classList.toggle('active', b === btn));
-      if (C3 && showcase) C3.setMode(showcase, vehiclesViewMode);
-    };
-  });
-}
-
-function vehicleAccent(v) {
-  if (window.NajjarCar3D) return window.NajjarCar3D.accentOf(v);
-  if ((v.make || '').includes('Land')) return 'lr';
-  if ((v.model || '').includes('GLE')) return 'gle';
-  if ((v.model || '').includes('G-Class') || (v.variant || '').includes('G63')) return 'g63';
-  if ((v.make || '').includes('BMW')) return 'bmw';
-  return 'def';
 }
 
 function vehicleCard(v) {
   const price = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
-  const accent = vehicleAccent(v);
-  const scene = window.NajjarCar3D
-    ? `<div class="nt-vcard-media">${window.NajjarCar3D.renderCar3D(v, { accent })}</div>`
-    : '';
   return `
-    <article class="vehicle-card nt-vcard nt-vcard--${accent}" data-vehicle-id="${v.id}" role="button" tabindex="0">
-      ${scene}
+    <article class="vehicle-card nt-vcard" data-vehicle-id="${v.id}" role="button" tabindex="0">
       <div class="nt-vcard-top">
         <span class="nt-vcard-stock">${e(v.stock_no)}</span>
         ${pill(v.status)}
@@ -633,8 +595,9 @@ function vehicleCard(v) {
         ${v.vin ? `<li><span>VIN</span><strong dir="ltr">${e(v.vin)}</strong></li>` : ''}
         ${v.plate_no ? `<li><span>اللوحة</span><strong>${e(v.plate_no)}</strong></li>` : ''}
         ${v.engine_cc ? `<li><span>المحرك</span><strong>${e(v.engine_cc)} cc</strong></li>` : ''}
+        ${v.seller_name ? `<li><span>البائع</span><strong>${e(v.seller_name)}</strong></li>` : ''}
+        ${v.buyer_name ? `<li><span>المشتري</span><strong>${e(v.buyer_name)}</strong></li>` : ''}
         ${v.origin_country ? `<li><span>المنشأ</span><strong>${e(v.origin_country)}</strong></li>` : ''}
-        ${v.import_ref ? `<li><span>الشحن</span><strong>${e(v.import_ref)}</strong></li>` : ''}
       </ul>
       <div class="nt-vcard-foot">
         <strong>${price}</strong>
@@ -643,17 +606,36 @@ function vehicleCard(v) {
     </article>`;
 }
 
+function purchaseInfoRows(v) {
+  if (!v.seller_name && !Number(v.purchase_cost)) return '';
+  return `
+    <div class="detail-row"><span>اسم البائع (اشتريت منه)</span><strong>${e(v.seller_name || '—')}</strong></div>
+    <div class="detail-row"><span>هاتف البائع</span><strong>${e(v.seller_phone || '—')}</strong></div>
+    <div class="detail-row"><span>رقم بطاقة/سجل البائع</span><strong class="number">${e(v.seller_id || '—')}</strong></div>
+    <div class="detail-row"><span>تاريخ الشراء</span><strong>${dmy(v.purchase_date)}</strong></div>`;
+}
+
+function saleInfoRows(v, sales) {
+  if (!sales || !sales.length) return '';
+  const s = sales[0];
+  return `
+    <div class="detail-row"><span>اسم المشتري (بيعت له)</span><strong>${e(s.buyer_name || '—')}</strong></div>
+    <div class="detail-row"><span>هاتف المشتري</span><strong>${e(s.buyer_phone || '—')}</strong></div>
+    <div class="detail-row"><span>تاريخ البيع</span><strong>${dmy(s.sale_date)}</strong></div>
+    <div class="detail-row"><span>سعر البيع الفعلي</span><strong>${money(s.sale_price)}</strong></div>
+    <div class="detail-row"><span>رقم البيع</span><strong class="number">${e(s.sale_no || '—')}</strong></div>`;
+}
+
 async function openVehicleDetail(id) {
   const data = await api('/vehicles/' + id);
   const v = data.vehicle;
+  const sales = data.sales || [];
   const priceDisplay = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
   const licenseLink = vehicleDocLink(v);
-  const scene3d = window.NajjarCar3D
-    ? `<div class="nt-vcard-media" style="margin:12px 0 4px">${window.NajjarCar3D.renderCar3D(v)}</div>`
-    : '';
+  const purchaseRows = purchaseInfoRows(v);
+  const saleRows = saleInfoRows(v, sales);
   openDrawer(`
     <div class="drawer-title"><h2>${e(v.make)} ${e(v.model)}</h2><p>${e(v.stock_no)} · ${pill(v.status)}</p></div>
-    ${scene3d}
     <div class="detail-list" style="margin:16px 0">
       <div class="detail-row"><span>الطراز</span><strong>${e(v.variant || '—')}</strong></div>
       <div class="detail-row"><span>النوع</span><strong>${e(v.vehicle_type || '—')}</strong></div>
@@ -662,12 +644,14 @@ async function openVehicleDetail(id) {
       <div class="detail-row"><span>رقم المحرك</span><strong class="number">${e(v.engine_no || '—')}</strong></div>
       ${licenseDetailRows(v)}
       <div class="detail-row"><span>سعر الشراء</span><strong>${Number(v.purchase_cost) > 0 ? money(v.purchase_cost) : '—'}</strong></div>
-      <div class="detail-row"><span>سعر البيع</span><strong>${priceDisplay}</strong></div>
+      <div class="detail-row"><span>سعر البيع المطلوب</span><strong>${priceDisplay}</strong></div>
       <div class="detail-row"><span>بلد المنشأ</span><strong>${e(v.origin_country || '—')}</strong></div>
       <div class="detail-row"><span>مرجع الاستيراد</span><strong>${e(v.import_ref || '—')}</strong></div>
       <div class="detail-row"><span>اللوحة</span><strong>${e(v.plate_no || '—')}</strong></div>
       ${v.notes ? `<div class="detail-row"><span>ملاحظات</span><strong>${e(v.notes)}</strong></div>` : ''}
     </div>
+    ${purchaseRows ? `<h3 style="margin:14px 0 6px">معلومات الشراء — من البائع</h3><div class="detail-list">${purchaseRows}</div>` : ''}
+    ${saleRows ? `<h3 style="margin:14px 0 6px">معلومات البيع — للمشتري</h3><div class="detail-list">${saleRows}</div>` : ''}
     ${licenseLink}
     <div class="form-actions">
       ${v.status !== 'مباعة' ? `<button class="btn success" type="button" id="btnSellVehicle">تسجيل بيع</button>` : ''}
@@ -735,9 +719,18 @@ function showAddVehicleForm() {
       <label class="field"><span>اللون</span><input id="fColor"></label>
       <label class="field"><span>سنة الصنع</span><input id="fYear" type="number" min="1990" max="2030"></label>
       <label class="field"><span>رقم الهيكل VIN</span><input id="fVin"></label>
-      <label class="field"><span>سعر الشراء</span><input id="fPurchase" type="number" step="0.001"></label>
-      <label class="field"><span>سعر البيع</span><input id="fList" type="number" step="0.001"></label>
       <label class="field"><span>بلد المنشأ</span><input id="fOrigin"></label>
+      <label class="field"><span>سعر البيع المطلوب</span><input id="fList" type="number" step="0.001"></label>
+    </div>
+    <h3 style="margin:16px 0 6px">معلومات الشراء — من اشتريت المركبة منه</h3>
+    <div class="form-grid">
+      <label class="field"><span>اسم البائع</span><input id="fSellerName" placeholder="اسم البائع / المالك السابق"></label>
+      <label class="field"><span>هاتف البائع</span><input id="fSellerPhone"></label>
+      <label class="field"><span>رقم بطاقة/سجل البائع</span><input id="fSellerId"></label>
+      <label class="field"><span>سعر الشراء</span><input id="fPurchase" type="number" step="0.001"></label>
+      <label class="field"><span>تاريخ الشراء</span><input id="fPurchaseDate" type="date" value="${new Date().toISOString().slice(0, 10)}"></label>
+    </div>
+    <div class="form-grid" style="margin-top:6px">
       <label class="field full"><span>ملاحظات</span><textarea id="fNotes" rows="2"></textarea></label>
     </div>
     <div class="form-actions">
@@ -760,6 +753,10 @@ function showAddVehicleForm() {
           purchase_cost: Number(document.getElementById('fPurchase').value) || 0,
           list_price: Number(document.getElementById('fList').value) || 0,
           origin_country: document.getElementById('fOrigin').value.trim(),
+          seller_name: document.getElementById('fSellerName').value.trim(),
+          seller_phone: document.getElementById('fSellerPhone').value.trim(),
+          seller_id: document.getElementById('fSellerId').value.trim(),
+          purchase_date: document.getElementById('fPurchaseDate').value,
           notes: document.getElementById('fNotes').value.trim(),
         },
       });
@@ -785,6 +782,10 @@ function showEditVehicleForm(v) {
       <label class="field"><span>شركة التأمين</span><input id="eInsurance" value="${e(v.insurance_company || '')}"></label>
       <label class="field"><span>وثيقة التأمين</span><input id="ePolicy" value="${e(v.insurance_policy || '')}"></label>
       <label class="field"><span>نوع التأمين</span><input id="eInsType" value="${e(v.insurance_type || '')}"></label>
+      <label class="field"><span>اسم البائع (اشتريت منه)</span><input id="eSellerName" value="${e(v.seller_name || '')}"></label>
+      <label class="field"><span>هاتف البائع</span><input id="eSellerPhone" value="${e(v.seller_phone || '')}"></label>
+      <label class="field"><span>رقم بطاقة/سجل البائع</span><input id="eSellerId" value="${e(v.seller_id || '')}"></label>
+      <label class="field"><span>تاريخ الشراء</span><input id="ePurchaseDate" type="date" value="${e(v.purchase_date || '')}"></label>
       <label class="field full"><span>ملاحظات</span><textarea id="eNotes" rows="2">${e(v.notes || '')}</textarea></label>
     </div>
     <div class="form-actions">
@@ -804,6 +805,10 @@ function showEditVehicleForm(v) {
           insurance_company: document.getElementById('eInsurance').value.trim(),
           insurance_policy: document.getElementById('ePolicy').value.trim(),
           insurance_type: document.getElementById('eInsType').value.trim(),
+          seller_name: document.getElementById('eSellerName').value.trim(),
+          seller_phone: document.getElementById('eSellerPhone').value.trim(),
+          seller_id: document.getElementById('eSellerId').value.trim(),
+          purchase_date: document.getElementById('ePurchaseDate').value,
           notes: document.getElementById('eNotes').value.trim(),
         },
       });
@@ -892,6 +897,221 @@ async function loadSales() {
       printSaleReceipt(r, c);
     };
   });
+}
+
+async function loadPurchases() {
+  setTitle('المشتريات', 'سجل شراء السيارات — البائع والمالك السابق');
+  const [purchData, vehData] = await Promise.all([api('/purchases'), api('/vehicles')]);
+  const rows = purchData.purchases || [];
+  const vehicles = vehData.vehicles || [];
+  const total = rows.reduce((sum, r) => sum + Number(r.purchase_price || 0), 0);
+  content.innerHTML = `
+    <div class="page-head">
+      <div><h2>المشتريات</h2><p>${rows.length} عملية شراء · إجمالي ${money(total)}</p></div>
+      <div class="actions-row">
+        <button class="btn primary" type="button" id="btnAddPurchase">+ تسجيل شراء</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>رقم الشراء</th><th>المركبة</th><th>البائع</th><th>هاتف البائع</th><th>السعر</th><th>التاريخ</th>
+        </tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(r => `
+            <tr>
+              <td><b>${e(r.purchase_no)}</b></td>
+              <td>${e(r.make || '')} ${e(r.model || '')} <span class="mini">${e(r.stock_no || '')}</span></td>
+              <td>${e(r.seller_name)}</td>
+              <td dir="ltr">${e(r.seller_phone || '—')}</td>
+              <td class="money">${money(r.purchase_price)}</td>
+              <td>${dmy(r.purchase_date)}</td>
+            </tr>`).join('') : '<tr><td colspan="6" class="empty-state">لا مشتريات مسجلة بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+  document.getElementById('btnAddPurchase').onclick = () => showAddPurchaseForm(vehicles);
+}
+
+function showAddPurchaseForm(vehicles) {
+  openModal(`
+    <h2>تسجيل شراء مركبة</h2>
+    <div class="form-grid">
+      <label class="field full"><span>المركبة (اختياري)</span>
+        <select id="pVehicle">
+          <option value="">— بدون ربط بمركبة —</option>
+          ${vehicles.map(v => `<option value="${v.id}">${e(v.stock_no)} — ${e(v.make)} ${e(v.model)}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field"><span>اسم البائع *</span><input id="pSellerName" placeholder="اسم البائع / المالك السابق"></label>
+      <label class="field"><span>هاتف البائع</span><input id="pSellerPhone"></label>
+      <label class="field"><span>رقم بطاقة/سجل البائع</span><input id="pSellerId"></label>
+      <label class="field"><span>بلد/مصدر الشراء</span><input id="pSourceCountry"></label>
+      <label class="field"><span>سعر الشراء *</span><input id="pPrice" type="number" step="0.001"></label>
+      <label class="field"><span>المبلغ المدفوع</span><input id="pPaid" type="number" step="0.001"></label>
+      <label class="field"><span>طريقة الدفع</span>
+        <select id="pMethod"><option>نقد</option><option>تحويل بنكي</option><option>شيك</option><option>تمويل</option></select>
+      </label>
+      <label class="field"><span>تاريخ الشراء</span><input id="pDate" type="date" value="${new Date().toISOString().slice(0, 10)}"></label>
+      <label class="field full"><span>ملاحظات</span><textarea id="pNotes" rows="2"></textarea></label>
+    </div>
+    <div class="form-actions">
+      <button class="btn primary" type="button" id="btnConfirmPurchase">حفظ عملية الشراء</button>
+      <button class="btn ghost" type="button" onclick="closeModal()">إلغاء</button>
+    </div>`);
+  document.getElementById('btnConfirmPurchase').onclick = async () => {
+    const sellerName = document.getElementById('pSellerName').value.trim();
+    if (!sellerName) return toast('اسم البائع مطلوب', 'error');
+    const price = Number(document.getElementById('pPrice').value) || 0;
+    if (price <= 0) return toast('سعر الشراء مطلوب', 'error');
+    try {
+      const res = await api('/purchases', {
+        method: 'POST',
+        body: {
+          vehicle_id: Number(document.getElementById('pVehicle').value) || null,
+          seller_name: sellerName,
+          seller_phone: document.getElementById('pSellerPhone').value.trim(),
+          seller_id: document.getElementById('pSellerId').value.trim(),
+          source_country: document.getElementById('pSourceCountry').value.trim(),
+          purchase_price: price,
+          paid_amount: Number(document.getElementById('pPaid').value) || price,
+          payment_method: document.getElementById('pMethod').value,
+          purchase_date: document.getElementById('pDate').value,
+          notes: document.getElementById('pNotes').value.trim(),
+        },
+      });
+      closeModal();
+      toast('تم تسجيل الشراء — ' + (res.purchase?.purchase_no || ''));
+      loadPurchases();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+}
+
+async function loadExpenses() {
+  setTitle('المصاريف', 'سجل مصاريف الشركة — شحن · جمارك · صيانة · إيجار');
+  const [expData, vehData] = await Promise.all([api('/expenses'), api('/vehicles')]);
+  const rows = expData.expenses || [];
+  const categories = expData.categories || [];
+  const vehicles = vehData.vehicles || [];
+  const total = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+  content.innerHTML = `
+    <div class="page-head">
+      <div><h2>المصاريف</h2><p>${rows.length} مصروف · إجمالي ${money(total)}</p></div>
+      <div class="actions-row">
+        <button class="btn primary" type="button" id="btnAddExpense">+ تسجيل مصروف</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>رقم المصروف</th><th>البند</th><th>المركبة</th><th>المستفيد</th><th>القيمة</th><th>التاريخ</th>
+        </tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(r => `
+            <tr>
+              <td><b>${e(r.expense_no)}</b></td>
+              <td>${e(r.category)}</td>
+              <td>${r.stock_no ? e(r.stock_no) + ' — ' + e(r.make || '') + ' ' + e(r.model || '') : '—'}</td>
+              <td>${e(r.payee || '—')}</td>
+              <td class="money">${money(r.amount)}</td>
+              <td>${dmy(r.expense_date)}</td>
+            </tr>`).join('') : '<tr><td colspan="6" class="empty-state">لا مصاريف مسجلة بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+  document.getElementById('btnAddExpense').onclick = () => showAddExpenseForm(categories, vehicles);
+}
+
+function showAddExpenseForm(categories, vehicles) {
+  openModal(`
+    <h2>تسجيل مصروف جديد</h2>
+    <div class="form-grid">
+      <label class="field"><span>البند *</span>
+        <select id="xCategory">${categories.map(c => `<option value="${e(c)}">${e(c)}</option>`).join('')}</select>
+      </label>
+      <label class="field"><span>القيمة *</span><input id="xAmount" type="number" step="0.001"></label>
+      <label class="field"><span>المستفيد / الجهة</span><input id="xPayee"></label>
+      <label class="field"><span>طريقة الدفع</span>
+        <select id="xMethod"><option>نقد</option><option>تحويل بنكي</option><option>شيك</option></select>
+      </label>
+      <label class="field"><span>تاريخ المصروف</span><input id="xDate" type="date" value="${new Date().toISOString().slice(0, 10)}"></label>
+      <label class="field full"><span>مركبة مرتبطة (اختياري)</span>
+        <select id="xVehicle">
+          <option value="">— مصروف عام —</option>
+          ${vehicles.map(v => `<option value="${v.id}">${e(v.stock_no)} — ${e(v.make)} ${e(v.model)}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field full"><span>ملاحظات</span><textarea id="xNotes" rows="2"></textarea></label>
+    </div>
+    <div class="form-actions">
+      <button class="btn primary" type="button" id="btnConfirmExpense">حفظ المصروف</button>
+      <button class="btn ghost" type="button" onclick="closeModal()">إلغاء</button>
+    </div>`);
+  document.getElementById('btnConfirmExpense').onclick = async () => {
+    const amount = Number(document.getElementById('xAmount').value) || 0;
+    if (amount <= 0) return toast('قيمة المصروف مطلوبة', 'error');
+    try {
+      const res = await api('/expenses', {
+        method: 'POST',
+        body: {
+          category: document.getElementById('xCategory').value,
+          amount,
+          payee: document.getElementById('xPayee').value.trim(),
+          payment_method: document.getElementById('xMethod').value,
+          expense_date: document.getElementById('xDate').value,
+          vehicle_id: Number(document.getElementById('xVehicle').value) || null,
+          notes: document.getElementById('xNotes').value.trim(),
+        },
+      });
+      closeModal();
+      toast('تم تسجيل المصروف — ' + (res.expense?.expense_no || ''));
+      loadExpenses();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+}
+
+const txKindClass = { 'شراء': 'importing', 'بيع': 'available', 'مصروف': 'service' };
+
+function kindPill(kind) {
+  return `<span class="pill ${txKindClass[kind] || 'draft'}">${e(kind)}</span>`;
+}
+
+async function loadTransactions() {
+  setTitle('الحركة اليومية', 'سجل شامل — مشتريات · مبيعات · مصاريف بالتاريخ');
+  const data = await api('/transactions');
+  const rows = data.transactions || [];
+  const totals = rows.reduce((acc, r) => {
+    if (r.kind === 'شراء') acc.purchases += Number(r.amount || 0);
+    if (r.kind === 'بيع') acc.sales += Number(r.amount || 0);
+    if (r.kind === 'مصروف') acc.expenses += Number(r.amount || 0);
+    return acc;
+  }, { purchases: 0, sales: 0, expenses: 0 });
+  content.innerHTML = `
+    <div class="page-head"><div><h2>الحركة اليومية</h2><p>${rows.length} حركة مسجلة</p></div></div>
+    <div class="stats-grid">
+      ${stat('إجمالي المشتريات', money(totals.purchases))}
+      ${stat('إجمالي المبيعات', money(totals.sales), 'highlight')}
+      ${stat('إجمالي المصاريف', money(totals.expenses))}
+      ${stat('صافي الحركة', money(totals.sales - totals.purchases - totals.expenses))}
+    </div>
+    <div class="table-wrap" style="margin-top:14px">
+      <table class="data-table">
+        <thead><tr>
+          <th>التاريخ</th><th>النوع</th><th>المرجع</th><th>الطرف</th><th>المركبة</th><th>القيمة</th>
+        </tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(r => `
+            <tr>
+              <td>${dmy(r.tx_date)}</td>
+              <td>${kindPill(r.kind)}</td>
+              <td><b>${e(r.ref_no)}</b></td>
+              <td>${e(r.party || '—')}</td>
+              <td>${e(r.stock_no || '—')}</td>
+              <td class="money">${money(r.amount)}</td>
+            </tr>`).join('') : '<tr><td colspan="6" class="empty-state">لا حركات مسجلة بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 async function loadImports() {
@@ -991,7 +1211,7 @@ async function boot() {
   } catch (_) {}
   const qs = new URLSearchParams(location.search || '');
   const view = (qs.get('view') || '').trim();
-  const start = ['vehicles', 'imports', 'sales', 'staff', 'company', 'dashboard'].includes(view) ? view : 'dashboard';
+  const start = ['vehicles', 'purchases', 'imports', 'sales', 'expenses', 'transactions', 'staff', 'company', 'dashboard'].includes(view) ? view : 'dashboard';
   if (start !== 'dashboard') {
     document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === start));
   }
