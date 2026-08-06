@@ -16,7 +16,8 @@
     "origin_country": "المملكة المتحدة",
     "import_ref": "",
     "purchase_cost": 0,
-    "list_price": 0,
+    "list_price": 33850,
+    "price_usd": 88000,
     "status": "متاحة",
     "plate_no": "",
     "license_valid_until": "2027-07-05",
@@ -27,6 +28,9 @@
     "insurance_type": "شامل",
     "mortgage": "—",
     "license_source": "/oman-vehicle-license.html",
+    "photos": [
+      "/auto-trading/assets/vehicles/nt-lr-001.jpg"
+    ],
     "notes": "بيانات مستخرجة من رخصة المركبة — أول تسجيل 2026-07-05 · صلاحية الرخصة حتى 2027-07-05 · رقم الوثيقة 4258396 · NAJJAR & AL SAMOOM TRADING"
   },
   {
@@ -46,7 +50,8 @@
     "origin_country": "الولايات المتحدة الأمريكية",
     "import_ref": "Bill of Sale — KHWALDE Auto Cars · RORO → Salalah Port",
     "purchase_cost": 0,
-    "list_price": 0,
+    "list_price": 10575,
+    "price_usd": 27500,
     "status": "قيد الاستيراد",
     "plate_no": "",
     "license_valid_until": "",
@@ -57,6 +62,9 @@
     "insurance_type": "",
     "mortgage": "",
     "license_source": "/auto-trading/documents/gle-2026-bill-of-sale.html",
+    "photos": [
+      "/auto-trading/assets/vehicles/nt-mb-002.jpg"
+    ],
     "notes": "Bill of Sale Florida HSMV 82050 · تاريخ البيع 2026-05-19 · المشتري NAJJAR AUTO CAR — مسقط المعبيلة · سعر المركبة $24,000 + شحن $3,500 = $27,500 · RORO → ميناء صلالة · وصول متوقع 35–40 يوم · عداد 53 ميل · البائع Ahmad Al-Khawalda / KHWALDE Auto Cars · Brighton Colorado USA"
   },
   {
@@ -67,7 +75,7 @@
     "variant": "G63 AMG",
     "vehicle_type": "SUV",
     "color": "Light Blue (أزرق فاتح / China Blue)",
-    "year": null,
+    "year": 2024,
     "vin": "",
     "engine_no": "",
     "engine_cc": "",
@@ -76,7 +84,8 @@
     "origin_country": "ألمانيا",
     "import_ref": "RoRo · HOEGH TRIGGER OSLO · ملصق 72863679",
     "purchase_cost": 0,
-    "list_price": 0,
+    "list_price": 58500,
+    "price_usd": 152100,
     "status": "قيد الاستيراد",
     "plate_no": "",
     "license_valid_until": "",
@@ -87,6 +96,9 @@
     "insurance_type": "",
     "mortgage": "",
     "license_source": "/auto-trading/documents/g63-port-shipment.html",
+    "photos": [
+      "/auto-trading/assets/vehicles/nt-mb-003.jpg"
+    ],
     "notes": "Mercedes-Benz G-Class W463A G63 AMG · Panamericana · Night Package · فرامل AMG حمراء · حارس أمامي · ملصق شحن 72863679 · سفينة HOEGH TRIGGER OSLO · حاويات MAERSK · VIN يُحدّث عند استلام الوثائق"
   },
   {
@@ -106,7 +118,8 @@
     "origin_country": "ألمانيا",
     "import_ref": "",
     "purchase_cost": 0,
-    "list_price": 0,
+    "list_price": 4200,
+    "price_usd": 10920,
     "status": "متاحة",
     "plate_no": "61265 / د د",
     "license_valid_until": "2026-12-29",
@@ -117,6 +130,9 @@
     "insurance_type": "طرف ثالث",
     "mortgage": "—",
     "license_source": "/auto-trading/documents/bmw-550i-license.html",
+    "photos": [
+      "/auto-trading/assets/vehicles/nt-bmw-004.jpg"
+    ],
     "notes": "رخصة عُمانية — لوحة 61265/دد خصوصي · المالك مازن بن محمد بن عبدالله الريامي · وزن فارغ 1689 kg · حمولة 1000 kg · صلاحية الرخصة 2026/01/05 — 2026/12/29"
   }
 ]

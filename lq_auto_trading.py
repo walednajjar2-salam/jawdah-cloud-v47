@@ -95,6 +95,8 @@ def _ensure_vehicle_columns(db: sqlite3.Connection) -> None:
         ("seller_phone", "TEXT"),
         ("seller_id", "TEXT"),
         ("purchase_date", "TEXT"),
+        ("photos", "TEXT"),
+        ("price_usd", "REAL NOT NULL DEFAULT 0"),
     ):
         try:
             db.execute(f"ALTER TABLE at_vehicles ADD COLUMN {col} {typ}")
@@ -103,6 +105,11 @@ def _ensure_vehicle_columns(db: sqlite3.Connection) -> None:
 
 
 def _vehicle_row_from_seed(item: Dict[str, Any]) -> Dict[str, Any]:
+    photos = item.get("photos") or item.get("images") or []
+    if isinstance(photos, str):
+        photos_json = photos
+    else:
+        photos_json = json.dumps(list(photos), ensure_ascii=False)
     return {
         "stock_no": item["stock_no"],
         "make": item["make"],
@@ -120,6 +127,7 @@ def _vehicle_row_from_seed(item: Dict[str, Any]) -> Dict[str, Any]:
         "import_ref": item.get("import_ref", ""),
         "purchase_cost": float(item.get("purchase_cost") or 0),
         "list_price": float(item.get("list_price") or 0),
+        "price_usd": float(item.get("price_usd") or 0),
         "status": item.get("status", "متاحة"),
         "plate_no": item.get("plate_no", ""),
         "license_valid_until": item.get("license_valid_until", ""),
@@ -131,6 +139,7 @@ def _vehicle_row_from_seed(item: Dict[str, Any]) -> Dict[str, Any]:
         "license_source": item.get("license_source", ""),
         "mortgage": item.get("mortgage", ""),
         "notes": item.get("notes", ""),
+        "photos": photos_json,
         "sort_order": int(item.get("sort_order") or 999),
     }
 
@@ -163,35 +172,37 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
                 """UPDATE at_vehicles SET
                     stock_no=?, make=?, model=?, variant=?, vehicle_type=?, color=?, year=?, vin=?, engine_no=?,
                     engine_cc=?, seats=?, axles=?, origin_country=?, import_ref=?, purchase_cost=?, list_price=?,
-                    status=?, plate_no=?, license_valid_until=?, first_registration=?, license_doc_no=?,
+                    price_usd=?, status=?, plate_no=?, license_valid_until=?, first_registration=?, license_doc_no=?,
                     insurance_company=?, insurance_policy=?, insurance_type=?, license_source=?, mortgage=?, notes=?,
-                    sort_order=?, updated_at=?
+                    photos=?, sort_order=?, updated_at=?
                 WHERE id=?""",
                 (
                     row["stock_no"], row["make"], row["model"], row["variant"], row["vehicle_type"], row["color"],
                     row["year"], row["vin"], row["engine_no"], row["engine_cc"], row["seats"], row["axles"],
-                    row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["status"],
-                    row["plate_no"], row["license_valid_until"], row["first_registration"], row["license_doc_no"],
-                    row["insurance_company"], row["insurance_policy"], row["insurance_type"], row["license_source"],
-                    row["mortgage"], row["notes"], row["sort_order"], now_iso(), existing[0],
+                    row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["price_usd"],
+                    row["status"], row["plate_no"], row["license_valid_until"], row["first_registration"],
+                    row["license_doc_no"], row["insurance_company"], row["insurance_policy"], row["insurance_type"],
+                    row["license_source"], row["mortgage"], row["notes"], row["photos"], row["sort_order"],
+                    now_iso(), existing[0],
                 ),
             )
         else:
             db.execute(
                 """INSERT INTO at_vehicles(
                     stock_no, make, model, variant, vehicle_type, color, year, vin, engine_no,
-                    engine_cc, seats, axles, origin_country, import_ref, purchase_cost, list_price,
+                    engine_cc, seats, axles, origin_country, import_ref, purchase_cost, list_price, price_usd,
                     status, plate_no, license_valid_until, first_registration, license_doc_no,
                     insurance_company, insurance_policy, insurance_type, license_source, mortgage, notes,
-                    sort_order, created_at, updated_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    photos, sort_order, created_at, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     row["stock_no"], row["make"], row["model"], row["variant"], row["vehicle_type"], row["color"],
                     row["year"], row["vin"], row["engine_no"], row["engine_cc"], row["seats"], row["axles"],
-                    row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["status"],
-                    row["plate_no"], row["license_valid_until"], row["first_registration"], row["license_doc_no"],
-                    row["insurance_company"], row["insurance_policy"], row["insurance_type"], row["license_source"],
-                    row["mortgage"], row["notes"], row["sort_order"], now_iso(), now_iso(),
+                    row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["price_usd"],
+                    row["status"], row["plate_no"], row["license_valid_until"], row["first_registration"],
+                    row["license_doc_no"], row["insurance_company"], row["insurance_policy"], row["insurance_type"],
+                    row["license_source"], row["mortgage"], row["notes"], row["photos"], row["sort_order"],
+                    now_iso(), now_iso(),
                 ),
             )
     # Remove old demo stock rows not in official seed (keep sold history).

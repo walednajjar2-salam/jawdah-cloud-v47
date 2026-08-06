@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at21">
-  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at11">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at22">
+  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at12">
 </head>
 <body class="nt-customer">
   <div class="nt-watermark" aria-hidden="true"></div>
@@ -17,7 +17,7 @@
     <img src="/auto-trading/assets/logo-official-clear.png?v=at13" alt="NAJAR & AL SAMOOM TRADING" class="nt-cust-mark nt-cust-mark--official">
     <div>
       <h1>معرض السيارات</h1>
-      <p class="nt-sub">مستعملة ومستوردة · مواصفات كاملة · صور · واتساب مباشر</p>
+      <p class="nt-sub">صور · أسعار · مواصفات · واتساب مباشر</p>
     </div>
     <div class="nt-hub-actions">
       <a class="nt-btn primary" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>
@@ -34,27 +34,31 @@
     بنك صحار الدولي · IBAN OM070300000234020022484 · NAJJAR &amp; AL SAMOOM TRADING — نزوى الفلج
   </footer>
 
-  <script src="/auto-trading/car-3d.js?v=at11"></script>
+  <script src="/auto-trading/car-3d.js?v=at12"></script>
   <script>
     const root = document.getElementById('custRoot');
     let vehicles = [];
     let filter = 'all';
+    let sort = 'showroom';
 
     function paint() {
-      root.innerHTML = NajjarCar3D.renderShowroom(vehicles, { filter, hero: true, whatsapp: true });
+      root.innerHTML = NajjarCar3D.renderShowroom(vehicles, { filter, sort, hero: true, whatsapp: true });
       NajjarCar3D.bindShowroom(root, vehicles, {
         onFilter: (id) => {
           filter = id || 'all';
           paint();
-          const grid = root.querySelector('[data-showroom]');
-          if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          root.querySelector('[data-showroom]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+        onSort: (id) => {
+          sort = id || 'showroom';
+          paint();
         },
       });
     }
 
     (async () => {
       try {
-        const rows = await fetch('/auto-trading/seed_vehicles.json?v=at8').then((r) => r.json());
+        const rows = await fetch('/auto-trading/seed_vehicles.json?v=at9').then((r) => r.json());
         vehicles = (rows || [])
           .filter((v) => v.status !== 'مباعة')
           .map((v, i) => ({ ...v, id: v.id != null ? v.id : i + 1 }));

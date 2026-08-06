@@ -1,8 +1,11 @@
-/* NAJJAR & AL SAMOOM TRADING — Car showroom + 3D vehicle visuals */
+/* NAJJAR & AL SAMOOM TRADING — Car showroom: photos · prices · specs */
 (function (global) {
   const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
   }[c]));
+
+  // Approximate pegged rates for display (1 OMR)
+  const FX = { USD: 2.6, SAR: 9.76, AED: 9.55 };
 
   function accentOf(v) {
     const make = String(v.make || '');
@@ -15,10 +18,44 @@
     return 'def';
   }
 
+  function fmtNum(n, digits) {
+    return Number(n || 0).toLocaleString('en-US', {
+      maximumFractionDigits: digits != null ? digits : 0,
+      minimumFractionDigits: 0,
+    });
+  }
+
   function money(v) {
-    return Number(v || 0) > 0
-      ? Number(v).toLocaleString('en-US', { maximumFractionDigits: 3 }) + ' ر.ع'
-      : 'حسب الاتفاق';
+    return Number(v || 0) > 0 ? `${fmtNum(v, 3)} ر.ع` : 'حسب الاتفاق';
+  }
+
+  function priceOMR(v) {
+    const omr = Number(v.list_price || 0);
+    if (omr > 0) return omr;
+    const usd = Number(v.price_usd || 0);
+    return usd > 0 ? usd / FX.USD : 0;
+  }
+
+  function priceBlock(v, opts = {}) {
+    const omr = priceOMR(v);
+    if (!(omr > 0)) {
+      return `<div class="nt-price-block"><strong class="nt-show-price">حسب الاتفاق</strong></div>`;
+    }
+    const usd = Number(v.price_usd || 0) > 0 ? Number(v.price_usd) : omr * FX.USD;
+    const sar = omr * FX.SAR;
+    const aed = omr * FX.AED;
+    const compact = opts.compact
+      ? `<span class="nt-price-fx">${fmtNum(usd)} USD · ${fmtNum(sar)} SAR · ${fmtNum(aed)} AED</span>`
+      : `<ul class="nt-price-fx-list">
+          <li><span>USD</span><b dir="ltr">${fmtNum(usd)}</b></li>
+          <li><span>SAR</span><b dir="ltr">${fmtNum(sar)}</b></li>
+          <li><span>AED</span><b dir="ltr">${fmtNum(aed)}</b></li>
+        </ul>`;
+    return `
+      <div class="nt-price-block">
+        <strong class="nt-show-price">${fmtNum(omr, 3)} ر.ع</strong>
+        ${compact}
+      </div>`;
   }
 
   function statusClass(s) {
@@ -27,6 +64,16 @@
     if (s === 'محجوزة') return 'reserved';
     if (s === 'مباعة') return 'sold';
     return 'draft';
+  }
+
+  function photosOf(v) {
+    let photos = v.photos || v.images || [];
+    if (typeof photos === 'string') {
+      try { photos = JSON.parse(photos); } catch (_) { photos = photos ? [photos] : []; }
+    }
+    if (!Array.isArray(photos)) photos = [];
+    if (!photos.length && v.photo_url) photos = [v.photo_url];
+    return photos.filter(Boolean);
   }
 
   function particlesHtml(n) {
@@ -41,7 +88,6 @@
     return out;
   }
 
-  /** CSS 3D vehicle visual — used as showroom media until real photos are attached */
   function renderCar3D(v, opts = {}) {
     const accent = opts.accent || accentOf(v);
     const delay = opts.delay != null ? opts.delay : (Math.random() * 3).toFixed(1);
@@ -90,7 +136,32 @@
       </div>`;
   }
 
+  function renderPhotoMedia(v, opts = {}) {
+    const photos = photosOf(v);
+    const src = photos[opts.photoIndex || 0] || photos[0];
+    if (!src) {
+      return renderCar3D(v, opts);
+    }
+    const label = `${v.make || ''} ${v.model || ''}`.trim();
+    const hero = opts.hero ? ' nt-photo-media--hero' : '';
+    const thumbs = opts.gallery && photos.length > 1
+      ? `<div class="nt-photo-thumbs">${photos.map((p, i) => `
+          <button type="button" class="nt-photo-thumb${i === (opts.photoIndex || 0) ? ' active' : ''}" data-photo-index="${i}">
+            <img src="${esc(p)}" alt="">
+          </button>`).join('')}</div>`
+      : '';
+    return `
+      <div class="nt-photo-media${hero}" data-photo-root>
+        <img class="nt-photo-main" src="${esc(src)}" alt="${esc(label)}" loading="${opts.eager ? 'eager' : 'lazy'}">
+        <div class="nt-photo-caption">${esc(label)}</div>
+        ${opts.badge ? `<div class="nt-photo-badge">${esc(opts.badge)}</div>` : ''}
+        ${thumbs}
+      </div>`;
+  }
+
   function waHref(v) {
+    const omr = priceOMR(v);
+    const priceLine = omr > 0 ? `السعر: ${fmtNum(omr, 3)} ر.ع` : 'السعر: حسب الاتفاق';
     return `https://wa.me/96871924089?text=${encodeURIComponent([
       'مرحباً NAJJAR & AL SAMOOM TRADING',
       'أرغب بالاستفسار عن السيارة التالية:',
@@ -100,7 +171,7 @@
       `رقم المخزون: ${v.stock_no || ''}`,
       v.vin ? `VIN: ${v.vin}` : '',
       v.plate_no ? `اللوحة: ${v.plate_no}` : '',
-      `السعر: ${money(v.list_price)}`,
+      priceLine,
     ].filter(Boolean).join('\n'))}`;
   }
 
@@ -128,7 +199,41 @@
       </li>`).join('');
   }
 
-  /** Professional showroom listing card — specs + visual + WhatsApp */
+  function sortVehicles(list, sort) {
+    const rows = (list || []).slice();
+    const key = sort || 'showroom';
+    rows.sort((a, b) => {
+      if (key === 'price-asc') return priceOMR(a) - priceOMR(b) || (a.sort_order || 999) - (b.sort_order || 999);
+      if (key === 'price-desc') return priceOMR(b) - priceOMR(a) || (a.sort_order || 999) - (b.sort_order || 999);
+      if (key === 'year-desc') return Number(b.year || 0) - Number(a.year || 0) || (a.sort_order || 999) - (b.sort_order || 999);
+      if (key === 'name') {
+        const an = `${a.make || ''} ${a.model || ''}`.localeCompare(`${b.make || ''} ${b.model || ''}`, 'ar');
+        return an || (a.sort_order || 999) - (b.sort_order || 999);
+      }
+      // default: showroom order
+      return (a.sort_order || 999) - (b.sort_order || 999) || String(a.stock_no || '').localeCompare(String(b.stock_no || ''));
+    });
+    return rows;
+  }
+
+  function renderSort(active) {
+    const options = [
+      ['showroom', 'ترتيب المعرض'],
+      ['price-asc', 'السعر: الأقل'],
+      ['price-desc', 'السعر: الأعلى'],
+      ['year-desc', 'الأحدث سنة'],
+      ['name', 'الاسم أ–ي'],
+    ];
+    return `
+      <label class="nt-show-sort">
+        <span>ترتيب</span>
+        <select data-sort aria-label="ترتيب السيارات">
+          ${options.map(([id, label]) => `
+            <option value="${esc(id)}"${active === id ? ' selected' : ''}>${esc(label)}</option>`).join('')}
+        </select>
+      </label>`;
+  }
+
   function renderShowroomCard(v, opts = {}) {
     const accent = accentOf(v);
     const idAttr = v.id != null ? ` data-vehicle-id="${esc(v.id)}"` : '';
@@ -137,7 +242,7 @@
     return `
       <article class="nt-vcard nt-show-card nt-vcard--${accent}"${idAttr}${idx} role="button" tabindex="0">
         <div class="nt-show-media">
-          ${renderCar3D(v, { accent, delay: opts.delay, cinema: true, badge: v.year || 'NAJJAR' })}
+          ${renderPhotoMedia(v, { accent, delay: opts.delay, badge: v.year || 'NAJJAR' })}
           <div class="nt-show-media-badge">${esc(v.status || '')}</div>
         </div>
         <div class="nt-vcard-top">
@@ -149,8 +254,8 @@
         <ul class="nt-vcard-meta">
           ${specRows(v, 4)}
         </ul>
-        <div class="nt-vcard-foot">
-          <strong class="nt-show-price">${money(v.list_price)}</strong>
+        <div class="nt-vcard-foot nt-vcard-foot--stack">
+          ${priceBlock(v, { compact: true })}
           <div class="nt-show-actions">
             <a class="nt-btn primary nt-show-wa" href="${waHref(v)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">واتساب</a>
             <span class="nt-show-more">التفاصيل</span>
@@ -182,16 +287,21 @@
   function renderShowroom(vehicles, opts = {}) {
     const list = vehicles || [];
     const filter = opts.filter || 'all';
-    const filtered = filter === 'all' ? list : list.filter((v) => v.status === filter);
+    const sort = opts.sort || 'showroom';
+    const sorted = sortVehicles(list, sort);
+    const filtered = filter === 'all' ? sorted : sorted.filter((v) => v.status === filter);
     return `
       <div class="nt-showroom-shell">
-        ${opts.hero !== false ? renderHero(list) : ''}
+        ${opts.hero !== false ? renderHero(sorted) : ''}
         <section class="nt-cust-intro">
           <div>
             <h2>سيارات المعرض</h2>
-            <p>عرض المواصفات · الصور · السعر · التواصل المباشر عبر واتساب</p>
+            <p>صور حقيقية · أسعار ر.ع / USD / SAR / AED · مواصفات كاملة · واتساب</p>
           </div>
-          ${renderFilters(list, filter)}
+          <div class="nt-show-controls">
+            ${renderFilters(list, filter)}
+            ${renderSort(sort)}
+          </div>
         </section>
         <div class="nt-showroom" data-showroom>
           ${filtered.length
@@ -211,12 +321,12 @@
     return `
       <section class="nt-cinema-hero nt-show-hero">
         <div class="nt-cinema-stage">
-          ${renderCar3D(v, { hero: true, cinema: true, delay: 0, badge: v.year || 'SHOWROOM' })}
+          ${renderPhotoMedia(v, { hero: true, eager: true, badge: v.year || 'SHOWROOM' })}
         </div>
         <div class="nt-cinema-copy">
           <p class="nt-kicker">NAJJAR &amp; AL SAMOOM TRADING</p>
           <h2>معرض السيارات المستعملة والمستوردة</h2>
-          <p>تصفّح المخزون بالمواصفات الكاملة — VIN، اللون، المحرك، المنشأ — وتواصل معنا مباشرة للحجز أو الاستفسار.</p>
+          <p>تصفّح المخزون بالصور والأسعار والمواصفات — VIN، اللون، المحرك، المنشأ — وتواصل معنا مباشرة للحجز أو الاستفسار.</p>
           <div class="nt-cinema-actions">
             <a class="nt-btn primary" href="#custRoot">عرض السيارات</a>
             <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>
@@ -237,23 +347,28 @@
     return el;
   }
 
-  /** Full vehicle detail sheet — replaces Instagram story/cinema overlays */
   function openVehicleSheet(vehicles, startIndex) {
     const list = vehicles || [];
     if (!list.length) return;
     let i = Math.max(0, Math.min(startIndex || 0, list.length - 1));
+    let photoIndex = 0;
     const overlay = ensureOverlay('ntVehicleSheet', 'nt-vehicle-sheet');
 
     function paint() {
       const v = list[i];
       const accent = accentOf(v);
+      const photos = photosOf(v);
+      if (photoIndex >= photos.length) photoIndex = 0;
       overlay.hidden = false;
       document.body.classList.add('nt-lock');
       overlay.innerHTML = `
         <div class="nt-vehicle-sheet-panel nt-vehicle-sheet-panel--${accent}" role="dialog" aria-modal="true" aria-label="تفاصيل السيارة">
           <button type="button" class="nt-story-close" aria-label="إغلاق">✕</button>
           <div class="nt-vehicle-sheet-media">
-            ${renderCar3D(v, { accent, cinema: true, hero: true, delay: 0, badge: v.stock_no || 'NAJJAR' })}
+            ${renderPhotoMedia(v, {
+              accent, cinema: true, hero: true, eager: true, gallery: true,
+              photoIndex, badge: v.stock_no || 'NAJJAR',
+            })}
           </div>
           <div class="nt-vehicle-sheet-body">
             <div class="nt-vcard-top">
@@ -268,7 +383,7 @@
               ${v.notes ? `<li class="nt-sheet-notes"><span>ملاحظات</span><strong>${esc(v.notes)}</strong></li>` : ''}
             </ul>
             <div class="nt-vehicle-sheet-foot">
-              <strong class="nt-show-price">${money(v.list_price)}</strong>
+              ${priceBlock(v)}
               <div class="nt-show-actions">
                 <button type="button" class="nt-btn ghost" data-sheet-prev ${i <= 0 ? 'disabled' : ''}>السابق</button>
                 <button type="button" class="nt-btn ghost" data-sheet-next ${i >= list.length - 1 ? 'disabled' : ''}>التالي</button>
@@ -280,8 +395,15 @@
       overlay.querySelector('.nt-story-close').onclick = close;
       const prev = overlay.querySelector('[data-sheet-prev]');
       const next = overlay.querySelector('[data-sheet-next]');
-      if (prev) prev.onclick = () => { i -= 1; paint(); };
-      if (next) next.onclick = () => { i += 1; paint(); };
+      if (prev) prev.onclick = () => { i -= 1; photoIndex = 0; paint(); };
+      if (next) next.onclick = () => { i += 1; photoIndex = 0; paint(); };
+      overlay.querySelectorAll('[data-photo-index]').forEach((btn) => {
+        btn.onclick = (ev) => {
+          ev.stopPropagation();
+          photoIndex = Number(btn.getAttribute('data-photo-index') || 0);
+          paint();
+        };
+      });
     }
 
     function close() {
@@ -302,9 +424,15 @@
         if (typeof opts.onFilter === 'function') opts.onFilter(btn.getAttribute('data-filter'));
       };
     });
+    const sortEl = root.querySelector('[data-sort]');
+    if (sortEl) {
+      sortEl.onchange = () => {
+        if (typeof opts.onSort === 'function') opts.onSort(sortEl.value);
+      };
+    }
     root.querySelectorAll('.nt-show-card[data-index], .nt-show-card[data-vehicle-id]').forEach((el) => {
       const open = (ev) => {
-        if (ev.target.closest('a,button')) return;
+        if (ev.target.closest('a,button,select,label')) return;
         const index = Number(el.getAttribute('data-index') || 0);
         openVehicleSheet(list, index);
         if (typeof opts.onVehicle === 'function') {
@@ -321,7 +449,7 @@
     });
   }
 
-  /* —— Legacy aliases (no Instagram chrome) —— */
+  /* Legacy aliases */
   function renderIgPost(v, opts) { return renderShowroomCard(v, opts); }
   function renderReel(v, opts) { return renderShowroomCard(v, opts); }
   function renderStories() { return ''; }
@@ -329,11 +457,12 @@
   function openStoryViewer(vehicles, startIndex) { return openVehicleSheet(vehicles, startIndex); }
   function openCinema(vehicles, startIndex) { return openVehicleSheet(vehicles, startIndex); }
   function bindGallery(root, vehicles, opts) { return bindShowroom(root, vehicles, opts); }
-  function setMode() { /* showroom has no feed/reels modes */ }
+  function setMode() {}
 
   global.NajjarCar3D = {
     accentOf,
     renderCar3D,
+    renderPhotoMedia,
     renderShowroomCard,
     renderShowroom,
     renderIgPost,
@@ -347,6 +476,9 @@
     bindShowroom,
     bindGallery,
     setMode,
+    sortVehicles,
+    photosOf,
+    priceBlock,
     money,
     esc,
     waHref,
