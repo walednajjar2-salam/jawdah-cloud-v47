@@ -65,7 +65,7 @@ body.theme-autotrading::after {
   opacity: 0.14;
 }
 
-/* Modern lifelike 3D icon images inside glassy gold frames */
+/* === 3D glassy icons with crystal gold edges === */
 .nt-ico,
 .nt-ico-img {
   width: 1.45em;
@@ -74,35 +74,148 @@ body.theme-autotrading::after {
   vertical-align: -0.25em;
   object-fit: contain;
   flex: 0 0 auto;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+  position: relative;
+  z-index: 1;
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
-.theme-autotrading .nav-icon {
-  width: 34px;
-  height: 34px;
+
+/* Crystal glass shells with gold 3D beveled rims */
+.nt-glass-3d,
+.theme-autotrading .nav-icon,
+.nt-kpi-icon,
+.nt-plat-icon--glass {
+  --nt-gold-hi: #f0d98a;
+  --nt-gold: #caa14a;
+  --nt-gold-lo: #6e5414;
+  position: relative;
   display: inline-grid;
   place-items: center;
-  border-radius: 11px;
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.16), rgba(202, 161, 74, 0.12));
-  border: 1.5px solid rgba(202, 161, 74, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 4px 12px rgba(0, 0, 0, 0.25);
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(155deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.08) 22%,
+      rgba(202, 161, 74, 0.18) 52%,
+      rgba(8, 6, 2, 0.62) 100%) padding-box,
+    linear-gradient(140deg, var(--nt-gold-hi), var(--nt-gold) 35%, var(--nt-gold-lo) 68%, var(--nt-gold-hi)) border-box;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.75),
+    0 0 0 2.5px rgba(202, 161, 74, 0.55),
+    inset 0 2px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -12px 20px rgba(202, 161, 74, 0.16),
+    inset 0 0 0 1px rgba(240, 217, 138, 0.28),
+    0 12px 26px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(202, 161, 74, 0.28);
+  transform: translateZ(0) perspective(420px) rotateX(6deg);
+  transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
+  animation: ntGlassRise 0.55s ease both;
+}
+
+.nt-glass-3d::before,
+.theme-autotrading .nav-icon::before,
+.nt-kpi-icon::before,
+.nt-plat-icon--glass::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.12) 24%, transparent 46%),
+    radial-gradient(120% 80% at 20% 0%, rgba(240, 217, 138, 0.28), transparent 55%);
+  opacity: 0.95;
+}
+
+.nt-glass-3d::after,
+.theme-autotrading .nav-icon::after,
+.nt-kpi-icon::after,
+.nt-plat-icon--glass::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 8%;
+  height: 38%;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+  opacity: 0.7;
+  filter: blur(0.4px);
+}
+
+.nt-glass-3d:hover,
+.theme-autotrading .nav-item:hover .nav-icon,
+.nt-kpi-icon:hover,
+.nt-plat:hover .nt-plat-icon--glass {
+  transform: translateY(-3px) perspective(420px) rotateX(2deg) scale(1.05);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.8),
+    0 0 0 2.5px rgba(240, 217, 138, 0.85),
+    inset 0 2px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -12px 22px rgba(202, 161, 74, 0.22),
+    0 16px 32px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(202, 161, 74, 0.42);
+}
+
+@keyframes ntGlassRise {
+  from { opacity: 0; transform: translateY(8px) perspective(420px) rotateX(12deg) scale(0.94); }
+  to { opacity: 1; transform: translateZ(0) perspective(420px) rotateX(6deg) scale(1); }
+}
+
+.theme-autotrading .nav-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
 }
 .theme-autotrading .nav-icon .nt-ico,
 .theme-autotrading .nav-icon .nt-ico-img { width: 22px; height: 22px; }
 .theme-autotrading .nav-item.active .nav-icon {
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.28), rgba(202, 161, 74, 0.35));
-  border-color: rgba(255, 255, 255, 0.45);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.45) 0%, rgba(202, 161, 74, 0.4) 42%, rgba(74, 50, 8, 0.75) 100%) padding-box,
+    linear-gradient(140deg, #f0d98a, #caa14a 40%, #6e5414 70%, #f0d98a) border-box;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 0 2.5px rgba(240, 217, 138, 0.9),
+    inset 0 2px 0 rgba(255, 255, 255, 0.62),
+    0 12px 24px rgba(202, 161, 74, 0.4);
 }
+
 .nt-kpi-icon {
-  width: 44px !important;
-  height: 44px !important;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
 }
 .nt-kpi-icon .nt-ico,
-.nt-kpi-icon .nt-ico-img { width: 28px; height: 28px; }
+.nt-kpi-icon .nt-ico-img { width: 30px; height: 30px; }
+
+.wa-quick .nt-glass-3d {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
 .wa-quick .nt-ico,
-.wa-quick .nt-ico-img { width: 1.25em; height: 1.25em; margin-left: 4px; }
+.wa-quick .nt-ico-img { width: 18px; height: 18px; margin-left: 0; }
+
+.nt-plat-icon--glass {
+  width: 78px;
+  height: 78px;
+}
 .nt-plat-icon .nt-ico,
-.nt-plat-icon .nt-ico-img { width: 46px; height: 46px; }
-.nt-plat-icon .nt-ico-img.nt-flag-img { width: 52px; height: 52px; border-radius: 8px; }
+.nt-plat-icon .nt-ico-img { width: 48px; height: 48px; }
+.nt-plat-icon .nt-ico-img.nt-flag-img { width: 54px; height: 54px; border-radius: 10px; }
 
 body.theme-autotrading .app-shell,
 body.theme-autotrading .workspace,
@@ -692,18 +805,8 @@ body.section-dashboard .content.dashboard-page {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-/* KPI icons — glassy badge with a golden crystal edge merged with a slight black ring */
+/* KPI icons base size/layout — glass/gold 3D look comes from shared .nt-kpi-icon rules above */
 .nt-kpi-icon {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.2), rgba(202, 161, 74, 0.12));
-  backdrop-filter: blur(8px) saturate(150%);
-  -webkit-backdrop-filter: blur(8px) saturate(150%);
-  border: 1.5px solid #caa14a;
-  box-shadow: var(--edge), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   font-size: 1.1rem;
   flex: 0 0 auto;
 }
@@ -839,29 +942,16 @@ body.section-dashboard .content.dashboard-page {
 .nt-plat p { margin: 0; color: var(--muted); font-size: 0.9rem; min-height: 2.6em; }
 
 .nt-plat-icon {
-  width: 72px;
-  height: 72px;
+  width: 78px;
+  height: 78px;
   display: grid;
   place-items: center;
   font-size: 2.05rem;
-  background: #0a0a0a;
   color: #fff;
-  box-shadow: var(--edge);
 }
 
 .nt-plat-icon--circle { border-radius: 50%; }
-.nt-plat-icon--flag { border-radius: 18px; }
-.nt-plat-icon--glass {
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(202, 161, 74, 0.1) 45%, rgba(10, 10, 10, 0.92));
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-  border: 1.8px solid rgba(202, 161, 74, 0.7);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 0 0 3px rgba(0, 0, 0, 0.45),
-    0 10px 24px rgba(0, 0, 0, 0.4);
-}
+.nt-plat-icon--flag { border-radius: 20px; }
 .nt-flag {
   font-size: 1.85rem;
   line-height: 1;
