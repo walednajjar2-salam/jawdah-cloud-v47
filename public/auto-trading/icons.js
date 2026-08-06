@@ -1,6 +1,6 @@
 /* Modern lifelike 3D icon images — NAJAR & AL SAMOOM TRADING */
 window.NajjarIcons = (function () {
-  const V = "at14";
+  const V = "at16";
   const base = "/auto-trading/assets/icons";
 
   const files = {
@@ -33,16 +33,24 @@ window.NajjarIcons = (function () {
     return `${base}/${file}?v=${V}`;
   }
 
-  function get(name) {
+  function get(name, opts) {
+    opts = opts || {};
     const flag = String(name || "").startsWith("flag-") ? " nt-flag-img" : "";
-    return `<img class="nt-ico nt-ico-img${flag}" src="${url(name)}" alt="" draggable="false" loading="lazy">`;
+    const img = `<img class="nt-ico nt-ico-img${flag}" src="${url(name)}" alt="" draggable="false" loading="lazy">`;
+    // wrap:false داخل حاويات زجاجية جاهزة (nav/kpi/platforms)
+    if (opts.wrap === false) return img;
+    return `<span class="nt-glass-3d">${img}</span>`;
   }
 
   function paint(root) {
     if (!root) return;
     root.querySelectorAll("[data-ico]").forEach((el) => {
       const name = el.getAttribute("data-ico");
-      el.innerHTML = get(name);
+      const hasShell = el.classList.contains("nav-icon")
+        || el.classList.contains("nt-kpi-icon")
+        || el.classList.contains("nt-plat-icon")
+        || el.classList.contains("nt-glass-3d");
+      el.innerHTML = get(name, { wrap: !hasShell });
     });
   }
 

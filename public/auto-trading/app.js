@@ -15,7 +15,7 @@ let companyProfile = null;
 const LOGO_URL = '/auto-trading/assets/logo-official-clear.png?v=at13';
 const LOGO_MARK = '/auto-trading/assets/logo-mark.png?v=at13';
 const LOGO_CARD = '/auto-trading/assets/logo-official.png?v=at13';
-const ICO = (name) => (window.NajjarIcons ? NajjarIcons.get(name) : '');
+const ICO = (name) => (window.NajjarIcons ? NajjarIcons.get(name, { wrap: false }) : '');
 
 function waLink(phone) {
   const p = String(phone || '').replace(/\D/g, '');
