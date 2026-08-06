@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at6">
-  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at6">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at7">
+  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at7">
 </head>
 <body class="nt-login">
   <div class="nt-watermark" aria-hidden="true"></div>
@@ -44,11 +44,11 @@
       </div>
     </section>
   </main>
-  <script src="/auto-trading/car-3d.js?v=at6"></script>
+  <script src="/auto-trading/car-3d.js?v=at7"></script>
   <script>
     document.getElementById('loginCarWrap').innerHTML = NajjarCar3D.renderCar3D(
       { make: 'Land Rover', model: 'Defender', variant: '110 P400' },
-      { accent: 'lr', delay: 0.4 }
+      { accent: 'lr', delay: 0.4, cinema: true, hero: true, badge: 'SLOW MOTION' }
     );
 
     async function doLogin() {

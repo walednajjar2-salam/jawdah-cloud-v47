@@ -8,14 +8,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at6">
-  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at6">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at7">
+  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at7">
 </head>
 <body class="nt-hub">
   <div class="nt-watermark" aria-hidden="true"></div>
   <main class="nt-hub-wrap">
     <header class="nt-hub-head">
-      <img class="nt-hub-logo" src="/auto-trading/assets/logo-mark.svg?v=at5" alt="NAJJAR TRADING">
+      <img class="nt-hub-logo" src="/auto-trading/assets/logo-mark.svg?v=at7" alt="NAJJAR TRADING">
       <div>
         <p class="nt-kicker">NAJJAR TRADING</p>
         <h1>منصات السيارات</h1>
@@ -28,6 +28,7 @@
       </div>
     </header>
 
+    <div id="platHero" style="margin-bottom:18px"></div>
     <section class="nt-plat-grid" aria-label="المنصات">
       <article class="nt-plat nt-plat--america" data-platform="america">
         <div class="nt-plat-icon nt-plat-icon--circle" aria-hidden="true">🇺🇸</div>
@@ -94,6 +95,7 @@
     <footer class="nt-hub-foot">NAJJAR TRADING · USED &amp; IMPORTED CARS · نزوى — الفلج</footer>
   </main>
 
+  <script src="/auto-trading/car-3d.js?v=at7"></script>
   <script>
     function readToken() {
       try {
@@ -118,6 +120,13 @@
 
     const token = readToken();
     if (!token) location.replace('/auto-trading/login.html');
+
+    document.getElementById('platHero').innerHTML = NajjarCar3D.renderHero([
+      { make: 'Mercedes-Benz', model: 'G-Class', variant: 'G63 AMG', stock_no: 'LIVE', status: 'قيد الاستيراد', list_price: 0 }
+    ]);
+    document.querySelectorAll('#platHero [data-open-gallery], #platHero [data-view-jump]').forEach((btn) => {
+      btn.onclick = () => { location.href = withToken('/auto-trading.html?platform=oman&view=vehicles'); };
+    });
 
     document.getElementById('backLq').href = withToken('/portal-select.html?from=autotrading');
     document.getElementById('btnLogout').onclick = () => {

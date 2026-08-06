@@ -427,17 +427,7 @@ async function loadDashboard() {
         <p class="nt-platform-chip" style="margin-top:10px">${e(PLATFORM_LABELS[plat] || plat)}</p>
       </div>
     </div>
-    ${window.NajjarCar3D ? `
-      <section class="card" style="margin-bottom:16px;overflow:hidden;padding:0">
-        <div class="ig-media" style="position:relative;aspect-ratio:21/9;min-height:220px">
-          ${window.NajjarCar3D.renderCar3D({ make: 'Mercedes-Benz', model: 'G-Class', variant: 'G63 AMG' }, { accent: 'g63', delay: 0 })}
-          <div class="ig-media-badge">3D Slow Motion</div>
-        </div>
-        <div class="card-body" style="padding:12px 16px">
-          <strong>معرض تفاعلي</strong>
-          <p class="mini" style="margin:4px 0 0">سيارات ثلاثية الأبعاد بحركة بطيئة مريحة — افتح المخزون أو بوابة الزبائن</p>
-        </div>
-      </section>` : ''}
+    ${window.NajjarCar3D ? `<div id="dashCinemaHero" style="margin-bottom:16px">${window.NajjarCar3D.renderHero([{ make: 'Mercedes-Benz', model: 'G-Class', variant: 'G63 AMG', stock_no: 'SHOW', status: 'متاحة', list_price: 0 }])}</div>` : ''}
     <div class="stats-grid">
       ${stat('إجمالي المركبات', s.total_vehicles)}
       ${stat('متاحة للبيع', s.available, 'highlight')}
@@ -517,12 +507,30 @@ async function loadDashboard() {
   };
   const goP = document.getElementById('dashGoPlatforms');
   if (goP) goP.onclick = goToPlatforms;
+  const hero = document.getElementById('dashCinemaHero');
+  if (hero && window.NajjarCar3D) {
+    hero.querySelectorAll('[data-open-gallery]').forEach((btn) => {
+      btn.onclick = () => {
+        document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === 'vehicles'));
+        loadSection('vehicles').then(() => {
+          if (window.NajjarCar3D && vehiclesCache.length) window.NajjarCar3D.openStoryViewer(vehiclesCache, 0);
+        });
+      };
+    });
+    hero.querySelectorAll('[data-view-jump]').forEach((btn) => {
+      btn.onclick = () => {
+        vehiclesViewMode = btn.getAttribute('data-view-jump') || 'reels';
+        document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === 'vehicles'));
+        loadSection('vehicles');
+      };
+    });
+  }
 }
 
 let vehiclesViewMode = 'feed';
 
 async function loadVehicles() {
-  setTitle('مخزون السيارات', 'معرض 3D بطيء الحركة — ترتيب إنستغرام');
+  setTitle('مخزون السيارات', 'معرض سينمائي 3D — قصص · ريلز · إنستغرام');
   await ensureCompany().catch(() => null);
   const qs = new URLSearchParams();
   if (statusFilter) qs.set('status', statusFilter);
@@ -534,14 +542,16 @@ async function loadVehicles() {
   content.innerHTML = `
     <div class="ig-toolbar">
       <div>
-        <h2>معرض المخزون</h2>
-        <p>${vehiclesCache.length} مركبة · حركة ثلاثية الأبعاد مريحة للعين</p>
+        <h2>معرض المخزون السينمائي</h2>
+        <p>${vehiclesCache.length} مركبة · حركة بطيئة مريحة · قصص وريلز</p>
       </div>
       <div class="actions-row">
         <div class="ig-view-toggle" role="group">
           <button type="button" data-vmode="feed" class="${vehiclesViewMode === 'feed' ? 'active' : ''}">فيد</button>
           <button type="button" data-vmode="grid" class="${vehiclesViewMode === 'grid' ? 'active' : ''}">شبكة</button>
+          <button type="button" data-vmode="reels" class="${vehiclesViewMode === 'reels' ? 'active' : ''}">ريلز</button>
         </div>
+        <button class="btn secondary" type="button" id="btnPlayStories">▶ قصص</button>
         <button class="btn primary" type="button" id="btnAddVehicle">+ إضافة مركبة</button>
       </div>
     </div>
@@ -559,12 +569,28 @@ async function loadVehicles() {
     </div>
     <div id="vehiclesShowcase">
       ${vehiclesCache.length && C3
-        ? C3.renderFeed(vehiclesCache, { stories: true, platforms: (companyProfile && companyProfile.platforms) || null })
+        ? C3.renderFeed(vehiclesCache, {
+            stories: true,
+            hero: true,
+            mode: vehiclesViewMode,
+            platforms: (companyProfile && companyProfile.platforms) || null,
+          })
         : (vehiclesCache.length ? `<div class="vehicle-grid">${vehiclesCache.map(v => vehicleCard(v)).join('')}</div>` : '<div class="empty-state">لا توجد مركبات — أضف مركبة جديدة</div>')}
     </div>`;
-  const feed = content.querySelector('.ig-feed');
-  if (feed) feed.classList.toggle('ig-feed--grid', vehiclesViewMode === 'grid');
+  const showcase = document.getElementById('vehiclesShowcase');
+  if (C3 && showcase) {
+    C3.setMode(showcase, vehiclesViewMode);
+    C3.bindGallery(showcase, vehiclesCache, {
+      onPlatform: (id) => {
+        localStorage.setItem('najjar_platform', id || 'oman');
+        goToPlatforms();
+      },
+      onVehicle: (id) => openVehicleDetail(id),
+    });
+  }
   document.getElementById('btnAddVehicle').onclick = showAddVehicleForm;
+  const playBtn = document.getElementById('btnPlayStories');
+  if (playBtn && C3) playBtn.onclick = () => C3.openStoryViewer(vehiclesCache, 0);
   document.getElementById('btnApplyFilter').onclick = () => {
     statusFilter = document.getElementById('filterStatus').value;
     makeFilter = document.getElementById('filterMake').value;
@@ -574,24 +600,7 @@ async function loadVehicles() {
     btn.onclick = () => {
       vehiclesViewMode = btn.getAttribute('data-vmode');
       content.querySelectorAll('[data-vmode]').forEach((b) => b.classList.toggle('active', b === btn));
-      const f = content.querySelector('.ig-feed');
-      if (f) f.classList.toggle('ig-feed--grid', vehiclesViewMode === 'grid');
-    };
-  });
-  content.querySelectorAll('.ig-story').forEach((btn) => {
-    btn.onclick = (ev) => {
-      ev.stopPropagation();
-      localStorage.setItem('najjar_platform', btn.getAttribute('data-platform') || 'oman');
-      goToPlatforms();
-    };
-  });
-  content.querySelectorAll('[data-vehicle-id]').forEach((el) => {
-    el.onclick = () => openVehicleDetail(Number(el.dataset.vehicleId));
-    el.onkeydown = (ev) => {
-      if (ev.key === 'Enter' || ev.key === ' ') {
-        ev.preventDefault();
-        openVehicleDetail(Number(el.dataset.vehicleId));
-      }
+      if (C3 && showcase) C3.setMode(showcase, vehiclesViewMode);
     };
   });
 }
