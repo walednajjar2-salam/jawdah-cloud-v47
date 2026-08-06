@@ -49,6 +49,8 @@ body.theme-autotrading::before {
     linear-gradient(160deg, #040403 0%, #0b0805 45%, #060503 100%);
 }
 
+/* Logo mark pinned near the top-right of the page, fixed so it never scrolls away —
+   a soft, transparent crystal watermark. On the dashboard it clears the right-hand sidebar. */
 .nt-watermark::after,
 body.theme-autotrading::after {
   content: "";
@@ -56,11 +58,22 @@ body.theme-autotrading::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at9');
+  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at10');
   background-repeat: no-repeat;
-  background-position: center 42%;
-  background-size: min(58vw, 520px);
-  opacity: 0.08;
+  background-size: min(20vw, 190px);
+  opacity: 0.12;
+}
+
+.nt-watermark::after { background-position: right 26px top 22px; }
+body.theme-autotrading::after { background-position: right 300px top 22px; }
+
+@media (max-width: 1180px) {
+  body.theme-autotrading::after { background-position: right 258px top 18px; background-size: min(24vw, 160px); }
+}
+
+@media (max-width: 820px) {
+  .nt-watermark::after,
+  body.theme-autotrading::after { background-position: right 16px top 16px; background-size: min(30vw, 130px); }
 }
 
 body.theme-autotrading .app-shell,
@@ -129,7 +142,7 @@ body.section-dashboard .content.dashboard-page {
   background: linear-gradient(135deg, #332208, #caa14a) !important;
   color: #fff !important;
   border-color: #caa14a !important;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(202, 161, 74, 0.3) !important;
 }
 
 .theme-autotrading .nav-item.active .nav-label,
@@ -145,25 +158,41 @@ body.section-dashboard .content.dashboard-page {
   color: #fff !important;
   border: 1px solid rgba(0, 0, 0, 0.5) !important;
   font-weight: 800;
-  box-shadow: 0 8px 22px rgba(202, 161, 74, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 22px rgba(202, 161, 74, 0.28) !important;
 }
 
 .theme-autotrading .btn.secondary {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid var(--line) !important;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(202, 161, 74, 0.05)) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(202, 161, 74, 0.5) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
   color: var(--navy) !important;
 }
 
 .theme-autotrading .btn.ghost {
-  background: transparent !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(8px);
   color: var(--navy) !important;
-  border: 1px solid rgba(202, 161, 74, 0.3) !important;
+  border: 1px solid rgba(202, 161, 74, 0.4) !important;
 }
 
 .theme-autotrading .btn.success {
   background: linear-gradient(135deg, #0f5c3b, #1f9d5f) !important;
   color: #fff !important;
   border: none !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Glassy icon buttons in the topbar (refresh, menu, version chip) — golden crystal edge */
+.theme-autotrading .icon-btn,
+.theme-autotrading .mobile-menu,
+.theme-autotrading .version {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(202, 161, 74, 0.08)) !important;
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border: 1.5px solid rgba(202, 161, 74, 0.6) !important;
+  color: var(--navy) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
 }
 
 .theme-autotrading .topbar,
@@ -192,10 +221,16 @@ body.section-dashboard .content.dashboard-page {
 .theme-autotrading .nt-vcard,
 .theme-autotrading .drawer-panel,
 .theme-autotrading .modal-panel {
-  background: var(--panel) !important;
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--line) !important;
-  box-shadow: var(--shadow);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(202, 161, 74, 0.05) 45%, transparent 75%),
+    var(--panel) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(202, 161, 74, 0.5) !important;
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(202, 161, 74, 0.16);
   color: var(--navy) !important;
 }
 
@@ -247,8 +282,11 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .theme-autotrading .table-wrap {
-  background: var(--panel-solid) !important;
-  border: 1px solid var(--line) !important;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.04), transparent 50%), var(--panel-solid) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(202, 161, 74, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .theme-autotrading .data-table th {
@@ -548,11 +586,13 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .nt-staff-card {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(202, 161, 74, 0.5);
   border-radius: 16px;
   padding: 14px;
-  background: var(--panel);
-  box-shadow: var(--shadow);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(202, 161, 74, 0.05)), var(--panel);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .nt-staff-card strong { display: block; color: var(--navy); margin-bottom: 4px; }
@@ -563,8 +603,9 @@ body.section-dashboard .content.dashboard-page {
   padding: 3px 8px;
   border-radius: 999px;
   margin-bottom: 8px;
+  backdrop-filter: blur(6px);
 }
-.nt-staff-role.owner { background: #0a0a0a; color: var(--gold2); border: 1px solid rgba(202, 161, 74, 0.5); }
+.nt-staff-role.owner { background: linear-gradient(150deg, rgba(255, 255, 255, 0.14), rgba(10, 10, 10, 0.9)); color: var(--gold2); border: 1px solid rgba(202, 161, 74, 0.6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 .nt-staff-role.sales { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
 .nt-staff-role.user { background: rgba(147, 51, 234, 0.18); color: #c084fc; }
 
@@ -572,25 +613,31 @@ body.section-dashboard .content.dashboard-page {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(202, 161, 74, 0.18);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.16), rgba(202, 161, 74, 0.14));
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  border: 1px solid rgba(202, 161, 74, 0.5);
   color: var(--gold-dark);
   font-weight: 800;
   font-size: 12px;
   padding: 6px 12px;
   border-radius: 999px;
   margin-bottom: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-/* KPI icons — red edge merged with a slight black ring */
+/* KPI icons — glassy badge with a golden crystal edge merged with a slight black ring */
 .nt-kpi-icon {
   width: 40px;
   height: 40px;
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: rgba(202, 161, 74, 0.14);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.2), rgba(202, 161, 74, 0.12));
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
   border: 1.5px solid #caa14a;
-  box-shadow: var(--edge);
+  box-shadow: var(--edge), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   font-size: 1.1rem;
   flex: 0 0 auto;
 }
