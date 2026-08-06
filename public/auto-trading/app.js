@@ -131,27 +131,86 @@ async function printVehicleOffer(v) {
 }
 
 function printSaleReceipt(sale, c) {
-  const bank = (c || {}).bank || {};
-  openPrintWindow('إيصال بيع — ' + (sale.sale_no || ''), `
-    <div class="head">
-      <h1>NAJJAR & AL SAMOOM TRADING</h1>
-      <p>USED & IMPORTED CARS</p>
-    </div>
-    <h2>إيصال بيع — ${e(sale.sale_no || '')}</h2>
-    <table>
-      <tr><th>التاريخ</th><td>${dmy(sale.sale_date)}</td></tr>
-      <tr><th>المشتري</th><td>${e(sale.buyer_name)} ${sale.buyer_phone ? '· ' + e(sale.buyer_phone) : ''}</td></tr>
-      <tr><th>المركبة</th><td>${e(sale.make || '')} ${e(sale.model || '')} · ${e(sale.stock_no || '')}</td></tr>
-      <tr><th>سعر البيع</th><td><b>${money(sale.sale_price)}</b></td></tr>
-      <tr><th>العربون</th><td>${money(sale.deposit_amount || 0)}</td></tr>
-      <tr><th>طريقة الدفع</th><td>${e(sale.payment_method || '—')}</td></tr>
-    </table>
-    <div class="bank">
-      <b>حساب التحويل</b><br>
-      ${e(bank.account_name_en || 'Al Najjar Trading')}<br>
-      IBAN: <span dir="ltr">${e(bank.iban || '')}</span>
-    </div>
-    <div class="foot">${e((c || {}).address_ar || 'نزوى — الفلج')}</div>`);
+  if (window.NajjarPrintDocs) {
+    NajjarPrintDocs.printReceiptVoucher(sale, c);
+    return;
+  }
+  openPrintWindow('سند قبض — ' + (sale.sale_no || ''), `<h2>سند قبض ${e(sale.sale_no || '')}</h2><p>${e(sale.buyer_name)} · ${money(sale.deposit_amount || sale.sale_price)}</p>`);
+}
+
+function saleDocActions(indexAttr) {
+  return `
+    <div class="actions-row" style="gap:6px;flex-wrap:wrap">
+      <button type="button" class="btn secondary small" data-doc-sale-contract="${indexAttr}">عقد بيع</button>
+      <button type="button" class="btn secondary small" data-doc-sale-invoice="${indexAttr}">فاتورة</button>
+      <button type="button" class="btn secondary small" data-doc-sale-receipt="${indexAttr}">سند قبض</button>
+    </div>`;
+}
+
+function purchaseDocActions(indexAttr) {
+  return `
+    <div class="actions-row" style="gap:6px;flex-wrap:wrap">
+      <button type="button" class="btn secondary small" data-doc-buy-contract="${indexAttr}">عقد شراء</button>
+      <button type="button" class="btn secondary small" data-doc-buy-invoice="${indexAttr}">فاتورة</button>
+      <button type="button" class="btn secondary small" data-doc-buy-voucher="${indexAttr}">سند صرف</button>
+    </div>`;
+}
+
+async function bindSaleDocButtons(root, rows) {
+  const c = await ensureCompany();
+  const docs = window.NajjarPrintDocs;
+  if (!docs) return;
+  root.querySelectorAll('[data-doc-sale-contract]').forEach((btn) => {
+    btn.onclick = () => {
+      const r = rows[Number(btn.getAttribute('data-doc-sale-contract'))];
+      docs.printSaleContract(r, r, c);
+    };
+  });
+  root.querySelectorAll('[data-doc-sale-invoice]').forEach((btn) => {
+    btn.onclick = () => {
+      const r = rows[Number(btn.getAttribute('data-doc-sale-invoice'))];
+      docs.printSaleInvoice(r, r, c);
+    };
+  });
+  root.querySelectorAll('[data-doc-sale-receipt]').forEach((btn) => {
+    btn.onclick = () => {
+      const r = rows[Number(btn.getAttribute('data-doc-sale-receipt'))];
+      docs.printReceiptVoucher(r, c);
+    };
+  });
+}
+
+async function bindPurchaseDocButtons(root, rows) {
+  const c = await ensureCompany();
+  const docs = window.NajjarPrintDocs;
+  if (!docs) return;
+  root.querySelectorAll('[data-doc-buy-contract]').forEach((btn) => {
+    btn.onclick = () => {
+      const r = rows[Number(btn.getAttribute('data-doc-buy-contract'))];
+      docs.printPurchaseContract(r, r, c);
+    };
+  });
+  root.querySelectorAll('[data-doc-buy-invoice]').forEach((btn) => {
+    btn.onclick = () => {
+      const r = rows[Number(btn.getAttribute('data-doc-buy-invoice'))];
+      docs.printPurchaseInvoice(r, r, c);
+    };
+  });
+  root.querySelectorAll('[data-doc-buy-voucher]').forEach((btn) => {
+    btn.onclick = () => {
+      const r = rows[Number(btn.getAttribute('data-doc-buy-voucher'))];
+      docs.printPaymentVoucher({
+        kind: 'purchase',
+        amount: r.purchase_price,
+        purchase_date: r.purchase_date,
+        purchase_no: r.purchase_no,
+        seller_name: r.seller_name,
+        stock_no: r.stock_no,
+        payment_method: r.payment_method,
+        notes: r.notes,
+      }, c);
+    };
+  });
 }
 
 function readToken() {
@@ -1042,8 +1101,9 @@ function showSaleForm(v) {
     <div class="form-grid">
       <label class="field"><span>اسم المشتري *</span><input id="sBuyer"></label>
       <label class="field"><span>الهاتف</span><input id="sPhone"></label>
+      <label class="field"><span>رقم الهوية / البطاقة</span><input id="sBuyerId" placeholder="للعقد والفاتورة"></label>
       <label class="field"><span>سعر البيع</span><input id="sPrice" type="number" step="0.001" value="${v.list_price || 0}"></label>
-      <label class="field"><span>العربون</span><input id="sDeposit" type="number" step="0.001" value="0"></label>
+      <label class="field"><span>العربون / المدفوع</span><input id="sDeposit" type="number" step="0.001" value="0"></label>
       <label class="field"><span>طريقة الدفع</span>
         <select id="sMethod"><option>نقد</option><option>تحويل بنكي</option><option>شيك</option><option>تمويل</option></select>
       </label>
@@ -1062,6 +1122,7 @@ function showSaleForm(v) {
           vehicle_id: v.id,
           buyer_name: document.getElementById('sBuyer').value.trim(),
           buyer_phone: document.getElementById('sPhone').value.trim(),
+          buyer_id: document.getElementById('sBuyerId').value.trim(),
           sale_price: Number(document.getElementById('sPrice').value) || 0,
           deposit_amount: Number(document.getElementById('sDeposit').value) || 0,
           payment_method: document.getElementById('sMethod').value,
@@ -1071,9 +1132,12 @@ function showSaleForm(v) {
       });
       closeModal();
       toast('تم تسجيل البيع — ' + (res.sale?.sale_no || ''));
-      if (confirm('طباعة إيصال البيع؟')) {
-        const c = await ensureCompany();
-        printSaleReceipt({ ...res.sale, make: v.make, model: v.model, variant: v.variant }, c);
+      const saleRow = { ...res.sale, make: v.make, model: v.model, variant: v.variant, vin: v.vin, engine_no: v.engine_no, year: v.year, color: v.color, plate_no: v.plate_no, vehicle_type: v.vehicle_type, origin_country: v.origin_country };
+      const c = await ensureCompany();
+      if (window.NajjarPrintDocs && confirm('طباعة عقد البيع العُماني؟')) {
+        NajjarPrintDocs.printSaleContract(saleRow, saleRow, c);
+      } else if (confirm('طباعة سند القبض؟')) {
+        printSaleReceipt(saleRow, c);
       }
       loadVehicles();
     } catch (err) { toast(err.message, 'error'); }
@@ -1081,15 +1145,15 @@ function showSaleForm(v) {
 }
 
 async function loadSales() {
-  setTitle('المبيعات', 'سجل مبيعات السيارات');
+  setTitle('المبيعات', 'عقود بيع · فواتير · سندات قبض — سلطنة عُمان');
   const data = await api('/sales');
   const rows = data.sales || [];
   content.innerHTML = `
-    <div class="page-head"><div><h2>المبيعات</h2><p>${rows.length} عملية بيع</p></div></div>
+    <div class="page-head"><div><h2>المبيعات والمستندات</h2><p>${rows.length} عملية بيع · اطبع عقد بيع أو فاتورة أو سند قبض</p></div></div>
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
-          <th>رقم البيع</th><th>المركبة</th><th>المشتري</th><th>السعر</th><th>التاريخ</th><th>الحالة</th><th>إجراء</th>
+          <th>رقم البيع</th><th>المركبة</th><th>المشتري</th><th>السعر</th><th>التاريخ</th><th>الحالة</th><th>مستندات عُمانية</th>
         </tr></thead>
         <tbody>
           ${rows.length ? rows.map((r, i) => `
@@ -1100,29 +1164,23 @@ async function loadSales() {
               <td class="money">${money(r.sale_price)}</td>
               <td>${dmy(r.sale_date)}</td>
               <td>${pill(r.status)}</td>
-              <td><button type="button" class="btn secondary small" data-print-sale="${i}">طباعة</button></td>
+              <td>${saleDocActions(i)}</td>
             </tr>`).join('') : '<tr><td colspan="7" class="empty-state">لا مبيعات بعد</td></tr>'}
         </tbody>
       </table>
     </div>`;
-  content.querySelectorAll('[data-print-sale]').forEach(btn => {
-    btn.onclick = async () => {
-      const r = rows[Number(btn.getAttribute('data-print-sale'))];
-      const c = await ensureCompany();
-      printSaleReceipt(r, c);
-    };
-  });
+  await bindSaleDocButtons(content, rows);
 }
 
 async function loadPurchases() {
-  setTitle('المشتريات', 'سجل شراء السيارات — البائع والمالك السابق');
+  setTitle('المشتريات', 'عقود شراء · فواتير · سندات صرف — سلطنة عُمان');
   const [purchData, vehData] = await Promise.all([api('/purchases'), api('/vehicles')]);
   const rows = purchData.purchases || [];
   const vehicles = vehData.vehicles || [];
   const total = rows.reduce((sum, r) => sum + Number(r.purchase_price || 0), 0);
   content.innerHTML = `
     <div class="page-head">
-      <div><h2>المشتريات</h2><p>${rows.length} عملية شراء · إجمالي ${money(total)}</p></div>
+      <div><h2>المشتريات والمستندات</h2><p>${rows.length} عملية شراء · إجمالي ${money(total)} · عقد شراء / فاتورة / سند صرف</p></div>
       <div class="actions-row">
         <button class="btn primary" type="button" id="btnAddPurchase">+ تسجيل شراء</button>
       </div>
@@ -1130,10 +1188,10 @@ async function loadPurchases() {
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
-          <th>رقم الشراء</th><th>المركبة</th><th>البائع</th><th>هاتف البائع</th><th>السعر</th><th>التاريخ</th>
+          <th>رقم الشراء</th><th>المركبة</th><th>البائع</th><th>هاتف البائع</th><th>السعر</th><th>التاريخ</th><th>مستندات عُمانية</th>
         </tr></thead>
         <tbody>
-          ${rows.length ? rows.map(r => `
+          ${rows.length ? rows.map((r, i) => `
             <tr>
               <td><b>${e(r.purchase_no)}</b></td>
               <td>${e(r.make || '')} ${e(r.model || '')} <span class="mini">${e(r.stock_no || '')}</span></td>
@@ -1141,11 +1199,13 @@ async function loadPurchases() {
               <td dir="ltr">${e(r.seller_phone || '—')}</td>
               <td class="money">${money(r.purchase_price)}</td>
               <td>${dmy(r.purchase_date)}</td>
-            </tr>`).join('') : '<tr><td colspan="6" class="empty-state">لا مشتريات مسجلة بعد</td></tr>'}
+              <td>${purchaseDocActions(i)}</td>
+            </tr>`).join('') : '<tr><td colspan="7" class="empty-state">لا مشتريات مسجلة بعد</td></tr>'}
         </tbody>
       </table>
     </div>`;
   document.getElementById('btnAddPurchase').onclick = () => showAddPurchaseForm(vehicles);
+  await bindPurchaseDocButtons(content, rows);
 }
 
 function showAddPurchaseForm(vehicles) {
@@ -1197,13 +1257,29 @@ function showAddPurchaseForm(vehicles) {
       });
       closeModal();
       toast('تم تسجيل الشراء — ' + (res.purchase?.purchase_no || ''));
+      const c = await ensureCompany();
+      const row = res.purchase || {};
+      if (window.NajjarPrintDocs && confirm('طباعة عقد الشراء العُماني؟')) {
+        NajjarPrintDocs.printPurchaseContract(row, row, c);
+      } else if (window.NajjarPrintDocs && confirm('طباعة سند الصرف؟')) {
+        NajjarPrintDocs.printPaymentVoucher({
+          kind: 'purchase',
+          amount: row.purchase_price,
+          purchase_date: row.purchase_date,
+          purchase_no: row.purchase_no,
+          seller_name: row.seller_name,
+          stock_no: row.stock_no,
+          payment_method: row.payment_method,
+          notes: row.notes,
+        }, c);
+      }
       loadPurchases();
     } catch (err) { toast(err.message, 'error'); }
   };
 }
 
 async function loadExpenses() {
-  setTitle('المصاريف', 'سجل مصاريف الشركة — شحن · جمارك · صيانة · إيجار');
+  setTitle('المصاريف', 'تسجيل مصاريف + سندات صرف — شحن · جمارك · صيانة · إيجار');
   const [expData, vehData] = await Promise.all([api('/expenses'), api('/vehicles')]);
   const rows = expData.expenses || [];
   const categories = expData.categories || [];
@@ -1211,7 +1287,7 @@ async function loadExpenses() {
   const total = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
   content.innerHTML = `
     <div class="page-head">
-      <div><h2>المصاريف</h2><p>${rows.length} مصروف · إجمالي ${money(total)}</p></div>
+      <div><h2>المصاريف وسندات الصرف</h2><p>${rows.length} مصروف · إجمالي ${money(total)}</p></div>
       <div class="actions-row">
         <button class="btn primary" type="button" id="btnAddExpense">+ تسجيل مصروف</button>
       </div>
@@ -1219,10 +1295,10 @@ async function loadExpenses() {
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
-          <th>رقم المصروف</th><th>البند</th><th>المركبة</th><th>المستفيد</th><th>القيمة</th><th>التاريخ</th>
+          <th>رقم المصروف</th><th>البند</th><th>المركبة</th><th>المستفيد</th><th>القيمة</th><th>التاريخ</th><th>سند</th>
         </tr></thead>
         <tbody>
-          ${rows.length ? rows.map(r => `
+          ${rows.length ? rows.map((r, i) => `
             <tr>
               <td><b>${e(r.expense_no)}</b></td>
               <td>${e(r.category)}</td>
@@ -1230,11 +1306,30 @@ async function loadExpenses() {
               <td>${e(r.payee || '—')}</td>
               <td class="money">${money(r.amount)}</td>
               <td>${dmy(r.expense_date)}</td>
-            </tr>`).join('') : '<tr><td colspan="6" class="empty-state">لا مصاريف مسجلة بعد</td></tr>'}
+              <td><button type="button" class="btn secondary small" data-doc-exp-voucher="${i}">سند صرف</button></td>
+            </tr>`).join('') : '<tr><td colspan="7" class="empty-state">لا مصاريف مسجلة بعد</td></tr>'}
         </tbody>
       </table>
     </div>`;
   document.getElementById('btnAddExpense').onclick = () => showAddExpenseForm(categories, vehicles);
+  const c = await ensureCompany();
+  content.querySelectorAll('[data-doc-exp-voucher]').forEach((btn) => {
+    btn.onclick = () => {
+      const r = rows[Number(btn.getAttribute('data-doc-exp-voucher'))];
+      if (!window.NajjarPrintDocs) return toast('وحدة الطباعة غير محمّلة', 'error');
+      NajjarPrintDocs.printPaymentVoucher({
+        kind: 'expense',
+        amount: r.amount,
+        expense_date: r.expense_date,
+        expense_no: r.expense_no,
+        payee: r.payee,
+        category: r.category,
+        stock_no: r.stock_no,
+        payment_method: r.payment_method,
+        notes: r.notes,
+      }, c);
+    };
+  });
 }
 
 function showAddExpenseForm(categories, vehicles) {
@@ -1280,6 +1375,21 @@ function showAddExpenseForm(categories, vehicles) {
       });
       closeModal();
       toast('تم تسجيل المصروف — ' + (res.expense?.expense_no || ''));
+      const c = await ensureCompany();
+      const row = res.expense || {};
+      if (window.NajjarPrintDocs && confirm('طباعة سند الصرف؟')) {
+        NajjarPrintDocs.printPaymentVoucher({
+          kind: 'expense',
+          amount: row.amount,
+          expense_date: row.expense_date,
+          expense_no: row.expense_no,
+          payee: row.payee,
+          category: row.category,
+          stock_no: row.stock_no,
+          payment_method: row.payment_method,
+          notes: row.notes,
+        }, c);
+      }
       loadExpenses();
     } catch (err) { toast(err.message, 'error'); }
   };
