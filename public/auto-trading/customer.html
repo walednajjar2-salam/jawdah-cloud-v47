@@ -3,92 +3,64 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>معرض NAJJAR &amp; AL SAMOOM السينمائي | بوابة الزبائن</title>
+  <title>معرض السيارات | NAJJAR &amp; AL SAMOOM TRADING</title>
   <link rel="icon" href="/assets/app-icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at20">
-  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at10">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at21">
+  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at11">
 </head>
 <body class="nt-customer">
   <div class="nt-watermark" aria-hidden="true"></div>
   <header class="nt-cust-hero">
     <img src="/auto-trading/assets/logo-official-clear.png?v=at13" alt="NAJAR & AL SAMOOM TRADING" class="nt-cust-mark nt-cust-mark--official">
     <div>
-      <h1>معرض السيارات السينمائي</h1>
-      <p class="nt-sub">3D بطيء الحركة · قصص · ريلز · ترتيب إنستغرام</p>
+      <h1>معرض السيارات</h1>
+      <p class="nt-sub">مستعملة ومستوردة · مواصفات كاملة · صور · واتساب مباشر</p>
     </div>
     <div class="nt-hub-actions">
-      <a class="nt-btn primary" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب</a>
+      <a class="nt-btn primary" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>
       <a class="nt-btn ghost" href="/auto-trading/login.html">دخول الموظفين</a>
     </div>
   </header>
 
   <main class="nt-cust-main">
-    <div class="ig-toolbar">
-      <div>
-        <h2>تجربة العرض الكاملة</h2>
-        <p>قصص تلقائية · وضع سينما · ريلز عمودية</p>
-      </div>
-      <div class="ig-view-toggle" role="group" aria-label="طريقة العرض">
-        <button type="button" class="active" data-view="feed">فيد</button>
-        <button type="button" data-view="grid">شبكة</button>
-        <button type="button" data-view="reels">ريلز</button>
-      </div>
-    </div>
-    <div id="custRoot" aria-live="polite">جاري تحميل المعرض السينمائي…</div>
+    <div id="custRoot" aria-live="polite">جاري تحميل سيارات المعرض…</div>
   </main>
 
   <footer class="nt-hub-foot">
     واتساب +968 71924089 · +968 93391994 · حمد +968 77548482 · مكتب 95551994<br>
-    بنك صحار الدولي · IBAN OM070300000234020022484 · NAJJAR & AL SAMOOM TRADING نزوى الفلج
+    بنك صحار الدولي · IBAN OM070300000234020022484 · NAJJAR &amp; AL SAMOOM TRADING — نزوى الفلج
   </footer>
 
-  <script src="/auto-trading/car-3d.js?v=at10"></script>
+  <script src="/auto-trading/car-3d.js?v=at11"></script>
   <script>
     const root = document.getElementById('custRoot');
     let vehicles = [];
-    let viewMode = 'feed';
+    let filter = 'all';
 
     function paint() {
-      root.innerHTML = NajjarCar3D.renderFeed(vehicles, { whatsapp: true, stories: true, hero: true, mode: viewMode });
-      NajjarCar3D.setMode(root, viewMode);
-      NajjarCar3D.bindGallery(root, vehicles, {
-        onPlatform: (id) => {
-          localStorage.setItem('najjar_platform', id);
-          location.href = '/auto-trading/login.html';
+      root.innerHTML = NajjarCar3D.renderShowroom(vehicles, { filter, hero: true, whatsapp: true });
+      NajjarCar3D.bindShowroom(root, vehicles, {
+        onFilter: (id) => {
+          filter = id || 'all';
+          paint();
+          const grid = root.querySelector('[data-showroom]');
+          if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
         },
-        onVehicle: (_id, index) => NajjarCar3D.openCinema(vehicles, index),
-      });
-      root.querySelectorAll('[data-view-jump]').forEach((btn) => {
-        btn.onclick = () => {
-          viewMode = btn.getAttribute('data-view-jump') || 'reels';
-          syncToggle();
-          NajjarCar3D.setMode(root, viewMode);
-        };
       });
     }
-
-    function syncToggle() {
-      document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', b.getAttribute('data-view') === viewMode));
-    }
-
-    document.querySelectorAll('[data-view]').forEach((btn) => {
-      btn.onclick = () => {
-        viewMode = btn.getAttribute('data-view');
-        syncToggle();
-        NajjarCar3D.setMode(root, viewMode);
-      };
-    });
 
     (async () => {
       try {
-        const rows = await fetch('/auto-trading/seed_vehicles.json?v=at7').then((r) => r.json());
-        vehicles = (rows || []).filter((v) => v.status !== 'مباعة');
+        const rows = await fetch('/auto-trading/seed_vehicles.json?v=at8').then((r) => r.json());
+        vehicles = (rows || [])
+          .filter((v) => v.status !== 'مباعة')
+          .map((v, i) => ({ ...v, id: v.id != null ? v.id : i + 1 }));
         paint();
       } catch (_) {
-        root.innerHTML = '<p class="empty-state">تعذر تحميل المعرض</p>';
+        root.innerHTML = '<p class="empty-state">تعذر تحميل سيارات المعرض</p>';
       }
     })();
   </script>

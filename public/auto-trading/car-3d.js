@@ -1,4 +1,4 @@
-/* NAJJAR & AL SAMOOM TRADING — Cinematic 3D cars + Instagram / Reels / Stories */
+/* NAJJAR & AL SAMOOM TRADING — Car showroom + 3D vehicle visuals */
 (function (global) {
   const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
@@ -41,7 +41,7 @@
     return out;
   }
 
-  /** Rich CSS 3D car — slow cinematic orbit */
+  /** CSS 3D vehicle visual — used as showroom media until real photos are attached */
   function renderCar3D(v, opts = {}) {
     const accent = opts.accent || accentOf(v);
     const delay = opts.delay != null ? opts.delay : (Math.random() * 3).toFixed(1);
@@ -93,143 +93,138 @@
   function waHref(v) {
     return `https://wa.me/96871924089?text=${encodeURIComponent([
       'مرحباً NAJJAR & AL SAMOOM TRADING',
-      'أرغب بالاستفسار عن:',
+      'أرغب بالاستفسار عن السيارة التالية:',
       `${v.make} ${v.model} ${v.variant || ''}`.trim(),
-      `مخزون: ${v.stock_no || ''}`,
+      v.year ? `السنة: ${v.year}` : '',
+      v.color ? `اللون: ${v.color}` : '',
+      `رقم المخزون: ${v.stock_no || ''}`,
       v.vin ? `VIN: ${v.vin}` : '',
+      v.plate_no ? `اللوحة: ${v.plate_no}` : '',
+      `السعر: ${money(v.list_price)}`,
     ].filter(Boolean).join('\n'))}`;
   }
 
-  function renderIgPost(v, opts = {}) {
+  function pill(status) {
+    return `<span class="pill ${statusClass(status)}">${esc(status || '')}</span>`;
+  }
+
+  function specRows(v, limit) {
+    const rows = [
+      v.vin ? ['VIN', v.vin, true] : null,
+      v.plate_no ? ['اللوحة', v.plate_no, false] : null,
+      v.engine_cc ? ['المحرك', `${v.engine_cc} cc`, false] : null,
+      v.year ? ['السنة', String(v.year), false] : null,
+      v.vehicle_type ? ['النوع', v.vehicle_type, false] : null,
+      v.origin_country ? ['المنشأ', v.origin_country, false] : null,
+      v.import_ref ? ['الشحن / المرجع', v.import_ref, false] : null,
+      v.seats ? ['المقاعد', String(v.seats), false] : null,
+      v.insurance_company ? ['التأمين', v.insurance_company, false] : null,
+    ].filter(Boolean);
+    const list = typeof limit === 'number' ? rows.slice(0, limit) : rows;
+    return list.map(([label, value, ltr]) => `
+      <li>
+        <span>${esc(label)}</span>
+        <strong${ltr ? ' dir="ltr"' : ''}>${esc(value)}</strong>
+      </li>`).join('');
+  }
+
+  /** Professional showroom listing card — specs + visual + WhatsApp */
+  function renderShowroomCard(v, opts = {}) {
     const accent = accentOf(v);
-    const interactive = opts.interactive !== false;
     const idAttr = v.id != null ? ` data-vehicle-id="${esc(v.id)}"` : '';
     const idx = opts.index != null ? ` data-index="${opts.index}"` : '';
-    const wa = opts.whatsapp
-      ? `<a class="ig-action ig-wa" href="${waHref(v)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">واتساب</a>`
-      : '';
+    const stock = v.stock_no || `CAR-${(opts.index || 0) + 1}`;
     return `
-      <article class="ig-post ig-post--${accent}"${idAttr}${idx} ${interactive ? 'role="button" tabindex="0"' : ''}>
-        <header class="ig-post-head">
-          <div class="ig-avatar ig-avatar--${accent}" aria-hidden="true"></div>
-          <div class="ig-user">
-            <strong>najjar.trading</strong>
-            <span>${esc(v.stock_no || '')} · ${esc(v.origin_country || 'عُمان')}</span>
-          </div>
-          <button type="button" class="ig-open-story" data-story-index="${opts.index || 0}" onclick="event.stopPropagation()">▶ قصة</button>
-          <span class="ig-pill ${statusClass(v.status)}">${esc(v.status || '')}</span>
-        </header>
-        <div class="ig-media">
-          ${renderCar3D(v, { accent, delay: opts.delay, cinema: true })}
-          <div class="ig-media-badge">${esc(v.year || '—')}</div>
-          <button type="button" class="ig-cinema-btn" data-cinema-index="${opts.index || 0}" onclick="event.stopPropagation()">⛶ سينما</button>
+      <article class="nt-vcard nt-show-card nt-vcard--${accent}"${idAttr}${idx} role="button" tabindex="0">
+        <div class="nt-show-media">
+          ${renderCar3D(v, { accent, delay: opts.delay, cinema: true, badge: v.year || 'NAJJAR' })}
+          <div class="nt-show-media-badge">${esc(v.status || '')}</div>
         </div>
-        <div class="ig-actions" aria-hidden="true">
-          <span class="ig-heart">♡</span>
-          <span class="ig-comment">💬</span>
-          <span class="ig-send">➤</span>
-          <span class="ig-save">⌫</span>
+        <div class="nt-vcard-top">
+          <span class="nt-vcard-stock">${esc(stock)}</span>
+          ${pill(v.status)}
         </div>
-        <div class="ig-body">
-          <h3>${esc(v.make)} ${esc(v.model)} <em>${esc(v.variant || '')}</em></h3>
-          <p class="ig-meta">${esc(v.color || '')} · ${esc(v.vehicle_type || '')}</p>
-          <ul class="ig-facts">
-            ${v.vin ? `<li><span>VIN</span><b dir="ltr">${esc(v.vin)}</b></li>` : ''}
-            ${v.plate_no ? `<li><span>لوحة</span><b>${esc(v.plate_no)}</b></li>` : ''}
-            ${v.engine_cc ? `<li><span>محرك</span><b>${esc(v.engine_cc)} cc</b></li>` : ''}
-            ${v.import_ref ? `<li><span>شحن</span><b>${esc(v.import_ref)}</b></li>` : ''}
-          </ul>
-          <div class="ig-foot">
-            <strong class="ig-price">${money(v.list_price)}</strong>
-            ${wa}
+        <h3>${esc(v.make)} ${esc(v.model)}</h3>
+        <p class="nt-vcard-var">${esc(v.variant || '')} · ${esc(v.year || '—')} · ${esc(v.color || '')}</p>
+        <ul class="nt-vcard-meta">
+          ${specRows(v, 4)}
+        </ul>
+        <div class="nt-vcard-foot">
+          <strong class="nt-show-price">${money(v.list_price)}</strong>
+          <div class="nt-show-actions">
+            <a class="nt-btn primary nt-show-wa" href="${waHref(v)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">واتساب</a>
+            <span class="nt-show-more">التفاصيل</span>
           </div>
         </div>
       </article>`;
   }
 
-  function renderReel(v, opts = {}) {
-    const accent = accentOf(v);
-    return `
-      <article class="ig-reel ig-reel--${accent}" data-index="${opts.index || 0}" ${v.id != null ? `data-vehicle-id="${esc(v.id)}"` : ''}>
-        <div class="ig-reel-media">
-          ${renderCar3D(v, { accent, delay: opts.delay, cinema: true, hero: true, badge: 'REEL' })}
-        </div>
-        <div class="ig-reel-side">
-          <button type="button" class="ig-reel-btn" aria-label="like">♡</button>
-          <button type="button" class="ig-reel-btn" aria-label="comment">💬</button>
-          <a class="ig-reel-btn" href="${waHref(v)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>
-        </div>
-        <div class="ig-reel-info">
-          <strong>najjar.trading</strong>
-          <h3>${esc(v.make)} ${esc(v.model)}</h3>
-          <p>${esc(v.variant || '')} · ${esc(v.year || '')} · ${esc(v.color || '')}</p>
-          <span class="ig-pill ${statusClass(v.status)}">${esc(v.status || '')}</span>
-        </div>
-      </article>`;
-  }
-
-  function renderStories(platforms) {
-    const items = platforms || [
-      { id: 'oman', label: 'عُمان', icon: '🇴🇲' },
-      { id: 'america', label: 'أمريكا', icon: '🇺🇸' },
-      { id: 'salam', label: 'سلام', icon: '🚗' },
-      { id: 'dubai', label: 'دبي', icon: '🇦🇪' },
-      { id: 'saudi', label: 'السعودية', icon: '🇸🇦' },
-      { id: 'jordan', label: 'الأردن', icon: '🇯🇴' },
-      { id: 'india', label: 'الهند', icon: '🇮🇳' },
-      { id: 'iran', label: 'إيران', icon: '🇮🇷' },
+  function renderFilters(vehicles, active) {
+    const counts = { all: vehicles.length, متاحة: 0, 'قيد الاستيراد': 0, محجوزة: 0 };
+    vehicles.forEach((v) => {
+      if (counts[v.status] != null) counts[v.status] += 1;
+    });
+    const chips = [
+      ['all', 'الكل', counts.all],
+      ['متاحة', 'متاحة للبيع', counts.متاحة],
+      ['قيد الاستيراد', 'قيد الاستيراد', counts['قيد الاستيراد']],
+      ['محجوزة', 'محجوزة', counts.محجوزة],
     ];
     return `
-      <div class="ig-stories" aria-label="منصات">
-        <button type="button" class="ig-story ig-story--live" data-open-gallery="0" style="--i:0">
-          <span class="ig-story-ring"><span class="ig-story-icon">✦</span></span>
-          <span class="ig-story-label">معرض</span>
-        </button>
-        ${items.map((p, i) => `
-          <button type="button" class="ig-story" data-platform="${esc(p.id)}" style="--i:${i + 1}">
-            <span class="ig-story-ring"><span class="ig-story-icon">${p.icon || '🚘'}</span></span>
-            <span class="ig-story-label">${esc(p.label_ar || p.label)}</span>
+      <div class="nt-show-filters" role="group" aria-label="تصفية السيارات">
+        ${chips.map(([id, label, n]) => `
+          <button type="button" class="nt-show-chip${active === id ? ' active' : ''}" data-filter="${esc(id)}">
+            ${esc(label)} <em>${n}</em>
           </button>`).join('')}
       </div>`;
+  }
+
+  function renderShowroom(vehicles, opts = {}) {
+    const list = vehicles || [];
+    const filter = opts.filter || 'all';
+    const filtered = filter === 'all' ? list : list.filter((v) => v.status === filter);
+    return `
+      <div class="nt-showroom-shell">
+        ${opts.hero !== false ? renderHero(list) : ''}
+        <section class="nt-cust-intro">
+          <div>
+            <h2>سيارات المعرض</h2>
+            <p>عرض المواصفات · الصور · السعر · التواصل المباشر عبر واتساب</p>
+          </div>
+          ${renderFilters(list, filter)}
+        </section>
+        <div class="nt-showroom" data-showroom>
+          ${filtered.length
+            ? filtered.map((v, i) => renderShowroomCard(v, {
+              ...opts,
+              delay: (i * 0.9).toFixed(1),
+              index: list.indexOf(v),
+            })).join('')
+            : '<p class="empty-state">لا توجد سيارات في هذا التصنيف</p>'}
+        </div>
+      </div>
+      <div id="ntVehicleSheet" class="nt-vehicle-sheet" hidden></div>`;
   }
 
   function renderHero(vehicles) {
     const v = (vehicles && vehicles[0]) || { make: 'NAJJAR', model: 'TRADING', variant: 'SHOWROOM' };
     return `
-      <section class="nt-cinema-hero">
+      <section class="nt-cinema-hero nt-show-hero">
         <div class="nt-cinema-stage">
-          ${renderCar3D(v, { hero: true, cinema: true, delay: 0, badge: 'SLOW MOTION 3D' })}
+          ${renderCar3D(v, { hero: true, cinema: true, delay: 0, badge: v.year || 'SHOWROOM' })}
         </div>
         <div class="nt-cinema-copy">
-          <p class="nt-kicker">NAJJAR SHOWROOM</p>
-          <h2>معرض سينمائي متحرك</h2>
-          <p>سيارات ثلاثية الأبعاد · حركة بطيئة مرتبة · تجربة تشبه إنستغرام وريلز</p>
+          <p class="nt-kicker">NAJJAR &amp; AL SAMOOM TRADING</p>
+          <h2>معرض السيارات المستعملة والمستوردة</h2>
+          <p>تصفّح المخزون بالمواصفات الكاملة — VIN، اللون، المحرك، المنشأ — وتواصل معنا مباشرة للحجز أو الاستفسار.</p>
           <div class="nt-cinema-actions">
-            <button type="button" class="nt-btn primary" data-open-gallery="0">▶ تشغيل القصص</button>
-            <button type="button" class="nt-btn ghost" data-view-jump="reels">ريلز</button>
+            <a class="nt-btn primary" href="#custRoot">عرض السيارات</a>
+            <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>
           </div>
         </div>
       </section>`;
   }
 
-  function renderFeed(vehicles, opts = {}) {
-    const list = vehicles || [];
-    return `
-      <div class="ig-shell">
-        ${opts.hero !== false ? renderHero(list) : ''}
-        ${opts.stories !== false ? renderStories(opts.platforms) : ''}
-        <div class="ig-feed ${opts.mode === 'grid' ? 'ig-feed--grid' : ''}" data-feed>
-          ${list.map((v, i) => renderIgPost(v, { ...opts, delay: (i * 1.1).toFixed(1), index: i })).join('') || '<p class="empty-state">لا توجد سيارات</p>'}
-        </div>
-        <div class="ig-reels ${opts.mode === 'reels' ? 'is-on' : ''}" data-reels hidden>
-          ${list.map((v, i) => renderReel(v, { delay: (i * 0.8).toFixed(1), index: i })).join('')}
-        </div>
-      </div>
-      <div id="ntStoryOverlay" class="nt-story-overlay" hidden></div>
-      <div id="ntCinemaOverlay" class="nt-cinema-overlay" hidden></div>`;
-  }
-
-  /* ——— Story / Cinema controllers ——— */
   function ensureOverlay(id, cls) {
     let el = document.getElementById(id);
     if (!el) {
@@ -242,162 +237,118 @@
     return el;
   }
 
-  function openStoryViewer(vehicles, startIndex) {
+  /** Full vehicle detail sheet — replaces Instagram story/cinema overlays */
+  function openVehicleSheet(vehicles, startIndex) {
     const list = vehicles || [];
     if (!list.length) return;
     let i = Math.max(0, Math.min(startIndex || 0, list.length - 1));
-    const overlay = ensureOverlay('ntStoryOverlay', 'nt-story-overlay');
-    let timer = null;
-    const DURATION = 5200;
+    const overlay = ensureOverlay('ntVehicleSheet', 'nt-vehicle-sheet');
 
     function paint() {
       const v = list[i];
       const accent = accentOf(v);
       overlay.hidden = false;
+      document.body.classList.add('nt-lock');
       overlay.innerHTML = `
-        <div class="nt-story nt-story--${accent}">
-          <div class="nt-story-bars">${list.map((_, idx) => `<i class="${idx < i ? 'done' : idx === i ? 'active' : ''}"></i>`).join('')}</div>
-          <header class="nt-story-head">
-            <div class="ig-avatar ig-avatar--${accent}"></div>
-            <div><strong>najjar.trading</strong><span>${esc(v.stock_no || '')}</span></div>
-            <button type="button" class="nt-story-close" aria-label="إغلاق">✕</button>
-          </header>
-          <div class="nt-story-media">${renderCar3D(v, { accent, cinema: true, hero: true, delay: 0, badge: `${i + 1}/${list.length}` })}</div>
-          <div class="nt-story-caption">
-            <h3>${esc(v.make)} ${esc(v.model)} ${esc(v.variant || '')}</h3>
-            <p>${esc(v.color || '')} · ${esc(v.year || '')} · ${money(v.list_price)}</p>
-            <a class="nt-btn primary" href="${waHref(v)}" target="_blank" rel="noopener">تواصل واتساب</a>
+        <div class="nt-vehicle-sheet-panel nt-vehicle-sheet-panel--${accent}" role="dialog" aria-modal="true" aria-label="تفاصيل السيارة">
+          <button type="button" class="nt-story-close" aria-label="إغلاق">✕</button>
+          <div class="nt-vehicle-sheet-media">
+            ${renderCar3D(v, { accent, cinema: true, hero: true, delay: 0, badge: v.stock_no || 'NAJJAR' })}
           </div>
-          <button type="button" class="nt-story-tap nt-story-tap--prev" aria-label="السابق"></button>
-          <button type="button" class="nt-story-tap nt-story-tap--next" aria-label="التالي"></button>
+          <div class="nt-vehicle-sheet-body">
+            <div class="nt-vcard-top">
+              <span class="nt-vcard-stock">${esc(v.stock_no || '')}</span>
+              ${pill(v.status)}
+            </div>
+            <h3>${esc(v.make)} ${esc(v.model)} <em>${esc(v.variant || '')}</em></h3>
+            <p class="nt-vcard-var">${esc(v.color || '')} · ${esc(v.vehicle_type || '')} · ${esc(v.year || '—')}</p>
+            <ul class="nt-vcard-meta nt-vcard-meta--sheet">
+              ${specRows(v)}
+              ${v.license_doc_no ? `<li><span>رقم الوثيقة</span><strong>${esc(v.license_doc_no)}</strong></li>` : ''}
+              ${v.notes ? `<li class="nt-sheet-notes"><span>ملاحظات</span><strong>${esc(v.notes)}</strong></li>` : ''}
+            </ul>
+            <div class="nt-vehicle-sheet-foot">
+              <strong class="nt-show-price">${money(v.list_price)}</strong>
+              <div class="nt-show-actions">
+                <button type="button" class="nt-btn ghost" data-sheet-prev ${i <= 0 ? 'disabled' : ''}>السابق</button>
+                <button type="button" class="nt-btn ghost" data-sheet-next ${i >= list.length - 1 ? 'disabled' : ''}>التالي</button>
+                <a class="nt-btn primary" href="${waHref(v)}" target="_blank" rel="noopener">استفسار واتساب</a>
+              </div>
+            </div>
+          </div>
         </div>`;
       overlay.querySelector('.nt-story-close').onclick = close;
-      overlay.querySelector('.nt-story-tap--prev').onclick = () => go(i - 1);
-      overlay.querySelector('.nt-story-tap--next').onclick = () => go(i + 1);
-      clearTimeout(timer);
-      timer = setTimeout(() => go(i + 1), DURATION);
-    }
-
-    function go(n) {
-      if (n < 0) { close(); return; }
-      if (n >= list.length) { close(); return; }
-      i = n;
-      paint();
+      const prev = overlay.querySelector('[data-sheet-prev]');
+      const next = overlay.querySelector('[data-sheet-next]');
+      if (prev) prev.onclick = () => { i -= 1; paint(); };
+      if (next) next.onclick = () => { i += 1; paint(); };
     }
 
     function close() {
-      clearTimeout(timer);
       overlay.hidden = true;
       overlay.innerHTML = '';
       document.body.classList.remove('nt-lock');
     }
 
-    document.body.classList.add('nt-lock');
+    overlay.onclick = (ev) => { if (ev.target === overlay) close(); };
     paint();
-    overlay.onclick = (ev) => { if (ev.target === overlay) close(); };
   }
 
-  function openCinema(vehicles, startIndex) {
-    const list = vehicles || [];
-    if (!list.length) return;
-    let i = Math.max(0, Math.min(startIndex || 0, list.length - 1));
-    const overlay = ensureOverlay('ntCinemaOverlay', 'nt-cinema-overlay');
-    const v = list[i];
-    const accent = accentOf(v);
-    overlay.hidden = false;
-    document.body.classList.add('nt-lock');
-    overlay.innerHTML = `
-      <div class="nt-cinema-frame">
-        <button type="button" class="nt-story-close" aria-label="إغلاق">✕</button>
-        <div class="nt-cinema-canvas">${renderCar3D(v, { accent, cinema: true, hero: true, delay: 0, badge: 'CINEMA MODE' })}</div>
-        <div class="nt-cinema-meta">
-          <button type="button" class="nt-btn ghost" data-cprev>‹</button>
-          <div>
-            <h3>${esc(v.make)} ${esc(v.model)} ${esc(v.variant || '')}</h3>
-            <p>${esc(v.stock_no || '')} · ${money(v.list_price)}</p>
-          </div>
-          <button type="button" class="nt-btn ghost" data-cnext>›</button>
-          <a class="nt-btn primary" href="${waHref(v)}" target="_blank" rel="noopener">واتساب</a>
-        </div>
-      </div>`;
-    const close = () => {
-      overlay.hidden = true;
-      overlay.innerHTML = '';
-      document.body.classList.remove('nt-lock');
-    };
-    overlay.querySelector('.nt-story-close').onclick = close;
-    overlay.querySelector('[data-cprev]').onclick = () => openCinema(list, i - 1);
-    overlay.querySelector('[data-cnext]').onclick = () => openCinema(list, i + 1);
-    overlay.onclick = (ev) => { if (ev.target === overlay) close(); };
-  }
-
-  function bindGallery(root, vehicles, opts = {}) {
+  function bindShowroom(root, vehicles, opts = {}) {
     if (!root) return;
     const list = vehicles || [];
-    root.querySelectorAll('[data-open-gallery]').forEach((btn) => {
-      btn.onclick = (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openStoryViewer(list, Number(btn.getAttribute('data-open-gallery') || 0));
+    root.querySelectorAll('[data-filter]').forEach((btn) => {
+      btn.onclick = () => {
+        if (typeof opts.onFilter === 'function') opts.onFilter(btn.getAttribute('data-filter'));
       };
     });
-    root.querySelectorAll('.ig-open-story, [data-story-index]').forEach((btn) => {
-      if (!btn.classList.contains('ig-open-story') && !btn.hasAttribute('data-story-index')) return;
-      btn.onclick = (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openStoryViewer(list, Number(btn.getAttribute('data-story-index') || 0));
+    root.querySelectorAll('.nt-show-card[data-index], .nt-show-card[data-vehicle-id]').forEach((el) => {
+      const open = (ev) => {
+        if (ev.target.closest('a,button')) return;
+        const index = Number(el.getAttribute('data-index') || 0);
+        openVehicleSheet(list, index);
+        if (typeof opts.onVehicle === 'function') {
+          opts.onVehicle(Number(el.getAttribute('data-vehicle-id')), index);
+        }
+      };
+      el.onclick = open;
+      el.onkeydown = (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          open(ev);
+        }
       };
     });
-    root.querySelectorAll('[data-cinema-index]').forEach((btn) => {
-      btn.onclick = (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openCinema(list, Number(btn.getAttribute('data-cinema-index') || 0));
-      };
-    });
-    if (opts.onPlatform) {
-      root.querySelectorAll('[data-platform]').forEach((btn) => {
-        btn.onclick = () => opts.onPlatform(btn.getAttribute('data-platform'));
-      });
-    }
-    if (opts.onVehicle) {
-      root.querySelectorAll('[data-vehicle-id]').forEach((el) => {
-        el.onclick = (ev) => {
-          if (ev.target.closest('a,button')) return;
-          opts.onVehicle(Number(el.getAttribute('data-vehicle-id')), Number(el.getAttribute('data-index') || 0));
-        };
-      });
-    }
   }
 
-  function setMode(root, mode) {
-    if (!root) return;
-    const feed = root.querySelector('[data-feed]');
-    const reels = root.querySelector('[data-reels]');
-    if (feed) {
-      feed.hidden = mode === 'reels';
-      feed.classList.toggle('ig-feed--grid', mode === 'grid');
-    }
-    if (reels) {
-      reels.hidden = mode !== 'reels';
-      reels.classList.toggle('is-on', mode === 'reels');
-    }
-  }
+  /* —— Legacy aliases (no Instagram chrome) —— */
+  function renderIgPost(v, opts) { return renderShowroomCard(v, opts); }
+  function renderReel(v, opts) { return renderShowroomCard(v, opts); }
+  function renderStories() { return ''; }
+  function renderFeed(vehicles, opts) { return renderShowroom(vehicles, opts); }
+  function openStoryViewer(vehicles, startIndex) { return openVehicleSheet(vehicles, startIndex); }
+  function openCinema(vehicles, startIndex) { return openVehicleSheet(vehicles, startIndex); }
+  function bindGallery(root, vehicles, opts) { return bindShowroom(root, vehicles, opts); }
+  function setMode() { /* showroom has no feed/reels modes */ }
 
   global.NajjarCar3D = {
     accentOf,
     renderCar3D,
+    renderShowroomCard,
+    renderShowroom,
     renderIgPost,
     renderReel,
     renderStories,
     renderFeed,
     renderHero,
+    openVehicleSheet,
     openStoryViewer,
     openCinema,
+    bindShowroom,
     bindGallery,
     setMode,
     money,
     esc,
+    waHref,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
