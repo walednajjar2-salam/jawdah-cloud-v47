@@ -58,11 +58,11 @@ body.theme-autotrading::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at10');
+  background-image: url('/auto-trading/assets/logo-watermark.svg?v=at11');
   background-repeat: no-repeat;
   background-position: center;
-  background-size: min(42vw, 460px);
-  opacity: 0.1;
+  background-size: min(58vw, 560px);
+  opacity: 0.11;
 }
 
 body.theme-autotrading .app-shell,
@@ -330,6 +330,27 @@ body.section-dashboard .content.dashboard-page {
   flex: 0 0 auto;
 }
 
+/* Official horizontal logo — top of the right sidebar (brand home) */
+.theme-autotrading .sidebar-brand.at-brand-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  padding: 8px 4px 18px !important;
+  border-bottom: 1px solid rgba(202, 161, 74, 0.28) !important;
+}
+
+.at-logo-official {
+  width: 100%;
+  height: auto;
+  max-height: 110px;
+  object-fit: contain;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  filter: drop-shadow(0 2px 10px rgba(202, 161, 74, 0.25));
+}
+
 .sign-banner {
   width: 100%;
   max-width: 520px;
@@ -559,6 +580,22 @@ body.section-dashboard .content.dashboard-page {
   box-shadow: var(--edge);
 }
 
+.nt-dash-banner--logo {
+  grid-template-columns: minmax(220px, 320px) 1fr;
+}
+
+.nt-dash-banner--logo img {
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 2px 10px rgba(202, 161, 74, 0.28));
+}
+
 .nt-dash-banner h2 {
   margin: 0;
   font-family: "Playfair Display", Georgia, serif;
@@ -672,6 +709,19 @@ body.section-dashboard .content.dashboard-page {
   border: 2px solid #caa14a;
   box-shadow: var(--edge);
   background: #0a0a0a;
+}
+
+.nt-hub-logo--official,
+.nt-cust-mark--official {
+  width: min(280px, 42vw);
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 2px 12px rgba(202, 161, 74, 0.3));
 }
 
 .nt-kicker {
@@ -806,10 +856,12 @@ body.section-dashboard .content.dashboard-page {
 
 .nt-login-brand { text-align: center; }
 .nt-login-sign {
-  width: min(100%, 420px);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
+  width: min(100%, 480px);
+  border-radius: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 4px 18px rgba(202, 161, 74, 0.28));
   margin-bottom: 16px;
+  background: transparent;
 }
 .nt-login-loc { color: var(--muted); }
 

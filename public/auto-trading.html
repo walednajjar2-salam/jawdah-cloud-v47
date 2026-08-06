@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>NAJJAR & AL SAMOOM TRADING | USED &amp; IMPORTED CARS</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at13">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at14">
   <style>
     .qe-topbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .qe-back { text-decoration: none; }
@@ -23,12 +23,8 @@
 <body class="app-body theme-autotrading">
   <div class="app-shell">
     <aside class="sidebar open">
-      <div class="sidebar-brand">
-        <img id="sidebarLogo" class="at-logo-img" src="/auto-trading/assets/logo-mark.svg?v=at10" alt="NAJJAR & AL SAMOOM TRADING">
-        <div>
-          <strong>NAJJAR & AL SAMOOM TRADING</strong>
-          <small>USED &amp; IMPORTED CARS</small>
-        </div>
+      <div class="sidebar-brand at-brand-stack">
+        <img id="sidebarLogo" class="at-logo-official" src="/auto-trading/assets/logo-official.svg?v=at11" alt="NAJJAR & AL SAMOOM TRADING">
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" data-section="dashboard"><span class="nav-inner"><span class="nav-icon">▣</span><span class="nav-label">لوحة التحكم</span></span></button>
@@ -82,6 +78,6 @@
     window.APP_USER = { role: 'operations', display_name: '', username: '' };
     try { localStorage.setItem('jawdah_portal_choice', 'autotrading'); } catch (_) {}
   </script>
-  <script src="/auto-trading/app.js?v=at10"></script>
+  <script src="/auto-trading/app.js?v=at11"></script>
 </body>
 </html>

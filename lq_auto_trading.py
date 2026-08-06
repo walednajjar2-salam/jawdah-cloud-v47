@@ -22,8 +22,9 @@ COMPANY_PROFILE: Dict[str, Any] = {
     "address_en": "Al-Dakhilia Governorate · Nizwa · Falaj",
     "country_ar": "سلطنة عُمان",
     "hours": "08:00 — 20:00",
-    "logo_url": "/auto-trading/assets/logo-al-najjar.svg",
+    "logo_url": "/auto-trading/assets/logo-official.svg",
     "logo_mark_url": "/auto-trading/assets/logo-mark.svg",
+    "logo_card_url": "/auto-trading/assets/logo-al-najjar.svg",
     "phones": {
         "owner": "71924089",
         "whatsapp_1": "71924089",

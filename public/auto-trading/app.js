@@ -12,8 +12,9 @@ let statusFilter = '';
 let makeFilter = '';
 let companyProfile = null;
 
-const LOGO_URL = '/auto-trading/assets/logo-al-najjar.svg?v=at3';
-const LOGO_MARK = '/auto-trading/assets/logo-mark.svg?v=at3';
+const LOGO_URL = '/auto-trading/assets/logo-official.svg?v=at11';
+const LOGO_MARK = '/auto-trading/assets/logo-mark.svg?v=at11';
+const LOGO_CARD = '/auto-trading/assets/logo-al-najjar.svg?v=at11';
 
 function waLink(phone) {
   const p = String(phone || '').replace(/\D/g, '');
@@ -309,7 +310,7 @@ function renderCompanyCard(c) {
   const contacts = c.contacts || [];
   return `
     <div class="company-hero-wide">
-      <img class="sign-banner" src="${e(c.logo_url || LOGO_URL)}" alt="${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}">
+      <img class="sign-banner" src="${e(c.logo_card_url || LOGO_CARD)}" alt="${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}">
       <div>
         <h2 style="margin:0;color:var(--navy)">${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}</h2>
         <p class="mini" style="letter-spacing:1px">${e(c.tagline_en || 'USED & IMPORTED CARS')}</p>
@@ -390,8 +391,8 @@ async function loadStaff() {
   const c = await ensureCompany();
   const staff = c.staff || [];
   content.innerHTML = `
-    <div class="nt-dash-banner">
-      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR & AL SAMOOM TRADING">
+    <div class="nt-dash-banner nt-dash-banner--logo">
+      <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
         <h2>فريق العمل</h2>
         <p>ملاك · مبيعات · مستخدمون — صلاحيات المنصة</p>
@@ -440,11 +441,10 @@ async function loadDashboard() {
   const staff = c.staff || [];
   const netCls = Number(s.net_profit) >= 0 ? 'highlight' : '';
   content.innerHTML = `
-    <div class="nt-dash-banner">
-      <img src="${e(c.logo_mark_url || LOGO_MARK)}" alt="NAJJAR & AL SAMOOM TRADING">
+    <div class="nt-dash-banner nt-dash-banner--logo">
+      <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
-        <h2>NAJJAR & AL SAMOOM TRADING</h2>
-        <p>USED &amp; IMPORTED CARS · ${e(c.address_ar || 'نزوى — الفلج')}</p>
+        <p>${e(c.address_ar || 'نزوى — الفلج')} · نظام محاسبي متكامل</p>
       </div>
     </div>
     <div class="stats-grid">
