@@ -114,7 +114,7 @@ body.theme-autotrading::after {
     inset 0 0 0 1px rgba(240, 217, 138, 0.28),
     0 12px 26px rgba(0, 0, 0, 0.5),
     0 0 22px rgba(202, 161, 74, 0.28);
-  transform: translateZ(0) perspective(420px) rotateX(6deg);
+  transform: translateZ(0);
   transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
   animation: ntGlassRise 0.55s ease both;
 }
@@ -157,7 +157,7 @@ body.theme-autotrading::after {
 .theme-autotrading .nav-item:hover .nav-icon,
 .nt-kpi-icon:hover,
 .nt-plat:hover .nt-plat-icon--glass {
-  transform: translateY(-3px) perspective(420px) rotateX(2deg) scale(1.05);
+  transform: translateY(-3px) scale(1.05);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.45),
     0 0 0 1px rgba(0, 0, 0, 0.8),
@@ -169,26 +169,50 @@ body.theme-autotrading::after {
 }
 
 @keyframes ntGlassRise {
-  from { opacity: 0; transform: translateY(8px) perspective(420px) rotateX(12deg) scale(0.94); }
-  to { opacity: 1; transform: translateZ(0) perspective(420px) rotateX(6deg) scale(1); }
+  from { opacity: 0; transform: translateY(8px) scale(0.94); }
+  to { opacity: 1; transform: translateZ(0) scale(1); }
+}
+
+.theme-autotrading .nav-item .nav-inner {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-height: 36px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 .theme-autotrading .nav-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  flex: 0 0 36px !important;
+  border-radius: 12px !important;
+  /* overrides .nav-item span { background:transparent } */
+  background:
+    linear-gradient(155deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.08) 22%,
+      rgba(202, 161, 74, 0.18) 52%,
+      rgba(8, 6, 2, 0.62) 100%) padding-box,
+    linear-gradient(140deg, var(--nt-gold-hi, #f0d98a), var(--nt-gold, #caa14a) 35%, var(--nt-gold-lo, #6e5414) 68%, var(--nt-gold-hi, #f0d98a)) border-box !important;
+  border: 2px solid transparent !important;
+  border-color: transparent !important;
 }
 .theme-autotrading .nav-icon .nt-ico,
-.theme-autotrading .nav-icon .nt-ico-img { width: 22px; height: 22px; }
+.theme-autotrading .nav-icon .nt-ico-img { width: 22px !important; height: 22px !important; }
 .theme-autotrading .nav-item.active .nav-icon {
   background:
     linear-gradient(155deg, rgba(255, 255, 255, 0.45) 0%, rgba(202, 161, 74, 0.4) 42%, rgba(74, 50, 8, 0.75) 100%) padding-box,
-    linear-gradient(140deg, #f0d98a, #caa14a 40%, #6e5414 70%, #f0d98a) border-box;
+    linear-gradient(140deg, #f0d98a, #caa14a 40%, #6e5414 70%, #f0d98a) border-box !important;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.55),
     0 0 0 2.5px rgba(240, 217, 138, 0.9),
     inset 0 2px 0 rgba(255, 255, 255, 0.62),
-    0 12px 24px rgba(202, 161, 74, 0.4);
+    0 12px 24px rgba(202, 161, 74, 0.4) !important;
 }
 
 .nt-kpi-icon {
@@ -267,11 +291,15 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .theme-autotrading .nav-item,
-.theme-autotrading .nav-item span {
+.theme-autotrading .nav-item .nav-label {
   color: var(--muted) !important;
   -webkit-text-fill-color: var(--muted) !important;
   background: transparent !important;
   border-color: transparent !important;
+}
+.theme-autotrading .nav-item .nav-inner {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
 }
 
 .theme-autotrading .nav-item:hover {
