@@ -94,6 +94,25 @@
     return out;
   }
 
+  function firstWithPhoto(vehicles) {
+    return (vehicles || []).find((v) => photosOf(v).length > 0);
+  }
+
+  function renderGlassLogo(opts = {}) {
+    const size = opts.size || 'hero';
+    const src = opts.src || '/auto-trading/assets/logo-official-clear.png?v=at13';
+    const alt = opts.alt || 'NAJJAR & AL SAMOOM TRADING';
+    return `
+      <div class="nt-glass-logo-float nt-glass-logo-float--${esc(size)}" role="img" aria-label="${esc(alt)}">
+        <div class="nt-glass-logo-glow"></div>
+        <div class="nt-glass-logo-ring"></div>
+        <div class="nt-glass-logo-pane">
+          <img src="${esc(src)}" alt="${esc(alt)}" loading="eager">
+        </div>
+        <div class="nt-glass-logo-shine"></div>
+      </div>`;
+  }
+
   function renderCar3D(v, opts = {}) {
     const accent = opts.accent || accentOf(v);
     const delay = opts.delay != null ? opts.delay : (Math.random() * 3).toFixed(1);
@@ -348,11 +367,14 @@
   }
 
   function renderHero(vehicles) {
-    const v = (vehicles && vehicles[0]) || { make: 'NAJJAR', model: 'TRADING', variant: 'SHOWROOM' };
+    const v = firstWithPhoto(vehicles);
+    const stage = v
+      ? renderPhotoMedia(v, { hero: true, eager: true, badge: v.year || v.stock_no || '' })
+      : renderGlassLogo({ size: 'hero' });
     return `
       <section class="nt-cinema-hero nt-show-hero">
         <div class="nt-cinema-stage">
-          ${renderPhotoMedia(v, { hero: true, eager: true, badge: v.year || 'SHOWROOM' })}
+          ${stage}
         </div>
         <div class="nt-cinema-copy">
           <p class="nt-kicker">NAJJAR &amp; AL SAMOOM TRADING</p>
@@ -498,7 +520,10 @@
 
   global.NajjarCar3D = {
     accentOf,
+    photosOf,
+    firstWithPhoto,
     renderCar3D,
+    renderGlassLogo,
     renderPhotoMedia,
     renderNoPhoto,
     renderShowroomCard,

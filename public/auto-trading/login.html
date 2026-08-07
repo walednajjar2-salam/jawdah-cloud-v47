@@ -3,21 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>تسجيل الدخول | NAJJAR & AL SAMOOM TRADING</title>
+  <title>Sign in | NAJJAR & AL SAMOOM TRADING</title>
   <link rel="icon" href="/assets/app-icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at34">
-  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at12">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at35">
 </head>
 <body class="nt-login">
   <div class="nt-watermark" aria-hidden="true"></div>
   <main class="nt-login-stage">
     <section class="nt-login-brand">
-      <img src="/auto-trading/assets/logo-official-clear.png?v=at13" alt="NAJAR & AL SAMOOM TRADING" class="nt-login-sign">
-      <div class="ig-media" id="loginCarWrap" style="position:relative;aspect-ratio:16/10;border-radius:18px;margin:14px auto 10px;max-width:420px;overflow:hidden"></div>
-      <p class="nt-login-loc">محافظة الداخلية — نزوى — الفلج</p>
+      <div id="loginBrandWrap"></div>
+      <div id="loginPhotoWrap" class="nt-login-live-photo" hidden></div>
+      <p class="nt-login-loc">Al Dakhiliyah — Nizwa — Al Falaj</p>
     </section>
     <section class="nt-login-card">
       <h2>تسجيل الدخول</h2>
@@ -36,18 +35,33 @@
         <a href="/najjar/customer.html">بوابة الزبائن</a>
         <a href="/najjar/platforms.html">المنصات</a>
       </div>
-      <div class="nt-staff-mini">
-        <span>ملاك: وليد النجار · حمد السموم (رأس المال 50/50)</span>
-        <span>موظفين: مبيعات · مصاريف · توزيعات — واية / رزان الشعيلي</span>
+      <div class="nt-team-credits">
+        <div class="nt-team-row">
+          <span class="nt-team-label">Owners</span>
+          <span class="nt-team-names">Walid Najjar &amp; Hamad Al Samoom</span>
+        </div>
+        <div class="nt-team-row">
+          <span class="nt-team-label">Team</span>
+          <span class="nt-team-names">Aya Al Shaili · Razan Al Shaili</span>
+        </div>
       </div>
     </section>
   </main>
-  <script src="/auto-trading/car-3d.js?v=at14"></script>
+  <script src="/auto-trading/car-3d.js?v=at16"></script>
   <script>
-    document.getElementById('loginCarWrap').innerHTML = NajjarCar3D.renderCar3D(
-      { make: 'Land Rover', model: 'Defender', variant: '110 P400' },
-      { accent: 'lr', delay: 0.4, cinema: true, hero: true, badge: 'SHOWROOM' }
-    );
+    document.getElementById('loginBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'login' });
+
+    (async () => {
+      try {
+        const data = await fetch('/api/auto-trading/showroom', { cache: 'no-store' }).then((r) => r.json());
+        if (!data || data.ok === false) return;
+        const v = NajjarCar3D.firstWithPhoto(data.vehicles || []);
+        if (!v) return;
+        const wrap = document.getElementById('loginPhotoWrap');
+        wrap.innerHTML = NajjarCar3D.renderPhotoMedia(v, { hero: true, eager: true, badge: v.year || v.stock_no || '' });
+        wrap.hidden = false;
+      } catch (_) {/* no stock photo — logo only */}
+    })();
 
     async function doLogin() {
       const err = document.getElementById('loginErr');
@@ -88,13 +102,9 @@
     document.getElementById('loginUser').addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') document.getElementById('loginPass').focus();
     });
-    // Skip the form only for a session the server still accepts. An expired token
-    // used to bounce the user between here and the platforms page forever.
     (async () => {
       let saved = (localStorage.getItem('jawdah_cloud_token') || '').trim();
       if (!saved) {
-        // Local storage can have been wiped while cleaning an older build off the
-        // device; the session cookie survives that, so it is worth asking.
         try {
           const m = document.cookie.match(/(?:^|;\s*)lq_token=([^;]+)/);
           saved = m ? decodeURIComponent(m[1]).trim() : '';

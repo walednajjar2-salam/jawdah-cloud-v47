@@ -8,13 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at34">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at35">
   <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at12">
 </head>
 <body class="nt-customer">
   <div class="nt-watermark" aria-hidden="true"></div>
   <header class="nt-cust-hero">
-    <img src="/auto-trading/assets/logo-official-clear.png?v=at13" alt="NAJAR & AL SAMOOM TRADING" class="nt-cust-mark nt-cust-mark--official">
+    <div id="custBrandWrap" class="nt-cust-brand-wrap"></div>
     <div>
       <h1>تشكيلة مختارة</h1>
       <p class="nt-sub">صور · أسعار · مواصفات · واتساب مباشر</p>
@@ -35,11 +35,14 @@
     واتساب <span dir="ltr">+968 71924089</span> · <span dir="ltr">+968 93391994</span> ·
     حمد <span dir="ltr">+968 77548482</span> · مكتب <span dir="ltr">95551994</span><br>
     بنك صحار الدولي · رقم الحساب الدولي <span dir="ltr">OM070300000234020022484</span> ·
-    NAJJAR &amp; AL SAMOOM TRADING — نزوى الفلج
+    NAJJAR &amp; AL SAMOOM TRADING — Nizwa · Al Falaj<br>
+    <span class="nt-team-foot">Walid Najjar &amp; Hamad Al Samoom · Aya Al Shaili · Razan Al Shaili</span>
   </footer>
 
-  <script src="/auto-trading/car-3d.js?v=at15"></script>
+  <script src="/auto-trading/car-3d.js?v=at16"></script>
   <script>
+    document.getElementById('custBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'compact' });
+
     const root = document.getElementById('custRoot');
     let vehicles = [];
     let filter = 'all';

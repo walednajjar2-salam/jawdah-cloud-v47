@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at34">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at35">
   <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at12">
 </head>
 <body class="nt-hub">
@@ -95,7 +95,7 @@
   </main>
 
   <script src="/auto-trading/icons.js?v=at19"></script>
-  <script src="/auto-trading/car-3d.js?v=at14"></script>
+  <script src="/auto-trading/car-3d.js?v=at16"></script>
   <script>
     if (window.NajjarIcons) NajjarIcons.paint(document);
 
@@ -144,12 +144,19 @@
       }).catch(() => {});
     }
 
-    document.getElementById('platHero').innerHTML = NajjarCar3D.renderHero([
-      { make: 'Mercedes-Benz', model: 'G-Class', variant: 'G63 AMG', stock_no: 'LIVE', status: 'قيد الاستيراد', list_price: 0 }
-    ]);
-    document.querySelectorAll('#platHero [data-open-gallery], #platHero [data-view-jump]').forEach((btn) => {
-      btn.onclick = () => { location.href = withToken('/najjar/staff.html?platform=oman&view=vehicles'); };
-    });
+    document.getElementById('platHero').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'hero' });
+    (async () => {
+      try {
+        const data = await fetch('/api/auto-trading/showroom', { cache: 'no-store' }).then((r) => r.json());
+        if (!data || data.ok === false) return;
+        const vehicles = (data.vehicles || []).map((v, i) => ({ ...v, id: v.id != null ? v.id : i + 1 }));
+        if (!NajjarCar3D.firstWithPhoto(vehicles)) return;
+        document.getElementById('platHero').innerHTML = NajjarCar3D.renderHero(vehicles);
+        document.querySelectorAll('#platHero [data-open-gallery], #platHero [data-view-jump]').forEach((btn) => {
+          btn.onclick = () => { location.href = withToken('/najjar/staff.html?platform=oman&view=vehicles'); };
+        });
+      } catch (_) {/* glass logo stays */}
+    })();
 
     document.getElementById('btnLogout').onclick = () => {
       localStorage.removeItem('jawdah_cloud_token');

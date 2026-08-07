@@ -1119,6 +1119,137 @@ body.section-dashboard .content.dashboard-page {
   font-size: 0.9rem;
 }
 .nt-login-links a { color: var(--gold-dark); font-weight: 700; text-decoration: none; }
+
+/* Floating glass logo — brand mark without illustrative car drawings */
+.nt-glass-logo-float {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-inline: auto;
+  isolation: isolate;
+  animation: nt-glass-float 5.5s ease-in-out infinite;
+}
+.nt-glass-logo-float--login {
+  width: min(100%, 360px);
+  aspect-ratio: 1.15;
+  margin-bottom: 8px;
+}
+.nt-glass-logo-float--hero {
+  width: min(100%, 420px);
+  aspect-ratio: 1.2;
+  margin: 0 auto;
+}
+.nt-glass-logo-float--compact {
+  width: min(100%, 200px);
+  aspect-ratio: 1;
+}
+.nt-glass-logo-glow {
+  position: absolute;
+  inset: 8% 10%;
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 40%, rgba(202, 161, 74, 0.45), transparent 68%);
+  filter: blur(18px);
+  z-index: 0;
+}
+.nt-glass-logo-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 0 0 1px rgba(202, 161, 74, 0.35),
+    0 22px 50px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -12px 28px rgba(202, 161, 74, 0.12);
+  z-index: 1;
+  pointer-events: none;
+}
+.nt-glass-logo-pane {
+  position: relative;
+  z-index: 2;
+  width: 78%;
+  padding: 18px 16px 14px;
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03) 42%, rgba(202, 161, 74, 0.08)),
+    rgba(12, 10, 6, 0.42);
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  border: 1px solid rgba(202, 161, 74, 0.42);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.nt-glass-logo-pane img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 22px rgba(202, 161, 74, 0.38));
+}
+.nt-glass-logo-shine {
+  position: absolute;
+  inset: 12% 18% auto;
+  height: 38%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent);
+  transform: rotate(-8deg);
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.75;
+}
+@keyframes nt-glass-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.nt-login-live-photo {
+  width: min(100%, 420px);
+  margin: 4px auto 12px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(202, 161, 74, 0.35);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+}
+.nt-login-live-photo .nt-photo-media { border-radius: 18px; }
+.nt-login-live-photo .nt-photo-caption { font-size: 0.82rem; }
+.nt-cust-brand-wrap { flex: 0 0 auto; }
+
+.nt-team-credits {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(202, 161, 74, 0.22);
+  display: grid;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+.nt-team-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 10px;
+}
+.nt-team-label {
+  color: var(--gold-dark);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+.nt-team-names {
+  color: var(--navy);
+  font-weight: 700;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.nt-team-foot {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 .nt-staff-mini {
   margin-top: 16px;
   display: grid;
@@ -1468,7 +1599,7 @@ body.nt-lock { overflow: hidden; }
 
 @media (max-width: 860px) {
   .nt-login-stage { grid-template-columns: 1fr; padding-top: 20px; }
-  .nt-login-sign { width: min(100%, 320px); }
+  .nt-glass-logo-float--login { width: min(100%, 300px); }
   .nt-dash-banner { grid-template-columns: 1fr; text-align: center; }
   .nt-dash-banner img { margin: 0 auto; }
   .nt-vehicle-sheet-panel { grid-template-columns: 1fr; }
