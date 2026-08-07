@@ -41,10 +41,6 @@ def main() -> int:
     must_close = [
         "/",
         "/index.html",
-        "/auto-trading/customer.html",
-        "/auto-trading/login.html",
-        "/auto-trading/platforms.html",
-        "/auto-trading.html",
         "/app.html",
         "/erp",
     ]
@@ -56,10 +52,24 @@ def main() -> int:
         if not ok:
             fails += 1
 
+    legacy_to_najjar = [
+        ("/auto-trading/customer.html", "/najjar/customer.html"),
+        ("/auto-trading/login.html", "/najjar/login.html"),
+        ("/auto-trading/platforms.html", "/najjar/platforms.html"),
+        ("/auto-trading.html", "/najjar/staff.html"),
+    ]
+    for path, target in legacy_to_najjar:
+        resp = fetch(path)
+        loc = resp.headers.get("Location", "")
+        ok = resp.status in (301, 302) and loc.startswith(target)
+        print(f"{'PASS' if ok else 'FAIL'}  {path:34s} -> {resp.status} {loc!r}")
+        if not ok:
+            fails += 1
+
     najjar_pages = [
-        (NAJJAR + "/", "معرض"),
-        (NAJJAR + "/customer.html", "معرض"),
-        (NAJJAR + "/login.html", "تسجيل الدخول"),
+        (NAJJAR + "/", "تشكيلة"),
+        (NAJJAR + "/customer.html", "تشكيلة"),
+        (NAJJAR + "/login.html", "Walid Najjar"),
         (NAJJAR + "/platforms.html", "المنصات"),
     ]
     for path, needle in najjar_pages:

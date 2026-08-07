@@ -4426,6 +4426,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return True
             return False
         if NAJJAR_PUBLISHED:
+            legacy_to_najjar = {
+                "/auto-trading/customer.html": NAJJAR_HOME,
+                "/auto-trading/login.html": NAJJAR_LOGIN,
+                "/auto-trading/platforms.html": NAJJAR_PLATFORMS,
+                "/auto-trading.html": NAJJAR_STAFF,
+            }
+            if path in legacy_to_najjar:
+                self.send_redirect(legacy_to_najjar[path])
+                return True
             if _is_najjar_public_path(path) or _is_auto_trading_asset(safe):
                 return False
             if path == "/manifest.webmanifest":
@@ -4711,15 +4720,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return self.send_redirect(legacy_auto_html[path])
 
         if not SITE_PUBLISHED and NAJJAR_PUBLISHED:
-            legacy_closed = {
-                "/auto-trading/customer.html",
-                "/auto-trading/login.html",
-                "/auto-trading/platforms.html",
-                "/auto-trading.html",
+            legacy_to_najjar = {
+                "/auto-trading/customer.html": NAJJAR_HOME,
+                "/auto-trading/login.html": NAJJAR_LOGIN,
+                "/auto-trading/platforms.html": NAJJAR_PLATFORMS,
+                "/auto-trading.html": NAJJAR_STAFF,
             }
-            if original_path in legacy_closed or (
-                original_safe.startswith("auto-trading/") and original_safe.endswith(".html")
-            ):
+            if original_path in legacy_to_najjar:
+                return self.send_redirect(legacy_to_najjar[original_path])
+            if original_safe.startswith("auto-trading/") and original_safe.endswith(".html"):
                 return self.send_redirect(SITE_CLOSED_URL)
 
         if path == "/favicon.ico":
