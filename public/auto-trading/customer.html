@@ -58,10 +58,13 @@
 
     (async () => {
       try {
-        const rows = await fetch('/auto-trading/seed_vehicles.json?v=at9').then((r) => r.json());
-        vehicles = (rows || [])
-          .filter((v) => v.status !== 'مباعة')
-          .map((v, i) => ({ ...v, id: v.id != null ? v.id : i + 1 }));
+        const data = await fetch('/api/auto-trading/showroom', { cache: 'no-store' }).then((r) => r.json());
+        if (!data || data.ok === false) throw new Error(data && data.error);
+        vehicles = (data.vehicles || []).map((v, i) => ({ ...v, id: v.id != null ? v.id : i + 1 }));
+        if (!vehicles.length) {
+          root.innerHTML = '<p class="empty-state">لا توجد سيارات معروضة حالياً — تواصل معنا عبر واتساب</p>';
+          return;
+        }
         paint();
       } catch (_) {
         root.innerHTML = '<p class="empty-state">تعذر تحميل سيارات المعرض</p>';

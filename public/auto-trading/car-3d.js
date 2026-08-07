@@ -37,9 +37,10 @@
   }
 
   function priceBlock(v, opts = {}) {
-    const omr = priceOMR(v);
+    const omr = v.price_on_request ? 0 : priceOMR(v);
     if (!(omr > 0)) {
-      return `<div class="nt-price-block"><strong class="nt-show-price">حسب الاتفاق</strong></div>`;
+      const label = v.status === 'قيد الاستيراد' ? 'السعر عند الوصول' : 'حسب الاتفاق';
+      return `<div class="nt-price-block"><strong class="nt-show-price">${label}</strong></div>`;
     }
     const usd = Number(v.price_usd || 0) > 0 ? Number(v.price_usd) : omr * FX.USD;
     const sar = omr * FX.SAR;
@@ -160,8 +161,8 @@
   }
 
   function waHref(v) {
-    const omr = priceOMR(v);
-    const priceLine = omr > 0 ? `السعر: ${fmtNum(omr, 3)} ر.ع` : 'السعر: حسب الاتفاق';
+    const omr = v.price_on_request ? 0 : priceOMR(v);
+    const priceLine = omr > 0 ? `السعر: ${fmtNum(omr, 3)} ر.ع` : 'السعر: عند الطلب';
     return `https://wa.me/96871924089?text=${encodeURIComponent([
       'مرحباً NAJJAR & AL SAMOOM TRADING',
       'أرغب بالاستفسار عن السيارة التالية:',
@@ -202,9 +203,16 @@
   function sortVehicles(list, sort) {
     const rows = (list || []).slice();
     const key = sort || 'showroom';
+    // Cars quoted on request have no number to compare, so they trail either ordering.
+    const quoted = (v) => (v.price_on_request ? 0 : priceOMR(v));
     rows.sort((a, b) => {
-      if (key === 'price-asc') return priceOMR(a) - priceOMR(b) || (a.sort_order || 999) - (b.sort_order || 999);
-      if (key === 'price-desc') return priceOMR(b) - priceOMR(a) || (a.sort_order || 999) - (b.sort_order || 999);
+      if (key === 'price-asc' || key === 'price-desc') {
+        const pa = quoted(a);
+        const pb = quoted(b);
+        if (!pa !== !pb) return pa ? -1 : 1;
+        const diff = key === 'price-asc' ? pa - pb : pb - pa;
+        return diff || (a.sort_order || 999) - (b.sort_order || 999);
+      }
       if (key === 'year-desc') return Number(b.year || 0) - Number(a.year || 0) || (a.sort_order || 999) - (b.sort_order || 999);
       if (key === 'name') {
         const an = `${a.make || ''} ${a.model || ''}`.localeCompare(`${b.make || ''} ${b.model || ''}`, 'ar');
@@ -284,12 +292,17 @@
       </div>`;
   }
 
+  function visibleVehicles(list, filter, sort) {
+    const sorted = sortVehicles(list || [], sort || 'showroom');
+    return !filter || filter === 'all' ? sorted : sorted.filter((v) => v.status === filter);
+  }
+
   function renderShowroom(vehicles, opts = {}) {
     const list = vehicles || [];
     const filter = opts.filter || 'all';
     const sort = opts.sort || 'showroom';
     const sorted = sortVehicles(list, sort);
-    const filtered = filter === 'all' ? sorted : sorted.filter((v) => v.status === filter);
+    const filtered = visibleVehicles(list, filter, sort);
     return `
       <div class="nt-showroom-shell">
         ${opts.hero !== false ? renderHero(sorted) : ''}
@@ -308,7 +321,7 @@
             ? filtered.map((v, i) => renderShowroomCard(v, {
               ...opts,
               delay: (i * 0.9).toFixed(1),
-              index: list.indexOf(v),
+              index: i,
             })).join('')
             : '<p class="empty-state">لا توجد سيارات في هذا التصنيف</p>'}
         </div>
@@ -419,6 +432,12 @@
   function bindShowroom(root, vehicles, opts = {}) {
     if (!root) return;
     const list = vehicles || [];
+    // The detail sheet walks the cards the visitor can actually see, in their order.
+    const activeChip = root.querySelector('.nt-show-chip.active');
+    const filter = opts.filter || (activeChip && activeChip.getAttribute('data-filter')) || 'all';
+    const sortSelect = root.querySelector('[data-sort]');
+    const sort = opts.sort || (sortSelect && sortSelect.value) || 'showroom';
+    const visible = visibleVehicles(list, filter, sort);
     root.querySelectorAll('[data-filter]').forEach((btn) => {
       btn.onclick = () => {
         if (typeof opts.onFilter === 'function') opts.onFilter(btn.getAttribute('data-filter'));
@@ -434,7 +453,7 @@
       const open = (ev) => {
         if (ev.target.closest('a,button,select,label')) return;
         const index = Number(el.getAttribute('data-index') || 0);
-        openVehicleSheet(list, index);
+        openVehicleSheet(visible, index);
         if (typeof opts.onVehicle === 'function') {
           opts.onVehicle(Number(el.getAttribute('data-vehicle-id')), index);
         }
@@ -477,6 +496,7 @@
     bindGallery,
     setMode,
     sortVehicles,
+    visibleVehicles,
     photosOf,
     priceBlock,
     money,
