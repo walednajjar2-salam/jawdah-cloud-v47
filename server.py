@@ -158,8 +158,16 @@ _RETIRED_ERP_PAGES = frozenset({
     "/Launch_Quality_LLC.html", "/Launch Quality LLC.html",
     "/install.html", "/download.html", "/docs.html",
     "/quick-estate.html", "/index.html", "/go.html", "/start.html",
-    "/get-windows.html", "/get-android.html", "/erp", "/erp.html",
+    "/erp", "/erp.html",
     "/auto-trading.html",
+})
+# Download hubs stay public while NAJJAR is live (even if old ERP face is closed).
+_NAJJAR_DOWNLOAD_PAGES = frozenset({
+    "/get-windows.html", "/get-android.html",
+    "/get-windows", "/get-android",
+    "/تحميل-ويندوز", "/تحميل-اندرويد",
+    "/download-windows", "/download-android",
+    "/windows-setup", "/android-apk",
 })
 
 
@@ -204,6 +212,24 @@ def _is_najjar_brand_asset(safe: str) -> bool:
         return False
     leaf = safe.rsplit("/", 1)[-1].lower()
     return leaf.endswith((".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico", ".gif"))
+
+
+def _is_najjar_download_asset(path: str, safe: str) -> bool:
+    """Windows/Android installers and release files for staff devices."""
+    if path in _NAJJAR_DOWNLOAD_PAGES:
+        return True
+    if safe in (
+        "get-windows.html", "get-android.html",
+        "LaunchQuality.exe", "lq-portable.zip",
+        "lq-setup.exe", "windows-setup.exe",
+    ):
+        return True
+    if safe.startswith("releases/windows/") or safe.startswith("releases/android/"):
+        return True
+    leaf = safe.rsplit("/", 1)[-1].lower()
+    return leaf.endswith((".exe", ".zip", ".apk", ".ps1", ".bat", ".vbs", ".json", ".ico", ".url", ".txt")) and (
+        safe.startswith("releases/") or safe.startswith("downloads/")
+    )
 
 
 def _najjar_api_allowed(parts: list) -> bool:
@@ -4441,7 +4467,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     cache="no-store, no-cache, must-revalidate, max-age=0",
                 )
                 return True
-            if _is_najjar_public_path(path) or _is_auto_trading_asset(safe) or _is_najjar_brand_asset(safe):
+            if (
+                _is_najjar_public_path(path)
+                or _is_auto_trading_asset(safe)
+                or _is_najjar_brand_asset(safe)
+                or _is_najjar_download_asset(path, safe)
+            ):
                 return False
             if path == "/manifest.webmanifest":
                 manifest = (PUBLIC_DIR / "manifest.webmanifest").read_bytes()

@@ -6,8 +6,8 @@
   "android_apk_url": "https://web-production-08d73.up.railway.app/releases/android/Launch-Quality-Staff.apk",
   "android_page": "https://web-production-08d73.up.railway.app/get-android",
   "setup_page": "https://web-production-08d73.up.railway.app/get-windows?auto=1",
-  "app_url": "https://web-production-08d73.up.railway.app/app.html",
-  "download_page": "https://web-production-08d73.up.railway.app/download.html",
+  "app_url": "https://web-production-08d73.up.railway.app/najjar/login.html",
+  "download_page": "https://web-production-08d73.up.railway.app/get-windows",
   "published_at": "2026-08-02T05:00:00Z",
   "release_notes": [
     "Aligned native app channel to v70.4",
