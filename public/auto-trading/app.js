@@ -492,7 +492,7 @@ async function loadStaff() {
       <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
         <h2>Team</h2>
-        <p>ملاك · مبيعات · مستخدمون — صلاحيات المنصة</p>
+        <p>Board · Operations · Sales · Accounting — passwords 1–5</p>
       </div>
     </div>
     <div class="nt-staff-grid">
@@ -500,23 +500,53 @@ async function loadStaff() {
         <article class="nt-staff-card">
           <span class="nt-staff-role ${e(s.role)}">${e(s.role_ar || s.role)}</span>
           <strong>${e(s.name_ar)}</strong>
-          <div class="mini">المستخدم: <span dir="ltr">${e(s.username)}</span></div>
+          <div class="mini">User: <span dir="ltr">${e(s.username)}</span></div>
+          ${s.password_hint ? `<div class="mini">Password: <strong dir="ltr">${e(s.password_hint)}</strong></div>` : ''}
           ${s.phone ? `<div class="mini" dir="ltr">+968 ${e(s.phone)}</div>` : ''}
         </article>`).join('')}
     </div>
     <section class="card" style="margin-top:16px">
       <div class="card-header"><h3>Permissions</h3></div>
       <div class="card-body detail-list">
-        <div class="detail-row"><span>مالك (Owner)</span><strong>وليد النجار · حمد السموم — كامل الصلاحيات + رأس المال والتوزيعات</strong></div>
-        <div class="detail-row"><span>مبيعات (Sales)</span><strong>واية الشعيلي — مخزون، مبيعات، مصاريف، زبائن</strong></div>
-        <div class="detail-row"><span>مستخدم (User)</span><strong>رزان الشعيلي — عرض ومتابعة</strong></div>
+        <div class="detail-row"><span>Board (1–2)</span><strong>waleed.najjar · hamad.sumoom — full access + capital</strong></div>
+        <div class="detail-row"><span>Operations (3)</span><strong>sara — stock, purchases, sales, expenses, imports</strong></div>
+        <div class="detail-row"><span>Sales (4)</span><strong>sales — stock, sales, imports</strong></div>
+        <div class="detail-row"><span>Accounting (5)</span><strong>accounting — purchases, sales, expenses, capital, ledger</strong></div>
       </div>
     </section>`;
 }
 
+function allowedSections() {
+  const fromApi = window.NAJJAR_SECTIONS;
+  if (Array.isArray(fromApi) && fromApi.length) return new Set(fromApi);
+  const role = String((window.APP_USER && window.APP_USER.role) || 'viewer').toLower();
+  const map = {
+    owner: ['dashboard', 'vehicles', 'purchases', 'sales', 'expenses', 'capital', 'transactions', 'imports', 'staff', 'company'],
+    admin: ['dashboard', 'vehicles', 'purchases', 'sales', 'expenses', 'capital', 'transactions', 'imports', 'staff', 'company'],
+    operations: ['dashboard', 'vehicles', 'purchases', 'sales', 'expenses', 'transactions', 'imports', 'staff', 'company'],
+    sales: ['dashboard', 'vehicles', 'sales', 'imports', 'staff', 'company'],
+    accountant: ['dashboard', 'vehicles', 'purchases', 'sales', 'expenses', 'capital', 'transactions', 'staff', 'company'],
+    viewer: ['dashboard', 'vehicles', 'sales', 'staff', 'company'],
+  };
+  return new Set(map[role] || map.viewer);
+}
+
+function applyNavPermissions() {
+  const allowed = allowedSections();
+  document.querySelectorAll('.nav-item[data-section]').forEach((btn) => {
+    const section = btn.dataset.section;
+    const ok = allowed.has(section);
+    btn.hidden = !ok;
+    btn.disabled = !ok;
+    if (!ok) btn.classList.remove('active');
+  });
+}
+
 function goToSection(name) {
-  document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === name));
-  loadSection(name);
+  const allowed = allowedSections();
+  const target = allowed.has(name) ? name : (allowed.has('dashboard') ? 'dashboard' : [...allowed][0]);
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === target));
+  loadSection(target);
 }
 
 function kpi(icon, label, value, cls = '') {
@@ -1786,15 +1816,17 @@ async function boot() {
   try {
     const me = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
     const user = me.user || me;
-    document.getElementById('userChip').textContent = user.name || user.username || '—';
+    const roleLabel = me.role_label_ar || user.role || '';
+    document.getElementById('userChip').textContent = (user.name || user.username || '—') + (roleLabel ? ` · ${roleLabel}` : '');
     window.APP_USER = user;
+    window.NAJJAR_SECTIONS = me.najjar_sections || [];
   } catch (_) {}
+  applyNavPermissions();
   const qs = new URLSearchParams(location.search || '');
   const view = (qs.get('view') || '').trim();
-  const start = ['vehicles', 'purchases', 'imports', 'sales', 'expenses', 'transactions', 'staff', 'company', 'dashboard'].includes(view) ? view : 'dashboard';
-  if (start !== 'dashboard') {
-    document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === start));
-  }
+  const allowed = allowedSections();
+  const start = allowed.has(view) ? view : (allowed.has('dashboard') ? 'dashboard' : [...allowed][0] || 'dashboard');
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.section === start));
   loadSection(start);
 }
 

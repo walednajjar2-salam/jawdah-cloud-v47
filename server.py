@@ -141,8 +141,16 @@ NAJJAR_PLATFORMS = f"{NAJJAR_BASE}/platforms.html"
 NAJJAR_STAFF = f"{NAJJAR_BASE}/staff.html"
 NAJJAR_API_ROOTS = frozenset({"auto-trading", "login", "me", "logout", "biometric"})
 NAJJAR_TEAM_USERNAMES = frozenset({
-    "waleed.najjar", "hamad.sumoom", "waya.shuaili", "razan.shuaili",
+    "waleed.najjar", "hamad.sumoom", "sara", "sales", "accounting",
 })
+# Easy local/team passwords (1–5). Env LQ_USER_PASSWORD_<USER> still overrides.
+NAJJAR_TEAM_BOOTSTRAP = (
+    ("waleed.najjar", "Walid Najjar", "owner", "1"),
+    ("hamad.sumoom", "Hamad Al Samoom", "owner", "2"),
+    ("sara", "Sara", "operations", "3"),
+    ("sales", "Sales", "sales", "4"),
+    ("accounting", "Accounting", "accountant", "5"),
+)
 # Legacy ERP HTML — never served when ERP_PUBLISHED=0.
 _RETIRED_ERP_PAGES = frozenset({
     "/app.html", "/app", "/app/", "/app/app.html",
@@ -250,6 +258,13 @@ ROLE_PERMISSIONS = {
     "deputy": {"all"},
     "accountant": {"dashboard", "properties:read", "clients:read", "contracts", "invoices", "accounts", "purchase_invoices", "revenues", "salaries", "admin_expenses", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "bank_transactions", "chart_accounts", "financial_periods", "approvals", "bank_reconciliations", "reports", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets"},
     "operations": {"dashboard", "properties", "clients", "contracts", "invoices", "accounts", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms", "hospitality_bookings", "hospitality_events", "hospitality_season_rates", "hospitality_folios:read", "reports:read", "approvals:request", "branches", "estate_properties", "estate_buildings", "estate_apartments", "estate_rooms", "estate_accessories", "estate_maintenance", "accounting_budgets:read"},
+    # NAJJAR sales desk — stock, sales, imports (no capital / company admin).
+    "sales": {
+        "dashboard", "properties", "clients", "contracts:read", "invoices:read",
+        "inventory_items", "inventory_transactions", "reports:read", "branches:read",
+        "estate_properties:read", "estate_buildings:read", "estate_apartments:read",
+        "estate_rooms:read", "estate_accessories:read",
+    },
     "reception": {"dashboard", "properties:read", "clients", "contracts:read", "invoices:read", "hospitality_events", "hospitality_bookings:read", "reports:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "messages"},
     "maintenance": {"dashboard", "properties:read", "maintenance", "inventory_items", "inventory_transactions", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "purchase_invoices:read", "reports:read", "branches:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance", "accounting_budgets:read"},
     "viewer": {"dashboard", "properties:read", "clients:read", "contracts:read", "invoices:read", "accounts:read", "purchase_invoices:read", "revenues:read", "salaries:read", "admin_expenses:read", "inventory_items:read", "hospitality_rooms:read", "hospitality_bookings:read", "hospitality_events:read", "hospitality_season_rates:read", "hospitality_folios:read", "bank_transactions:read", "chart_accounts:read", "financial_periods:read", "approvals:read", "bank_reconciliations:read", "maintenance:read", "reports:read", "backup:export", "branches:read", "audit:read", "estate_properties:read", "estate_buildings:read", "estate_apartments:read", "estate_rooms:read", "estate_accessories:read", "estate_maintenance:read", "accounting_budgets:read"},
@@ -257,15 +272,26 @@ ROLE_PERMISSIONS = {
 ROLE_PERMISSIONS["operations"].update({"estate_actions_convert", "estate_actions_contract_create"})
 ROLE_PERMISSIONS["accountant"].update({"estate_actions_contract_close", "estate_actions_month_close", "estate_actions_pricing_edit"})
 ROLE_PERMISSIONS["reception"].update({"estate_actions_convert"})
+ROLE_PERMISSIONS["sales"].update({"estate_actions_convert"})
 ROLE_LABELS_AR = {
-    "owner": "المدير العام",
+    "owner": "مجلس إدارة",
     "admin": "مدير النظام",
     "deputy": "نائب المدير",
-    "accountant": "محاسب",
-    "operations": "مسؤول العقارات",
+    "accountant": "محاسبة",
+    "operations": "تشغيل",
+    "sales": "مبيعات",
     "reception": "استقبال",
     "maintenance": "صيانة",
     "viewer": "مشاهدة فقط",
+}
+# NAJJAR staff console sections each role may open.
+NAJJAR_SECTION_ACCESS = {
+    "owner": {"dashboard", "vehicles", "purchases", "sales", "expenses", "capital", "transactions", "imports", "staff", "company"},
+    "admin": {"dashboard", "vehicles", "purchases", "sales", "expenses", "capital", "transactions", "imports", "staff", "company"},
+    "operations": {"dashboard", "vehicles", "purchases", "sales", "expenses", "transactions", "imports", "staff", "company"},
+    "sales": {"dashboard", "vehicles", "sales", "imports", "staff", "company"},
+    "accountant": {"dashboard", "vehicles", "purchases", "sales", "expenses", "capital", "transactions", "staff", "company"},
+    "viewer": {"dashboard", "vehicles", "sales", "staff", "company"},
 }
 
 TABLES = {
@@ -321,7 +347,7 @@ PRIMARY_OWNER_USERNAMES = FULL_ACCESS_USERNAMES
 DAILY_OPS_MANAGER_USERNAMES = frozenset(NAJJAR_TEAM_USERNAMES)
 RESTRICTED_ADMIN_USERNAMES: frozenset[str] = frozenset()
 
-WRITE_ROLES = {"owner", "admin", "deputy", "accountant", "operations", "reception", "maintenance"}
+WRITE_ROLES = {"owner", "admin", "deputy", "accountant", "operations", "sales", "reception", "maintenance"}
 
 OTP_CODES: Dict[str, Tuple[str, float]] = {}
 OTP_TTL_SECONDS = 300
@@ -2345,14 +2371,8 @@ def insert(db: sqlite3.Connection, table: str, row: Dict[str, Any]) -> None:
 def seed_if_empty(db: sqlite3.Connection) -> None:
     """Bootstrap only real accounts + chart of accounts. Never insert demo business data."""
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
-        defaults = [
-            ("waleed.najjar", "Walid Najjar", "owner", "Waleed2026!"),
-            ("hamad.sumoom", "Hamad Al Samoom", "owner", "Hamad2026!"),
-            ("waya.shuaili", "Aya Al Shaili", "operations", "Waya2026!"),
-            ("razan.shuaili", "Razan Al Shaili", "reception", "Razan2026!"),
-        ]
-        for username, name, role, legacy_pwd in defaults:
-            pwd, _must = resolve_bootstrap_password(username, role, legacy_pwd)
+        for username, name, role, legacy_pwd in NAJJAR_TEAM_BOOTSTRAP:
+            # Easy 1–5 passwords are intentional for this team roster.
             insert(
                 db,
                 "users",
@@ -2362,9 +2382,10 @@ def seed_if_empty(db: sqlite3.Connection) -> None:
                     "name": name,
                     "role": role,
                     "active": 1,
-                    "password_hash": password_hash(pwd),
+                    "password_hash": password_hash(legacy_pwd),
                     "email": resolve_user_email(username),
-                    "must_change_password": 1,
+                    "must_change_password": 0,
+                    "password_changed_at": now_iso(),
                     "created_at": now_iso(),
                     "last_login": None,
                 },
@@ -4303,13 +4324,7 @@ def purge_demo_business_data(db: sqlite3.Connection) -> Dict[str, int]:
 
 def ensure_team_users(db: sqlite3.Connection) -> None:
     """NAJJAR-only accounts — legacy Launch Quality ERP users are deactivated."""
-    team = [
-        ("waleed.najjar", "Walid Najjar", "owner", "Waleed2026!"),
-        ("hamad.sumoom", "Hamad Al Samoom", "owner", "Hamad2026!"),
-        ("waya.shuaili", "Aya Al Shaili", "operations", "Waya2026!"),
-        ("razan.shuaili", "Razan Al Shaili", "reception", "Razan2026!"),
-    ]
-    for username, name, role, password in team:
+    for username, name, role, password in NAJJAR_TEAM_BOOTSTRAP:
         env_key = "LQ_USER_PASSWORD_" + re.sub(r"[^A-Z0-9]+", "_", str(username).upper()).strip("_")
         override = (os.environ.get(env_key) or "").strip()
         effective_password = override or password
@@ -5045,10 +5060,19 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return None if not user else self.api_change_password(db, user)
                 if parts[0] == "me" and method == "GET":
                     user = self.require_user(db, query=query)
-                    return None if not user else self.send_json({
+                    if not user:
+                        return None
+                    role = str(user.get("role") or "viewer").lower()
+                    sections = sorted(NAJJAR_SECTION_ACCESS.get(role) or NAJJAR_SECTION_ACCESS["viewer"])
+                    if str(user.get("username") or "").lower() in FULL_ACCESS_USERNAMES:
+                        sections = sorted(NAJJAR_SECTION_ACCESS["owner"])
+                    perms = ROLE_PERMISSIONS.get(role, set())
+                    return self.send_json({
                         "ok": True,
                         "user": user,
-                        "permissions": sorted(ROLE_PERMISSIONS.get(user["role"], [])),
+                        "permissions": sorted(perms) if perms != {"all"} else ["all"],
+                        "najjar_sections": sections,
+                        "role_label_ar": ROLE_LABELS_AR.get(role, role),
                         "version": APP_VERSION,
                         "base_edition": APP_BASE_EDITION,
                         "edition_label": APP_EDITION_LABEL,
@@ -5444,6 +5468,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
         return device_id
 
     def apply_password_rotation(self, db: sqlite3.Connection, row: sqlite3.Row) -> sqlite3.Row:
+        # Easy team passwords (1–5) must keep working — do not force rotation.
+        uname = str(row["username"] if "username" in row.keys() else "").strip().lower()
+        if uname in NAJJAR_TEAM_USERNAMES:
+            return row
         if password_needs_rotation(row["password_changed_at"] if "password_changed_at" in row.keys() else None, created_at=row["created_at"] if "created_at" in row.keys() else None):
             if not bool(row["must_change_password"] if "must_change_password" in row.keys() else 0):
                 db.execute("UPDATE users SET must_change_password=1 WHERE id=?", (row["id"],))

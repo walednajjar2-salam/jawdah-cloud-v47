@@ -60,10 +60,11 @@ COMPANY_PROFILE: Dict[str, Any] = {
         "iban": "OM070300000234020022484",
     },
     "staff": [
-        {"name_ar": "وليد نجار", "username": "waleed.najjar", "role": "owner", "role_ar": "مالك", "phone": "71924089"},
-        {"name_ar": "حمد السموم", "username": "hamad.sumoom", "role": "owner", "role_ar": "مالك", "phone": "77548482"},
-        {"name_ar": "واية الشعيلي", "username": "waya.shuaili", "role": "sales", "role_ar": "مبيعات", "phone": ""},
-        {"name_ar": "رزان الشعيلي", "username": "razan.shuaili", "role": "user", "role_ar": "مستخدم", "phone": ""},
+        {"name_ar": "وليد النجار", "username": "waleed.najjar", "role": "owner", "role_ar": "مجلس إدارة", "phone": "71924089", "password_hint": "1"},
+        {"name_ar": "حمد السموم", "username": "hamad.sumoom", "role": "owner", "role_ar": "مجلس إدارة", "phone": "77548482", "password_hint": "2"},
+        {"name_ar": "ساره", "username": "sara", "role": "operations", "role_ar": "تشغيل", "phone": "", "password_hint": "3"},
+        {"name_ar": "مبيعات", "username": "sales", "role": "sales", "role_ar": "مبيعات", "phone": "", "password_hint": "4"},
+        {"name_ar": "محاسبة", "username": "accounting", "role": "accountant", "role_ar": "محاسبة", "phone": "", "password_hint": "5"},
     ],
     "partners": [
         {
