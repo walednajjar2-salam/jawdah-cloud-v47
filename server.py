@@ -114,7 +114,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v76-najjar-ui-at42").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v78-najjar-app-icon").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -4715,6 +4715,19 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return self.send_redirect(SITE_CLOSED_URL)
 
         if path == "/favicon.ico":
+            fav = PUBLIC_DIR / "favicon.ico"
+            if not fav.is_file():
+                fav = PUBLIC_DIR / "assets" / "app-icon-192.png"
+            if fav.is_file():
+                data = fav.read_bytes()
+                ctype = "image/x-icon" if fav.suffix.lower() == ".ico" else "image/png"
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             self.send_response(204)
             self.end_headers()
             return
