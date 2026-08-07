@@ -166,6 +166,10 @@
       table{width:100%; border-collapse:collapse; margin:8px 0 12px}
       th,td{border:1px solid var(--line); padding:8px 10px; text-align:right; font-size:12.5px; vertical-align:top}
       th{width:32%; background:linear-gradient(180deg,#fff6df,#f7ecd0); color:#3a2a10; font-weight:800}
+      /* An itemised table heads its columns, so the label-column width does not apply. */
+      table.items th{width:auto}
+      table.items th:first-child{width:46%}
+      table.items td:not(:first-child){white-space:nowrap}
       .box{
         border:1px solid var(--line); border-radius:12px; padding:12px 14px;
         background:var(--soft); margin:10px 0; font-size:12.5px; line-height:1.7;
@@ -236,12 +240,14 @@
 
   function bankBox(c) {
     const bank = (c || {}).bank || {};
+    // Arabic labels keep the line right-to-left; a Latin label such as "IBAN"
+    // would be reordered to the far side of its own number.
     return `
       <div class="box">
         <b>بيانات التحويل البنكي · ${esc(bank.name_ar || 'بنك صحار الدولي')}</b><br>
-        اسم الحساب: ${esc(bank.account_name_en || 'Al Najjar Trading')}<br>
-        IBAN: <span dir="ltr">${esc(bank.iban || '')}</span><br>
-        SWIFT: <span dir="ltr">${esc(bank.swift || '')}</span>
+        اسم الحساب: <span dir="ltr">${esc(bank.account_name_en || 'Al Najjar Trading')}</span><br>
+        رقم الحساب الدولي: <span dir="ltr">${esc(bank.iban || '')}</span><br>
+        رمز السويفت: <span dir="ltr">${esc(bank.swift || '')}</span>
       </div>`;
   }
 
@@ -417,11 +423,11 @@
         <tr><th>مرجع البيع</th><td dir="ltr">${esc(sale.sale_no || '—')}</td></tr>
       </table>
       <h3 class="sec">تفاصيل الفاتورة</h3>
-      <table>
+      <table class="items">
         <tr><th>البيان</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
         <tr>
           <td>${esc(v.make || '')} ${esc(v.model || '')} ${esc(v.variant || '')}<br>
-            <span style="color:var(--muted);font-size:11px">VIN: <span dir="ltr">${esc(v.vin || '—')}</span> · مخزون ${esc(v.stock_no || '—')}</span>
+            <span style="color:var(--muted);font-size:11px">رقم الهيكل: <span dir="ltr">${esc(v.vin || '—')}</span> · مخزون ${esc(v.stock_no || '—')}</span>
           </td>
           <td>1</td>
           <td>${money(net)}</td>
@@ -454,11 +460,11 @@
         <tr><th>الهوية / السجل</th><td dir="ltr">${esc(purchase.seller_id || '—')}</td></tr>
         <tr><th>مرجع الشراء</th><td dir="ltr">${esc(purchase.purchase_no || '—')}</td></tr>
       </table>
-      <table>
+      <table class="items">
         <tr><th>البيان</th><th>السعر</th></tr>
         <tr>
           <td>${esc(v.make || '')} ${esc(v.model || '')} · ${esc(v.stock_no || '—')}<br>
-            <span style="font-size:11px;color:var(--muted)">VIN: <span dir="ltr">${esc(v.vin || '—')}</span></span>
+            <span style="font-size:11px;color:var(--muted)">رقم الهيكل: <span dir="ltr">${esc(v.vin || '—')}</span></span>
           </td>
           <td><b>${money(price)}</b></td>
         </tr>
