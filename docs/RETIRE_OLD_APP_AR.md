@@ -93,7 +93,8 @@ LQ_NAJJAR_BASE=/najjar         # غيّر البادئة إن رغبت
 LQ_SITE_PUBLISHED=0            # افتراضي — لا يُعرض شيء على / أو ERP
 LQ_NAJJAR_PUBLISHED=0          # إيقاف NAJJAR أيضاً (كل شيء → /closed)
 LQ_SITE_PUBLISHED=1            # تفعيل الوجه العام الكامل (يُحوّل القديم إلى /najjar/)
-LQ_CLIENT_PURGE=v74-najjar-path
+LQ_CLIENT_PURGE=v75-najjar-only
+LQ_ERP_PUBLISHED=0            # ERP القديم متوقف نهائياً — NAJJAR فقط
 ```
 
 التحقق:
