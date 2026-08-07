@@ -664,18 +664,19 @@ async function loadDashboard() {
       </div>
     </section>`;
   bindCopyButtons(content);
-  const goV = document.getElementById('dashGoVehicles');
-  if (goV) goV.onclick = () => goToSection('vehicles');
-  const goPu = document.getElementById('dashGoPurchases');
-  if (goPu) goPu.onclick = () => goToSection('purchases');
-  const goS = document.getElementById('dashGoSales');
-  if (goS) goS.onclick = () => goToSection('sales');
-  const goEx = document.getElementById('dashGoExpenses');
-  if (goEx) goEx.onclick = () => goToSection('expenses');
-  const goCap = document.getElementById('dashGoCapital');
-  if (goCap) goCap.onclick = () => goToSection('capital');
-  const goTx = document.getElementById('dashGoTransactions');
-  if (goTx) goTx.onclick = () => goToSection('transactions');
+  const allowed = allowedSections();
+  const wireDash = (id, section) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!allowed.has(section)) { el.hidden = true; return; }
+    el.onclick = () => goToSection(section);
+  };
+  wireDash('dashGoVehicles', 'vehicles');
+  wireDash('dashGoPurchases', 'purchases');
+  wireDash('dashGoSales', 'sales');
+  wireDash('dashGoExpenses', 'expenses');
+  wireDash('dashGoCapital', 'capital');
+  wireDash('dashGoTransactions', 'transactions');
 }
 
 const CAPITAL_TYPE_LABEL = {
