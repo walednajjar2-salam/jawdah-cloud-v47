@@ -614,9 +614,14 @@ def _capital_summary(db: sqlite3.Connection) -> Dict[str, Any]:
         "total_contributions": total_contrib,
         "total_withdrawals": total_withdrawals,
         "total_distributed": total_distributed,
+        # The whole chain travels together: a partner shown a gross profit he
+        # cannot subtract back to the sale price does not trust the number.
+        "sales_total": profit["sales_total"],
         "gross_profit": profit["gross_profit"],
         "net_profit": profit["net_profit"],
         "cost_of_sales": profit["cost_of_sales"],
+        "expenses_on_sold": profit["expenses_on_sold"],
+        "overhead": profit["overhead"],
         "inventory_cost": profit["inventory_cost"],
         "distributable_estimate": max(0.0, profit["net_profit"] - total_distributed),
         "entry_types": CAPITAL_ENTRY_TYPES,
@@ -739,6 +744,7 @@ def handle_api(
         }
         profit = _profit_summary(db)
         stats["cost_of_sales"] = profit["cost_of_sales"]
+        stats["expenses_on_sold"] = profit["expenses_on_sold"]
         stats["gross_profit"] = profit["gross_profit"]
         stats["net_profit"] = profit["net_profit"]
         stats["overhead"] = profit["overhead"]

@@ -293,6 +293,40 @@ def main() -> int:
     assert flow_by_type.get("withdrawal") == "out", flow_by_type
     assert flow_by_type.get("distribution") == "out", flow_by_type
 
+    # A partner shown a profit has to be able to subtract his way back to the
+    # sale price, so every figure in the chain is published and the chain adds
+    # up on both screens that quote it.
+    assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)
+    dash = out[-1][1]["stats"]
+    assert lq_auto_trading.handle_api(db, "GET", ["capital"], {}, {}, user, send)
+    cap = out[-1][1]["summary"]
+    chain = ("sales_total", "cost_of_sales", "expenses_on_sold",
+             "overhead", "gross_profit", "net_profit", "inventory_cost")
+    for key in chain:
+        assert key in dash, f"dashboard is missing {key}"
+        assert key in cap, f"capital summary is missing {key}"
+        assert abs(float(dash[key]) - float(cap[key])) < 0.01, (
+            f"{key} disagrees: dashboard {dash[key]} vs capital {cap[key]}")
+    assert abs(
+        float(cap["sales_total"]) - float(cap["cost_of_sales"])
+        - float(cap["expenses_on_sold"]) - float(cap["gross_profit"])
+    ) < 0.01, cap
+    assert abs(
+        float(cap["gross_profit"]) - float(cap["overhead"]) - float(cap["net_profit"])
+    ) < 0.01, cap
+    # Every expense lands on exactly one side of the sold/unsold line.
+    assert abs(
+        float(cap["expenses_on_sold"]) + float(cap["overhead"])
+        - float(dash["expenses_total"])
+    ) < 0.01, (cap, dash["expenses_total"])
+    # Partner balances and payouts are the sum of their parts.
+    partners = cap["partners"]
+    assert abs(sum(float(p["capital_balance"]) for p in partners)
+               - float(cap["total_capital"])) < 0.01
+    assert abs(sum(float(p["distributions_total"]) for p in partners)
+               - float(cap["total_distributed"])) < 0.01
+    assert abs(sum(float(p["ownership_pct"]) for p in partners) - 100) < 0.01
+
     print("auto-trading API smoke test: OK")
     return 0
 

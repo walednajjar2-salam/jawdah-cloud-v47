@@ -630,6 +630,30 @@ const CAPITAL_TYPE_LABEL = {
   adjustment: 'تسوية',
 };
 
+/* A partner asked to accept a profit figure has to be able to subtract his way
+   back to the sale price, so the deductions are laid out in order rather than
+   scattered across separate cards. */
+function profitChain(s) {
+  const row = (label, value, cls = '') =>
+    `<tr class="${cls}"><th scope="row">${e(label)}</th><td>${value}</td></tr>`;
+  return `<section class="card nt-profit-chain" style="margin-top:14px">
+    <div class="card-header"><h3>أساس حساب الربح</h3></div>
+    <div class="card-body">
+      <table class="nt-chain-table">
+        <tbody>
+          ${row('المبيعات', money(s.sales_total || 0))}
+          ${row('− تكلفة شراء السيارات المباعة', money(s.cost_of_sales || 0))}
+          ${row('− مصاريف السيارات المباعة', money(s.expenses_on_sold || 0))}
+          ${row('= الربح الإجمالي', money(s.gross_profit || 0), 'nt-chain-sum')}
+          ${row('− المصاريف العامة', money(s.overhead || 0))}
+          ${row('= صافي الربح', money(s.net_profit || 0), 'nt-chain-total')}
+        </tbody>
+      </table>
+      <p class="mini" style="margin-top:10px">المخزون بالتكلفة <strong>${money(s.inventory_cost || 0)}</strong> — سيارات لم تُبع بعد، تكلفتها تبقى في المخزون ولا تُخصم من الربح حتى تُباع.</p>
+    </div>
+  </section>`;
+}
+
 async function loadCapital() {
   setTitle('رأس المال والتوزيعات', 'وليد النجار · حمد السموم — مساهمات · سحوبات · توزيع أرباح');
   const data = await api('/capital');
@@ -653,11 +677,7 @@ async function loadCapital() {
       ${kpi(ICO('ok'), 'صافي الربح', money(summary.net_profit || 0))}
       ${kpi(ICO('ledger'), 'قابل للتوزيع', money(summary.distributable_estimate || 0))}
     </div>
-    <div class="stats-grid" style="margin-top:14px">
-      ${kpi(ICO('sale'), 'الربح الإجمالي', money(summary.gross_profit || 0))}
-      ${kpi(ICO('buy'), 'تكلفة المبيعات', money(summary.cost_of_sales || 0))}
-      ${kpi(ICO('car'), 'المخزون بالتكلفة', money(summary.inventory_cost || 0))}
-    </div>
+    ${profitChain(summary)}
     <div class="nt-staff-grid" style="margin-top:14px">
       ${partners.map(p => `
         <article class="nt-staff-card">
