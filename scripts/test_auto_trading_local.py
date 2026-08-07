@@ -179,6 +179,10 @@ def main() -> int:
     tx = out[-1][1]["transactions"]
     kinds = {t["kind"] for t in tx}
     assert {"شراء", "بيع", "مصروف"}.issubset(kinds)
+    # Each row says which way the money went, so the page can total cash flow.
+    assert all(t["flow"] in ("in", "out") for t in tx)
+    assert all(t["flow"] == "in" for t in tx if t["kind"] == "بيع")
+    assert all(t["flow"] == "out" for t in tx if t["kind"] in ("شراء", "مصروف"))
 
     # Partner capital — وليد النجار / حمد السموم
     assert lq_auto_trading.handle_api(db, "GET", ["capital"], {}, {}, user, send)
@@ -273,6 +277,21 @@ def main() -> int:
         {"category": "أخرى", "amount": 20, "payee": "التالي"}, user, send,
     )
     assert out[-1][1]["expense"]["expense_no"] != first_expense_no
+
+    # Partners paying in is cash in; a withdrawal or a profit payout is cash out.
+    assert lq_auto_trading.handle_api(
+        db, "POST", ["capital"], {},
+        {"partner_id": waleed_id, "entry_type": "withdrawal", "amount": 500, "entry_date": "2026-04-01"},
+        user, send,
+    )
+    assert out[-1][0] == 201
+    assert lq_auto_trading.handle_api(db, "GET", ["transactions"], {}, {}, user, send)
+    capital_rows = [t for t in out[-1][1]["transactions"] if t["kind"] == "رأس مال"]
+    assert capital_rows, "capital movements belong in the daily ledger"
+    flow_by_type = {t["detail"]: t["flow"] for t in capital_rows}
+    assert flow_by_type.get("opening") == "in", flow_by_type
+    assert flow_by_type.get("withdrawal") == "out", flow_by_type
+    assert flow_by_type.get("distribution") == "out", flow_by_type
 
     print("auto-trading API smoke test: OK")
     return 0

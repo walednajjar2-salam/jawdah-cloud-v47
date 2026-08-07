@@ -1130,26 +1130,36 @@ def handle_api(
         return send_json({"ok": True, "expense": dict(row)}, 201) or True
 
     if head == "transactions" and method == "GET":
+        # Every row states whether money came in or went out, so the ledger can
+        # be totalled as cash flow. A capital entry's direction depends on its
+        # type: partners paying in is cash in, a withdrawal or a profit payout is
+        # cash out.
         limit = 300
         rows = db.execute(
             f"""
             SELECT * FROM (
-                SELECT 'شراء' AS kind, p.purchase_date AS tx_date, p.purchase_no AS ref_no,
+                SELECT 'شراء' AS kind, 'out' AS flow, '' AS detail,
+                       p.purchase_date AS tx_date, p.purchase_no AS ref_no,
                        p.stock_no AS stock_no, p.seller_name AS party, p.purchase_price AS amount,
                        p.notes AS notes, p.created_by AS created_by, p.created_at AS created_at
                 FROM at_purchases p
                 UNION ALL
-                SELECT 'بيع' AS kind, s.sale_date AS tx_date, s.sale_no AS ref_no,
+                SELECT 'بيع' AS kind, 'in' AS flow, '' AS detail,
+                       s.sale_date AS tx_date, s.sale_no AS ref_no,
                        s.stock_no AS stock_no, s.buyer_name AS party, s.sale_price AS amount,
                        s.notes AS notes, s.created_by AS created_by, s.created_at AS created_at
                 FROM at_sales s
                 UNION ALL
-                SELECT 'مصروف' AS kind, ex.expense_date AS tx_date, ex.expense_no AS ref_no,
+                SELECT 'مصروف' AS kind, 'out' AS flow, ex.category AS detail,
+                       ex.expense_date AS tx_date, ex.expense_no AS ref_no,
                        COALESCE(ex.stock_no, '') AS stock_no, COALESCE(ex.payee, ex.category) AS party,
                        ex.amount AS amount, ex.notes AS notes, ex.created_by AS created_by, ex.created_at AS created_at
                 FROM at_expenses ex
                 UNION ALL
-                SELECT 'رأس مال' AS kind, ce.entry_date AS tx_date, ce.entry_no AS ref_no,
+                SELECT 'رأس مال' AS kind,
+                       CASE WHEN ce.entry_type IN ('withdrawal','distribution') THEN 'out' ELSE 'in' END AS flow,
+                       ce.entry_type AS detail,
+                       ce.entry_date AS tx_date, ce.entry_no AS ref_no,
                        '' AS stock_no, pr.name_ar AS party, ce.amount AS amount,
                        ce.notes AS notes, ce.created_by AS created_by, ce.created_at AS created_at
                 FROM at_capital_entries ce
@@ -1158,7 +1168,11 @@ def handle_api(
             ORDER BY tx_date DESC, created_at DESC LIMIT {limit}
             """
         ).fetchall()
-        return send_json({"ok": True, "transactions": [dict(r) for r in rows]}) or True
+        return send_json({
+            "ok": True,
+            "transactions": [dict(r) for r in rows],
+            "entry_types": CAPITAL_ENTRY_TYPES,
+        }) or True
 
     if head == "capital" and method == "GET":
         summary = _capital_summary(db)

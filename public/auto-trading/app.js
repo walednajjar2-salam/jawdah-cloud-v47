@@ -1412,45 +1412,60 @@ function showAddExpenseForm(categories, vehicles) {
   };
 }
 
-const txKindClass = { 'شراء': 'importing', 'بيع': 'available', 'مصروف': 'service' };
+const txKindClass = { 'شراء': 'importing', 'بيع': 'available', 'مصروف': 'service', 'رأس مال': 'capital' };
 
 function kindPill(kind) {
   return `<span class="pill ${txKindClass[kind] || 'draft'}">${e(kind)}</span>`;
 }
 
 async function loadTransactions() {
-  setTitle('الحركة اليومية', 'سجل شامل — مشتريات · مبيعات · مصاريف بالتاريخ');
+  setTitle('الحركة اليومية', 'سجل الصندوق — داخل وخارج بالتاريخ');
   const data = await api('/transactions');
   const rows = data.transactions || [];
+  const labels = data.entry_types || {};
+  // This ledger tracks cash, not profit: buying a car that is still on the lot
+  // is money out but no loss. Profit is on the dashboard, on a cost-of-sales
+  // basis, so the two figures are labelled apart rather than confused.
   const totals = rows.reduce((acc, r) => {
-    if (r.kind === 'شراء') acc.purchases += Number(r.amount || 0);
-    if (r.kind === 'بيع') acc.sales += Number(r.amount || 0);
-    if (r.kind === 'مصروف') acc.expenses += Number(r.amount || 0);
+    const amount = Number(r.amount || 0);
+    if (r.flow === 'in') acc.cashIn += amount;
+    else acc.cashOut += amount;
+    if (r.kind === 'شراء') acc.purchases += amount;
+    if (r.kind === 'بيع') acc.sales += amount;
+    if (r.kind === 'مصروف') acc.expenses += amount;
     return acc;
-  }, { purchases: 0, sales: 0, expenses: 0 });
+  }, { cashIn: 0, cashOut: 0, purchases: 0, sales: 0, expenses: 0 });
+  const netCash = totals.cashIn - totals.cashOut;
   content.innerHTML = `
     <div class="page-head"><div><h2>الحركة اليومية</h2><p>${rows.length} حركة مسجلة</p></div></div>
     <div class="stats-grid">
+      ${stat('نقد داخل', money(totals.cashIn), 'highlight')}
+      ${stat('نقد خارج', money(totals.cashOut))}
+      ${stat('صافي الحركة النقدية', money(netCash))}
+      ${stat('إجمالي المبيعات', money(totals.sales))}
       ${stat('إجمالي المشتريات', money(totals.purchases))}
-      ${stat('إجمالي المبيعات', money(totals.sales), 'highlight')}
       ${stat('إجمالي المصاريف', money(totals.expenses))}
-      ${stat('صافي الحركة', money(totals.sales - totals.purchases - totals.expenses))}
     </div>
+    <p class="mini" style="margin:10px 2px 0">
+      هذه الصفحة تتابع حركة النقد لا الربح — شراء سيارة لم تُبع بعد هو نقد خارج وليس خسارة.
+      الربح محسوب على أساس تكلفة المبيعات في لوحة التحكم.
+    </p>
     <div class="table-wrap" style="margin-top:14px">
       <table class="data-table">
         <thead><tr>
-          <th>التاريخ</th><th>النوع</th><th>المرجع</th><th>الطرف</th><th>المركبة</th><th>القيمة</th>
+          <th>التاريخ</th><th>النوع</th><th>المرجع</th><th>الطرف</th><th>المركبة</th><th>الاتجاه</th><th>القيمة</th>
         </tr></thead>
         <tbody>
           ${rows.length ? rows.map(r => `
             <tr>
               <td>${dmy(r.tx_date)}</td>
-              <td>${kindPill(r.kind)}</td>
+              <td>${kindPill(r.kind)}${r.kind === 'رأس مال' && r.detail ? `<br><span class="mini">${e(labels[r.detail] || r.detail)}</span>` : ''}</td>
               <td><b>${e(r.ref_no)}</b></td>
               <td>${e(r.party || '—')}</td>
               <td>${e(r.stock_no || '—')}</td>
+              <td><span class="pill ${r.flow === 'in' ? 'cash-in' : 'cash-out'}">${r.flow === 'in' ? 'داخل' : 'خارج'}</span></td>
               <td class="money">${money(r.amount)}</td>
-            </tr>`).join('') : '<tr><td colspan="6" class="empty-state">لا حركات مسجلة بعد</td></tr>'}
+            </tr>`).join('') : '<tr><td colspan="7" class="empty-state">لا حركات مسجلة بعد</td></tr>'}
         </tbody>
       </table>
     </div>`;
