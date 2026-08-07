@@ -114,7 +114,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v74-najjar-path").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v75-najjar-only").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -132,11 +132,27 @@ SITE_CLOSED_URL = "/closed"
 # NAJJAR lives under its own URL prefix — not / and not /auto-trading/*.html.
 NAJJAR_BASE = (os.environ.get("LQ_NAJJAR_BASE", "/najjar").strip().rstrip("/") or "/najjar")
 NAJJAR_PUBLISHED = os.environ.get("LQ_NAJJAR_PUBLISHED", "1").strip().lower() in ("1", "true", "yes", "on")
+# Launch Quality ERP is retired — NAJJAR is the only live product. Set LQ_ERP_PUBLISHED=1
+# only for emergency maintenance of legacy data (never on public Railway).
+ERP_PUBLISHED = os.environ.get("LQ_ERP_PUBLISHED", "0").strip().lower() in ("1", "true", "yes", "on")
 NAJJAR_HOME = f"{NAJJAR_BASE}/customer.html"
 NAJJAR_LOGIN = f"{NAJJAR_BASE}/login.html"
 NAJJAR_PLATFORMS = f"{NAJJAR_BASE}/platforms.html"
 NAJJAR_STAFF = f"{NAJJAR_BASE}/staff.html"
 NAJJAR_API_ROOTS = frozenset({"auto-trading", "login", "me", "logout", "biometric"})
+NAJJAR_TEAM_USERNAMES = frozenset({
+    "waleed.najjar", "hamad.sumoom", "waya.shuaili", "razan.shuaili",
+})
+# Legacy ERP HTML — never served when ERP_PUBLISHED=0.
+_RETIRED_ERP_PAGES = frozenset({
+    "/app.html", "/app", "/app/", "/app/app.html",
+    "/portal-select.html", "/portal-select",
+    "/Launch_Quality_LLC.html", "/Launch Quality LLC.html",
+    "/install.html", "/download.html", "/docs.html",
+    "/quick-estate.html", "/index.html", "/go.html", "/start.html",
+    "/get-windows.html", "/get-android.html", "/erp", "/erp.html",
+    "/auto-trading.html",
+})
 
 
 def _najjar_page_file(path: str) -> Optional[str]:
@@ -204,7 +220,7 @@ CONTRACT_CORE_FIELDS = {
 }
 ESTATE_UNIT_ACTIVE_STATUSES = {"active"}
 ESTATE_CONTRACT_FLOW_STATUSES = {"draft", "approvalrequested", "approved", "active", "ended", "cancelled"}
-CORE_USERNAMES = {"waleed", "yaqoub", "razan", "amjad", "ali", "admin", "owner"}
+CORE_USERNAMES = set(NAJJAR_TEAM_USERNAMES)
 
 # Fallback assets: Railway can still open the app even if the public folder is misplaced.
 FALLBACK_INDEX_HTML = "<!doctype html>\n<html lang=\"ar\" dir=\"ltr\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Launch Quality LLC</title>\n  <link rel=\"stylesheet\" href=\"app.css\">\n</head>\n<body>\n  <main id=\"loginScreen\" class=\"login hidden\">\n    <section class=\"login-card\">\n      <img src=\"assets/brand-logo-gold.png\" alt=\"Jawdah logo\">\n      <h1>Launch Quality LLC</h1>\n      <p class=\"mini\">Real Estate & Hospitality Management System</p>\n      <input id=\"loginUser\" placeholder=\"اسم المستخدم\" autocomplete=\"username\">\n      <input id=\"loginPass\" placeholder=\"كلمة المرور\" type=\"password\" autocomplete=\"current-password\">\n      <button id=\"loginBtn\" class=\"gold-btn\" style=\"width:100%;margin-top:10px\">تسجيل الدخول</button>\n      <p class=\"mini\">Use the authorized administrator account.</p>\n    </section>\n  </main>\n\n  <main id=\"app\" class=\"app hidden\">\n    <aside id=\"sidebar\" class=\"sidebar\">\n      <div class=\"brand\">\n        <img src=\"assets/brand-logo-gold.png\" alt=\"logo\">\n        <div><h1>Launch Quality LLC</h1><small>Real Estate & Hospitality Management</small></div>\n      </div>\n      <nav id=\"nav\" class=\"nav\"></nav>\n    </aside>\n    <section class=\"content\">\n      <header class=\"topbar\">\n        <button id=\"menuBtn\" class=\"ghost mobile-nav\">☰</button>\n        <div class=\"search\"><input id=\"globalSearch\" placeholder=\"بحث سريع Ctrl + K\"></div>\n        <button class=\"gold-btn\" onclick=\"showSection('properties')\">+ إضافة</button>\n        <div id=\"clock\" class=\"top-pill\">00:00:00</div>\n        <div class=\"userbox\"><div id=\"avatar\" class=\"avatar\">J</div><div><b id=\"userName\">User</b><br><small id=\"userRole\" class=\"mini\">Role</small></div></div>\n        <button id=\"logoutBtn\" class=\"ghost\">خروج</button>\n      </header>\n      <h2 id=\"sectionTitle\">لوحة التحكم التنفيذية</h2>\n\n      <section id=\"sec-dashboard\" class=\"section active\">\n        <div class=\"hero\"><h2>مركز القيادة التنفيذي للعقارات والضيافة</h2><p>نظام إدارة عقارية وضيافة يربط التشغيل المالي والإداري مباشرة: العقار ← العميل ← العقد ← الفاتورة ← التحصيل ← الحسابات.</p><div id=\"heroStats\" class=\"status-line\" style=\"margin-top:14px\"></div></div>\n        <div id=\"kpiGrid\" class=\"grid kpis\"></div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>الإيرادات والمصروفات</h3><div class=\"canvas-wrap\"><canvas id=\"incomeChart\"></canvas></div></div>\n          <div class=\"card\"><h3>خريطة GIS تشغيلية</h3><div class=\"gis\"><div id=\"gisPins\"></div></div></div>\n        </div>\n        <div class=\"layout\">\n          <div class=\"card\"><h3>قرارات الآن</h3><div id=\"decisionList\"></div></div>\n          <div class=\"card\"><h3>الإشغال</h3><div class=\"canvas-wrap\"><canvas id=\"occupancyChart\"></canvas></div></div>\n        </div>\n        <div class=\"card\"><h3>إجراءات سريعة</h3><div id=\"quickActions\" class=\"quick\"></div></div>\n      </section>\n\n      <section id=\"sec-properties\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عقار</h3><div class=\"form\"><input id=\"pImage\" placeholder=\"إيموجي/رمز\" value=\"🏠\"><input id=\"pName\" placeholder=\"اسم العقار\"><input id=\"pType\" placeholder=\"النوع\"><select id=\"pStatus\"><option>Rented</option><option>Vacant</option><option>Maintenance</option></select><input id=\"pPrice\" placeholder=\"السعر\"><input id=\"pLocation\" placeholder=\"الموقع\"><textarea id=\"pNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createProperty()\">حفظ العقار</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><select id=\"propStatusFilter\" onchange=\"renderProperties()\"></select><button class=\"ghost\" onclick=\"exportCsv('properties')\">تصدير CSV</button></div><div id=\"propertiesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-clients\" class=\"section\">\n        <div class=\"card\"><h3>إضافة عميل</h3><div class=\"form\"><input id=\"cName\" placeholder=\"اسم العميل\"><input id=\"cPhone\" placeholder=\"الهاتف\"><input id=\"cEmail\" placeholder=\"البريد\"><input id=\"cNational\" placeholder=\"الهوية/السجل\"><textarea id=\"cNotes\" placeholder=\"ملاحظات\"></textarea></div><button class=\"gold-btn\" onclick=\"createClient()\">حفظ العميل</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('clients')\">تصدير CSV</button></div><div id=\"clientsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-contracts\" class=\"section\">\n        <div class=\"card\"><h3>إنشاء عقد</h3><div class=\"form\"><select id=\"contractProperty\"></select><select id=\"contractClient\"></select><input id=\"contractStart\" type=\"date\"><input id=\"contractEnd\" type=\"date\"><input id=\"contractRent\" placeholder=\"قيمة الإيجار\"><textarea id=\"contractNotes\" placeholder=\"ملاحظات العقد\"></textarea></div><button class=\"gold-btn\" onclick=\"createContract()\">حفظ العقد</button></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('contracts')\">تصدير CSV</button></div><div id=\"contractsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-invoices\" class=\"section\">\n        <div class=\"card\"><h3>الفواتير والتحصيل</h3><p class=\"mini\">يتم إنشاء الفاتورة من العقد فقط لضمان الربط الصحيح.</p><div id=\"invoicesTable\"></div></div>\n      </section>\n\n      <section id=\"sec-accounts\" class=\"section\">\n        <div class=\"card\"><h3>إضافة حركة مالية</h3><div class=\"form\"><input id=\"accDate\" type=\"date\"><select id=\"accType\"><option value=\"income\">income</option><option value=\"expense\">expense</option></select><input id=\"accCategory\" placeholder=\"التصنيف\"><input id=\"accDesc\" placeholder=\"الوصف\"><input id=\"accAmount\" placeholder=\"المبلغ\"></div><button class=\"gold-btn\" onclick=\"createAccount()\">حفظ الحركة</button></div>\n        <div class=\"card\"><h3>ملخص الحسابات</h3><div id=\"accountSummary\" class=\"status-line\"></div><div class=\"canvas-wrap\"><canvas id=\"expenseChart\"></canvas></div></div>\n        <div class=\"card\"><div class=\"toolbar\"><button class=\"ghost\" onclick=\"exportCsv('accounts')\">تصدير CSV</button></div><div id=\"accountsTable\"></div></div>\n      </section>\n\n      <section id=\"sec-maintenance\" class=\"section\">\n        <div class=\"card\"><h3>طلب صيانة</h3><div class=\"form\"><select id=\"maintProperty\"></select><input id=\"maintTitle\" placeholder=\"عنوان الطلب\"><select id=\"maintPriority\"><option>High</option><option>Medium</option><option>Low</option></select><input id=\"maintCost\" placeholder=\"التكلفة المتوقعة\"><textarea id=\"maintNotes\" placeholder=\"تفاصيل\"></textarea></div><button class=\"gold-btn\" onclick=\"createMaintenance()\">حفظ الطلب</button></div>\n        <div class=\"grid\" id=\"maintenanceGrid\" style=\"grid-template-columns:repeat(auto-fit,minmax(260px,1fr))\"></div>\n      </section>\n\n      <section id=\"sec-reports\" class=\"section\">\n        <div id=\"reportsBox\"></div>\n        <div class=\"card\"><button class=\"gold-btn\" onclick=\"renderReports()\">تحديث التقرير</button> <button class=\"ghost\" onclick=\"downloadBackup()\">تنزيل Backup</button></div>\n      </section>\n\n      <section id=\"sec-users\" class=\"section\">\n        <div class=\"card\"><h3>إضافة مستخدم</h3><div class=\"form\"><input id=\"uUsername\" placeholder=\"اسم المستخدم\"><input id=\"uName\" placeholder=\"الاسم\"><select id=\"uRole\"><option value=\"admin\">admin</option><option value=\"accountant\">accountant</option><option value=\"operations\">operations</option><option value=\"maintenance\">maintenance</option><option value=\"viewer\">viewer</option></select><input id=\"uPassword\" placeholder=\"كلمة المرور\"></div><button class=\"gold-btn\" onclick=\"createUser()\">حفظ المستخدم</button></div>\n        <div class=\"card\"><div id=\"usersTable\"></div></div>\n      </section>\n\n      <section id=\"sec-backup\" class=\"section\">\n        <div class=\"card\"><h3>مركز التخزين والنسخ الاحتياطي</h3><div id=\"backupStatus\" class=\"status-line\"></div><div class=\"toolbar\" style=\"margin-top:16px\"><button class=\"gold-btn\" onclick=\"downloadBackup()\">تنزيل Backup JSON</button><button class=\"ghost\" onclick=\"exportCsv('properties')\">عقارات CSV</button><button class=\"ghost\" onclick=\"exportCsv('clients')\">عملاء CSV</button><button class=\"ghost\" onclick=\"exportCsv('contracts')\">عقود CSV</button><button class=\"ghost\" onclick=\"exportCsv('invoices')\">فواتير CSV</button><button class=\"ghost\" onclick=\"exportCsv('accounts')\">حسابات CSV</button></div></div>\n      </section>\n\n      <section id=\"sec-qa\" class=\"section\">\n        <div class=\"card\"><h3>اختبار التشغيل</h3><button class=\"gold-btn\" onclick=\"runQA()\">تشغيل الاختبار الآن</button><div id=\"qaBox\" style=\"margin-top:15px\"></div></div>\n      </section>\n    </section>\n  </main>\n\n  <div id=\"paymentModal\" class=\"modal\"><div class=\"modal-box\"><h2>تحصيل فاتورة</h2><p id=\"payInfo\"></p><input id=\"payInvoiceId\" type=\"hidden\"><div class=\"form\"><input id=\"payAmount\" placeholder=\"المبلغ\"><select id=\"payMethod\"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select><input id=\"payNote\" placeholder=\"ملاحظة\"></div><button class=\"gold-btn\" onclick=\"submitPayment()\">تأكيد التحصيل</button> <button class=\"ghost\" onclick=\"closeModal('paymentModal')\">إغلاق</button></div></div>\n  <div id=\"invoiceModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"invoicePreview\"></div><div class=\"toolbar\"><button class=\"gold-btn\" onclick=\"window.print()\">طباعة A4</button><button class=\"ghost\" onclick=\"downloadInvoice()\">تنزيل HTML</button><button class=\"ghost\" onclick=\"closeModal('invoiceModal')\">إغلاق</button></div></div></div>\n  <div id=\"genericModal\" class=\"modal\"><div class=\"modal-box\"><div id=\"genericModalBody\"></div><button class=\"ghost\" onclick=\"closeModal('genericModal')\">إغلاق</button></div></div>\n  <script src=\"app.js\"></script>\n</body>\n</html>\n"
@@ -300,10 +316,10 @@ TABLES = {
     "audit_log": ["id", "created_at", "username", "action", "entity", "entity_id", "details"],
 }
 
-FULL_ACCESS_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi", "ahmed", "ahmed.najjar"}
-PRIMARY_OWNER_USERNAMES = {"waleed", "yaqoub", "owner", "waleed.najjar", "yaqoub.khasibi"}
-DAILY_OPS_MANAGER_USERNAMES = {"razan", "razan.shuaili", "waleed", "yaqoub", "waleed.najjar", "yaqoub.khasibi"}
-RESTRICTED_ADMIN_USERNAMES = {"ahmed", "ahmed.najjar", "ahmed.alnajjar"}
+FULL_ACCESS_USERNAMES = frozenset({"waleed.najjar", "hamad.sumoom"})
+PRIMARY_OWNER_USERNAMES = FULL_ACCESS_USERNAMES
+DAILY_OPS_MANAGER_USERNAMES = frozenset(NAJJAR_TEAM_USERNAMES)
+RESTRICTED_ADMIN_USERNAMES: frozenset[str] = frozenset()
 
 WRITE_ROLES = {"owner", "admin", "deputy", "accountant", "operations", "reception", "maintenance"}
 
@@ -2330,13 +2346,10 @@ def seed_if_empty(db: sqlite3.Connection) -> None:
     """Bootstrap only real accounts + chart of accounts. Never insert demo business data."""
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         defaults = [
-            ("waleed", "وليد", "admin", "111111"),
-            ("yaqoub", "يعقوب", "owner", "owner2015"),
-            ("owner", "يعقوب فاضل حمد الخصيبي", "owner", "001970"),
-            ("razan", "رزان", "accountant", "222222"),
-            ("amjad", "امجد", "operations", "333333"),
-            ("ali", "علي", "maintenance", "444444"),
-            ("admin", "System Admin", "admin", "555555"),
+            ("waleed.najjar", "Walid Najjar", "owner", "Waleed2026!"),
+            ("hamad.sumoom", "Hamad Al Samoom", "owner", "Hamad2026!"),
+            ("waya.shuaili", "Aya Al Shaili", "operations", "Waya2026!"),
+            ("razan.shuaili", "Razan Al Shaili", "reception", "Razan2026!"),
         ]
         for username, name, role, legacy_pwd in defaults:
             pwd, _must = resolve_bootstrap_password(username, role, legacy_pwd)
@@ -4289,27 +4302,12 @@ def purge_demo_business_data(db: sqlite3.Connection) -> Dict[str, int]:
 
 
 def ensure_team_users(db: sqlite3.Connection) -> None:
-    # Force effective credentials + role model for production operations.
-    # Full access required by management: owner + waleed + yaqoub.
+    """NAJJAR-only accounts — legacy Launch Quality ERP users are deactivated."""
     team = [
-        ("owner", "يعقوب فاضل الخصيبي", "owner", "001970"),
-        ("yaqoub", "يعقوب فاضل الخصيبي", "owner", "owner2015"),
-        ("waleed", "وليد نجار", "owner", "111111"),
-        ("waleed.najjar", "وليد نجار", "owner", "Waleed2026!"),
-        ("ahmed", "احمد محمد عبد الهادي", "admin", "Ahmed2026!"),
-        ("ahmed.najjar", "احمد محمد عبد الهادي", "admin", "Ahmed2026!"),
-        ("admin", "System Admin", "admin", "555555"),
-        ("razan", "رزان الشعيلي", "reception", "222222"),
-        ("razan.shuaili", "رزان الشعيلي", "reception", "Razan2026!"),
-        ("waya.shuaili", "واية الشعيلي", "operations", "Waya2026!"),
-        ("hamad.sumoom", "حمد السموم", "owner", "Hamad2026!"),
-        ("amjad", "امجد", "operations", "333333"),
-        ("ali", "علي محمد علي النديش", "operations", "444444"),
-        ("mohammed.siraj", "محمد صالح سراج النور", "operations", "Siraj2026!"),
-        ("reception", "موظف استقبال", "reception", "Reception2026!"),
-        ("dataentry", "موظف إدخال", "operations", "DataEntry2026!"),
-        ("staff", "موظف عام", "operations", "Staff2026!"),
-        ("viewer", "مشاهد", "viewer", "Viewer2026!"),
+        ("waleed.najjar", "Walid Najjar", "owner", "Waleed2026!"),
+        ("hamad.sumoom", "Hamad Al Samoom", "owner", "Hamad2026!"),
+        ("waya.shuaili", "Aya Al Shaili", "operations", "Waya2026!"),
+        ("razan.shuaili", "Razan Al Shaili", "reception", "Razan2026!"),
     ]
     for username, name, role, password in team:
         env_key = "LQ_USER_PASSWORD_" + re.sub(r"[^A-Z0-9]+", "_", str(username).upper()).strip("_")
@@ -4323,45 +4321,15 @@ def ensure_team_users(db: sqlite3.Connection) -> None:
             effective_password,
             active=True,
         )
-    # Real office roster from management list (no password overwrite on existing users).
-    try:
-        lq_business_catalog.ensure_business_staff(db, ensure_user)
-    except Exception:
-        pass
-    # Force planned roles without rotating passwords.
+    allowed = tuple(sorted(NAJJAR_TEAM_USERNAMES))
+    placeholders = ",".join("?" * len(allowed))
     db.execute(
-        "UPDATE users SET role='admin', active=1, name='احمد محمد عبد الهادي' WHERE lower(username) IN ('ahmed.najjar','ahmed')"
+        f"UPDATE users SET active=0 WHERE lower(username) NOT IN ({placeholders})",
+        allowed,
     )
     db.execute(
-        "UPDATE users SET role='owner', active=1, name='وليد نجار' WHERE lower(username) IN ('waleed','waleed.najjar')"
-    )
-    db.execute(
-        "UPDATE users SET role='owner', active=1, name='حمد السموم' WHERE lower(username)='hamad.sumoom'"
-    )
-    db.execute(
-        "UPDATE users SET role='operations', active=1, name='واية الشعيلي' WHERE lower(username)='waya.shuaili'"
-    )
-    db.execute(
-        "UPDATE users SET role='owner', active=1, name=COALESCE(NULLIF(name,''), 'يعقوب فاضل الخصيبي') "
-        "WHERE lower(username)='owner'"
-    )
-    db.execute(
-        "UPDATE users SET role='owner', active=1, name='يعقوب فاضل الخصيبي' WHERE lower(username)='yaqoub'"
-    )
-    db.execute(
-        "UPDATE users SET role='reception', active=1, name='رزان الشعيلي' "
-        "WHERE lower(username) IN ('razan','razan.shuaili','razan.accounting')"
-    )
-    db.execute(
-        "UPDATE users SET role='operations', active=1, name='امجد' WHERE lower(username) IN ('amjad','amjad.jamoudi')"
-    )
-    db.execute(
-        "UPDATE users SET role='operations', active=1, name='علي محمد علي النديش' "
-        "WHERE lower(username) IN ('ali','ali.hospitality')"
-    )
-    db.execute(
-        "UPDATE users SET role='operations', active=1, name='محمد صالح سراج النور' "
-        "WHERE lower(username) IN ('mohammed.siraj')"
+        f"UPDATE users SET active=1 WHERE lower(username) IN ({placeholders})",
+        allowed,
     )
 
 
@@ -4434,6 +4402,21 @@ class JawdahHandler(BaseHTTPRequestHandler):
             }
             if path in legacy_to_najjar:
                 self.send_redirect(legacy_to_najjar[path])
+                return True
+            if not ERP_PUBLISHED and path in _RETIRED_ERP_PAGES:
+                self.send_redirect(NAJJAR_LOGIN)
+                return True
+            if not ERP_PUBLISHED and safe in ("app.js", "app.css"):
+                stub = (
+                    f"location.replace({NAJJAR_LOGIN!r});"
+                    if safe == "app.js"
+                    else "/* ERP retired — NAJJAR only */"
+                )
+                _send_bytes(
+                    stub.encode("utf-8"),
+                    "application/javascript; charset=utf-8" if safe == "app.js" else "text/css; charset=utf-8",
+                    cache="no-store, no-cache, must-revalidate, max-age=0",
+                )
                 return True
             if _is_najjar_public_path(path) or _is_auto_trading_asset(safe):
                 return False
@@ -4847,6 +4830,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         {"ok": False, "error": "Site unpublished", "closed": True},
                         503,
                     )
+                if not ERP_PUBLISHED and parts[0] != "health" and not _najjar_api_allowed(parts):
+                    return self.send_json(
+                        {"ok": False, "error": "ERP retired — NAJJAR only", "najjar_only": True},
+                        503,
+                    )
                 if parts[0] == "quick-estate":
                     user = self.require_user(db, "dashboard")
                     if not user:
@@ -4880,7 +4868,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     return self.send_json({
                         "ok": True,
                         "status": "healthy",
-                        "service": "production",
+                        "service": "najjar",
+                        "erp_published": ERP_PUBLISHED,
+                        "najjar_published": NAJJAR_PUBLISHED,
                         "version": APP_VERSION,
                         "release_channel": RELEASE_CHANNEL,
                         "stable": STABLE_RELEASE,

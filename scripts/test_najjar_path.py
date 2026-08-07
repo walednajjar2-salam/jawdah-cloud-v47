@@ -40,14 +40,25 @@ def main() -> int:
 
     must_close = [
         "/",
-        "/index.html",
-        "/app.html",
-        "/erp",
     ]
     for path in must_close:
         resp = fetch(path)
         loc = resp.headers.get("Location", "")
         ok = resp.status in (301, 302) and loc.startswith(CLOSED)
+        print(f"{'PASS' if ok else 'FAIL'}  {path:34s} -> {resp.status} {loc!r}")
+        if not ok:
+            fails += 1
+
+    erp_to_najjar = [
+        ("/index.html", "/najjar/login.html"),
+        ("/erp", "/najjar/login.html"),
+        ("/app.html", "/najjar/login.html"),
+        ("/portal-select.html", "/najjar/login.html"),
+    ]
+    for path, target in erp_to_najjar:
+        resp = fetch(path)
+        loc = resp.headers.get("Location", "")
+        ok = resp.status in (301, 302) and loc.startswith(target)
         print(f"{'PASS' if ok else 'FAIL'}  {path:34s} -> {resp.status} {loc!r}")
         if not ok:
             fails += 1
@@ -96,12 +107,12 @@ def main() -> int:
         fails += 1
 
     try:
-        urllib.request.urlopen(ORIGIN + "/api/dashboard", timeout=5)
-        print("FAIL  /api/dashboard still open")
+        urllib.request.urlopen(ORIGIN + "/api/bootstrap", timeout=5)
+        print("FAIL  /api/bootstrap still open")
         fails += 1
     except urllib.error.HTTPError as e:
         ok = e.code == 503
-        print(f"{'PASS' if ok else 'FAIL'}  /api/dashboard -> {e.code}")
+        print(f"{'PASS' if ok else 'FAIL'}  /api/bootstrap -> {e.code} (ERP retired)")
         if not ok:
             fails += 1
 
