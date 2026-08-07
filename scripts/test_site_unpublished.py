@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Nothing is published while LQ_SITE_PUBLISHED is off — not ERP, not NAJJAR."""
+"""Nothing is published while LQ_SITE_PUBLISHED and LQ_NAJJAR_PUBLISHED are both off."""
 from __future__ import annotations
 
 import urllib.error
@@ -9,11 +9,13 @@ ORIGIN = "http://127.0.0.1:8765"
 
 CLOSED = "/closed"
 
-# Paths that must redirect to /closed when publishing is off
+# Paths that must redirect to /closed when publishing is fully off
 MUST_CLOSE = [
     "/",
     "/index.html",
     "/najjar",
+    "/najjar/",
+    "/najjar/customer.html",
     "/auto-trading/customer.html",
     "/auto-trading/login.html",
     "/auto-trading/platforms.html",
@@ -47,6 +49,15 @@ def fetch(path: str):
 
 def main() -> int:
     fails = 0
+    try:
+        probe = fetch("/najjar/customer.html")
+        if probe.status == 200:
+            print("SKIP  server has LQ_NAJJAR_PUBLISHED=1 (NAJJAR live at /najjar/)")
+            print("      restart with LQ_NAJJAR_PUBLISHED=0 to run this test")
+            print("      use scripts/test_najjar_path.py for the default mode")
+            return 0
+    except Exception:
+        pass
     try:
         urllib.request.urlopen(ORIGIN + "/api/health", timeout=3).read()
     except Exception as exc:

@@ -1,4 +1,5 @@
 /* النجار والسموم — تجارة واستيراد السيارات */
+const NAJJAR_WEB = '/najjar';
 const API_BASE = '/api/auto-trading';
 const content = document.getElementById('content');
 const drawer = document.getElementById('drawer');
@@ -268,7 +269,7 @@ function currentPlatform() {
 function goToPlatforms(event) {
   if (event) event.preventDefault();
   const token = readToken();
-  let url = '/auto-trading/platforms.html?from=dashboard&t=' + Date.now();
+  let url = NAJJAR_WEB + '/platforms.html?from=dashboard&t=' + Date.now();
   if (token) url += '&token=' + encodeURIComponent(token);
   location.href = url;
 }
@@ -307,7 +308,7 @@ const statusClass = {
 
 async function api(url, options = {}) {
   const token = readToken();
-  if (!token) { location.replace('/auto-trading/login.html'); return; }
+  if (!token) { location.replace(NAJJAR_WEB + '/login.html'); return; }
   const opts = { ...options };
   opts.headers = {
     'Content-Type': 'application/json',
@@ -319,7 +320,7 @@ async function api(url, options = {}) {
   const data = await res.json().catch(() => ({ ok: false, error: 'تعذر قراءة رد الخادم' }));
   if (res.status === 401) {
     localStorage.removeItem('jawdah_cloud_token');
-    location.replace('/auto-trading/login.html');
+    location.replace(NAJJAR_WEB + '/login.html');
     return;
   }
   if (!res.ok || data.ok === false) throw new Error(data.error || 'حدث خطأ');
@@ -860,7 +861,7 @@ async function loadVehicles() {
         <p>${vehiclesCache.length} مركبة</p>
       </div>
       <div class="actions-row">
-        <a class="btn ghost" href="/auto-trading/customer.html" target="_blank" rel="noopener">بوابة الزبائن</a>
+        <a class="btn ghost" href="${NAJJAR_WEB}/customer.html" target="_blank" rel="noopener">بوابة الزبائن</a>
         <button class="btn primary" type="button" id="btnAddVehicle">+ إضافة مركبة</button>
       </div>
     </div>
@@ -1592,7 +1593,7 @@ function showAddImportForm() {
 
 async function boot() {
   const token = readToken();
-  if (!token) { location.replace('/auto-trading/login.html'); return; }
+  if (!token) { location.replace(NAJJAR_WEB + '/login.html'); return; }
   try {
     const me = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
     const user = me.user || me;

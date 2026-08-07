@@ -1,10 +1,10 @@
 {
-  "id": "/auto-trading/login.html",
+  "id": "/najjar/login.html",
   "name": "NAJJAR & AL SAMOOM TRADING",
   "short_name": "NAJJAR Trading",
   "description": "Used & imported cars — staff showroom and inventory",
-  "start_url": "/auto-trading/login.html?source=pwa",
-  "scope": "/auto-trading/",
+  "start_url": "/najjar/login.html?source=pwa",
+  "scope": "/najjar/",
   "display": "standalone",
   "display_override": ["standalone", "browser"],
   "background_color": "#0a0a0a",
@@ -31,13 +31,13 @@
     {
       "name": "معرض السيارات",
       "short_name": "Showroom",
-      "url": "/auto-trading/customer.html",
+      "url": "/najjar/customer.html",
       "icons": [{"src": "/assets/app-icon-192.png", "sizes": "192x192"}]
     },
     {
       "name": "منصات السيارات",
       "short_name": "Platforms",
-      "url": "/auto-trading/platforms.html",
+      "url": "/najjar/platforms.html",
       "icons": [{"src": "/assets/app-icon-192.png", "sizes": "192x192"}]
     }
   ]

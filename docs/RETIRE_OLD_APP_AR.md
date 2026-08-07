@@ -64,23 +64,44 @@ LQ_CLIENT_PURGE=v73-اسم-الإصدار
 
 ## إيقاف النشر بالكامل — v73
 
-**لا يُعرض أي شيء** — لا ERP القديم ولا NAJJAR — ما لم تُفعِّل النشر يدوياً على Railway:
+**ERP القديم وكل المسارات القديمة** تبقى مغلقة. NAJJAR يُنشر افتراضياً على مسار مستقل:
 
 ```
-LQ_SITE_PUBLISHED=1
+/najjar/              → بوابة الزبائن (معرض السيارات)
+/najjar/login.html    → دخول الموظفين
+/najjar/platforms.html → اختيار المنصة
+/najjar/staff.html    → لوحة الموظفين
 ```
 
-بدون هذا المتغير، الوضع الافتراضي **متوقف**:
+المسارات القديمة **لا تُعرض**:
 
 | المسار | ماذا يحدث |
 | --- | --- |
-| `/` · `/najjar` · `/auto-trading/*` · `/app.html` · `/erp` | تحويل إلى `/closed` |
-| `/closed` | صفحة «النشر متوقف» فقط |
+| `/` · `/auto-trading/*.html` · `/app.html` · `/erp` | تحويل إلى `/closed` |
+| `/najjar/*` | NAJJAR (عند `LQ_NAJJAR_PUBLISHED=1` الافتراضي) |
+| `/closed` | صفحة «النشر متوقف» عند إيقاف NAJJAR أيضاً |
 | `/remove` | تنظيف الجهاز من النسخة القديمة |
 | `/api/health` | يبقى لمراقبة السيرفر |
+| `/api/auto-trading/*` · `/api/login` · `/api/me` | يعمل مع NAJJAR فقط |
 | باقي `/api/*` | 503 — النشر متوقف |
 
-التحقق: `python3 scripts/test_site_unpublished.py`
+### متغيرات Railway
+
+```
+LQ_NAJJAR_PUBLISHED=1          # افتراضي — NAJJAR على /najjar/
+LQ_NAJJAR_BASE=/najjar         # غيّر البادئة إن رغبت
+LQ_SITE_PUBLISHED=0            # افتراضي — لا يُعرض شيء على / أو ERP
+LQ_NAJJAR_PUBLISHED=0          # إيقاف NAJJAR أيضاً (كل شيء → /closed)
+LQ_SITE_PUBLISHED=1            # تفعيل الوجه العام الكامل (يُحوّل القديم إلى /najjar/)
+LQ_CLIENT_PURGE=v74-najjar-path
+```
+
+التحقق:
+
+```bash
+python3 scripts/test_najjar_path.py      # NAJJAR على /najjar/ (الافتراضي)
+LQ_NAJJAR_PUBLISHED=0 python3 server.py  # ثم test_site_unpublished.py
+```
 
 ## إيقاف نظام جودة الانطلاقة (ERP) — v72
 

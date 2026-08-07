@@ -114,7 +114,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v73-unpublished").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v74-najjar-path").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -124,11 +124,58 @@ CLIENT_PURGE_COOKIE = "lq_purge"
 # a directive that only takes effect in some other browser is a reload risk with
 # no benefit here.
 CLIENT_PURGE_DIRECTIVES = '"cache", "storage"'
-# When off, nothing is published — not ERP, not NAJJAR, not the showroom. Only
-# /closed and /remove stay reachable so devices can be cleaned. Set LQ_SITE_PUBLISHED=1
-# on Railway when you deliberately turn publishing back on.
+# When off, the ERP shell and legacy entry points stay hidden. NAJJAR can still be
+# published on its own base path (see NAJJAR_PUBLISHED). Set LQ_SITE_PUBLISHED=1 on
+# Railway to turn the full public site face back on.
 SITE_PUBLISHED = os.environ.get("LQ_SITE_PUBLISHED", "0").strip().lower() in ("1", "true", "yes", "on")
 SITE_CLOSED_URL = "/closed"
+# NAJJAR lives under its own URL prefix — not / and not /auto-trading/*.html.
+NAJJAR_BASE = (os.environ.get("LQ_NAJJAR_BASE", "/najjar").strip().rstrip("/") or "/najjar")
+NAJJAR_PUBLISHED = os.environ.get("LQ_NAJJAR_PUBLISHED", "1").strip().lower() in ("1", "true", "yes", "on")
+NAJJAR_HOME = f"{NAJJAR_BASE}/customer.html"
+NAJJAR_LOGIN = f"{NAJJAR_BASE}/login.html"
+NAJJAR_PLATFORMS = f"{NAJJAR_BASE}/platforms.html"
+NAJJAR_STAFF = f"{NAJJAR_BASE}/staff.html"
+NAJJAR_API_ROOTS = frozenset({"auto-trading", "login", "me", "logout", "biometric"})
+
+
+def _najjar_page_file(path: str) -> Optional[str]:
+    """Map a public /najjar/* URL to a file under public/."""
+    mapping = {
+        NAJJAR_BASE: "auto-trading/customer.html",
+        NAJJAR_BASE + "/": "auto-trading/customer.html",
+        NAJJAR_BASE + "/customer.html": "auto-trading/customer.html",
+        NAJJAR_BASE + "/login.html": "auto-trading/login.html",
+        NAJJAR_BASE + "/login": "auto-trading/login.html",
+        NAJJAR_BASE + "/platforms.html": "auto-trading/platforms.html",
+        NAJJAR_BASE + "/platforms": "auto-trading/platforms.html",
+        NAJJAR_STAFF: "auto-trading.html",
+        NAJJAR_BASE + "/staff": "auto-trading.html",
+        "/najjar-login": "auto-trading/login.html",
+        "/دخول-النجار": "auto-trading/login.html",
+        "/النجار": "auto-trading/customer.html",
+        "/سيارات": "auto-trading/customer.html",
+    }
+    if path in mapping:
+        return mapping[path]
+    if path.rstrip("/") == NAJJAR_BASE:
+        return "auto-trading/customer.html"
+    return None
+
+
+def _is_najjar_public_path(path: str) -> bool:
+    return _najjar_page_file(path) is not None or path in (NAJJAR_BASE, NAJJAR_BASE + "/")
+
+
+def _is_auto_trading_asset(safe: str) -> bool:
+    if not safe.startswith("auto-trading/"):
+        return False
+    leaf = safe.rsplit("/", 1)[-1]
+    return not leaf.endswith(".html")
+
+
+def _najjar_api_allowed(parts: list) -> bool:
+    return bool(parts) and parts[0] in NAJJAR_API_ROOTS
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -4378,6 +4425,14 @@ class JawdahHandler(BaseHTTPRequestHandler):
                             cache="no-store, no-cache, must-revalidate, max-age=0")
                 return True
             return False
+        if NAJJAR_PUBLISHED:
+            if _is_najjar_public_path(path) or _is_auto_trading_asset(safe):
+                return False
+            if path == "/manifest.webmanifest":
+                manifest = (PUBLIC_DIR / "manifest.webmanifest").read_bytes()
+                _send_bytes(manifest, "application/manifest+json; charset=utf-8",
+                            cache="no-store, no-cache, must-revalidate, max-age=0")
+                return True
         if path == "/manifest.webmanifest":
             body = json.dumps({
                 "id": "/closed",
@@ -4540,8 +4595,6 @@ class JawdahHandler(BaseHTTPRequestHandler):
         # Short stable aliases so old/cached 404 bookmarks still fail less often.
         download_name: Optional[str] = None
         # Public site face = NAJJAR & AL SAMOOM TRADING (Launch Quality ERP entry points stay hidden).
-        NAJJAR_HOME = "/auto-trading/customer.html"
-        NAJJAR_LOGIN = "/auto-trading/login.html"
         if path in ("/go", "/دخول", "/start"):
             path = "/go.html"
         if path in ("/fresh", "/تحديث", "/clear-cache"):
@@ -4583,11 +4636,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 self.wfile.write(raw)
 
         safe_peek = Path(urllib.parse.unquote(path).lstrip("/")).as_posix()
+        original_path = path
+        original_safe = safe_peek
         if self._site_closed_gate(path, safe_peek, _send_bytes):
             return
 
+        najjar_file = _najjar_page_file(path) if NAJJAR_PUBLISHED else None
+        if najjar_file:
+            safe_peek = najjar_file
+            path = "/" + najjar_file
+
         # Published face only — when LQ_SITE_PUBLISHED=0 the gate above already sent
-        # every other request to /closed.
+        # every other request to /closed (except NAJJAR on NAJJAR_BASE when enabled).
         if SITE_PUBLISHED:
             if path in ("/", "", "/index.html", "/najjar", "/najjar/", "/النجار", "/سيارات", "/auto", "/autotrading"):
                 self.send_response(302)
@@ -4599,13 +4659,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 "/go.html", "/start.html",
                 "/login", "/login.html",
             ):
-                if path != "/auto-trading/login.html":
+                if path != NAJJAR_LOGIN:
                     self.send_response(302)
                     self.send_header("Location", NAJJAR_LOGIN)
                     self.end_headers()
                     return
             ERP_STAFF_LOGIN = NAJJAR_LOGIN
-            ERP_STAFF_HOME = "/auto-trading/platforms.html"
+            ERP_STAFF_HOME = NAJJAR_PLATFORMS
             erp_login = {
                 "/app.html", "/app", "/app/", "/app/app.html",
                 "/Launch_Quality_LLC.html", "/Launch Quality LLC.html",
@@ -4622,7 +4682,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return self.send_redirect(ERP_STAFF_HOME)
             if path == "/app.js":
                 _send_bytes(
-                    b"location.replace('/auto-trading/login.html');",
+                    ("location.replace(%r);" % NAJJAR_LOGIN).encode("utf-8"),
                     "application/javascript; charset=utf-8",
                     cache="no-store, no-cache, must-revalidate, max-age=0",
                 )
@@ -4633,14 +4693,34 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 return
             if path in ("/najjar-platforms", "/najjar/platforms", "/منصات-النجار"):
                 self.send_response(302)
-                self.send_header("Location", "/auto-trading/platforms.html")
+                self.send_header("Location", NAJJAR_PLATFORMS)
                 self.end_headers()
                 return
             if path in ("/najjar-admin", "/najjar/dashboard", "/لوحة-النجار"):
                 self.send_response(302)
-                self.send_header("Location", "/auto-trading.html")
+                self.send_header("Location", NAJJAR_STAFF)
                 self.end_headers()
                 return
+            legacy_auto_html = {
+                "/auto-trading/customer.html": NAJJAR_HOME,
+                "/auto-trading/login.html": NAJJAR_LOGIN,
+                "/auto-trading/platforms.html": NAJJAR_PLATFORMS,
+                "/auto-trading.html": NAJJAR_STAFF,
+            }
+            if path in legacy_auto_html:
+                return self.send_redirect(legacy_auto_html[path])
+
+        if not SITE_PUBLISHED and NAJJAR_PUBLISHED:
+            legacy_closed = {
+                "/auto-trading/customer.html",
+                "/auto-trading/login.html",
+                "/auto-trading/platforms.html",
+                "/auto-trading.html",
+            }
+            if original_path in legacy_closed or (
+                original_safe.startswith("auto-trading/") and original_safe.endswith(".html")
+            ):
+                return self.send_redirect(SITE_CLOSED_URL)
 
         if path == "/favicon.ico":
             self.send_response(204)
@@ -4730,15 +4810,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
         # Safe fallback — only when publishing is on and ERP paths slipped through.
         if SITE_PUBLISHED:
             if path == "/app.html":
-                return self.send_redirect("/auto-trading/login.html")
+                return self.send_redirect(NAJJAR_LOGIN)
             if path == "/portal-select.html":
-                return self.send_redirect("/auto-trading/platforms.html")
+                return self.send_redirect(NAJJAR_PLATFORMS)
             if path == "/app.css":
                 raw = b"/* retired */"
                 _send_bytes(raw, "text/css; charset=utf-8", cache="no-store")
                 return
             if path == "/app.js":
-                raw = b"location.replace('/auto-trading/login.html');"
+                raw = ("location.replace(%r);" % NAJJAR_LOGIN).encode("utf-8")
                 _send_bytes(raw, "application/javascript; charset=utf-8", cache="no-store")
                 return
         elif path in ("/app.html", "/portal-select.html", "/app.js", "/app.css"):
@@ -4751,7 +4831,9 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 parts = [p for p in path.split("/") if p][1:]
                 if not parts:
                     return self.send_json({"ok": True, "status": "production"})
-                if not SITE_PUBLISHED and parts[0] != "health":
+                if not SITE_PUBLISHED and parts[0] != "health" and not (
+                    NAJJAR_PUBLISHED and _najjar_api_allowed(parts)
+                ):
                     return self.send_json(
                         {"ok": False, "error": "Site unpublished", "closed": True},
                         503,
@@ -9443,9 +9525,9 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
             "manifest": {
                 "version": STAFF_APP_VERSION,
                 "production_url": PRODUCTION_URL,
-                "download_page": f"{PRODUCTION_URL}/auto-trading/login.html",
+                "download_page": f"{PRODUCTION_URL}{NAJJAR_LOGIN}",
                 "install_page": f"{PRODUCTION_URL}/remove",
-                "app_url": f"{PRODUCTION_URL}/auto-trading/platforms.html",
+                "app_url": f"{PRODUCTION_URL}{NAJJAR_PLATFORMS}",
                 "apk_url": STAFF_DOWNLOAD_APK,
                 "windows_zip_url": STAFF_DOWNLOAD_ZIP,
                 "features": [

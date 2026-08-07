@@ -21,7 +21,7 @@
         <p class="nt-sub">اختر الدولة أو المنصة — المزادات، الاستيراد، والمخزون المحلي</p>
       </div>
       <div class="nt-hub-actions">
-        <a class="nt-btn ghost" href="/auto-trading/customer.html">بوابة الزبائن</a>
+        <a class="nt-btn ghost" href="/najjar/customer.html">بوابة الزبائن</a>
         <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب</a>
         <button class="nt-btn primary" type="button" id="btnLogout">خروج</button>
       </div>
@@ -134,12 +134,12 @@
 
     const token = readToken();
     if (!token) {
-      location.replace('/auto-trading/login.html');
+      location.replace('/najjar/login.html');
     } else {
       fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } }).then(async (res) => {
         if (!res.ok) {
           localStorage.removeItem('jawdah_cloud_token');
-          location.replace('/auto-trading/login.html');
+          location.replace('/najjar/login.html');
         }
       }).catch(() => {});
     }
@@ -148,30 +148,30 @@
       { make: 'Mercedes-Benz', model: 'G-Class', variant: 'G63 AMG', stock_no: 'LIVE', status: 'قيد الاستيراد', list_price: 0 }
     ]);
     document.querySelectorAll('#platHero [data-open-gallery], #platHero [data-view-jump]').forEach((btn) => {
-      btn.onclick = () => { location.href = withToken('/auto-trading.html?platform=oman&view=vehicles'); };
+      btn.onclick = () => { location.href = withToken('/najjar/staff.html?platform=oman&view=vehicles'); };
     });
 
     document.getElementById('btnLogout').onclick = () => {
       localStorage.removeItem('jawdah_cloud_token');
-      location.replace('/auto-trading/login.html');
+      location.replace('/najjar/login.html');
     };
 
     const routes = {
-      america: '/auto-trading.html?platform=america&view=imports',
-      salam: '/auto-trading.html?platform=salam&view=imports',
-      oman: '/auto-trading.html?platform=oman&view=vehicles',
-      dubai: '/auto-trading.html?platform=dubai&view=imports',
-      jordan: '/auto-trading.html?platform=jordan&view=imports',
-      iran: '/auto-trading.html?platform=iran&view=imports',
-      india: '/auto-trading.html?platform=india&view=imports',
-      saudi: '/auto-trading.html?platform=saudi&view=imports',
+      america: '/najjar/staff.html?platform=america&view=imports',
+      salam: '/najjar/staff.html?platform=salam&view=imports',
+      oman: '/najjar/staff.html?platform=oman&view=vehicles',
+      dubai: '/najjar/staff.html?platform=dubai&view=imports',
+      jordan: '/najjar/staff.html?platform=jordan&view=imports',
+      iran: '/najjar/staff.html?platform=iran&view=imports',
+      india: '/najjar/staff.html?platform=india&view=imports',
+      saudi: '/najjar/staff.html?platform=saudi&view=imports',
     };
 
     document.querySelectorAll('[data-platform]').forEach((el) => {
       el.addEventListener('click', () => {
         const key = el.getAttribute('data-platform');
         localStorage.setItem('najjar_platform', key);
-        location.href = withToken(routes[key] || '/auto-trading.html');
+        location.href = withToken(routes[key] || '/najjar/staff.html');
       });
       el.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); el.click(); }
