@@ -104,7 +104,7 @@ body.nt-lock { overflow: hidden; }
 }
 .nt-cinema-copy h2 {
   margin: 6px 0 10px;
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
   font-size: clamp(1.5rem, 3vw, 2.1rem);
   color: var(--gold-dark, #8a6520);
 }
@@ -284,7 +284,7 @@ body.nt-lock { overflow: hidden; }
 .ig-body h3 {
   margin: 0 0 4px;
   font-size: 1.05rem;
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
 }
 .ig-body h3 em { font-style: normal; color: #5c4310; font-size: 0.92em; }
 .ig-meta { margin: 0 0 10px; color: #6b6558; font-size: 0.86rem; }
@@ -363,7 +363,7 @@ body.nt-lock { overflow: hidden; }
   color: #fff;
   text-shadow: 0 2px 10px rgba(0,0,0,.45);
 }
-.ig-reel-info h3 { margin: 4px 0; font-family: "Playfair Display", Georgia, serif; }
+.ig-reel-info h3 { margin: 4px 0; font-family: var(--nt-font); }
 .ig-reel-info p { margin: 0 0 8px; opacity: .85; font-size: .9rem; }
 
 /* ——— 3D scene ——— */
@@ -813,7 +813,7 @@ body.nt-lock { overflow: hidden; }
   color: #fff;
   text-shadow: 0 2px 12px rgba(0,0,0,.5);
 }
-.nt-story-caption h3 { margin: 0 0 6px; font-family: "Playfair Display", Georgia, serif; }
+.nt-story-caption h3 { margin: 0 0 6px; font-family: var(--nt-font); }
 .nt-story-caption p { margin: 0 0 12px; opacity: .9; }
 .nt-story-tap {
   position: absolute;
@@ -854,7 +854,7 @@ body.nt-lock { overflow: hidden; }
   flex-wrap: wrap;
   background: linear-gradient(180deg, #12141a, #0a0c10);
 }
-.nt-cinema-meta h3 { margin: 0; font-family: "Playfair Display", Georgia, serif; }
+.nt-cinema-meta h3 { margin: 0; font-family: var(--nt-font); }
 .nt-cinema-meta p { margin: 2px 0 0; opacity: .75; font-size: .85rem; }
 .nt-cinema-frame .nt-story-close {
   position: absolute;

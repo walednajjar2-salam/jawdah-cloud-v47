@@ -1,8 +1,10 @@
 @import url('/quick-estate/quick-estate.css');
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap');
 
 :root {
   /* Light luxury glass — NAJJAR & AL SAMOOM TRADING */
+  --nt-font: Arial, Helvetica, "Segoe UI", sans-serif;
+  --nt-size: 12px;
+  --nt-weight: 700;
   --gold: #b8892a;
   --gold2: #e8c96a;
   --gold-dark: #8a6520;
@@ -35,7 +37,9 @@
   --blue2: var(--gold2);
   --navy: #2c2416;
   --bg: #faf7f0;
-  font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
+  font-family: var(--nt-font);
+  font-size: var(--nt-size);
+  font-weight: var(--nt-weight);
   color: var(--navy);
 }
 
@@ -290,7 +294,7 @@ body.section-dashboard .content.dashboard-page {
 
 .theme-autotrading .sidebar-brand strong {
   letter-spacing: 0.08em;
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
   color: var(--navy) !important;
 }
 
@@ -688,7 +692,7 @@ body.section-dashboard .content.dashboard-page {
   margin: 8px 0 4px;
   color: var(--navy);
   font-size: 1.15rem;
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
 }
 
 .nt-vcard-top {
@@ -887,7 +891,7 @@ body.section-dashboard .content.dashboard-page {
 
 .nt-dash-banner h2 {
   margin: 0;
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
   letter-spacing: 0.04em;
   color: var(--gold-dark);
   font-size: clamp(1.35rem, 2.5vw, 1.75rem);
@@ -983,7 +987,9 @@ body.section-dashboard .content.dashboard-page {
 .nt-login, .nt-hub, .nt-customer {
   min-height: 100vh;
   margin: 0;
-  font-family: "Cairo", Tahoma, sans-serif;
+  font-family: var(--nt-font);
+  font-size: var(--nt-size);
+  font-weight: var(--nt-weight);
   color: var(--ink);
 }
 
@@ -1034,7 +1040,7 @@ body.section-dashboard .content.dashboard-page {
 
 .nt-hub-head h1, .nt-cust-hero h1, .nt-login-brand h1 {
   margin: 4px 0;
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
   font-size: clamp(1.6rem, 3vw, 2.2rem);
 }
 
@@ -1359,7 +1365,7 @@ body.section-dashboard .content.dashboard-page {
   align-items: flex-end;
   gap: 14px;
 }
-.nt-cust-intro h2 { margin: 0 0 6px; color: var(--navy); font-family: "Playfair Display", Georgia, serif; }
+.nt-cust-intro h2 { margin: 0 0 6px; color: var(--navy); font-family: var(--nt-font); }
 .nt-cust-intro p { margin: 0; color: var(--muted); }
 .nt-show-controls {
   display: flex;
@@ -1603,7 +1609,7 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .nt-show-hero .nt-cinema-copy h2 {
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
 }
 
 /* Vehicle detail sheet */
@@ -1660,7 +1666,7 @@ body.section-dashboard .content.dashboard-page {
 .nt-vehicle-sheet-body h3 {
   margin: 10px 0 6px;
   color: var(--navy);
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
   font-size: 1.45rem;
 }
 .nt-vehicle-sheet-body h3 em {
@@ -1778,7 +1784,7 @@ body.nt-lock { overflow: hidden; }
 }
 
 .page-head h2 {
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: var(--nt-font);
   letter-spacing: 0.01em;
 }
 
@@ -2077,7 +2083,7 @@ body.app-body.theme-autotrading ::-webkit-scrollbar-track {
 
 .modal-panel h2,
 .drawer-title h2 {
-  font-family: "Playfair Display", Georgia, serif !important;
+  font-family: var(--nt-font) !important;
 }
 
 .vehicle-crud-bar .btn {
@@ -2092,6 +2098,56 @@ body.app-body.theme-autotrading ::-webkit-scrollbar-track {
   .nt-vcard::after {
     animation: none !important;
   }
+}
+
+/* ——— Typography: Arial Bold 12px ——— */
+body.app-body.theme-autotrading,
+body.nt-login,
+body.nt-hub,
+body.nt-customer {
+  font-family: var(--nt-font) !important;
+  font-size: var(--nt-size) !important;
+  font-weight: var(--nt-weight) !important;
+  line-height: 1.45;
+}
+
+body.app-body.theme-autotrading :where(
+  h1, h2, h3, h4, h5, h6,
+  p, span, label, a, li, small, strong, em,
+  button, input, select, textarea, option,
+  th, td, .label, .mini, .nav-label, .pill,
+  .btn, .nt-btn, .field span, .detail-row,
+  .card-header h3, .drawer-title h2, .modal-panel h2,
+  .page-head h2, .nt-dash-banner h2, .nt-plat h2,
+  .nt-hub-head h1, .nt-cust-hero h1, .nt-login-card h2,
+  .stat-card strong, .nt-vcard h4, .nt-vcard h3
+),
+.nt-login :where(h1, h2, h3, p, span, label, a, button, input),
+.nt-hub :where(h1, h2, h3, p, span, label, a, button),
+.nt-customer :where(h1, h2, h3, p, span, label, a, button) {
+  font-family: var(--nt-font) !important;
+  font-size: var(--nt-size) !important;
+  font-weight: var(--nt-weight) !important;
+}
+
+.theme-autotrading .topbar h1,
+.page-head h2,
+.nt-dash-banner h2,
+.nt-hub-head h1,
+.nt-cust-hero h1,
+.nt-plat h2,
+.vehicle-card h4,
+.nt-vcard h3,
+.nt-vcard h4 {
+  letter-spacing: 0;
+}
+
+.copy-row .number,
+.nt-chain-table td,
+.nt-chain-table th,
+.stat-card strong {
+  font-family: var(--nt-font) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 } /* end @layer nt_theme */
