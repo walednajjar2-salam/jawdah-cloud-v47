@@ -141,6 +141,22 @@ def main() -> int:
     assert lq_auto_trading.handle_api(db, "GET", ["purchases"], {}, {}, user, send)
     assert len(out[-1][1]["purchases"]) >= 1
 
+    # A contract or voucher printed from a transaction must name the vehicle it
+    # transfers, so the chassis and engine numbers travel with the record.
+    doc_fields = ("make", "model", "vin", "engine_no", "plate_no", "vehicle_type", "origin_country")
+    listed_purchase = next(p for p in out[-1][1]["purchases"] if p["vehicle_id"] == vehicle_id)
+    assert all(f in listed_purchase for f in doc_fields), sorted(listed_purchase)
+    assert listed_purchase["vin"], "purchase list must carry the VIN"
+    assert purchase["vin"] == listed_purchase["vin"], "fresh purchase must carry it too"
+    # …and the purchase keeps its own party and reference, not the vehicle's.
+    assert purchase["seller_name"] == "أحمد الكندي"
+    assert purchase["purchase_no"].startswith("AT-P-")
+
+    assert lq_auto_trading.handle_api(db, "GET", ["sales"], {}, {}, user, send)
+    listed_sale = out[-1][1]["sales"][0]
+    assert all(f in listed_sale for f in doc_fields), sorted(listed_sale)
+    assert listed_sale["buyer_name"], "sale must keep its own buyer"
+
     # Expenses
     assert lq_auto_trading.handle_api(
         db,

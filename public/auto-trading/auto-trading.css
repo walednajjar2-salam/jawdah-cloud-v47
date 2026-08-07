@@ -1130,6 +1130,26 @@ body.section-dashboard .content.dashboard-page {
   overflow: hidden;
 }
 .nt-photo-media--hero { min-height: 280px; }
+/* Stand-in for a car whose photographs have not arrived yet. */
+.nt-nophoto {
+  position: absolute;
+  inset: 0;
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 45%, rgba(202, 161, 74, 0.14), transparent 70%),
+    linear-gradient(165deg, #14100a 0%, #0a0806 100%);
+}
+.nt-nophoto-mark { width: min(46%, 150px); opacity: 0.72; }
+.nt-nophoto strong { color: #f0d98a; font-size: 0.95rem; }
+.nt-nophoto span { color: rgba(240, 217, 138, 0.62); font-size: 0.76rem; font-weight: 700; }
+.nt-nophoto--hero .nt-nophoto-mark { width: min(38%, 210px); }
 .nt-photo-main {
   display: block;
   width: 100%;
@@ -1341,12 +1361,23 @@ body.section-dashboard .content.dashboard-page {
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.65);
   position: relative;
 }
+/* Keep the close button out of the grid flow: as a third item it pushed the
+   details column into a second row and left the media panel at its floor height. */
+.nt-vehicle-sheet-panel > .nt-story-close {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 6;
+  margin: 0;
+}
 .nt-vehicle-sheet-media {
+  /* The 3D placeholder is absolutely positioned, so it needs this box to size it. */
+  position: relative;
   min-height: 320px;
   background: #050403;
   border-left: 1px solid rgba(202, 161, 74, 0.25);
 }
-.nt-vehicle-sheet-media .car3d-scene { min-height: 100%; border-radius: 0; }
+.nt-vehicle-sheet-media .car3d-scene { min-height: 320px; border-radius: 0; }
 .nt-vehicle-sheet-body {
   padding: 22px 20px 18px;
   overflow: auto;
@@ -1365,6 +1396,8 @@ body.section-dashboard .content.dashboard-page {
   color: var(--gold-dark);
   font-size: 0.9em;
 }
+/* Leave room for the close button that overlays this corner. */
+.nt-vehicle-sheet-body .nt-vcard-top { padding-left: 46px; }
 .nt-vcard-meta--sheet { margin-top: 16px; }
 .nt-sheet-notes strong {
   font-weight: 600;

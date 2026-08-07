@@ -8,8 +8,100 @@
     }[c]));
   }
 
+  // The rial divides into 1000 baisa, so three places are shown even when round.
   function money(v) {
-    return `${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 3 })} ر.ع`;
+    const n = Number(v || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
+    });
+    return `<span dir="ltr">${n}</span> ر.ع`;
+  }
+
+  const AR_ONES = [
+    '', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة',
+    'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر',
+    'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر',
+  ];
+  const AR_TENS = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+  const AR_HUNDREDS = [
+    '', 'مئة', 'مئتان', 'ثلاثمئة', 'أربعمئة', 'خمسمئة', 'ستمئة', 'سبعمئة', 'ثمانمئة', 'تسعمئة',
+  ];
+  // singular, dual, 3–10, and 11 upwards
+  const AR_SCALES = [
+    [1e9, ['مليار', 'ملياران', 'مليارات', 'مليار']],
+    [1e6, ['مليون', 'مليونان', 'ملايين', 'مليون']],
+    [1e3, ['ألف', 'ألفان', 'آلاف', 'ألف']],
+  ];
+
+  function arUnder1000(n) {
+    const out = [];
+    const h = Math.floor(n / 100);
+    const rest = n % 100;
+    if (h) out.push(AR_HUNDREDS[h]);
+    if (rest < 20) {
+      if (rest) out.push(AR_ONES[rest]);
+    } else {
+      const ones = rest % 10;
+      const tens = AR_TENS[Math.floor(rest / 10)];
+      out.push(ones ? `${AR_ONES[ones]} و${tens}` : tens);
+    }
+    return out.join(' و');
+  }
+
+  function arScaleWord(count, forms) {
+    if (count === 1) return forms[0];
+    if (count === 2) return forms[1];
+    if (count <= 10) return forms[2];
+    return forms[3];
+  }
+
+  function arInteger(n) {
+    let rest = Math.floor(Math.abs(Number(n) || 0));
+    if (!rest) return 'صفر';
+    const out = [];
+    AR_SCALES.forEach(([base, forms]) => {
+      const count = Math.floor(rest / base);
+      if (!count) return;
+      const word = arScaleWord(count, forms);
+      out.push(count <= 2 ? word : `${arUnder1000(count)} ${word}`);
+      rest -= count * base;
+    });
+    if (rest) out.push(arUnder1000(rest));
+    return out.join(' و');
+  }
+
+  /* The counted noun follows the last two digits: plural after 3–10, singular
+     accusative after 11–99, and singular genitive after a round hundred or
+     thousand — "ألف ريال عماني", not "ألف ريالاً". */
+  function countedNoun(n, genitive, accusative, plural) {
+    const tail = n % 100;
+    if (tail === 0) return genitive;
+    if (tail >= 3 && tail <= 10) return plural;
+    return accusative;
+  }
+
+  /** Omani vouchers and contracts state the sum in words as well as figures. */
+  function moneyWords(v) {
+    const baisaTotal = Math.round((Number(v) || 0) * 1000);
+    const rial = Math.floor(baisaTotal / 1000);
+    const baisa = baisaTotal % 1000;
+    const out = [];
+    if (rial === 1) out.push('ريال عماني واحد');
+    else if (rial === 2) out.push('ريالان عمانيان');
+    else if (rial) {
+      out.push(`${arInteger(rial)} ${countedNoun(rial, 'ريال عماني', 'ريالاً عمانياً', 'ريالات عمانية')}`);
+    }
+    if (baisa === 1) out.push('بيسة واحدة');
+    else if (baisa === 2) out.push('بيستان');
+    else if (baisa) out.push(`${arInteger(baisa)} ${countedNoun(baisa, 'بيسة', 'بيسة', 'بيسات')}`);
+    if (!out.length) return 'فقط صفر ريال عماني لا غير';
+    return `فقط ${out.join(' و')} لا غير`;
+  }
+
+  /** Amount in figures with the written sum underneath, as a voucher reads. */
+  function amountRow(label, v) {
+    return `<tr><th>${esc(label)}</th><td><b>${money(v)}</b>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${esc(moneyWords(v))}</div></td></tr>`;
   }
 
   function dmy(v) {
@@ -111,8 +203,12 @@
     `;
   }
 
-  function brandHeader(c, docTitleAr, docTitleEn, docNo) {
+  function brandHeader(c, docTitleAr, docTitleEn, docNo, docDate) {
     const company = c || {};
+    const reg = [
+      company.cr_no ? `س.ت: <strong dir="ltr">${esc(company.cr_no)}</strong>` : '',
+      company.vat_no ? `الرقم الضريبي: <strong dir="ltr">${esc(company.vat_no)}</strong>` : '',
+    ].filter(Boolean).join(' · ');
     return `
       <div class="watermark"><img src="${LOGO}" alt=""></div>
       <div class="brand">
@@ -131,9 +227,10 @@
       </div>
       <div class="meta-row">
         <span>رقم المستند: <strong dir="ltr">${esc(docNo || '—')}</strong></span>
-        <span>التاريخ: <strong>${esc(arguments[4] || '—')}</strong></span>
+        <span>التاريخ: <strong>${esc(docDate || '—')}</strong></span>
         <span>المكان: <strong>نزوى — سلطنة عُمان</strong></span>
       </div>
+      ${reg ? `<div class="meta-row" style="margin-top:-6px">${reg}</div>` : ''}
     `;
   }
 
@@ -170,19 +267,45 @@
       </div>`;
   }
 
-  function openDoc(title, innerHtml) {
+  /* Fire the print dialog only once the logo and the web font have landed —
+     printing early yields an unbranded sheet in a fallback typeface. A timeout
+     keeps a blocked font CDN from holding the document hostage. */
+  function printWhenReady(w) {
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      try { w.print(); } catch (_) {}
+    };
+    try {
+      const waits = [w.document.fonts ? w.document.fonts.ready : Promise.resolve()];
+      w.document.querySelectorAll('img').forEach((img) => {
+        if (img.complete) return;
+        waits.push(new Promise((resolve) => { img.onload = img.onerror = resolve; }));
+      });
+      Promise.all(waits).then(() => setTimeout(go, 150));
+    } catch (_) { /* fall through to the deadline below */ }
+    setTimeout(go, 4000);
+  }
+
+  function openDoc(title, innerHtml, company) {
+    const c = company || {};
     const w = window.open('', '_blank');
     if (!w) {
       if (typeof toast === 'function') toast('فعّل النوافذ المنبثقة للطباعة', 'error');
       return;
     }
+    const footReg = [
+      c.cr_no ? `C.R. ${esc(c.cr_no)}` : '',
+      c.vat_no ? `VAT ${esc(c.vat_no)}` : '',
+    ].filter(Boolean).join(' · ');
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
       <title>${esc(title)}</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
       <style>${docStyles()}</style></head>
       <body><div class="sheet">${innerHtml}
-        <div class="foot">NAJJAR &amp; AL SAMOOM TRADING · C.R. Trade · Nizwa Falaj · Sultanate of Oman<br>
+        <div class="foot">NAJJAR &amp; AL SAMOOM TRADING${footReg ? ' · ' + footReg : ''} · Nizwa Falaj · Sultanate of Oman<br>
         هذا المستند صادر إلكترونياً من نظام الشركة · للطباعة الرسمية ضع الختم والتوقيع</div>
       </div>
       <div class="no-print" style="text-align:center;margin:12px">
@@ -191,7 +314,7 @@
       </body></html>`);
     w.document.close();
     w.focus();
-    setTimeout(() => { try { w.print(); } catch (_) {} }, 450);
+    printWhenReady(w);
   }
 
   /** عقد بيع مركبة — سلطنة عُمان */
@@ -213,7 +336,7 @@
       ${vehicleTable(v)}
       <h3 class="sec">الثمن وطريقة السداد</h3>
       <div class="totals"><table>
-        <tr><th>سعر البيع المتفق عليه</th><td><b>${money(price)}</b></td></tr>
+        ${amountRow('سعر البيع المتفق عليه', price)}
         <tr><th>المبلغ المدفوع / العربون</th><td>${money(deposit)}</td></tr>
         <tr><th>المتبقي</th><td>${money(remaining)}</td></tr>
         <tr><th>طريقة الدفع</th><td>${esc(sale.payment_method || '—')}</td></tr>
@@ -229,7 +352,7 @@
         ${sale.notes ? '<li>ملاحظات خاصة: ' + esc(sale.notes) + '</li>' : ''}
       </ol>
       ${signBlock('الطرف الأول — الشركة / الختم', 'الطرف الثاني — المشتري')}`;
-    openDoc('عقد بيع — ' + (sale.sale_no || ''), body);
+    openDoc('عقد بيع — ' + (sale.sale_no || ''), body, c);
   }
 
   /** عقد شراء مركبة — الشركة تشتري من بائع */
@@ -250,7 +373,7 @@
       ${vehicleTable(v)}
       <h3 class="sec">قيمة الشراء</h3>
       <div class="totals"><table>
-        <tr><th>سعر الشراء</th><td><b>${money(price)}</b></td></tr>
+        ${amountRow('سعر الشراء', price)}
         <tr><th>المبلغ المدفوع</th><td>${money(paid)}</td></tr>
         <tr><th>طريقة الدفع</th><td>${esc(purchase.payment_method || '—')}</td></tr>
         <tr><th>مصدر/بلد</th><td>${esc(purchase.source_country || v.origin_country || '—')}</td></tr>
@@ -264,7 +387,7 @@
         ${purchase.notes ? '<li>ملاحظات: ' + esc(purchase.notes) + '</li>' : ''}
       </ol>
       ${signBlock('الطرف الأول — البائع', 'الطرف الثاني — الشركة / الختم')}`;
-    openDoc('عقد شراء — ' + (purchase.purchase_no || ''), body);
+    openDoc('عقد شراء — ' + (purchase.purchase_no || ''), body, c);
   }
 
   /** فاتورة بيع */
@@ -274,8 +397,19 @@
     const price = Number(sale.sale_price || 0);
     const deposit = Number(sale.deposit_amount || 0);
     const invNo = 'INV-' + String(sale.sale_no || '').replace(/^AT-S-/, '');
+    // Only a VAT-registered seller may issue a tax invoice, and the agreed
+    // retail price is treated as VAT-inclusive when one is due.
+    const vatRate = c.vat_no ? Number(c.vat_rate || 0) : 0;
+    const net = vatRate > 0 ? price / (1 + vatRate / 100) : price;
+    const vat = price - net;
     const body = `
-      ${brandHeader(c, 'فاتورة بيع', 'Tax Invoice / Sales Invoice', invNo, dmy(sale.sale_date))}
+      ${brandHeader(
+        c,
+        vatRate > 0 ? 'فاتورة ضريبية' : 'فاتورة بيع',
+        vatRate > 0 ? 'Tax Invoice' : 'Sales Invoice',
+        invNo,
+        dmy(sale.sale_date)
+      )}
       <table>
         <tr><th>العميل / المشتري</th><td>${esc(sale.buyer_name || '—')}</td></tr>
         <tr><th>الهاتف</th><td dir="ltr">${esc(sale.buyer_phone || '—')}</td></tr>
@@ -290,18 +424,20 @@
             <span style="color:var(--muted);font-size:11px">VIN: <span dir="ltr">${esc(v.vin || '—')}</span> · مخزون ${esc(v.stock_no || '—')}</span>
           </td>
           <td>1</td>
-          <td>${money(price)}</td>
-          <td><b>${money(price)}</b></td>
+          <td>${money(net)}</td>
+          <td><b>${money(net)}</b></td>
         </tr>
       </table>
       <div class="totals"><table>
+        <tr><th>${vatRate > 0 ? 'الإجمالي قبل الضريبة' : 'الإجمالي'}</th><td>${money(net)}</td></tr>
+        ${vatRate > 0 ? `<tr><th>ضريبة القيمة المضافة ${vatRate}%</th><td>${money(vat)}</td></tr>` : ''}
         <tr><th>المدفوع / العربون</th><td>${money(deposit)}</td></tr>
-        <tr><th>المتبقي</th><td>${money(Math.max(0, price - deposit))}</td></tr>
-        <tr><th>الإجمالي المستحق</th><td>${money(price)}</td></tr>
+        ${amountRow('الإجمالي المستحق', price)}
       </table></div>
+      <div class="box">المتبقي بعد الدفعات: <b>${money(Math.max(0, price - deposit))}</b></div>
       ${bankBox(c)}
       ${signBlock('المحاسب / البائع', 'العميل')}`;
-    openDoc('فاتورة بيع — ' + invNo, body);
+    openDoc((vatRate > 0 ? 'فاتورة ضريبية — ' : 'فاتورة بيع — ') + invNo, body, c);
   }
 
   /** فاتورة شراء (داخلية) */
@@ -329,10 +465,10 @@
       </table>
       <div class="totals"><table>
         <tr><th>طريقة الدفع</th><td>${esc(purchase.payment_method || '—')}</td></tr>
-        <tr><th>إجمالي فاتورة الشراء</th><td>${money(price)}</td></tr>
+        ${amountRow('إجمالي فاتورة الشراء', price)}
       </table></div>
       ${signBlock('المستلم / المشتريات', 'اعتماد الإدارة')}`;
-    openDoc('فاتورة شراء — ' + invNo, body);
+    openDoc('فاتورة شراء — ' + invNo, body, c);
   }
 
   /** سند قبض — استلام مبلغ من عميل */
@@ -345,13 +481,13 @@
       <div class="box">استلمنا من المكرم/ة: <b>${esc(sale.buyer_name || '—')}</b>
         ${sale.buyer_phone ? ' · <span dir="ltr">' + esc(sale.buyer_phone) + '</span>' : ''}</div>
       <div class="totals"><table>
-        <tr><th>مبلغ وقدره</th><td><b>${money(amount)}</b></td></tr>
+        ${amountRow('مبلغ وقدره', amount)}
         <tr><th>وذلك عن</th><td>عربون/دفعة بيع مركبة ${esc(sale.stock_no || '')} · مرجع ${esc(sale.sale_no || '')}</td></tr>
         <tr><th>طريقة القبض</th><td>${esc(sale.payment_method || '—')}</td></tr>
       </table></div>
       ${bankBox(c)}
       ${signBlock('المحاسب المستلم', 'الدافع / العميل')}`;
-    openDoc('سند قبض — ' + no, body);
+    openDoc('سند قبض — ' + no, body, c);
   }
 
   /** سند صرف — صرف مبلغ (شراء أو مصروف) */
@@ -371,17 +507,18 @@
       ${brandHeader(c, 'سند صرف', 'Payment Voucher', no, dmy(date))}
       <div class="box">يُصرف للمكرم/ة: <b>${esc(payee)}</b></div>
       <div class="totals"><table>
-        <tr><th>مبلغ وقدره</th><td><b>${money(amount)}</b></td></tr>
+        ${amountRow('مبلغ وقدره', amount)}
         <tr><th>وذلك عن</th><td>${esc(reason)}</td></tr>
         <tr><th>طريقة الصرف</th><td>${esc(payload.payment_method || '—')}</td></tr>
         <tr><th>المرجع</th><td dir="ltr">${esc(ref || '—')}</td></tr>
       </table></div>
       ${payload.notes ? '<div class="box">ملاحظات: ' + esc(payload.notes) + '</div>' : ''}
       ${signBlock('أمر الصرف / الإدارة', 'المستلم')}`;
-    openDoc('سند صرف — ' + no, body);
+    openDoc('سند صرف — ' + no, body, c);
   }
 
   global.NajjarPrintDocs = {
+    moneyWords,
     printSaleContract,
     printPurchaseContract,
     printSaleInvoice,

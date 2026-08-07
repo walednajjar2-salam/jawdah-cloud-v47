@@ -28,6 +28,12 @@ COMPANY_PROFILE: Dict[str, Any] = {
     "address_en": "Al-Dakhilia Governorate · Nizwa · Falaj",
     "country_ar": "سلطنة عُمان",
     "hours": "08:00 — 20:00",
+    # Printed on contracts, invoices and vouchers when filled in. A VAT number
+    # is what turns the sales invoice into a tax invoice, so it stays blank
+    # until the company is actually registered for VAT.
+    "cr_no": "",
+    "vat_no": "",
+    "vat_rate": 5.0,
     "logo_url": "/auto-trading/assets/logo-official-clear.png",
     "logo_mark_url": "/auto-trading/assets/logo-mark.png",
     "logo_card_url": "/auto-trading/assets/logo-official.png",
@@ -617,6 +623,26 @@ def _capital_summary(db: sqlite3.Connection) -> Dict[str, Any]:
     }
 
 
+# Vehicle details the printed contracts, invoices and vouchers identify the car by.
+DOC_VEHICLE_FIELDS = (
+    "make", "model", "variant", "color", "year", "vehicle_type",
+    "vin", "engine_no", "engine_cc", "plate_no", "origin_country", "import_ref",
+)
+
+
+def with_doc_vehicle(row: Dict[str, Any], vehicle: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Attach the vehicle identity to a sale or purchase for immediate printing.
+
+    Only fields the transaction itself does not carry are copied, so a record's
+    own buyer, notes and stock number are never shadowed by the vehicle's.
+    """
+    out = dict(row)
+    for key in DOC_VEHICLE_FIELDS:
+        if vehicle and key not in out:
+            out[key] = vehicle.get(key)
+    return out
+
+
 # Fields a visitor may see. Costs, buyer/seller identities and internal notes stay private.
 PUBLIC_VEHICLE_FIELDS = (
     "id", "stock_no", "make", "model", "variant", "vehicle_type", "color", "year",
@@ -868,8 +894,12 @@ def handle_api(
         return send_json({"ok": True, "vehicle": dict(row)}, 201) or True
 
     if head == "sales" and method == "GET":
+        # The chassis and engine numbers travel with the sale so a contract
+        # reprinted from this list still identifies the vehicle it transfers.
         rows = db.execute(
-            """SELECT s.*, v.make, v.model, v.variant, v.color, v.year
+            """SELECT s.*, v.make, v.model, v.variant, v.color, v.year, v.vehicle_type,
+                      v.vin, v.engine_no, v.engine_cc, v.plate_no,
+                      v.origin_country, v.import_ref
                FROM at_sales s LEFT JOIN at_vehicles v ON v.id=s.vehicle_id
                ORDER BY s.id DESC LIMIT 100"""
         ).fetchall()
@@ -919,7 +949,7 @@ def handle_api(
         _audit(db, user, "sale_created", "sale", str(sid), {"sale_no": sale_no, "stock_no": v["stock_no"], "buyer": buyer_name})
         db.commit()
         row = db.execute("SELECT * FROM at_sales WHERE id=?", (sid,)).fetchone()
-        return send_json({"ok": True, "sale": dict(row)}, 201) or True
+        return send_json({"ok": True, "sale": with_doc_vehicle(dict(row), v)}, 201) or True
 
     if head == "imports" and method == "GET":
         rows = db.execute("SELECT * FROM at_import_orders ORDER BY id DESC").fetchall()
@@ -985,7 +1015,9 @@ def handle_api(
 
     if head == "purchases" and method == "GET":
         rows = db.execute(
-            """SELECT p.*, v.make, v.model, v.variant, v.color, v.year
+            """SELECT p.*, v.make, v.model, v.variant, v.color, v.year, v.vehicle_type,
+                      v.vin, v.engine_no, v.engine_cc, v.plate_no,
+                      v.origin_country, v.import_ref
                FROM at_purchases p LEFT JOIN at_vehicles v ON v.id=p.vehicle_id
                ORDER BY p.id DESC LIMIT 200"""
         ).fetchall()
@@ -1048,7 +1080,8 @@ def handle_api(
         _audit(db, user, "purchase_created", "purchase", str(pid), {"purchase_no": purchase_no, "seller": seller_name, "stock_no": stock_no})
         db.commit()
         row = db.execute("SELECT * FROM at_purchases WHERE id=?", (pid,)).fetchone()
-        return send_json({"ok": True, "purchase": dict(row)}, 201) or True
+        vehicle_for_doc = dict(vehicle_row) if vehicle_row else None
+        return send_json({"ok": True, "purchase": with_doc_vehicle(dict(row), vehicle_for_doc)}, 201) or True
 
     if head == "expenses" and method == "GET":
         rows = db.execute(

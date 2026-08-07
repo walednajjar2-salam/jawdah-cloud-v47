@@ -1149,7 +1149,7 @@ function showSaleForm(v) {
       });
       closeModal();
       toast('تم تسجيل البيع — ' + (res.sale?.sale_no || ''));
-      const saleRow = { ...res.sale, make: v.make, model: v.model, variant: v.variant, vin: v.vin, engine_no: v.engine_no, year: v.year, color: v.color, plate_no: v.plate_no, vehicle_type: v.vehicle_type, origin_country: v.origin_country };
+      const saleRow = res.sale || {};
       const c = await ensureCompany();
       if (window.NajjarPrintDocs && confirm('طباعة عقد البيع العُماني؟')) {
         NajjarPrintDocs.printSaleContract(saleRow, saleRow, c);

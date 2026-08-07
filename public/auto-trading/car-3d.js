@@ -6,6 +6,7 @@
 
   // Approximate pegged rates for display (1 OMR)
   const FX = { USD: 2.6, SAR: 9.76, AED: 9.55 };
+  const LOGO_MARK = '/auto-trading/assets/logo-mark.png?v=at27';
 
   function accentOf(v) {
     const make = String(v.make || '');
@@ -141,11 +142,24 @@
       </div>`;
   }
 
+  function renderNoPhoto(v, opts = {}) {
+    const label = `${v.make || ''} ${v.model || ''}`.trim();
+    const hero = opts.hero ? ' nt-nophoto--hero' : '';
+    return `
+      <div class="nt-nophoto${hero}" role="img" aria-label="لا توجد صورة لهذه السيارة بعد">
+        <img class="nt-nophoto-mark" src="${LOGO_MARK}" alt="">
+        <strong>${esc(label)}</strong>
+        <span>الصور قريباً — تواصل معنا للاستفسار</span>
+        ${opts.badge ? `<div class="nt-photo-badge">${esc(opts.badge)}</div>` : ''}
+      </div>`;
+  }
+
   function renderPhotoMedia(v, opts = {}) {
     const photos = photosOf(v);
     const src = photos[opts.photoIndex || 0] || photos[0];
     if (!src) {
-      return renderCar3D(v, opts);
+      // A stylised drawing in place of a product photo misleads a buyer.
+      return renderNoPhoto(v, opts);
     }
     const label = `${v.make || ''} ${v.model || ''}`.trim();
     const hero = opts.hero ? ' nt-photo-media--hero' : '';
@@ -486,6 +500,7 @@
     accentOf,
     renderCar3D,
     renderPhotoMedia,
+    renderNoPhoto,
     renderShowroomCard,
     renderShowroom,
     renderIgPost,
