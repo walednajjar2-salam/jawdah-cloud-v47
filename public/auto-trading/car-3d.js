@@ -326,8 +326,8 @@
         ${opts.hero !== false ? renderHero(sorted) : ''}
         <section class="nt-cust-intro">
           <div>
-            <h2>سيارات المعرض</h2>
-            <p>صور حقيقية · أسعار ر.ع / USD / SAR / AED · مواصفات كاملة · واتساب</p>
+            <h2>المعروض الآن</h2>
+            <p>صور حقيقية · أسعار واضحة · تواصل واتساب مباشر</p>
           </div>
           <div class="nt-show-controls">
             ${renderFilters(list, filter)}
@@ -356,10 +356,10 @@
         </div>
         <div class="nt-cinema-copy">
           <p class="nt-kicker">NAJJAR &amp; AL SAMOOM TRADING</p>
-          <h2>معرض السيارات المستعملة والمستوردة</h2>
-          <p>تصفّح المخزون بالصور والأسعار والمواصفات — VIN، اللون، المحرك، المنشأ — وتواصل معنا مباشرة للحجز أو الاستفسار.</p>
+          <h2>مستوردة ومختارة بعناية</h2>
+          <p>تصفّح بالصور والأسعار، وتواصل معنا مباشرة للحجز أو الاستفسار.</p>
           <div class="nt-cinema-actions">
-            <a class="nt-btn primary" href="#custRoot">عرض السيارات</a>
+            <a class="nt-btn primary" href="#custRoot">استكشف التشكيلة</a>
             <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>
           </div>
         </div>

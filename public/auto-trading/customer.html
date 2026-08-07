@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>معرض السيارات | NAJJAR &amp; AL SAMOOM TRADING</title>
+  <title>NAJJAR &amp; AL SAMOOM TRADING</title>
   <link rel="icon" href="/assets/app-icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,17 +16,17 @@
   <header class="nt-cust-hero">
     <img src="/auto-trading/assets/logo-official-clear.png?v=at13" alt="NAJAR & AL SAMOOM TRADING" class="nt-cust-mark nt-cust-mark--official">
     <div>
-      <h1>معرض السيارات</h1>
+      <h1>تشكيلة مختارة</h1>
       <p class="nt-sub">صور · أسعار · مواصفات · واتساب مباشر</p>
     </div>
     <div class="nt-hub-actions">
       <a class="nt-btn primary" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>
-      <a class="nt-btn ghost" href="/najjar/login.html">دخول الموظفين</a>
+      <a class="nt-btn ghost" href="/najjar/login.html">تسجيل الدخول</a>
     </div>
   </header>
 
   <main class="nt-cust-main">
-    <div id="custRoot" aria-live="polite">جاري تحميل سيارات المعرض…</div>
+    <div id="custRoot" aria-live="polite">جاري التحميل…</div>
   </main>
 
   <!-- Each number is its own left-to-right run; otherwise the leading "+" is
@@ -38,7 +38,7 @@
     NAJJAR &amp; AL SAMOOM TRADING — نزوى الفلج
   </footer>
 
-  <script src="/auto-trading/car-3d.js?v=at14"></script>
+  <script src="/auto-trading/car-3d.js?v=at15"></script>
   <script>
     const root = document.getElementById('custRoot');
     let vehicles = [];
@@ -71,7 +71,7 @@
         }
         paint();
       } catch (_) {
-        root.innerHTML = '<p class="empty-state">تعذر تحميل سيارات المعرض</p>';
+        root.innerHTML = '<p class="empty-state">تعذر تحميل القائمة — حاول لاحقاً أو تواصل عبر واتساب</p>';
       }
     })();
   </script>

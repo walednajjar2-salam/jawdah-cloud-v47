@@ -29,7 +29,7 @@
   ],
   "shortcuts": [
     {
-      "name": "معرض السيارات",
+      "name": "تشكيلة NAJJAR",
       "short_name": "Showroom",
       "url": "/najjar/customer.html",
       "icons": [{"src": "/assets/app-icon-192.png", "sizes": "192x192"}]
