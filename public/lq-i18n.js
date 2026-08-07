@@ -335,8 +335,24 @@
     },
   };
 
+  function savedLang() {
+    try {
+      const stored = (localStorage.getItem(STORAGE_KEY) || "").trim().toLowerCase();
+      if (DICT[stored]) return stored;
+    } catch (_) {/* storage can be unavailable */}
+    // The cookie copy is the one that survives a site-data wipe. Without it an
+    // Arabic-speaking office would be handed an English interface the first time
+    // a device is cleaned, because the fallback below reads the machine's locale.
+    try {
+      const m = document.cookie.match(/(?:^|;\s*)lq_lang=([^;]+)/);
+      const fromCookie = m ? decodeURIComponent(m[1]).trim().toLowerCase() : "";
+      if (DICT[fromCookie]) return fromCookie;
+    } catch (_) {/* ignore */}
+    return "";
+  }
+
   function detectLang() {
-    const saved = (localStorage.getItem(STORAGE_KEY) || "").trim().toLowerCase();
+    const saved = savedLang();
     if (DICT[saved]) return saved;
     const nav = String(navigator.language || "ar").toLowerCase();
     if (nav.startsWith("ar")) return "ar";
@@ -416,7 +432,14 @@
     const n = String(next || "").toLowerCase();
     if (!DICT[n]) return lang;
     lang = n;
-    localStorage.setItem(STORAGE_KEY, lang);
+    try {
+      localStorage.setItem(STORAGE_KEY, lang);
+    } catch (_) {/* storage can be unavailable */}
+    try {
+      document.cookie =
+        STORAGE_KEY + "=" + encodeURIComponent(lang) +
+        "; Path=/; Max-Age=31536000; SameSite=Lax";
+    } catch (_) {/* ignore */}
     applyDocument();
     return lang;
   }
