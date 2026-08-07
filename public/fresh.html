@@ -37,7 +37,7 @@
         localStorage.removeItem('lq_workspace_collapsed');
         document.cookie = 'lq_token=; Path=/; Max-Age=0; SameSite=Lax';
       }catch(e){}
-      const url = '/auto-trading/login.html?fresh=' + Date.now();
+      const url = '/closed?fresh=' + Date.now();
       document.getElementById('go').onclick = function(){ location.replace(url); };
       setTimeout(function(){ location.replace(url); }, 600);
     })();

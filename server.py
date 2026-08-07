@@ -114,7 +114,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v72-erp-shutdown").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v73-unpublished").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -124,6 +124,11 @@ CLIENT_PURGE_COOKIE = "lq_purge"
 # a directive that only takes effect in some other browser is a reload risk with
 # no benefit here.
 CLIENT_PURGE_DIRECTIVES = '"cache", "storage"'
+# When off, nothing is published — not ERP, not NAJJAR, not the showroom. Only
+# /closed and /remove stay reachable so devices can be cleaned. Set LQ_SITE_PUBLISHED=1
+# on Railway when you deliberately turn publishing back on.
+SITE_PUBLISHED = os.environ.get("LQ_SITE_PUBLISHED", "0").strip().lower() in ("1", "true", "yes", "on")
+SITE_CLOSED_URL = "/closed"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -4349,6 +4354,58 @@ class JawdahHandler(BaseHTTPRequestHandler):
             self.send_purge_headers()
         self.end_headers()
 
+    @staticmethod
+    def _site_cleanup_paths() -> frozenset[str]:
+        """Reachable while publishing is off — device cleanup only."""
+        return frozenset({
+            "/closed", "/closed.html",
+            "/remove", "/remove-old-app.html",
+            "/حذف", "/حذف-التطبيق", "/old-app",
+            "/fresh", "/fresh.html", "/reset-cache.html",
+            "/remove-old-app.html",
+            "/clear-cache", "/تحديث",
+            "/sw.js", "/favicon.ico",
+        })
+
+    def _site_closed_gate(self, path: str, safe: str, _send_bytes) -> bool:
+        """When publishing is off, answer every public face with /closed."""
+        if SITE_PUBLISHED:
+            return False
+        if path in self._site_cleanup_paths():
+            if path in ("/closed", "/closed.html"):
+                closed = (PUBLIC_DIR / "closed.html").read_bytes()
+                _send_bytes(closed, "text/html; charset=utf-8",
+                            cache="no-store, no-cache, must-revalidate, max-age=0")
+                return True
+            return False
+        if path == "/manifest.webmanifest":
+            body = json.dumps({
+                "id": "/closed",
+                "name": "Unpublished",
+                "short_name": "Closed",
+                "start_url": "/closed",
+                "scope": "/closed",
+                "display": "browser",
+                "background_color": "#0a0a0a",
+                "theme_color": "#0a0a0a",
+            }, ensure_ascii=False).encode("utf-8")
+            _send_bytes(body, "application/manifest+json; charset=utf-8",
+                        cache="no-store, no-cache, must-revalidate, max-age=0")
+            return True
+        if path in ("/app.js",) or safe == "app.js":
+            _send_bytes(
+                b"location.replace('/closed');",
+                "application/javascript; charset=utf-8",
+                cache="no-store, no-cache, must-revalidate, max-age=0",
+            )
+            return True
+        if path in ("/app.css",) or safe == "app.css":
+            _send_bytes(b"/* unpublished */", "text/css; charset=utf-8",
+                        cache="no-store, no-cache, must-revalidate, max-age=0")
+            return True
+        self.send_redirect(SITE_CLOSED_URL)
+        return True
+
     def send_html(self, html: str, status: int = 200) -> None:
         raw = html.encode("utf-8")
         self.send_response(status)
@@ -4493,6 +4550,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         # device is the only way the installed icon actually leaves them.
         if path in ("/remove", "/remove-old-app", "/حذف-التطبيق", "/حذف", "/old-app"):
             path = "/remove-old-app.html"
+        if path in ("/closed",):
+            path = "/closed.html"
         if path in ("/lq-setup.exe", "/windows-setup.exe", "/LaunchQuality-Setup.exe", "/LaunchQuality.exe", "/app-windows.exe", "/windows.exe"):
             download_name = "LaunchQuality.exe"
             path = "/releases/windows/LaunchQuality-Setup.exe"
@@ -4523,62 +4582,66 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if not head_only:
                 self.wfile.write(raw)
 
-        # NAJJAR & AL SAMOOM TRADING — primary published site + short aliases
-        if path in ("/", "", "/index.html", "/najjar", "/najjar/", "/النجار", "/سيارات", "/auto", "/autotrading"):
-            self.send_response(302)
-            self.send_header("Location", NAJJAR_HOME)
-            self.end_headers()
+        safe_peek = Path(urllib.parse.unquote(path).lstrip("/")).as_posix()
+        if self._site_closed_gate(path, safe_peek, _send_bytes):
             return
-        if path in (
-            "/najjar-login", "/najjar/login", "/دخول-النجار", "/auto-trading/login",
-            "/go.html", "/start.html",
-            "/login", "/login.html",
-        ):
-            # Folder-friendly /auto-trading/login still resolves to login.html below.
-            if path != "/auto-trading/login.html":
+
+        # Published face only — when LQ_SITE_PUBLISHED=0 the gate above already sent
+        # every other request to /closed.
+        if SITE_PUBLISHED:
+            if path in ("/", "", "/index.html", "/najjar", "/najjar/", "/النجار", "/سيارات", "/auto", "/autotrading"):
                 self.send_response(302)
-                self.send_header("Location", NAJJAR_LOGIN)
+                self.send_header("Location", NAJJAR_HOME)
                 self.end_headers()
                 return
-        # Launch Quality ERP — fully retired. Every bookmark, installed icon, and
-        # cached shell entry lands on NAJJAR instead of opening the old seven-portal UI.
-        ERP_STAFF_LOGIN = NAJJAR_LOGIN
-        ERP_STAFF_HOME = "/auto-trading/platforms.html"
-        erp_login = {
-            "/app.html", "/app", "/app/", "/app/app.html",
-            "/Launch_Quality_LLC.html", "/Launch Quality LLC.html",
-            "/install.html", "/download.html", "/docs.html",
-            "/quick-estate.html", "/reset-cache.html",
-        }
-        erp_portal = {
-            "/portal-select.html", "/portal-select",
-            "/erp", "/erp.html", "/إدارة", "/منصات", "/platforms",
-        }
-        if path in erp_login:
-            return self.send_redirect(ERP_STAFF_LOGIN)
-        if path in erp_portal:
-            return self.send_redirect(ERP_STAFF_HOME)
-        if path == "/app.js":
-            _send_bytes(
-                b"location.replace('/auto-trading/login.html');",
-                "application/javascript; charset=utf-8",
-                cache="no-store, no-cache, must-revalidate, max-age=0",
-            )
-            return
-        if path == "/app.css":
-            _send_bytes(b"/* Launch Quality ERP retired */", "text/css; charset=utf-8",
-                        cache="no-store, no-cache, must-revalidate, max-age=0")
-            return
-        if path in ("/najjar-platforms", "/najjar/platforms", "/منصات-النجار"):
-            self.send_response(302)
-            self.send_header("Location", "/auto-trading/platforms.html")
-            self.end_headers()
-            return
-        if path in ("/najjar-admin", "/najjar/dashboard", "/لوحة-النجار"):
-            self.send_response(302)
-            self.send_header("Location", "/auto-trading.html")
-            self.end_headers()
-            return
+            if path in (
+                "/najjar-login", "/najjar/login", "/دخول-النجار", "/auto-trading/login",
+                "/go.html", "/start.html",
+                "/login", "/login.html",
+            ):
+                if path != "/auto-trading/login.html":
+                    self.send_response(302)
+                    self.send_header("Location", NAJJAR_LOGIN)
+                    self.end_headers()
+                    return
+            ERP_STAFF_LOGIN = NAJJAR_LOGIN
+            ERP_STAFF_HOME = "/auto-trading/platforms.html"
+            erp_login = {
+                "/app.html", "/app", "/app/", "/app/app.html",
+                "/Launch_Quality_LLC.html", "/Launch Quality LLC.html",
+                "/install.html", "/download.html", "/docs.html",
+                "/quick-estate.html", "/reset-cache.html",
+            }
+            erp_portal = {
+                "/portal-select.html", "/portal-select",
+                "/erp", "/erp.html", "/إدارة", "/منصات", "/platforms",
+            }
+            if path in erp_login:
+                return self.send_redirect(ERP_STAFF_LOGIN)
+            if path in erp_portal:
+                return self.send_redirect(ERP_STAFF_HOME)
+            if path == "/app.js":
+                _send_bytes(
+                    b"location.replace('/auto-trading/login.html');",
+                    "application/javascript; charset=utf-8",
+                    cache="no-store, no-cache, must-revalidate, max-age=0",
+                )
+                return
+            if path == "/app.css":
+                _send_bytes(b"/* Launch Quality ERP retired */", "text/css; charset=utf-8",
+                            cache="no-store, no-cache, must-revalidate, max-age=0")
+                return
+            if path in ("/najjar-platforms", "/najjar/platforms", "/منصات-النجار"):
+                self.send_response(302)
+                self.send_header("Location", "/auto-trading/platforms.html")
+                self.end_headers()
+                return
+            if path in ("/najjar-admin", "/najjar/dashboard", "/لوحة-النجار"):
+                self.send_response(302)
+                self.send_header("Location", "/auto-trading.html")
+                self.end_headers()
+                return
+
         if path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
@@ -4664,19 +4727,22 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     cache = "public, max-age=86400"
             _send_bytes(raw, ctype, disposition=disposition, cache=cache)
             return
-        # Safe fallback — ERP shell assets are retired; send browsers to NAJJAR.
-        if path == "/app.html":
-            return self.send_redirect("/auto-trading/login.html")
-        if path == "/portal-select.html":
-            return self.send_redirect("/auto-trading/platforms.html")
-        if path == "/app.css":
-            raw = b"/* retired */"
-            _send_bytes(raw, "text/css; charset=utf-8", cache="no-store")
-            return
-        if path == "/app.js":
-            raw = b"location.replace('/auto-trading/login.html');"
-            _send_bytes(raw, "application/javascript; charset=utf-8", cache="no-store")
-            return
+        # Safe fallback — only when publishing is on and ERP paths slipped through.
+        if SITE_PUBLISHED:
+            if path == "/app.html":
+                return self.send_redirect("/auto-trading/login.html")
+            if path == "/portal-select.html":
+                return self.send_redirect("/auto-trading/platforms.html")
+            if path == "/app.css":
+                raw = b"/* retired */"
+                _send_bytes(raw, "text/css; charset=utf-8", cache="no-store")
+                return
+            if path == "/app.js":
+                raw = b"location.replace('/auto-trading/login.html');"
+                _send_bytes(raw, "application/javascript; charset=utf-8", cache="no-store")
+                return
+        elif path in ("/app.html", "/portal-select.html", "/app.js", "/app.css"):
+            return self.send_redirect(SITE_CLOSED_URL)
         self.send_error(404, "File not found")
 
     def handle_api(self, method: str, path: str, query: str) -> None:
@@ -4685,6 +4751,11 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 parts = [p for p in path.split("/") if p][1:]
                 if not parts:
                     return self.send_json({"ok": True, "status": "production"})
+                if not SITE_PUBLISHED and parts[0] != "health":
+                    return self.send_json(
+                        {"ok": False, "error": "Site unpublished", "closed": True},
+                        503,
+                    )
                 if parts[0] == "quick-estate":
                     user = self.require_user(db, "dashboard")
                     if not user:
