@@ -71,6 +71,25 @@ body.lq-edition-terrifying .lq-edition-badge.lq-env-trial .lq-ed-kicker {
   color: #9a6a12 !important;
 }
 
+/* Trial-environment marker in the header — hidden on the official copy. */
+.lq-env-chip[hidden] { display: none !important; }
+.lq-env-chip {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font: 800 12px/1 Tajawal, "Segoe UI", sans-serif;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.lq-env-chip.is-trial {
+  color: #7a4f07;
+  background: linear-gradient(145deg, #fff3d6 0%, #f6e7c3 100%);
+  border: 1px solid rgba(184, 137, 45, 0.6);
+  box-shadow: 0 1px 3px rgba(122, 79, 7, 0.18);
+}
+
 /* Header composition as base */
 body.lq-edition-terrifying.app-ready .lq-header-welcome-row {
   align-items: center !important;

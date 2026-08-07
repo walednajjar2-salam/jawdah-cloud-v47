@@ -121,7 +121,15 @@
     }
 
     const token = readToken();
-    if (!token) location.replace('/auto-trading/login.html');
+    if (!token) {
+      location.replace('/auto-trading/login.html');
+    } else {
+      fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } }).then((res) => {
+        if (res.ok) return;
+        localStorage.removeItem('jawdah_cloud_token');
+        location.replace('/auto-trading/login.html');
+      }).catch(() => {});
+    }
 
     document.getElementById('platHero').innerHTML = NajjarCar3D.renderHero([
       { make: 'Mercedes-Benz', model: 'G-Class', variant: 'G63 AMG', stock_no: 'LIVE', status: 'قيد الاستيراد', list_price: 0 }

@@ -4472,8 +4472,6 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return
         if path in (
             "/najjar-login", "/najjar/login", "/دخول-النجار", "/auto-trading/login",
-            "/app", "/app/", "/app.html", "/app/app.html",
-            "/portal-select", "/portal-select.html",
             "/go.html", "/start.html",
             "/login", "/login.html",
         ):
@@ -4483,6 +4481,17 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 self.send_header("Location", NAJJAR_LOGIN)
                 self.end_headers()
                 return
+        # Launch Quality ERP: unadvertised on the public face, still reachable for staff.
+        if path in ("/app", "/app/", "/app/app.html"):
+            self.send_response(302)
+            self.send_header("Location", "/app.html")
+            self.end_headers()
+            return
+        if path in ("/portal-select", "/erp", "/erp.html", "/إدارة", "/منصات", "/platforms"):
+            self.send_response(302)
+            self.send_header("Location", "/portal-select.html")
+            self.end_headers()
+            return
         if path in ("/najjar-platforms", "/najjar/platforms", "/منصات-النجار"):
             self.send_response(302)
             self.send_header("Location", "/auto-trading/platforms.html")
@@ -4599,6 +4608,13 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         db, method, parts[1:], qmap, payload, user, self.send_json
                     )
                 if parts[0] == "auto-trading":
+                    if parts[1:2] == ["showroom"] and method == "GET":
+                        # Public feed for the customer page — no session required.
+                        return self.send_json({
+                            "ok": True,
+                            "vehicles": lq_auto_trading.public_showroom(db),
+                            "company": lq_auto_trading.public_company_card(),
+                        })
                     user = self.require_user(db, "dashboard")
                     if not user:
                         return None

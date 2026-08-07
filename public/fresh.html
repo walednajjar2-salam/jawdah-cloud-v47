@@ -31,9 +31,11 @@
         }
       }catch(e){}
       try{
+        localStorage.removeItem('jawdah_cloud_token');
         localStorage.removeItem('jawdah_portal_choice');
         localStorage.removeItem('lq_hub_expanded');
         localStorage.removeItem('lq_workspace_collapsed');
+        document.cookie = 'lq_token=; Path=/; Max-Age=0; SameSite=Lax';
       }catch(e){}
       const url = '/auto-trading/login.html?fresh=' + Date.now();
       document.getElementById('go').onclick = function(){ location.replace(url); };

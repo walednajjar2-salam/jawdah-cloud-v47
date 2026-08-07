@@ -1057,8 +1057,15 @@ function applyEnvModeBadge(me){
   document.documentElement.setAttribute('data-lq-env-label', label);
   document.body.classList.toggle('lq-env-trial', mode==='trial' || mode==='demo');
   document.body.classList.toggle('lq-env-official', mode==='official' || mode==='production');
+  // The chip only appears outside production, so nobody mistakes the trial copy
+  // for the live one while the official header stays uncluttered.
+  const official = mode==='official' || mode==='production';
   const el = document.getElementById('lqEnvModeLabel');
-  if(el) el.textContent = label;
+  if(el){
+    el.textContent = label;
+    el.hidden = official;
+    el.classList.toggle('is-trial', !official);
+  }
   const badge = document.getElementById('lqEditionBadge');
   if(badge) badge.title = label + ' · ' + (me?.edition_label || APP_EDITION_LABEL);
 }

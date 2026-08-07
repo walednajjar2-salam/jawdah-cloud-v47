@@ -299,7 +299,11 @@ async function api(url, options = {}) {
   if (opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
   const res = await fetch(url.startsWith('/api/') ? url : (API_BASE + url), opts);
   const data = await res.json().catch(() => ({ ok: false, error: 'تعذر قراءة رد الخادم' }));
-  if (res.status === 401) { location.replace('/auto-trading/login.html'); return; }
+  if (res.status === 401) {
+    localStorage.removeItem('jawdah_cloud_token');
+    location.replace('/auto-trading/login.html');
+    return;
+  }
   if (!res.ok || data.ok === false) throw new Error(data.error || 'حدث خطأ');
   return data;
 }

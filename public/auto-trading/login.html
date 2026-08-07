@@ -88,9 +88,22 @@
     document.getElementById('loginUser').addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') document.getElementById('loginPass').focus();
     });
-    if ((localStorage.getItem('jawdah_cloud_token') || '').trim()) {
-      location.replace('/auto-trading/platforms.html');
-    }
+    // Skip the form only for a session the server still accepts. An expired token
+    // used to bounce the user between here and the platforms page forever.
+    (async () => {
+      const saved = (localStorage.getItem('jawdah_cloud_token') || '').trim();
+      if (!saved) return;
+      try {
+        const res = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + saved } });
+        if (res.ok) {
+          location.replace('/auto-trading/platforms.html');
+          return;
+        }
+      } catch (_) {
+        return;
+      }
+      localStorage.removeItem('jawdah_cloud_token');
+    })();
   </script>
 </body>
 </html>
