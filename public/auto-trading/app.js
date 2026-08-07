@@ -533,6 +533,8 @@ async function loadDashboard() {
     <div class="nt-dash-banner nt-dash-banner--logo">
       <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
+        <span class="nt-dash-kicker">NAJJAR & AL SAMOOM · USED & IMPORTED CARS</span>
+        <h2>لوحة التحكم</h2>
         <p>${e(c.address_ar || 'نزوى — الفلج')} · شريكان: وليد النجار · حمد السموم</p>
       </div>
     </div>

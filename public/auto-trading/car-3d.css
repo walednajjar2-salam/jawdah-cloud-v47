@@ -165,26 +165,26 @@ body.nt-lock { overflow: hidden; }
   color: #6b6558;
 }
 .ig-view-toggle button.active {
-  background: linear-gradient(135deg, #5c4310, #caa14a);
-  color: #111;
+  background: linear-gradient(135deg, #9a7020, #d4ad4a, #e8c96a);
+  color: #fff;
 }
 
-/* ——— Post ——— */
 .ig-post {
   width: min(100%, var(--ig-max));
-  background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(120, 12, 16, 0.18);
-  border-radius: 22px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.78));
+  border: 1px solid rgba(184, 137, 42, 0.2);
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 18px 48px rgba(24, 18, 8, 0.1);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 50px rgba(44, 36, 22, 0.08);
+  backdrop-filter: blur(16px);
   cursor: pointer;
-  transition: transform 0.7s var(--car-ease), box-shadow 0.7s var(--car-ease);
+  transition: transform 0.45s var(--car-ease), box-shadow 0.45s var(--car-ease);
   animation: igRise 0.9s var(--car-ease) both;
 }
 .ig-post:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 26px 60px rgba(24, 18, 8, 0.16);
+  transform: translateY(-8px);
+  box-shadow: 0 28px 64px rgba(44, 36, 22, 0.12);
+  border-color: rgba(184, 137, 42, 0.35);
 }
 
 .ig-post-head {

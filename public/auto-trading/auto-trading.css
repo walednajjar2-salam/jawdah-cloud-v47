@@ -275,6 +275,8 @@ body.section-dashboard .content.dashboard-page {
 
 .theme-autotrading .app-shell {
   background: transparent !important;
+  position: relative;
+  z-index: 1;
 }
 
 .theme-autotrading .sidebar {
@@ -821,16 +823,42 @@ body.section-dashboard .content.dashboard-page {
 .nt-dash-banner {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
-  padding: 18px 20px;
-  border-radius: 20px;
-  background: linear-gradient(120deg, rgba(5, 3, 4, 0.95), rgba(30, 8, 11, 0.92));
-  color: #f6ecec;
-  margin-bottom: 18px;
-  border: 1px solid rgba(202, 161, 74, 0.4);
-  box-shadow: var(--shadow);
+  padding: 22px 24px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.72) 45%, rgba(245, 230, 196, 0.45) 100%);
+  color: var(--navy);
+  margin-bottom: 20px;
+  border: 1px solid rgba(184, 137, 42, 0.22);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   animation: ntFadeUp 0.55s ease both;
+  position: relative;
+  overflow: hidden;
+}
+
+.nt-dash-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(232, 201, 106, 0.28), transparent 42%),
+    radial-gradient(circle at 8% 82%, rgba(255, 255, 255, 0.65), transparent 38%);
+  pointer-events: none;
+}
+
+.nt-dash-banner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #d4ad4a, #e8c96a, #d4ad4a, transparent);
+  pointer-events: none;
 }
 
 .nt-dash-banner img {
@@ -860,11 +888,29 @@ body.section-dashboard .content.dashboard-page {
 .nt-dash-banner h2 {
   margin: 0;
   font-family: "Playfair Display", Georgia, serif;
-  letter-spacing: 0.06em;
-  color: var(--gold2);
+  letter-spacing: 0.04em;
+  color: var(--gold-dark);
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
 }
 
-.nt-dash-banner p { margin: 4px 0 0; color: rgba(246, 236, 236, 0.75); font-size: 0.92rem; }
+.nt-dash-banner p { margin: 6px 0 0; color: var(--muted); font-size: 0.92rem; line-height: 1.6; }
+.nt-dash-banner > * { position: relative; z-index: 1; }
+
+.nt-dash-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-dark);
+  background: rgba(245, 230, 196, 0.65);
+  border: 1px solid rgba(184, 137, 42, 0.22);
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
 
 .nt-staff-grid {
   display: grid;
@@ -873,13 +919,18 @@ body.section-dashboard .content.dashboard-page {
 }
 
 .nt-staff-card {
-  border: 1px solid rgba(202, 161, 74, 0.5);
-  border-radius: 16px;
-  padding: 14px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(202, 161, 74, 0.05)), var(--panel);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(184, 137, 42, 0.22);
+  border-radius: 20px;
+  padding: 16px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.68));
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.nt-staff-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
 }
 
 .nt-staff-card strong { display: block; color: var(--navy); margin-bottom: 4px; }
@@ -890,20 +941,18 @@ body.section-dashboard .content.dashboard-page {
   padding: 3px 8px;
   border-radius: 999px;
   margin-bottom: 8px;
-  backdrop-filter: blur(6px);
 }
-.nt-staff-role.owner { background: linear-gradient(150deg, rgba(255, 255, 255, 0.14), rgba(10, 10, 10, 0.9)); color: var(--gold2); border: 1px solid rgba(202, 161, 74, 0.6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-.nt-staff-role.sales { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
-.nt-staff-role.user { background: rgba(147, 51, 234, 0.18); color: #c084fc; }
+.nt-staff-role.owner { background: linear-gradient(135deg, rgba(245, 230, 196, 0.85), rgba(232, 201, 106, 0.45)); color: var(--gold-dark); border: 1px solid rgba(184, 137, 42, 0.35); }
+.nt-staff-role.sales { background: rgba(34, 197, 94, 0.12); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.22); }
+.nt-staff-role.user { background: rgba(147, 51, 234, 0.1); color: #7e22ce; border: 1px solid rgba(147, 51, 234, 0.2); }
 
 .nt-platform-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.16), rgba(202, 161, 74, 0.14));
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  border: 1px solid rgba(202, 161, 74, 0.5);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.88), rgba(245, 230, 196, 0.55));
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(184, 137, 42, 0.28);
   color: var(--gold-dark);
   font-weight: 800;
   font-size: 12px;
@@ -1748,6 +1797,301 @@ body.nt-lock { overflow: hidden; }
   border-radius: 50%;
   background: radial-gradient(circle, rgba(232, 201, 106, 0.22), transparent 70%);
   pointer-events: none;
+}
+
+/* ——— Premium v2: animated ambience + micro-interactions ——— */
+.nt-lux-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.nt-lux-bg::before,
+.nt-lux-bg::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  animation: ntOrbFloat 18s ease-in-out infinite;
+}
+.nt-lux-bg::before {
+  width: min(42vw, 420px);
+  height: min(42vw, 420px);
+  top: -8%;
+  left: -6%;
+  background: radial-gradient(circle, rgba(232, 201, 106, 0.45), transparent 70%);
+}
+.nt-lux-bg::after {
+  width: min(36vw, 360px);
+  height: min(36vw, 360px);
+  bottom: -10%;
+  right: -4%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.85), rgba(245, 230, 196, 0.35) 55%, transparent 72%);
+  animation-delay: -9s;
+  animation-direction: reverse;
+}
+
+@keyframes ntOrbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(24px, 18px) scale(1.06); }
+  66% { transform: translate(-16px, 28px) scale(0.96); }
+}
+
+@keyframes ntShimmer {
+  0% { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(220%) skewX(-12deg); }
+}
+
+.theme-autotrading .btn,
+.nt-btn {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.theme-autotrading .btn:hover:not(:disabled),
+.nt-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+}
+.theme-autotrading .btn:active:not(:disabled),
+.nt-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.theme-autotrading .field input:focus,
+.theme-autotrading .field select:focus,
+.theme-autotrading .field textarea:focus,
+.theme-autotrading input:focus,
+.theme-autotrading select:focus,
+.theme-autotrading textarea:focus,
+.nt-field input:focus {
+  outline: none !important;
+  border-color: rgba(184, 137, 42, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(232, 201, 106, 0.28), inset 0 1px 2px rgba(44, 36, 22, 0.04) !important;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.theme-autotrading .stat-card {
+  padding: 16px 18px !important;
+  border-radius: 20px !important;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.theme-autotrading .stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg) !important;
+  border-color: rgba(184, 137, 42, 0.38) !important;
+}
+.theme-autotrading .stat-card.highlight {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(245, 230, 196, 0.55) 58%, rgba(232, 201, 106, 0.22)) !important;
+  border-color: rgba(184, 137, 42, 0.38) !important;
+}
+.theme-autotrading .stat-card .label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.theme-autotrading .stat-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.page-head {
+  margin-bottom: 18px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.48));
+  border: 1px solid rgba(184, 137, 42, 0.16);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.page-head h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+  position: relative;
+  padding-bottom: 6px;
+}
+.page-head h2::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 48px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d4ad4a, #e8c96a);
+}
+.page-head p { margin: 6px 0 0; }
+
+.vehicle-card::after,
+.nt-vcard:not(.nt-show-card)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.55) 50%, transparent 58%);
+  transform: translateX(-120%) skewX(-12deg);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.vehicle-card:hover::after,
+.nt-vcard:not(.nt-show-card):hover::after {
+  opacity: 1;
+  animation: ntShimmer 0.85s ease;
+}
+
+.nt-plat {
+  position: relative;
+  overflow: hidden;
+}
+.nt-plat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.55), transparent 55%);
+  pointer-events: none;
+  opacity: 0.7;
+}
+.nt-plat::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(212, 173, 74, 0.65), transparent);
+}
+
+.nt-login-card {
+  position: relative;
+  overflow: hidden;
+}
+.nt-login-card::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 70%;
+  height: 80%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 201, 106, 0.2), transparent 68%);
+  pointer-events: none;
+}
+
+.theme-autotrading .empty-state {
+  padding: 36px 24px !important;
+  text-align: center;
+  border-radius: 22px !important;
+  background: linear-gradient(165deg, rgba(255,255,255,.85), rgba(245,230,196,.35)) !important;
+  border: 1px dashed rgba(184, 137, 42, 0.28) !important;
+  font-weight: 700;
+}
+
+.theme-autotrading .audit-item {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(184, 137, 42, 0.1);
+  margin-bottom: 8px;
+  transition: background 0.2s ease;
+}
+.theme-autotrading .audit-item:hover {
+  background: rgba(245, 230, 196, 0.35);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid rgba(184, 137, 42, 0.14);
+}
+
+.split-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.theme-autotrading .card {
+  border-radius: 22px !important;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.theme-autotrading .card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.theme-autotrading .sidebar-foot .wa-quick {
+  color: #128c7e !important;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(18, 140, 126, 0.22);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.theme-autotrading .sidebar-foot .wa-quick:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(18, 140, 126, 0.12);
+}
+
+html.theme-autotrading-scroll,
+body.app-body.theme-autotrading {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(184, 137, 42, 0.45) rgba(255, 255, 255, 0.4);
+}
+body.app-body.theme-autotrading ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+body.app-body.theme-autotrading ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #e8c96a, #b8892a);
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+}
+body.app-body.theme-autotrading ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.nt-show-card {
+  padding: 0 !important;
+  overflow: hidden;
+}
+.nt-show-card:hover {
+  transform: translateY(-6px);
+}
+
+.modal-panel h2,
+.drawer-title h2 {
+  font-family: "Playfair Display", Georgia, serif !important;
+}
+
+.vehicle-crud-bar .btn {
+  min-width: 72px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-lux-bg::before,
+  .nt-lux-bg::after,
+  .nt-glass-logo-float,
+  .vehicle-card::after,
+  .nt-vcard::after {
+    animation: none !important;
+  }
 }
 
 } /* end @layer nt_theme */
