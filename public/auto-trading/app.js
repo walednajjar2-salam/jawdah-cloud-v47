@@ -115,7 +115,7 @@ async function printVehicleOffer(v) {
       <p>USED & IMPORTED CARS · ${e(c.address_ar || '')}</p>
       <p>${e(c.address_en || '')}</p>
     </div>
-    <h2>عرض مركبة — ${e(v.stock_no)}</h2>
+    <h2>Vehicle — ${e(v.stock_no)}</h2>
     <table>
       <tr><th>الماركة / الطراز</th><td>${e(v.make)} ${e(v.model)} ${e(v.variant || '')}</td></tr>
       <tr><th>السنة / اللون</th><td>${e(v.year || '—')} · ${e(v.color || '—')}</td></tr>
@@ -416,7 +416,7 @@ function renderCompanyCard(c) {
     </div>
     <div class="split-grid">
       <section class="card">
-        <div class="card-header"><h3>📞 التواصل</h3></div>
+        <div class="card-header"><h3>Contact</h3></div>
         <div class="card-body contact-grid">
           ${contacts.map(x => `
             <div class="contact-card">
@@ -427,7 +427,7 @@ function renderCompanyCard(c) {
         </div>
       </section>
       <section class="card">
-        <div class="card-header"><h3>🏦 الحساب البنكي — ${e(bank.name_ar || '')}</h3></div>
+        <div class="card-header"><h3>Bank account — ${e(bank.name_ar || '')}</h3></div>
         <div class="card-body">
           <div class="detail-list">
             <div class="detail-row"><span>اسم صاحب الحساب</span><strong>${e(bank.account_name_en || '')}</strong></div>
@@ -456,7 +456,7 @@ async function ensureCompany() {
 }
 
 async function loadCompany() {
-  setTitle('بيانات الشركة', 'التواصل والحساب البنكي — Al Najjar Trading');
+  setTitle('Company', 'Contact & bank details — NAJJAR & AL SAMOOM TRADING');
   const c = await ensureCompany();
   content.innerHTML = renderCompanyCard(c);
   bindCopyButtons(content);
@@ -484,14 +484,14 @@ async function loadSection(section) {
 }
 
 async function loadStaff() {
-  setTitle('الموظفون', 'فريق NAJJAR & AL SAMOOM TRADING — صلاحيات الدخول');
+  setTitle('Staff', 'NAJJAR & AL SAMOOM TRADING team — access roles');
   const c = await ensureCompany();
   const staff = c.staff || [];
   content.innerHTML = `
     <div class="nt-dash-banner nt-dash-banner--logo">
       <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
-        <h2>فريق العمل</h2>
+        <h2>Team</h2>
         <p>ملاك · مبيعات · مستخدمون — صلاحيات المنصة</p>
       </div>
     </div>
@@ -505,7 +505,7 @@ async function loadStaff() {
         </article>`).join('')}
     </div>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>الصلاحيات</h3></div>
+      <div class="card-header"><h3>Permissions</h3></div>
       <div class="card-body detail-list">
         <div class="detail-row"><span>مالك (Owner)</span><strong>وليد النجار · حمد السموم — كامل الصلاحيات + رأس المال والتوزيعات</strong></div>
         <div class="detail-row"><span>مبيعات (Sales)</span><strong>واية الشعيلي — مخزون، مبيعات، مصاريف، زبائن</strong></div>
@@ -530,7 +530,7 @@ function kpi(icon, label, value, cls = '') {
 }
 
 async function loadDashboard() {
-  setTitle('لوحة التحكم', 'برنامج الموظفين — مبيعات · مصاريف · رأس مال الشريكين');
+  setTitle('Dashboard', 'Staff console — sales · expenses · partner capital');
   const data = await api('/dashboard');
   const c = data.company || {};
   companyProfile = c;
@@ -543,7 +543,7 @@ async function loadDashboard() {
       <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
       <div>
         <span class="nt-dash-kicker">NAJJAR & AL SAMOOM · USED & IMPORTED CARS</span>
-        <h2>لوحة التحكم</h2>
+        <h2>Dashboard</h2>
         <p>${e(c.address_ar || 'نزوى — الفلج')} · شريكان: وليد النجار · حمد السموم</p>
       </div>
     </div>
@@ -574,7 +574,7 @@ async function loadDashboard() {
     </div>
     <div class="split-grid" style="margin-top:16px">
       <section class="card">
-        <div class="card-header"><h3>الوصول السريع</h3></div>
+        <div class="card-header"><h3>Quick access</h3></div>
         <div class="card-body">
           <div class="actions-row">
             <button class="btn primary" type="button" id="dashGoVehicles">المخزون</button>
@@ -587,7 +587,7 @@ async function loadDashboard() {
         </div>
       </section>
       <section class="card">
-        <div class="card-header"><h3>آخر الحركات</h3></div>
+        <div class="card-header"><h3>Recent activity</h3></div>
         <div class="card-body audit-list">
           ${data.recent.length ? data.recent.map(a => `
             <div class="contract-card">
@@ -601,7 +601,7 @@ async function loadDashboard() {
       </section>
     </div>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>فريق NAJJAR & AL SAMOOM TRADING</h3></div>
+      <div class="card-header"><h3>NAJJAR & AL SAMOOM TRADING team</h3></div>
       <div class="card-body">
         <div class="nt-staff-grid">
           ${staff.map(x => `
@@ -614,7 +614,7 @@ async function loadDashboard() {
       </div>
     </section>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>التواصل والحساب</h3></div>
+      <div class="card-header"><h3>Contact & banking</h3></div>
       <div class="card-body">
         <div class="contact-grid" style="margin-bottom:14px">
           ${(c.contacts || []).slice(0, 3).map(x => `
@@ -663,7 +663,7 @@ function profitChain(s) {
   const row = (label, value, cls = '') =>
     `<tr class="${cls}"><th scope="row">${e(label)}</th><td>${value}</td></tr>`;
   return `<section class="card nt-profit-chain" style="margin-top:14px">
-    <div class="card-header"><h3>أساس حساب الربح</h3></div>
+    <div class="card-header"><h3>Profit basis</h3></div>
     <div class="card-body">
       <table class="nt-chain-table">
         <tbody>
@@ -681,7 +681,7 @@ function profitChain(s) {
 }
 
 async function loadCapital() {
-  setTitle('رأس المال والتوزيعات', 'وليد النجار · حمد السموم — مساهمات · سحوبات · توزيع أرباح');
+  setTitle('Capital & Distributions', 'Walid Najjar · Hamad Al Samoom — contributions · draws · profit share');
   const data = await api('/capital');
   const summary = data.summary || {};
   const partners = summary.partners || [];
@@ -691,7 +691,7 @@ async function loadCapital() {
   content.innerHTML = `
     <div class="nt-dash-banner">
       <div>
-        <h2>محاسبة رأس مال الشريكين</h2>
+        <h2>Partner capital accounting</h2>
         <p>وليد النجار 50% · حمد السموم 50% — تسجيل المساهمات والسحوبات وتوزيع الأرباح</p>
       </div>
     </div>
@@ -716,7 +716,7 @@ async function loadCapital() {
     </div>
     <div class="split-grid" style="margin-top:16px">
       <section class="card">
-        <div class="card-header"><h3>تسجيل حركة رأس مال</h3></div>
+        <div class="card-header"><h3>Record capital movement</h3></div>
         <div class="card-body">
           <div class="form-grid">
             <label class="field"><span>الشريك</span><select id="capPartner">${partnerOptions}</select></label>
@@ -738,7 +738,7 @@ async function loadCapital() {
         </div>
       </section>
       <section class="card">
-        <div class="card-header"><h3>توزيع أرباح على الشريكين</h3></div>
+        <div class="card-header"><h3>Distribute profit to partners</h3></div>
         <div class="card-body">
           <div class="form-grid">
             <label class="field"><span>إجمالي التوزيع (OMR)</span><input id="distAmount" type="number" min="0" step="0.001" placeholder="0.000"></label>
@@ -755,7 +755,7 @@ async function loadCapital() {
       </section>
     </div>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>سجل حركات رأس المال</h3></div>
+      <div class="card-header"><h3>Capital movement log</h3></div>
       <div class="card-body table-wrap">
         <table class="data-table">
           <thead><tr><th>الرقم</th><th>التاريخ</th><th>الشريك</th><th>النوع</th><th>المبلغ</th><th>الطريقة</th><th>ملاحظات</th></tr></thead>
@@ -775,7 +775,7 @@ async function loadCapital() {
       </div>
     </section>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>سجل التوزيعات</h3></div>
+      <div class="card-header"><h3>Distribution log</h3></div>
       <div class="card-body table-wrap">
         <table class="data-table">
           <thead><tr><th>الرقم</th><th>الفترة</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>إجراء</th></tr></thead>
@@ -858,7 +858,7 @@ async function loadCapital() {
 }
 
 async function loadVehicles() {
-  setTitle('مخزون السيارات', 'المركبات · بيانات الشراء والبيع والترخيص');
+  setTitle('Vehicle Inventory', 'Vehicles · purchase, sale & licensing details');
   await ensureCompany().catch(() => null);
   const qs = new URLSearchParams();
   if (statusFilter) qs.set('status', statusFilter);
@@ -869,7 +869,7 @@ async function loadVehicles() {
   content.innerHTML = `
     <div class="page-head">
       <div>
-        <h2>مخزون السيارات</h2>
+        <h2>Vehicle inventory</h2>
         <p>${vehiclesCache.length} مركبة</p>
       </div>
       <div class="actions-row vehicle-crud-bar">
@@ -1171,7 +1171,7 @@ async function openVehicleDetail(id) {
 function showReserveForm(v) {
   closeDrawer();
   openModal(`
-    <h2>حجز مركبة — ${e(v.make)} ${e(v.model)}</h2>
+    <h2>Reserve vehicle — ${e(v.make)} ${e(v.model)}</h2>
     <div class="form-grid">
       <label class="field"><span>اسم العميل *</span><input id="rName"></label>
       <label class="field"><span>الهاتف</span><input id="rPhone"></label>
@@ -1204,7 +1204,7 @@ function showReserveForm(v) {
 
 function showAddVehicleForm() {
   openModal(`
-    <h2>إضافة مركبة جديدة</h2>
+    <h2>Add new vehicle</h2>
     <div class="form-grid">
       <label class="field"><span>رقم المخزون *</span><input id="fStockNo" placeholder="NT-LR-002"></label>
       <label class="field"><span>الماركة *</span><input id="fMake" placeholder="Toyota"></label>
@@ -1273,7 +1273,7 @@ function showEditVehicleForm(v) {
   closeDrawer();
   const photos = vehiclePhotos(v);
   openModal(`
-    <h2>تعديل ${e(v.make)} ${e(v.model)}</h2>
+    <h2>Edit ${e(v.make)} ${e(v.model)}</h2>
     ${photos.length ? `<div style="margin-bottom:12px">${renderPhotoGallery(photos, 'edit')}</div>` : ''}
     <div class="form-grid">
       <label class="field"><span>الحالة</span>
@@ -1336,7 +1336,7 @@ function showEditVehicleForm(v) {
 function showSaleForm(v) {
   closeDrawer();
   openModal(`
-    <h2>تسجيل بيع — ${e(v.make)} ${e(v.model)}</h2>
+    <h2>Record sale — ${e(v.make)} ${e(v.model)}</h2>
     <p class="mini">مخزون: ${e(v.stock_no)} · السعر: ${money(v.list_price)}</p>
     <div class="form-grid">
       <label class="field"><span>اسم المشتري *</span><input id="sBuyer"></label>
@@ -1385,11 +1385,11 @@ function showSaleForm(v) {
 }
 
 async function loadSales() {
-  setTitle('المبيعات', 'عقود بيع · فواتير · سندات قبض — سلطنة عُمان');
+  setTitle('Sales', 'Sale contracts · invoices · receipts — Sultanate of Oman');
   const data = await api('/sales');
   const rows = data.sales || [];
   content.innerHTML = `
-    <div class="page-head"><div><h2>المبيعات والمستندات</h2><p>${rows.length} عملية بيع · اطبع عقد بيع أو فاتورة أو سند قبض</p></div></div>
+    <div class="page-head"><div><h2>Sales & documents</h2><p>${rows.length} عملية بيع · اطبع عقد بيع أو فاتورة أو سند قبض</p></div></div>
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
@@ -1413,14 +1413,14 @@ async function loadSales() {
 }
 
 async function loadPurchases() {
-  setTitle('المشتريات', 'عقود شراء · فواتير · سندات صرف — سلطنة عُمان');
+  setTitle('Purchases', 'Purchase contracts · invoices · payments — Sultanate of Oman');
   const [purchData, vehData] = await Promise.all([api('/purchases'), api('/vehicles')]);
   const rows = purchData.purchases || [];
   const vehicles = vehData.vehicles || [];
   const total = rows.reduce((sum, r) => sum + Number(r.purchase_price || 0), 0);
   content.innerHTML = `
     <div class="page-head">
-      <div><h2>المشتريات والمستندات</h2><p>${rows.length} عملية شراء · إجمالي ${money(total)} · عقد شراء / فاتورة / سند صرف</p></div>
+      <div><h2>Purchases & documents</h2><p>${rows.length} عملية شراء · إجمالي ${money(total)} · عقد شراء / فاتورة / سند صرف</p></div>
       <div class="actions-row">
         <button class="btn primary" type="button" id="btnAddPurchase">+ تسجيل شراء</button>
       </div>
@@ -1450,7 +1450,7 @@ async function loadPurchases() {
 
 function showAddPurchaseForm(vehicles) {
   openModal(`
-    <h2>تسجيل شراء مركبة</h2>
+    <h2>Record vehicle purchase</h2>
     <div class="form-grid">
       <label class="field full"><span>المركبة (اختياري)</span>
         <select id="pVehicle">
@@ -1519,7 +1519,7 @@ function showAddPurchaseForm(vehicles) {
 }
 
 async function loadExpenses() {
-  setTitle('المصاريف', 'تسجيل مصاريف + سندات صرف — شحن · جمارك · صيانة · إيجار');
+  setTitle('Expenses', 'Expense entries & payment vouchers — shipping · customs · maintenance · rent');
   const [expData, vehData] = await Promise.all([api('/expenses'), api('/vehicles')]);
   const rows = expData.expenses || [];
   const categories = expData.categories || [];
@@ -1527,7 +1527,7 @@ async function loadExpenses() {
   const total = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
   content.innerHTML = `
     <div class="page-head">
-      <div><h2>المصاريف وسندات الصرف</h2><p>${rows.length} مصروف · إجمالي ${money(total)}</p></div>
+      <div><h2>Expenses & payment vouchers</h2><p>${rows.length} مصروف · إجمالي ${money(total)}</p></div>
       <div class="actions-row">
         <button class="btn primary" type="button" id="btnAddExpense">+ تسجيل مصروف</button>
       </div>
@@ -1574,7 +1574,7 @@ async function loadExpenses() {
 
 function showAddExpenseForm(categories, vehicles) {
   openModal(`
-    <h2>تسجيل مصروف جديد</h2>
+    <h2>Record new expense</h2>
     <div class="form-grid">
       <label class="field"><span>البند *</span>
         <select id="xCategory">${categories.map(c => `<option value="${e(c)}">${e(c)}</option>`).join('')}</select>
@@ -1642,7 +1642,7 @@ function kindPill(kind) {
 }
 
 async function loadTransactions() {
-  setTitle('الحركة اليومية', 'سجل الصندوق — داخل وخارج بالتاريخ');
+  setTitle('Daily Ledger', 'Cash book — inflows & outflows by date');
   const data = await api('/transactions');
   const rows = data.transactions || [];
   const labels = data.entry_types || {};
@@ -1660,7 +1660,7 @@ async function loadTransactions() {
   }, { cashIn: 0, cashOut: 0, purchases: 0, sales: 0, expenses: 0 });
   const netCash = totals.cashIn - totals.cashOut;
   content.innerHTML = `
-    <div class="page-head"><div><h2>الحركة اليومية</h2><p>${rows.length} حركة مسجلة</p></div></div>
+    <div class="page-head"><div><h2>Daily ledger</h2><p>${rows.length} حركة مسجلة</p></div></div>
     <div class="stats-grid">
       ${stat('نقد داخل', money(totals.cashIn), 'highlight')}
       ${stat('نقد خارج', money(totals.cashOut))}
@@ -1695,12 +1695,12 @@ async function loadTransactions() {
 }
 
 async function loadImports() {
-  setTitle('الاستيراد', 'طلبات استيراد السيارات');
+  setTitle('Imports', 'Vehicle import requests');
   const data = await api('/imports');
   const rows = data.imports || [];
   content.innerHTML = `
     <div class="page-head">
-      <div><h2>طلبات الاستيراد</h2><p>${rows.length} طلب</p></div>
+      <div><h2>Import requests</h2><p>${rows.length} طلب</p></div>
       <div class="actions-row">
         <button class="btn primary" type="button" id="btnAddImport">+ طلب استيراد</button>
       </div>
@@ -1747,7 +1747,7 @@ async function loadImports() {
 
 function showAddImportForm() {
   openModal(`
-    <h2>طلب استيراد جديد</h2>
+    <h2>New import request</h2>
     <div class="form-grid">
       <label class="field"><span>بلد المنشأ *</span><input id="iOrigin" placeholder="اليابان"></label>
       <label class="field"><span>المورد</span><input id="iSupplier"></label>
