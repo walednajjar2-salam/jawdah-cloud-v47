@@ -1,4 +1,4 @@
-# Launch Quality LLC v47 — Documentation
+# نجار & سموم 2026 — Documentation
 
 - [Railway deployment](../RAILWAY.md)
 - [Quick deploy steps](../DEPLOYMENT.txt)

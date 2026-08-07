@@ -100,13 +100,12 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v71.0-stock-integrity"
-# Production baseline family: v71.0 = live showroom feed, protected stock records,
-# cost-of-sales profit. v72 retires the Launch Quality ERP shell — NAJJAR is the
-# only staff-facing product; old /app.html entry points redirect here.
+APP_VERSION = "Najjar-Sumoom-2026-v72.0"
+# Production baseline: نجّار & سموم 2026. v72 retires the Launch Quality ERP shell —
+# NAJJAR is the only staff-facing product; old /app.html entry points redirect here.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
-STABLE_TAG = "v71.0-stock-integrity"
+STABLE_TAG = "v72.0-najjar-sumoom-2026"
 # A device that installed an earlier build keeps serving that build from its own
 # service worker cache, so shipping a release never reaches it — the old shell
 # answers before the network does. Bumping this generation makes the next page
@@ -114,7 +113,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v76-najjar-ui-at42").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v78-najjar-design-team").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -141,7 +140,7 @@ NAJJAR_PLATFORMS = f"{NAJJAR_BASE}/platforms.html"
 NAJJAR_STAFF = f"{NAJJAR_BASE}/staff.html"
 NAJJAR_API_ROOTS = frozenset({"auto-trading", "login", "me", "logout", "biometric"})
 NAJJAR_TEAM_USERNAMES = frozenset({
-    "waleed.najjar", "hamad.sumoom", "waya.shuaili", "razan.shuaili",
+    "waleed.najjar", "hamad.sumoom", "sara", "sales", "accounting",
 })
 # Legacy ERP HTML — never served when ERP_PUBLISHED=0.
 _RETIRED_ERP_PAGES = frozenset({
@@ -2346,10 +2345,11 @@ def seed_if_empty(db: sqlite3.Connection) -> None:
     """Bootstrap only real accounts + chart of accounts. Never insert demo business data."""
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         defaults = [
-            ("waleed.najjar", "Walid Najjar", "owner", "Waleed2026!"),
-            ("hamad.sumoom", "Hamad Al Samoom", "owner", "Hamad2026!"),
-            ("waya.shuaili", "Aya Al Shaili", "operations", "Waya2026!"),
-            ("razan.shuaili", "Razan Al Shaili", "reception", "Razan2026!"),
+            ("waleed.najjar", "وليد النجار", "owner", "Waleed2026!"),
+            ("hamad.sumoom", "حمد السموم", "owner", "Hamad2026!"),
+            ("sara", "ساره", "operations", "Sara2026!"),
+            ("sales", "مبيعات", "operations", "Sales2026!"),
+            ("accounting", "محاسبة", "accountant", "Accounting2026!"),
         ]
         for username, name, role, legacy_pwd in defaults:
             pwd, _must = resolve_bootstrap_password(username, role, legacy_pwd)
@@ -2438,8 +2438,10 @@ def default_daily_ops_icon(username: str, display_name: str = "") -> str:
         return "👑"
     if "yaqoub" in uname:
         return "🛰️"
-    if "razan" in uname:
+    if uname == "sara":
         return "🗂️"
+    if uname == "sales":
+        return "🚗"
     if "admin" in uname:
         return "🛡️"
     if "account" in uname:
@@ -4304,10 +4306,11 @@ def purge_demo_business_data(db: sqlite3.Connection) -> Dict[str, int]:
 def ensure_team_users(db: sqlite3.Connection) -> None:
     """NAJJAR-only accounts — legacy Launch Quality ERP users are deactivated."""
     team = [
-        ("waleed.najjar", "Walid Najjar", "owner", "Waleed2026!"),
-        ("hamad.sumoom", "Hamad Al Samoom", "owner", "Hamad2026!"),
-        ("waya.shuaili", "Aya Al Shaili", "operations", "Waya2026!"),
-        ("razan.shuaili", "Razan Al Shaili", "reception", "Razan2026!"),
+        ("waleed.najjar", "وليد النجار", "owner", "Waleed2026!"),
+        ("hamad.sumoom", "حمد السموم", "owner", "Hamad2026!"),
+        ("sara", "ساره", "operations", "Sara2026!"),
+        ("sales", "مبيعات", "operations", "Sales2026!"),
+        ("accounting", "محاسبة", "accountant", "Accounting2026!"),
     ]
     for username, name, role, password in team:
         env_key = "LQ_USER_PASSWORD_" + re.sub(r"[^A-Z0-9]+", "_", str(username).upper()).strip("_")
@@ -4586,7 +4589,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def serve_static(self, path: str, head_only: bool = False) -> None:
         # Short stable aliases so old/cached 404 bookmarks still fail less often.
         download_name: Optional[str] = None
-        # Public site face = NAJJAR & AL SAMOOM TRADING (Launch Quality ERP entry points stay hidden).
+        # Public site face = نجار & سموم 2026 (Launch Quality ERP entry points stay hidden).
         if path in ("/go", "/دخول", "/start"):
             path = "/go.html"
         if path in ("/fresh", "/تحديث", "/clear-cache"):
@@ -14224,7 +14227,7 @@ def main() -> None:
             "invoices_cols": len(db.execute("PRAGMA table_info(invoices)").fetchall()),
         }
     print(f"Schema overview: {schema_overview}")
-    print(f"Launch Quality LLC {APP_VERSION} [{APP_EDITION_LABEL}] running on http://{HOST}:{PORT}")
+    print(f"نجار & سموم 2026 · {APP_VERSION} [{APP_EDITION_LABEL}] running on http://{HOST}:{PORT}")
     print(f"Database: {DB_PATH}")
     print(f"Data dir: {DATA_DIR} | Backup dir: {BACKUP_DIR}")
     print("Health check: /api/health")

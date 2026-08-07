@@ -3,24 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Sign in | NAJJAR & AL SAMOOM TRADING</title>
+  <title>دخول | نجار &amp; سموم 2026</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at42">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at43">
 </head>
-<body class="nt-login">
+<body class="nt-login nt-login--v2">
   <div class="nt-watermark" aria-hidden="true"></div>
   <div class="nt-lux-bg" aria-hidden="true"></div>
   <main class="nt-login-stage">
     <section class="nt-login-brand">
       <div id="loginBrandWrap"></div>
-      <p class="nt-login-loc">محافظة الداخلية — ولاية نزوى</p>
+      <p class="nt-login-brand-name">نجار &amp; سموم 2026</p>
+      <p class="nt-login-loc">محافظة الداخلية — ولاية نزوى · الفلج</p>
+      <p class="nt-login-board">مجلس الإدارة · وليد النجار &amp; حمد السموم</p>
     </section>
     <section class="nt-login-card">
       <h2>تسجيل الدخول</h2>
       <p class="nt-login-hint">بعد الدخول تنتقل إلى صفحة المنصات حسب الدول</p>
       <label class="nt-field">
         <span>اسم المستخدم</span>
-        <input id="loginUser" autocomplete="username" placeholder="مثال: waleed.najjar">
+        <input id="loginUser" autocomplete="username" placeholder="مثال: sales أو sara أو accounting">
       </label>
       <label class="nt-field">
         <span>كلمة المرور</span>
@@ -34,13 +39,13 @@
       </div>
       <div class="nt-team-credits">
         <div class="nt-team-row">
-          <span class="nt-team-label">Owners</span>
-          <span class="nt-team-names">Walid Najjar &amp; Hamad Al Samoom</span>
+          <span class="nt-team-label">مجلس الإدارة</span>
+          <span class="nt-team-names">وليد النجار &amp; حمد السموم</span>
         </div>
       </div>
     </section>
   </main>
-  <script src="/auto-trading/car-3d.js?v=at16"></script>
+  <script src="/auto-trading/car-3d.js?v=at17"></script>
   <script>
     document.getElementById('loginBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'login' });
 

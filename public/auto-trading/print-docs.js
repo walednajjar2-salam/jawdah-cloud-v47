@@ -1,4 +1,4 @@
-/* عقود · فواتير · سندات — تصميم قريب من موقع النجار والسموم */
+/* عقود · فواتير · سندات — نجار & سموم 2026 */
 (function (global) {
   const LOGO = '/auto-trading/assets/logo-official-clear.png?v=at13';
 
@@ -217,10 +217,10 @@
     return `
       <div class="watermark"><img src="${LOGO}" alt=""></div>
       <div class="brand">
-        <img src="${LOGO}" alt="NAJJAR & AL SAMOOM">
+        <img src="${LOGO}" alt="نجار و سموم 2026">
         <div class="brand-center">
-          <h1>NAJJAR &amp; AL SAMOOM TRADING</h1>
-          <h2>النجار والسموم للتجارة</h2>
+          <h1>NAJJAR &amp; SUMOOM 2026</h1>
+          <h2>نجار &amp; سموم 2026</h2>
           <p>USED &amp; IMPORTED CARS · ${esc(company.address_ar || 'نزوى — الفلج')} · سلطنة عُمان</p>
           <div class="badge">${esc(docTitleAr)}${docTitleEn ? ' · ' + esc(docTitleEn) : ''}</div>
         </div>
@@ -310,7 +310,7 @@
       <title>${esc(title)}</title>
       <style>${docStyles()}</style></head>
       <body><div class="sheet">${innerHtml}
-        <div class="foot">NAJJAR &amp; AL SAMOOM TRADING${footReg ? ' · ' + footReg : ''} · Nizwa Falaj · Sultanate of Oman<br>
+        <div class="foot">نجار &amp; سموم 2026${footReg ? ' · ' + footReg : ''} · Nizwa Falaj · Sultanate of Oman<br>
         هذا المستند صادر إلكترونياً من نظام الشركة · للطباعة الرسمية ضع الختم والتوقيع</div>
       </div>
       <div class="no-print" style="text-align:center;margin:12px">
@@ -333,7 +333,7 @@
       ${brandHeader(c, 'عقد بيع مركبة', 'Vehicle Sale Contract', sale.sale_no, dmy(sale.sale_date))}
       <div class="box">
         تم الاتفاق في سلطنة عُمان — ولاية نزوى، بين كل من:<br>
-        <b>الطرف الأول (البائع):</b> النجار والسموم للتجارة — NAJJAR &amp; AL SAMOOM TRADING، مقرها ${esc(c.address_ar || 'نزوى — الفلج')}.<br>
+        <b>الطرف الأول (البائع):</b> نجار &amp; سموم 2026 — NAJJAR &amp; SUMOOM 2026، مقرها ${esc(c.address_ar || 'نزوى — الفلج')}.<br>
         <b>الطرف الثاني (المشتري):</b> ${esc(sale.buyer_name || '—')}
         ${sale.buyer_id ? ' · رقم الهوية/البطاقة: <span dir="ltr">' + esc(sale.buyer_id) + '</span>' : ''}
         ${sale.buyer_phone ? ' · هاتف: <span dir="ltr">' + esc(sale.buyer_phone) + '</span>' : ''}.
@@ -373,7 +373,7 @@
         <b>الطرف الأول (البائع / المالك السابق):</b> ${esc(purchase.seller_name || '—')}
         ${purchase.seller_id ? ' · الهوية/السجل: <span dir="ltr">' + esc(purchase.seller_id) + '</span>' : ''}
         ${purchase.seller_phone ? ' · هاتف: <span dir="ltr">' + esc(purchase.seller_phone) + '</span>' : ''}.<br>
-        <b>الطرف الثاني (المشتري):</b> النجار والسموم للتجارة — NAJJAR &amp; AL SAMOOM TRADING.
+        <b>الطرف الثاني (المشتري):</b> نجار &amp; سموم 2026 — NAJJAR &amp; SUMOOM 2026.
       </div>
       ${vehicleTable(v)}
       <h3 class="sec">قيمة الشراء</h3>
