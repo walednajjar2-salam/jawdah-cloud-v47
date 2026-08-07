@@ -9,3 +9,8 @@ mobile/android-webview/.gradle/
 mobile/android-webview/build/
 mobile/android-webview/app/build/
 mobile/android-webview/local.properties
+
+# Runtime state produced by the server (database, uploads, backups)
+data/
+__pycache__/
+*.pyc

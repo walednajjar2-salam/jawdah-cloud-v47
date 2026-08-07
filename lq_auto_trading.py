@@ -8,7 +8,13 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 BASE_DIR = Path(__file__).resolve().parent
-SEED_PATH = BASE_DIR / "public" / "auto-trading" / "seed_vehicles.json"
+# Reference catalogue of the office vehicles. It holds VINs, licence numbers and
+# previous-owner details, so it lives outside public/ and reaches visitors only
+# through the filtered showroom feed.
+SEED_PATH = BASE_DIR / "reference" / "seed_vehicles.json"
+_LEGACY_SEED_PATH = BASE_DIR / "public" / "auto-trading" / "seed_vehicles.json"
+if not SEED_PATH.exists() and _LEGACY_SEED_PATH.exists():
+    SEED_PATH = _LEGACY_SEED_PATH
 
 COMPANY_PROFILE: Dict[str, Any] = {
     "name_ar": "النجار والسموم للتجارة — سيارات مستعملة ومستوردة",
@@ -122,6 +128,20 @@ def now_iso() -> str:
     return datetime.now().replace(microsecond=0).isoformat()
 
 
+# Databases whose reference catalogue has already been seeded in this process.
+_BOOTSTRAPPED_DBS: set[str] = set()
+
+
+def _db_path(db: sqlite3.Connection) -> str:
+    try:
+        for _, name, file in db.execute("PRAGMA database_list").fetchall():
+            if name == "main":
+                return str(file or ":memory:")
+    except sqlite3.Error:
+        pass
+    return ":memory:"
+
+
 def _ensure_vehicle_columns(db: sqlite3.Connection) -> None:
     for col, typ in (
         ("first_registration", "TEXT"),
@@ -183,15 +203,27 @@ def _vehicle_row_from_seed(item: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+# Columns the seed file owns. Everything else (status, prices, plate, insurance,
+# buyer/seller, notes…) belongs to the staff and must survive a re-sync.
+SEED_REFRESHABLE_COLUMNS = (
+    "stock_no", "make", "model", "variant", "vehicle_type", "color", "year", "vin",
+    "engine_no", "engine_cc", "seats", "axles", "first_registration", "license_doc_no",
+    "license_source", "photos", "sort_order",
+)
+
+
 def sync_seed_vehicles(db: sqlite3.Connection) -> None:
-    """Upsert reference vehicles from seed file (license / office data)."""
+    """Insert reference vehicles from the seed file and refresh their spec sheet.
+
+    Operational fields edited in the portal are never overwritten: the seed is a
+    catalogue of specifications, not a source of truth for stock state or pricing.
+    """
     if not SEED_PATH.exists():
         return
     rows = json.loads(SEED_PATH.read_text(encoding="utf-8"))
     if not isinstance(rows, list):
         return
     seed_stocks = {str(r.get("stock_no") or "") for r in rows if r.get("stock_no")}
-    seed_vins = {str(r.get("vin") or "") for r in rows if r.get("vin")}
     for idx, item in enumerate(rows, start=1):
         if not item.get("stock_no") or not item.get("make") or not item.get("model"):
             continue
@@ -207,21 +239,11 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
                 (row["stock_no"],),
             ).fetchone()
         if existing:
+            sets = ", ".join(f"{col}=?" for col in SEED_REFRESHABLE_COLUMNS)
             db.execute(
-                """UPDATE at_vehicles SET
-                    stock_no=?, make=?, model=?, variant=?, vehicle_type=?, color=?, year=?, vin=?, engine_no=?,
-                    engine_cc=?, seats=?, axles=?, origin_country=?, import_ref=?, purchase_cost=?, list_price=?,
-                    price_usd=?, status=?, plate_no=?, license_valid_until=?, first_registration=?, license_doc_no=?,
-                    insurance_company=?, insurance_policy=?, insurance_type=?, license_source=?, mortgage=?, notes=?,
-                    photos=?, sort_order=?, updated_at=?
-                WHERE id=?""",
+                f"UPDATE at_vehicles SET {sets}, updated_at=? WHERE id=?",
                 (
-                    row["stock_no"], row["make"], row["model"], row["variant"], row["vehicle_type"], row["color"],
-                    row["year"], row["vin"], row["engine_no"], row["engine_cc"], row["seats"], row["axles"],
-                    row["origin_country"], row["import_ref"], row["purchase_cost"], row["list_price"], row["price_usd"],
-                    row["status"], row["plate_no"], row["license_valid_until"], row["first_registration"],
-                    row["license_doc_no"], row["insurance_company"], row["insurance_policy"], row["insurance_type"],
-                    row["license_source"], row["mortgage"], row["notes"], row["photos"], row["sort_order"],
+                    *(row[col] for col in SEED_REFRESHABLE_COLUMNS),
                     now_iso(), existing[0],
                 ),
             )
@@ -244,22 +266,17 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
                     now_iso(), now_iso(),
                 ),
             )
-    # Remove old demo stock rows not in official seed (keep sold history).
+    # One-off removal of the pre-launch demo stock (AT-001…AT-005). Only rows that
+    # were never traded are dropped, and never anything the staff created later.
     demo_stocks = ("AT-001", "AT-002", "AT-003", "AT-004", "AT-005")
     for code in demo_stocks:
         if code in seed_stocks:
             continue
         db.execute(
-            "DELETE FROM at_vehicles WHERE stock_no=? AND lower(status) NOT IN ('مباعة','sold')",
+            """DELETE FROM at_vehicles WHERE stock_no=? AND lower(status) NOT IN ('مباعة','sold')
+               AND id NOT IN (SELECT vehicle_id FROM at_sales WHERE vehicle_id IS NOT NULL)
+               AND id NOT IN (SELECT vehicle_id FROM at_purchases WHERE vehicle_id IS NOT NULL)""",
             (code,),
-        )
-    # Drop duplicate VIN rows that are not in seed file (demo duplicates).
-    if seed_vins:
-        placeholders = ",".join("?" for _ in seed_vins)
-        db.execute(
-            f"DELETE FROM at_vehicles WHERE vin != '' AND vin NOT IN ({placeholders}) "
-            f"AND stock_no LIKE 'AT-%' AND lower(status) NOT IN ('مباعة','sold')",
-            tuple(seed_vins),
         )
     db.commit()
 
@@ -412,7 +429,10 @@ def ensure_tables(db: sqlite3.Connection) -> None:
         """
     )
     _ensure_vehicle_columns(db)
-    sync_seed_vehicles(db)
+    path = _db_path(db)
+    if path not in _BOOTSTRAPPED_DBS:
+        sync_seed_vehicles(db)
+        _BOOTSTRAPPED_DBS.add(path)
     _ensure_partners(db)
 
 
@@ -433,34 +453,43 @@ def _audit(db: sqlite3.Connection, user: Dict[str, Any], action: str, entity_typ
     )
 
 
+def _next_doc_no(db: sqlite3.Connection, table: str, column: str, letter: str) -> str:
+    """Sequence document numbers from the highest issued number of the year.
+
+    Counting rows would re-issue a number as soon as one is removed, and the
+    document tables reject duplicates.
+    """
+    year = datetime.now().year
+    prefix = f"AT-{letter}-{year}-"
+    last = db.execute(
+        f"SELECT MAX(CAST(substr({column}, ?) AS INTEGER)) FROM {table} WHERE {column} LIKE ?",
+        (len(prefix) + 1, prefix + "%"),
+    ).fetchone()[0]
+    return f"{prefix}{int(last or 0) + 1:04d}"
+
+
 def _next_sale_no(db: sqlite3.Connection) -> str:
-    n = db.execute("SELECT COUNT(*) FROM at_sales").fetchone()[0] + 1
-    return f"AT-S-{datetime.now().year}-{n:04d}"
+    return _next_doc_no(db, "at_sales", "sale_no", "S")
 
 
 def _next_import_no(db: sqlite3.Connection) -> str:
-    n = db.execute("SELECT COUNT(*) FROM at_import_orders").fetchone()[0] + 1
-    return f"AT-I-{datetime.now().year}-{n:04d}"
+    return _next_doc_no(db, "at_import_orders", "order_no", "I")
 
 
 def _next_purchase_no(db: sqlite3.Connection) -> str:
-    n = db.execute("SELECT COUNT(*) FROM at_purchases").fetchone()[0] + 1
-    return f"AT-P-{datetime.now().year}-{n:04d}"
+    return _next_doc_no(db, "at_purchases", "purchase_no", "P")
 
 
 def _next_expense_no(db: sqlite3.Connection) -> str:
-    n = db.execute("SELECT COUNT(*) FROM at_expenses").fetchone()[0] + 1
-    return f"AT-E-{datetime.now().year}-{n:04d}"
+    return _next_doc_no(db, "at_expenses", "expense_no", "E")
 
 
 def _next_capital_entry_no(db: sqlite3.Connection) -> str:
-    n = db.execute("SELECT COUNT(*) FROM at_capital_entries").fetchone()[0] + 1
-    return f"AT-C-{datetime.now().year}-{n:04d}"
+    return _next_doc_no(db, "at_capital_entries", "entry_no", "C")
 
 
 def _next_distribution_no(db: sqlite3.Connection) -> str:
-    n = db.execute("SELECT COUNT(*) FROM at_capital_distributions").fetchone()[0] + 1
-    return f"AT-D-{datetime.now().year}-{n:04d}"
+    return _next_doc_no(db, "at_capital_distributions", "dist_no", "D")
 
 
 def _ensure_partners(db: sqlite3.Connection) -> None:
@@ -545,6 +574,55 @@ def _capital_summary(db: sqlite3.Connection) -> Dict[str, Any]:
         "distributable_estimate": max(0.0, net_profit - total_distributed),
         "entry_types": CAPITAL_ENTRY_TYPES,
     }
+
+
+# Fields a visitor may see. Costs, buyer/seller identities and internal notes stay private.
+PUBLIC_VEHICLE_FIELDS = (
+    "id", "stock_no", "make", "model", "variant", "vehicle_type", "color", "year",
+    "vin", "engine_cc", "seats", "axles", "origin_country", "status", "sort_order",
+    "first_registration", "license_valid_until",
+)
+PUBLIC_STATUSES = ("متاحة", "محجوزة", "قيد الاستيراد")
+
+
+def public_company_card() -> Dict[str, Any]:
+    """Branding and contact details for visitors — no staff or partner records."""
+    keys = (
+        "name_ar", "name_en", "tagline_en", "activity_ar", "motto_ar", "address_ar",
+        "address_en", "country_ar", "hours", "logo_url", "logo_mark_url", "contacts", "bank",
+    )
+    return {key: COMPANY_PROFILE.get(key) for key in keys}
+
+
+def public_showroom(db: sqlite3.Connection) -> List[Dict[str, Any]]:
+    """Vehicles offered to visitors, with only the public half of each record.
+
+    Prices are published for cars standing in the showroom. A car still on the
+    water carries its landed cost, not a retail price, so it is quoted on request.
+    """
+    ensure_tables(db)
+    placeholders = ",".join("?" for _ in PUBLIC_STATUSES)
+    rows = db.execute(
+        f"SELECT * FROM at_vehicles WHERE status IN ({placeholders}) ORDER BY sort_order ASC, stock_no ASC",
+        PUBLIC_STATUSES,
+    ).fetchall()
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        public = {key: item.get(key) for key in PUBLIC_VEHICLE_FIELDS}
+        photos = item.get("photos")
+        if isinstance(photos, str) and photos.strip():
+            try:
+                photos = json.loads(photos)
+            except json.JSONDecodeError:
+                photos = [photos]
+        public["photos"] = photos if isinstance(photos, list) else []
+        on_the_way = item.get("status") == "قيد الاستيراد"
+        public["list_price"] = 0 if on_the_way else float(item.get("list_price") or 0)
+        public["price_usd"] = 0 if on_the_way else float(item.get("price_usd") or 0)
+        public["price_on_request"] = bool(on_the_way or public["list_price"] <= 0)
+        out.append(public)
+    return out
 
 
 def handle_api(
