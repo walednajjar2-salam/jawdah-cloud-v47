@@ -229,7 +229,20 @@ function readToken() {
       return qTok;
     }
   } catch (_) {}
-  return (localStorage.getItem('jawdah_cloud_token') || '').trim();
+  const stored = (localStorage.getItem('jawdah_cloud_token') || '').trim();
+  if (stored) return stored;
+  // The session also rides in a cookie, which outlives a wipe of local storage —
+  // so a device cleaned of an older build comes back signed in instead of
+  // sending the whole showroom to the login screen for no reason.
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)lq_token=([^;]+)/);
+    const fromCookie = m ? decodeURIComponent(m[1]).trim() : '';
+    if (fromCookie) {
+      localStorage.setItem('jawdah_cloud_token', fromCookie);
+      return fromCookie;
+    }
+  } catch (_) {}
+  return '';
 }
 
 const PLATFORM_LABELS = {

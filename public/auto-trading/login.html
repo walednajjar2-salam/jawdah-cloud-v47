@@ -91,7 +91,16 @@
     // Skip the form only for a session the server still accepts. An expired token
     // used to bounce the user between here and the platforms page forever.
     (async () => {
-      const saved = (localStorage.getItem('jawdah_cloud_token') || '').trim();
+      let saved = (localStorage.getItem('jawdah_cloud_token') || '').trim();
+      if (!saved) {
+        // Local storage can have been wiped while cleaning an older build off the
+        // device; the session cookie survives that, so it is worth asking.
+        try {
+          const m = document.cookie.match(/(?:^|;\s*)lq_token=([^;]+)/);
+          saved = m ? decodeURIComponent(m[1]).trim() : '';
+          if (saved) localStorage.setItem('jawdah_cloud_token', saved);
+        } catch (_) {/* ignore */}
+      }
       if (!saved) return;
       try {
         const res = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + saved } });
