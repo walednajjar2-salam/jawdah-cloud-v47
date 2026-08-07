@@ -113,7 +113,7 @@ STABLE_TAG = "v72.0-najjar-sumoom-2026"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v77-najjar-sumoom-2026").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v78-najjar-design-team").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -140,7 +140,7 @@ NAJJAR_PLATFORMS = f"{NAJJAR_BASE}/platforms.html"
 NAJJAR_STAFF = f"{NAJJAR_BASE}/staff.html"
 NAJJAR_API_ROOTS = frozenset({"auto-trading", "login", "me", "logout", "biometric"})
 NAJJAR_TEAM_USERNAMES = frozenset({
-    "waleed.najjar", "hamad.sumoom", "waya.shuaili", "razan.shuaili",
+    "waleed.najjar", "hamad.sumoom", "sara", "sales", "accounting",
 })
 # Legacy ERP HTML — never served when ERP_PUBLISHED=0.
 _RETIRED_ERP_PAGES = frozenset({
@@ -2345,10 +2345,11 @@ def seed_if_empty(db: sqlite3.Connection) -> None:
     """Bootstrap only real accounts + chart of accounts. Never insert demo business data."""
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         defaults = [
-            ("waleed.najjar", "Walid Najjar", "owner", "Waleed2026!"),
-            ("hamad.sumoom", "Hamad Al Samoom", "owner", "Hamad2026!"),
-            ("waya.shuaili", "Aya Al Shaili", "operations", "Waya2026!"),
-            ("razan.shuaili", "Razan Al Shaili", "reception", "Razan2026!"),
+            ("waleed.najjar", "وليد النجار", "owner", "Waleed2026!"),
+            ("hamad.sumoom", "حمد السموم", "owner", "Hamad2026!"),
+            ("sara", "ساره", "operations", "Sara2026!"),
+            ("sales", "مبيعات", "operations", "Sales2026!"),
+            ("accounting", "محاسبة", "accountant", "Accounting2026!"),
         ]
         for username, name, role, legacy_pwd in defaults:
             pwd, _must = resolve_bootstrap_password(username, role, legacy_pwd)
@@ -2437,8 +2438,10 @@ def default_daily_ops_icon(username: str, display_name: str = "") -> str:
         return "👑"
     if "yaqoub" in uname:
         return "🛰️"
-    if "razan" in uname:
+    if uname == "sara":
         return "🗂️"
+    if uname == "sales":
+        return "🚗"
     if "admin" in uname:
         return "🛡️"
     if "account" in uname:
@@ -4303,10 +4306,11 @@ def purge_demo_business_data(db: sqlite3.Connection) -> Dict[str, int]:
 def ensure_team_users(db: sqlite3.Connection) -> None:
     """NAJJAR-only accounts — legacy Launch Quality ERP users are deactivated."""
     team = [
-        ("waleed.najjar", "Walid Najjar", "owner", "Waleed2026!"),
-        ("hamad.sumoom", "Hamad Al Samoom", "owner", "Hamad2026!"),
-        ("waya.shuaili", "Aya Al Shaili", "operations", "Waya2026!"),
-        ("razan.shuaili", "Razan Al Shaili", "reception", "Razan2026!"),
+        ("waleed.najjar", "وليد النجار", "owner", "Waleed2026!"),
+        ("hamad.sumoom", "حمد السموم", "owner", "Hamad2026!"),
+        ("sara", "ساره", "operations", "Sara2026!"),
+        ("sales", "مبيعات", "operations", "Sales2026!"),
+        ("accounting", "محاسبة", "accountant", "Accounting2026!"),
     ]
     for username, name, role, password in team:
         env_key = "LQ_USER_PASSWORD_" + re.sub(r"[^A-Z0-9]+", "_", str(username).upper()).strip("_")

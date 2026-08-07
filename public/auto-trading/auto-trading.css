@@ -1,29 +1,30 @@
 @import url('/quick-estate/quick-estate.css');
 
 :root {
-  /* Light luxury glass — NAJJAR & AL SAMOOM TRADING */
-  --nt-font: Arial, Helvetica, "Segoe UI", sans-serif;
-  --nt-size: 12px;
-  --nt-size-heading: 14px;
-  --nt-weight: 700;
-  --gold: #b8892a;
-  --gold2: #e8c96a;
+  /* نجار & سموم 2026 — luxury automotive glass */
+  --nt-font: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+  --nt-display: "El Messiri", "IBM Plex Sans Arabic", serif;
+  --nt-size: 15px;
+  --nt-size-heading: clamp(1.25rem, 2vw, 1.7rem);
+  --nt-weight: 600;
+  --gold: #c49a3c;
+  --gold2: #f0d78a;
   --gold-dark: #8a6520;
-  --gold-soft: #f5e6c4;
+  --gold-soft: #f7ecd2;
   --red-deep: #6b3a12;
-  --navy: #2c2416;
-  --ink: #1f1a14;
-  --bg: #faf7f0;
-  --bg2: #f0e9dc;
-  --panel: rgba(255, 255, 255, 0.68);
-  --panel-solid: rgba(255, 255, 255, 0.92);
-  --glass: rgba(255, 255, 255, 0.55);
-  --line: rgba(184, 137, 42, 0.28);
-  --muted: #8a7d68;
-  --shadow: 0 20px 50px rgba(44, 36, 22, 0.07), 0 8px 24px rgba(184, 137, 42, 0.1);
-  --shadow-lg: 0 28px 64px rgba(44, 36, 22, 0.1), 0 12px 32px rgba(184, 137, 42, 0.14);
-  --edge: 0 0 0 1px rgba(255, 255, 255, 0.95), 0 0 0 2px rgba(184, 137, 42, 0.42);
-  --glass-blur: blur(22px) saturate(1.65);
+  --navy: #1a1610;
+  --ink: #16130f;
+  --bg: #0f0e0c;
+  --bg2: #1c1812;
+  --panel: rgba(255, 255, 255, 0.72);
+  --panel-solid: rgba(255, 255, 255, 0.94);
+  --glass: rgba(255, 255, 255, 0.58);
+  --line: rgba(196, 154, 60, 0.32);
+  --muted: #7a6f5c;
+  --shadow: 0 22px 56px rgba(10, 8, 4, 0.14), 0 8px 24px rgba(196, 154, 60, 0.12);
+  --shadow-lg: 0 32px 72px rgba(10, 8, 4, 0.18), 0 14px 36px rgba(196, 154, 60, 0.16);
+  --edge: 0 0 0 1px rgba(255, 255, 255, 0.95), 0 0 0 2px rgba(196, 154, 60, 0.45);
+  --glass-blur: blur(24px) saturate(1.7);
 }
 
 /* Wrapped in a cascade layer so these !important theme rules always win over the
@@ -44,7 +45,7 @@
   color: var(--navy);
 }
 
-/* Soft champagne crystal background with golden light pools */
+/* Warm night-showroom atmosphere with gold light pools */
 .nt-watermark,
 body.theme-autotrading::before {
   content: "";
@@ -53,10 +54,10 @@ body.theme-autotrading::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 90% 70% at 8% 12%, rgba(232, 201, 106, 0.22), transparent 58%),
-    radial-gradient(ellipse 75% 60% at 94% 8%, rgba(255, 255, 255, 0.85), transparent 52%),
-    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(184, 137, 42, 0.12), transparent 55%),
-    linear-gradient(165deg, #fdfbf7 0%, #f7f1e6 38%, #efe6d6 72%, #faf6ef 100%);
+    radial-gradient(ellipse 85% 65% at 12% 8%, rgba(240, 215, 138, 0.2), transparent 55%),
+    radial-gradient(ellipse 70% 55% at 92% 12%, rgba(196, 154, 60, 0.14), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(26, 22, 16, 0.08), transparent 60%),
+    linear-gradient(165deg, #f8f4eb 0%, #efe6d4 42%, #e7dcc6 78%, #f5f0e6 100%);
 }
 
 .nt-watermark::after,
@@ -949,7 +950,8 @@ body.section-dashboard .content.dashboard-page {
 }
 .nt-staff-role.owner { background: linear-gradient(135deg, rgba(245, 230, 196, 0.85), rgba(232, 201, 106, 0.45)); color: var(--gold-dark); border: 1px solid rgba(184, 137, 42, 0.35); }
 .nt-staff-role.sales { background: rgba(34, 197, 94, 0.12); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.22); }
-.nt-staff-role.user { background: rgba(147, 51, 234, 0.1); color: #7e22ce; border: 1px solid rgba(147, 51, 234, 0.2); }
+.nt-staff-role.accountant { background: rgba(14, 116, 144, 0.12); color: #0e7490; border: 1px solid rgba(14, 116, 144, 0.22); }
+.nt-staff-role.user { background: rgba(120, 113, 98, 0.12); color: #57534e; border: 1px solid rgba(120, 113, 98, 0.22); }
 
 .nt-platform-chip {
   display: inline-flex;
@@ -2101,7 +2103,7 @@ body.app-body.theme-autotrading ::-webkit-scrollbar-track {
   }
 }
 
-/* ——— Typography: Arial Bold — text 12px · headings 14px ——— */
+/* ——— Typography: IBM Plex Sans Arabic + El Messiri display ——— */
 body.app-body.theme-autotrading,
 body.nt-login,
 body.nt-hub,
@@ -2109,7 +2111,7 @@ body.nt-customer {
   font-family: var(--nt-font) !important;
   font-size: var(--nt-size) !important;
   font-weight: var(--nt-weight) !important;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
 body.app-body.theme-autotrading :where(
@@ -2123,8 +2125,8 @@ body.app-body.theme-autotrading :where(
 .nt-hub :where(p, span, label, a, button),
 .nt-customer :where(p, span, label, a, button) {
   font-family: var(--nt-font) !important;
-  font-size: var(--nt-size) !important;
-  font-weight: var(--nt-weight) !important;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 body.app-body.theme-autotrading :where(
@@ -2138,9 +2140,10 @@ body.app-body.theme-autotrading :where(
 .nt-login :where(h1, h2, h3),
 .nt-hub :where(h1, h2, h3),
 .nt-customer :where(h1, h2, h3) {
-  font-family: var(--nt-font) !important;
+  font-family: var(--nt-display) !important;
   font-size: var(--nt-size-heading) !important;
-  font-weight: var(--nt-weight) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
 }
 
 .theme-autotrading .topbar h1,
@@ -2176,6 +2179,199 @@ body.app-body.theme-autotrading :where(
 .theme-autotrading .topbar p,
 .theme-autotrading .page-head p {
   font-size: var(--nt-size) !important;
+}
+
+/* ——— Design v2: full-bleed showroom hero + elevated hubs ——— */
+.nt-bleed-hero {
+  position: relative;
+  min-height: min(92vh, 860px);
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+  margin: 0;
+  color: #f7f1e4;
+}
+
+.nt-bleed-hero__media {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 40%, rgba(196, 154, 60, 0.28), transparent 55%),
+    linear-gradient(140deg, #1a1610 0%, #2a2218 45%, #14110d 100%);
+  background-size: cover;
+  background-position: center 35%;
+  transform: scale(1.04);
+  animation: ntHeroDrift 22s ease-in-out infinite alternate;
+}
+
+.nt-bleed-hero__veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(10, 8, 5, 0.35) 0%, rgba(10, 8, 5, 0.55) 42%, rgba(10, 8, 5, 0.88) 100%),
+    radial-gradient(ellipse 70% 50% at 50% 20%, rgba(240, 215, 138, 0.16), transparent 65%);
+}
+
+.nt-bleed-hero__content {
+  position: relative;
+  z-index: 2;
+  width: min(920px, calc(100% - 32px));
+  padding: 48px 12px 56px;
+  text-align: center;
+  animation: ntFadeUp 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.nt-bleed-hero__brand {
+  margin: 0 auto 10px;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.35));
+}
+
+.nt-bleed-hero__brand-name {
+  margin: 0 0 10px;
+  font-family: var(--nt-display) !important;
+  font-size: clamp(2.4rem, 7vw, 4.4rem) !important;
+  font-weight: 700 !important;
+  line-height: 1.05;
+  color: #f7efd4 !important;
+  text-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  letter-spacing: 0.02em;
+  animation: ntBrandIn 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.nt-bleed-hero__headline {
+  margin: 0 0 10px;
+  font-family: var(--nt-display) !important;
+  font-size: clamp(1.15rem, 2.6vw, 1.55rem) !important;
+  font-weight: 600 !important;
+  color: rgba(247, 241, 228, 0.92) !important;
+}
+
+.nt-bleed-hero__lead {
+  margin: 0 auto 22px;
+  max-width: 34ch;
+  color: rgba(247, 241, 228, 0.78) !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+}
+
+.nt-bleed-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.nt-bleed-hero__cta .nt-btn.ghost {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(240, 215, 138, 0.45);
+  color: #f7efd4;
+}
+
+.nt-bleed-hero__nav {
+  position: absolute;
+  z-index: 3;
+  top: 18px;
+  inset-inline: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nt-bleed-hero__nav a {
+  color: rgba(247, 241, 228, 0.88) !important;
+  text-decoration: none;
+  font-weight: 600 !important;
+  font-size: 0.92rem !important;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(240, 215, 138, 0.22);
+  backdrop-filter: blur(10px);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.nt-bleed-hero__nav a:hover {
+  background: rgba(240, 215, 138, 0.18);
+  transform: translateY(-1px);
+}
+
+.nt-cust-main--v2 {
+  width: min(1100px, calc(100% - 28px));
+  margin: -28px auto 0;
+  position: relative;
+  z-index: 2;
+  padding: 8px 0 40px;
+}
+
+.nt-hub-foot--v2 {
+  padding: 8px 16px 36px;
+}
+
+.nt-hub-foot--v2 .nt-team-foot {
+  display: block;
+  margin-top: 8px;
+  color: var(--gold-dark);
+  font-family: var(--nt-display);
+  font-weight: 700;
+}
+
+.nt-login-brand-name {
+  margin: 8px 0 4px;
+  font-family: var(--nt-display) !important;
+  font-size: clamp(1.8rem, 4vw, 2.6rem) !important;
+  font-weight: 700 !important;
+  color: var(--navy) !important;
+  letter-spacing: 0.02em;
+}
+
+.nt-login-board {
+  margin: 10px 0 0;
+  color: var(--gold-dark);
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+}
+
+.nt-login--v2 .nt-login-card {
+  animation: ntFadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.12s;
+}
+
+.nt-login--v2 .nt-login-brand {
+  animation: ntFadeUp 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.nt-hub .nt-hub-head h1 {
+  font-family: var(--nt-display) !important;
+  font-size: clamp(1.5rem, 2.5vw, 2rem) !important;
+}
+
+.nt-plat {
+  animation: ntFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.nt-plat:nth-child(1) { animation-delay: 0.02s; }
+.nt-plat:nth-child(2) { animation-delay: 0.06s; }
+.nt-plat:nth-child(3) { animation-delay: 0.1s; }
+.nt-plat:nth-child(4) { animation-delay: 0.14s; }
+.nt-plat:nth-child(5) { animation-delay: 0.18s; }
+.nt-plat:nth-child(6) { animation-delay: 0.22s; }
+.nt-plat:nth-child(7) { animation-delay: 0.26s; }
+.nt-plat:nth-child(8) { animation-delay: 0.3s; }
+
+@keyframes ntHeroDrift {
+  from { transform: scale(1.04) translate3d(0, 0, 0); }
+  to { transform: scale(1.1) translate3d(-1.5%, 1%, 0); }
+}
+
+@keyframes ntBrandIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@media (max-width: 720px) {
+  .nt-bleed-hero { min-height: min(88vh, 720px); }
+  .nt-bleed-hero__content { padding-bottom: 40px; }
+  .nt-cust-main--v2 { margin-top: -18px; }
+  .nt-login-stage { gap: 18px; }
 }
 
 } /* end @layer nt_theme */

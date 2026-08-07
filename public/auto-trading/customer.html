@@ -5,49 +5,76 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>نجار &amp; سموم 2026</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at42">
-  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at16">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at43">
+  <link rel="stylesheet" href="/auto-trading/car-3d.css?v=at17">
 </head>
-<body class="nt-customer">
+<body class="nt-customer nt-customer--v2">
   <div class="nt-watermark" aria-hidden="true"></div>
   <div class="nt-lux-bg" aria-hidden="true"></div>
-  <header class="nt-cust-hero">
-    <div id="custBrandWrap" class="nt-cust-brand-wrap"></div>
-    <div>
-      <h1>تشكيلة مختارة</h1>
-      <p class="nt-sub">صور · أسعار · مواصفات · واتساب مباشر</p>
+
+  <header class="nt-bleed-hero" id="top">
+    <div class="nt-bleed-hero__media" id="heroMedia" aria-hidden="true"></div>
+    <div class="nt-bleed-hero__veil" aria-hidden="true"></div>
+    <div class="nt-bleed-hero__content">
+      <div id="custBrandWrap" class="nt-cust-brand-wrap nt-bleed-hero__brand"></div>
+      <p class="nt-bleed-hero__brand-name">نجار &amp; سموم 2026</p>
+      <h1 class="nt-bleed-hero__headline">سيارتك بثقة</h1>
+      <p class="nt-bleed-hero__lead">من الاستيراد إلى التسليم — تشكيلة مختارة في نزوى</p>
+      <div class="nt-bleed-hero__cta">
+        <a class="nt-btn primary" href="#custRoot">استكشف التشكيلة</a>
+        <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>
+      </div>
     </div>
-    <div class="nt-hub-actions">
-      <a class="nt-btn primary" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>
-      <a class="nt-btn ghost" href="/najjar/login.html">تسجيل الدخول</a>
-    </div>
+    <nav class="nt-bleed-hero__nav" aria-label="روابط سريعة">
+      <a href="/najjar/login.html">دخول الموظفين</a>
+      <a href="https://wa.me/96893391994" target="_blank" rel="noopener">مبيعات</a>
+    </nav>
   </header>
 
-  <main class="nt-cust-main">
+  <main class="nt-cust-main nt-cust-main--v2">
     <div id="custRoot" aria-live="polite">جاري التحميل…</div>
   </main>
 
-  <!-- Each number is its own left-to-right run; otherwise the leading "+" is
-       reordered past the digits in this right-to-left footer. -->
-  <footer class="nt-hub-foot">
+  <footer class="nt-hub-foot nt-hub-foot--v2">
     واتساب <span dir="ltr">+968 71924089</span> · <span dir="ltr">+968 93391994</span> ·
     حمد <span dir="ltr">+968 77548482</span> · مكتب <span dir="ltr">95551994</span><br>
-    بنك صحار الدولي · رقم الحساب الدولي <span dir="ltr">OM070300000234020022484</span> ·
-    نجار &amp; سموم 2026 — نزوى · الفلج<br>
-    <span class="nt-team-foot">Walid Najjar &amp; Hamad Al Samoom</span>
+    بنك صحار الدولي · رقم الحساب الدولي <span dir="ltr">OM070300000234020022484</span><br>
+    نجار &amp; سموم 2026 — نزوى · الفلج
+    <span class="nt-team-foot">مجلس الإدارة · وليد النجار &amp; حمد السموم</span>
   </footer>
 
-  <script src="/auto-trading/car-3d.js?v=at16"></script>
+  <script src="/auto-trading/car-3d.js?v=at17"></script>
   <script>
-    document.getElementById('custBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'compact' });
+    document.getElementById('custBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'hero' });
 
     const root = document.getElementById('custRoot');
+    const heroMedia = document.getElementById('heroMedia');
     let vehicles = [];
     let filter = 'all';
     let sort = 'showroom';
 
+    function setHeroBackdrop(list) {
+      const withPhoto = (list || []).find((v) => {
+        const p = v.photos || v.images || [];
+        return (Array.isArray(p) && p.length) || v.photo_url;
+      });
+      if (!withPhoto) {
+        heroMedia.style.backgroundImage = '';
+        return;
+      }
+      let photos = withPhoto.photos || withPhoto.images || [];
+      if (typeof photos === 'string') {
+        try { photos = JSON.parse(photos); } catch (_) { photos = photos ? [photos] : []; }
+      }
+      const src = (Array.isArray(photos) && photos[0]) || withPhoto.photo_url || '';
+      if (src) heroMedia.style.backgroundImage = 'url("' + String(src).replace(/"/g, '') + '")';
+    }
+
     function paint() {
-      root.innerHTML = NajjarCar3D.renderShowroom(vehicles, { filter, sort, hero: true, whatsapp: true });
+      root.innerHTML = NajjarCar3D.renderShowroom(vehicles, { filter, sort, hero: false, whatsapp: true });
       NajjarCar3D.bindShowroom(root, vehicles, {
         onFilter: (id) => {
           filter = id || 'all';
@@ -66,6 +93,7 @@
         const data = await fetch('/api/auto-trading/showroom', { cache: 'no-store' }).then((r) => r.json());
         if (!data || data.ok === false) throw new Error(data && data.error);
         vehicles = (data.vehicles || []).map((v, i) => ({ ...v, id: v.id != null ? v.id : i + 1 }));
+        setHeroBackdrop(vehicles);
         if (!vehicles.length) {
           root.innerHTML = '<p class="empty-state">لا توجد سيارات معروضة حالياً — تواصل معنا عبر واتساب</p>';
           return;

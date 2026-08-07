@@ -31,10 +31,14 @@ def main() -> int:
     assert company["name_en"] == "NAJJAR & SUMOOM 2026"
     assert company["name_ar"] == "نجار & سموم 2026"
     assert company["bank"]["iban"].startswith("OM07")
-    assert any(s.get("name_ar") == "وليد نجار" for s in company.get("staff") or [])
-    assert any(s.get("name_ar") == "حمد السموم" for s in company.get("staff") or [])
-    assert any(s.get("name_ar") == "واية الشعيلي" for s in company.get("staff") or [])
-    assert any(s.get("name_ar") == "رزان الشعيلي" for s in company.get("staff") or [])
+    staff_names = {s.get("name_ar") for s in company.get("staff") or []}
+    assert staff_names == {"وليد النجار", "حمد السموم", "ساره", "مبيعات", "محاسبة"}
+    staff_by_user = {s.get("username"): s for s in company.get("staff") or []}
+    assert staff_by_user["waleed.najjar"]["role_ar"] == "مجلس إدارة"
+    assert staff_by_user["hamad.sumoom"]["role_ar"] == "مجلس إدارة"
+    assert staff_by_user["sara"]["name_ar"] == "ساره"
+    assert staff_by_user["sales"]["role_ar"] == "مبيعات"
+    assert staff_by_user["accounting"]["role_ar"] == "محاسبة"
     assert len(company.get("platforms") or []) >= 8
 
     assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)

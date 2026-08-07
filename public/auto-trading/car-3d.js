@@ -378,8 +378,8 @@
         </div>
         <div class="nt-cinema-copy">
           <p class="nt-kicker">نجار &amp; سموم 2026</p>
-          <h2>مستوردة ومختارة بعناية</h2>
-          <p>تصفّح بالصور والأسعار، وتواصل معنا مباشرة للحجز أو الاستفسار.</p>
+          <h2>مستوردة ومختارة لعُمان</h2>
+          <p>صور · أسعار · مواصفات — وتواصل مباشر عبر واتساب للحجز.</p>
           <div class="nt-cinema-actions">
             <a class="nt-btn primary" href="#custRoot">استكشف التشكيلة</a>
             <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب المعرض</a>

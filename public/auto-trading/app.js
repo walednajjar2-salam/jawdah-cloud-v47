@@ -507,9 +507,10 @@ async function loadStaff() {
     <section class="card" style="margin-top:16px">
       <div class="card-header"><h3>الصلاحيات</h3></div>
       <div class="card-body detail-list">
-        <div class="detail-row"><span>مالك (Owner)</span><strong>وليد النجار · حمد السموم — كامل الصلاحيات + رأس المال والتوزيعات</strong></div>
-        <div class="detail-row"><span>مبيعات (Sales)</span><strong>واية الشعيلي — مخزون، مبيعات، مصاريف، زبائن</strong></div>
-        <div class="detail-row"><span>مستخدم (User)</span><strong>رزان الشعيلي — عرض ومتابعة</strong></div>
+        <div class="detail-row"><span>مجلس إدارة</span><strong>وليد النجار · حمد السموم — كامل الصلاحيات + رأس المال والتوزيعات</strong></div>
+        <div class="detail-row"><span>مبيعات</span><strong>حساب مبيعات — مخزون، مبيعات، مصاريف، زبائن</strong></div>
+        <div class="detail-row"><span>محاسبة</span><strong>حساب محاسبة — مالية وتقارير</strong></div>
+        <div class="detail-row"><span>موظفة</span><strong>ساره — تشغيل ومتابعة</strong></div>
       </div>
     </section>`;
 }

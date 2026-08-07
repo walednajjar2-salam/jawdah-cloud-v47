@@ -147,7 +147,7 @@
         const data = await res.json();
         const role = String(data.user?.role || data.role || "").toLowerCase();
         const uname = String(data.user?.username || "").toLowerCase();
-        if (role === "accountant" || ["razan", "waleed", "yaqoub", "owner", "ahmed", "ahmed.najjar", "waleed.najjar"].includes(uname)) {
+        if (role === "accountant" || ["accounting", "sara", "sales", "waleed", "yaqoub", "owner", "ahmed", "ahmed.najjar", "waleed.najjar"].includes(uname)) {
           document.body.classList.add("show-finance");
         }
       } catch (_) {}
