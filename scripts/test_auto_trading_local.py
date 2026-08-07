@@ -327,6 +327,46 @@ def main() -> int:
                - float(cap["total_distributed"])) < 0.01
     assert abs(sum(float(p["ownership_pct"]) for p in partners) - 100) < 0.01
 
+    platforms = {p["id"]: p["label_ar"] for p in company.get("platforms") or []}
+    assert platforms.get("america") == "USA"
+    assert platforms.get("salam") == "SALAM TRADING"
+
+    # Delete unsold vehicle without sales history.
+    assert lq_auto_trading.handle_api(
+        db, "POST", ["vehicles"], {},
+        {
+            "stock_no": "NT-DEL-001", "make": "Test", "model": "DeleteMe",
+            "status": "متاحة", "list_price": 1000,
+        },
+        user, send,
+    )
+    del_id = out[-1][1]["vehicle"]["id"]
+    assert lq_auto_trading.handle_api(db, "DELETE", ["vehicles", str(del_id)], {}, {}, user, send)
+    assert out[-1][1]["ok"] is True
+    assert not db.execute("SELECT id FROM at_vehicles WHERE id=?", (del_id,)).fetchone()
+
+    # Sold vehicles cannot be deleted.
+    sold_id = db.execute("SELECT id FROM at_vehicles WHERE status='مباعة' LIMIT 1").fetchone()[0]
+    assert lq_auto_trading.handle_api(db, "DELETE", ["vehicles", str(sold_id)], {}, {}, user, send)
+    assert out[-1][0] == 400
+
+    # Photo upload appends to vehicle gallery.
+    photo_vehicle = db.execute("SELECT id FROM at_vehicles WHERE status='متاحة' LIMIT 1").fetchone()[0]
+    tiny_png = (
+        "data:image/png;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+    assert lq_auto_trading.handle_api(
+        db, "POST", ["vehicles", str(photo_vehicle), "photos"], {},
+        {"image": tiny_png, "content_type": "image/png"},
+        user, send,
+    )
+    uploaded = out[-1][1]
+    assert uploaded["ok"] is True
+    assert uploaded["url"].startswith("/uploads/auto-trading/vehicles/")
+    photos = json.loads(uploaded["vehicle"]["photos"]) if isinstance(uploaded["vehicle"]["photos"], str) else uploaded["vehicle"]["photos"]
+    assert uploaded["url"] in photos
+
     print("auto-trading API smoke test: OK")
     return 0
 

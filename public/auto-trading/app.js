@@ -9,6 +9,7 @@ const modalContent = document.getElementById('modalContent');
 
 let currentSection = 'dashboard';
 let vehiclesCache = [];
+let selectedVehicleId = null;
 let statusFilter = '';
 let makeFilter = '';
 let companyProfile = null;
@@ -247,8 +248,8 @@ function readToken() {
 }
 
 const PLATFORM_LABELS = {
-  america: '🇺🇸 أمريكا — مزادات Copart / IAAI',
-  salam: '🚗 سلام أوتو كار',
+  america: '🇺🇸 USA — مزادات Copart / IAAI',
+  salam: '🚗 SALAM TRADING',
   oman: '🇴🇲 عُمان — مخزون السيارات',
   dubai: '🇦🇪 دبي',
   jordan: '🇯🇴 الأردن',
@@ -860,9 +861,12 @@ async function loadVehicles() {
         <h2>مخزون السيارات</h2>
         <p>${vehiclesCache.length} مركبة</p>
       </div>
-      <div class="actions-row">
+      <div class="actions-row vehicle-crud-bar">
         <a class="btn ghost" href="${NAJJAR_WEB}/customer.html" target="_blank" rel="noopener">بوابة الزبائن</a>
-        <button class="btn primary" type="button" id="btnAddVehicle">+ إضافة مركبة</button>
+        <button class="btn primary" type="button" id="btnAddVehicle">إضافة</button>
+        <button class="btn secondary" type="button" id="btnEditSelected" disabled>تعديل</button>
+        <button class="btn danger" type="button" id="btnDeleteSelected" disabled>حذف</button>
+        <button class="btn ghost" type="button" id="btnCancelSelection">إلغاء</button>
       </div>
     </div>
     <div class="filters">
@@ -880,9 +884,40 @@ async function loadVehicles() {
       ${vehiclesCache.length ? `<div class="vehicle-grid">${vehiclesCache.map(v => vehicleCard(v)).join('')}</div>` : '<div class="empty-state">لا توجد مركبات — أضف مركبة جديدة</div>'}
     </div>`;
   document.getElementById('vehiclesShowcase').querySelectorAll('[data-vehicle-id]').forEach((card) => {
-    card.onclick = () => openVehicleDetail(card.getAttribute('data-vehicle-id'));
+    card.onclick = (ev) => {
+      if (ev.target.closest('[data-edit-id], [data-delete-id]')) return;
+      selectVehicle(card.getAttribute('data-vehicle-id'));
+      openVehicleDetail(card.getAttribute('data-vehicle-id'));
+    };
+  });
+  document.getElementById('vehiclesShowcase').querySelectorAll('[data-edit-id]').forEach((btn) => {
+    btn.onclick = (ev) => {
+      ev.stopPropagation();
+      selectVehicle(btn.getAttribute('data-edit-id'));
+      editVehicleById(btn.getAttribute('data-edit-id'));
+    };
+  });
+  document.getElementById('vehiclesShowcase').querySelectorAll('[data-delete-id]').forEach((btn) => {
+    btn.onclick = (ev) => {
+      ev.stopPropagation();
+      selectVehicle(btn.getAttribute('data-delete-id'));
+      deleteVehicleById(btn.getAttribute('data-delete-id'));
+    };
   });
   document.getElementById('btnAddVehicle').onclick = showAddVehicleForm;
+  document.getElementById('btnEditSelected').onclick = () => {
+    if (!selectedVehicleId) return toast('اختر مركبة أولاً', 'error');
+    editVehicleById(selectedVehicleId);
+  };
+  document.getElementById('btnDeleteSelected').onclick = () => {
+    if (!selectedVehicleId) return toast('اختر مركبة أولاً', 'error');
+    deleteVehicleById(selectedVehicleId);
+  };
+  document.getElementById('btnCancelSelection').onclick = () => {
+    clearVehicleSelection();
+    closeDrawer();
+    closeModal();
+  };
   document.getElementById('btnApplyFilter').onclick = () => {
     statusFilter = document.getElementById('filterStatus').value;
     makeFilter = document.getElementById('filterMake').value;
@@ -898,6 +933,103 @@ function vehiclePhotos(v) {
   return Array.isArray(photos) ? photos.filter(Boolean) : [];
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result || ''));
+    r.onerror = () => reject(new Error('تعذر قراءة الملف'));
+    r.readAsDataURL(file);
+  });
+}
+
+async function uploadVehiclePhotos(vehicleId, files) {
+  const list = Array.from(files || []).filter(Boolean);
+  if (!list.length) return [];
+  const urls = [];
+  for (const file of list) {
+    const image = await readFileAsDataUrl(file);
+    const res = await api('/vehicles/' + vehicleId + '/photos', {
+      method: 'POST',
+      body: { image, content_type: file.type || 'image/jpeg', name: file.name },
+    });
+    if (res.url) urls.push(res.url);
+  }
+  return urls;
+}
+
+function renderPhotoGallery(photos, idPrefix = 'veh') {
+  if (!photos.length) return '<p class="mini">لا توجد صور — حمّل صوراً من الأسفل</p>';
+  return `<div class="nt-photo-thumbs">${photos.map((p, i) => `
+    <div class="nt-photo-thumb${i === 0 ? ' active' : ''}"><img src="${e(p)}" alt="صورة ${i + 1}" loading="lazy"></div>
+  `).join('')}</div>`;
+}
+
+function photoUploadField(idPrefix, label = 'تحميل صور') {
+  return `
+    <label class="field full">
+      <span>${label}</span>
+      <input type="file" id="${idPrefix}Photos" accept="image/*" multiple>
+      <p class="mini">JPG · PNG · WebP — حتى 5MB لكل صورة</p>
+    </label>
+    <div id="${idPrefix}PhotoPreview" class="nt-photo-thumbs hidden"></div>`;
+}
+
+function bindPhotoPreview(inputId, previewId) {
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  if (!input || !preview) return;
+  input.onchange = () => {
+    const files = Array.from(input.files || []);
+    if (!files.length) {
+      preview.innerHTML = '';
+      preview.classList.add('hidden');
+      return;
+    }
+    preview.classList.remove('hidden');
+    preview.innerHTML = files.map((f) => {
+      const url = URL.createObjectURL(f);
+      return `<div class="nt-photo-thumb"><img src="${url}" alt="${e(f.name)}"></div>`;
+    }).join('');
+  };
+}
+
+function clearVehicleSelection() {
+  selectedVehicleId = null;
+  document.querySelectorAll('.vehicle-card.selected').forEach((el) => el.classList.remove('selected'));
+  const editBtn = document.getElementById('btnEditSelected');
+  const delBtn = document.getElementById('btnDeleteSelected');
+  if (editBtn) editBtn.disabled = true;
+  if (delBtn) delBtn.disabled = true;
+}
+
+function selectVehicle(id) {
+  selectedVehicleId = String(id);
+  document.querySelectorAll('.vehicle-card').forEach((el) => {
+    el.classList.toggle('selected', el.getAttribute('data-vehicle-id') === selectedVehicleId);
+  });
+  const editBtn = document.getElementById('btnEditSelected');
+  const delBtn = document.getElementById('btnDeleteSelected');
+  if (editBtn) editBtn.disabled = false;
+  if (delBtn) delBtn.disabled = false;
+}
+
+async function deleteVehicleById(id) {
+  const v = vehiclesCache.find((row) => String(row.id) === String(id));
+  const label = v ? `${v.make} ${v.model} (${v.stock_no})` : 'هذه المركبة';
+  if (!confirm(`حذف ${label}؟ لا يمكن التراجع.`)) return;
+  try {
+    await api('/vehicles/' + id, { method: 'DELETE' });
+    toast('تم حذف المركبة');
+    clearVehicleSelection();
+    loadVehicles();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function editVehicleById(id) {
+  const data = await api('/vehicles/' + id);
+  showEditVehicleForm(data.vehicle);
+}
+
 function vehicleCard(v) {
   const price = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
   const photos = vehiclePhotos(v);
@@ -908,7 +1040,7 @@ function vehicleCard(v) {
     ? `<span class="nt-price-fx" dir="ltr">${Number(v.price_usd).toLocaleString('en-US')} USD</span>`
     : '';
   return `
-    <article class="vehicle-card nt-vcard nt-show-card" data-vehicle-id="${v.id}" role="button" tabindex="0">
+    <article class="vehicle-card nt-vcard nt-show-card${String(selectedVehicleId) === String(v.id) ? ' selected' : ''}" data-vehicle-id="${v.id}" role="button" tabindex="0">
       ${media}
       <div class="nt-vcard-top">
         <span class="nt-vcard-stock">${e(v.stock_no)}</span>
@@ -926,7 +1058,10 @@ function vehicleCard(v) {
       </ul>
       <div class="nt-vcard-foot nt-vcard-foot--stack">
         <div class="nt-price-block"><strong class="nt-show-price">${price}</strong>${usd}</div>
-        <span class="mini">تفاصيل →</span>
+        <div class="nt-vcard-actions">
+          <button type="button" class="btn small secondary" data-edit-id="${v.id}">تعديل</button>
+          <button type="button" class="btn small danger" data-delete-id="${v.id}">حذف</button>
+        </div>
       </div>
     </article>`;
 }
@@ -959,8 +1094,10 @@ async function openVehicleDetail(id) {
   const licenseLink = vehicleDocLink(v);
   const purchaseRows = purchaseInfoRows(v);
   const saleRows = saleInfoRows(v, sales);
+  const photos = vehiclePhotos(v);
   openDrawer(`
     <div class="drawer-title"><h2>${e(v.make)} ${e(v.model)}</h2><p>${e(v.stock_no)} · ${pill(v.status)}</p></div>
+    ${photos.length ? `<div style="margin:12px 0">${renderPhotoGallery(photos)}</div>` : ''}
     <div class="detail-list" style="margin:16px 0">
       <div class="detail-row"><span>الطراز</span><strong>${e(v.variant || '—')}</strong></div>
       <div class="detail-row"><span>النوع</span><strong>${e(v.vehicle_type || '—')}</strong></div>
@@ -978,12 +1115,20 @@ async function openVehicleDetail(id) {
     ${purchaseRows ? `<h3 style="margin:14px 0 6px">معلومات الشراء — من البائع</h3><div class="detail-list">${purchaseRows}</div>` : ''}
     ${saleRows ? `<h3 style="margin:14px 0 6px">معلومات البيع — للمشتري</h3><div class="detail-list">${saleRows}</div>` : ''}
     ${licenseLink}
+    <div class="photo-upload-block" style="margin:14px 0">
+      <h3 style="margin:0 0 8px">صور المركبة</h3>
+      ${renderPhotoGallery(photos, 'drawer')}
+      ${photoUploadField('drawerUpload', 'تحميل صور جديدة')}
+      <button class="btn secondary" type="button" id="btnUploadDrawerPhotos">رفع الصور</button>
+    </div>
     <div class="form-actions">
       ${v.status !== 'مباعة' ? `<button class="btn success" type="button" id="btnSellVehicle">تسجيل بيع</button>` : ''}
       ${v.status === 'متاحة' ? `<button class="btn secondary" type="button" id="btnReserveVehicle">حجز</button>` : ''}
       <button class="btn secondary" type="button" id="btnWaVehicle">واتساب</button>
       <button class="btn ghost" type="button" id="btnPrintVehicle">طباعة عرض</button>
       <button class="btn secondary" type="button" id="btnEditVehicle">تعديل</button>
+      ${v.status !== 'مباعة' ? `<button class="btn danger" type="button" id="btnDeleteVehicle">حذف</button>` : ''}
+      <button class="btn ghost" type="button" id="btnCancelDrawer">إلغاء</button>
     </div>`);
   const sellBtn = document.getElementById('btnSellVehicle');
   if (sellBtn) sellBtn.onclick = () => showSaleForm(v);
@@ -996,6 +1141,20 @@ async function openVehicleDetail(id) {
   const reserveBtn = document.getElementById('btnReserveVehicle');
   if (reserveBtn) reserveBtn.onclick = () => showReserveForm(v);
   document.getElementById('btnEditVehicle').onclick = () => showEditVehicleForm(v);
+  document.getElementById('btnCancelDrawer').onclick = closeDrawer;
+  bindPhotoPreview('drawerUploadPhotos', 'drawerUploadPhotoPreview');
+  document.getElementById('btnUploadDrawerPhotos').onclick = async () => {
+    const input = document.getElementById('drawerUploadPhotos');
+    const files = input?.files;
+    if (!files?.length) return toast('اختر صوراً للرفع', 'error');
+    try {
+      await uploadVehiclePhotos(v.id, files);
+      toast('تم رفع الصور');
+      openVehicleDetail(v.id);
+    } catch (err) { toast(err.message, 'error'); }
+  };
+  const deleteBtn = document.getElementById('btnDeleteVehicle');
+  if (deleteBtn) deleteBtn.onclick = () => { closeDrawer(); deleteVehicleById(v.id); };
 }
 
 function showReserveForm(v) {
@@ -1058,13 +1217,16 @@ function showAddVehicleForm() {
     <div class="form-grid" style="margin-top:6px">
       <label class="field full"><span>ملاحظات</span><textarea id="fNotes" rows="2"></textarea></label>
     </div>
+    <h3 style="margin:16px 0 6px">صور المركبة</h3>
+    ${photoUploadField('fNew', 'تحميل صور')}
     <div class="form-actions">
       <button class="btn primary" type="button" id="btnSaveVehicle">حفظ</button>
       <button class="btn ghost" type="button" onclick="closeModal()">إلغاء</button>
     </div>`);
+  bindPhotoPreview('fNewPhotos', 'fNewPhotoPreview');
   document.getElementById('btnSaveVehicle').onclick = async () => {
     try {
-      await api('/vehicles', {
+      const res = await api('/vehicles', {
         method: 'POST',
         body: {
           stock_no: document.getElementById('fStockNo').value.trim(),
@@ -1085,6 +1247,10 @@ function showAddVehicleForm() {
           notes: document.getElementById('fNotes').value.trim(),
         },
       });
+      const photoInput = document.getElementById('fNewPhotos');
+      if (photoInput?.files?.length && res.vehicle?.id) {
+        await uploadVehiclePhotos(res.vehicle.id, photoInput.files);
+      }
       closeModal();
       toast('تمت إضافة المركبة');
       loadVehicles();
@@ -1094,8 +1260,10 @@ function showAddVehicleForm() {
 
 function showEditVehicleForm(v) {
   closeDrawer();
+  const photos = vehiclePhotos(v);
   openModal(`
     <h2>تعديل ${e(v.make)} ${e(v.model)}</h2>
+    ${photos.length ? `<div style="margin-bottom:12px">${renderPhotoGallery(photos, 'edit')}</div>` : ''}
     <div class="form-grid">
       <label class="field"><span>الحالة</span>
         <select id="eStatus">${['متاحة', 'محجوزة', 'مباعة', 'قيد الاستيراد', 'صيانة'].map(s => `<option value="${s}" ${v.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
@@ -1113,10 +1281,14 @@ function showEditVehicleForm(v) {
       <label class="field"><span>تاريخ الشراء</span><input id="ePurchaseDate" type="date" value="${e(v.purchase_date || '')}"></label>
       <label class="field full"><span>ملاحظات</span><textarea id="eNotes" rows="2">${e(v.notes || '')}</textarea></label>
     </div>
+    <h3 style="margin:16px 0 6px">صور المركبة</h3>
+    ${photoUploadField('fEdit', 'تحميل صور إضافية')}
     <div class="form-actions">
       <button class="btn primary" type="button" id="btnUpdateVehicle">حفظ التعديل</button>
       <button class="btn ghost" type="button" onclick="closeModal()">إلغاء</button>
+      ${v.status !== 'مباعة' ? `<button class="btn danger" type="button" id="btnDeleteInEdit">حذف</button>` : ''}
     </div>`);
+  bindPhotoPreview('fEditPhotos', 'fEditPhotoPreview');
   document.getElementById('btnUpdateVehicle').onclick = async () => {
     try {
       await api('/vehicles/' + v.id, {
@@ -1137,11 +1309,17 @@ function showEditVehicleForm(v) {
           notes: document.getElementById('eNotes').value.trim(),
         },
       });
+      const photoInput = document.getElementById('fEditPhotos');
+      if (photoInput?.files?.length) {
+        await uploadVehiclePhotos(v.id, photoInput.files);
+      }
       closeModal();
       toast('تم حفظ التعديل');
       loadVehicles();
     } catch (err) { toast(err.message, 'error'); }
   };
+  const delInEdit = document.getElementById('btnDeleteInEdit');
+  if (delInEdit) delInEdit.onclick = () => { closeModal(); deleteVehicleById(v.id); };
 }
 
 function showSaleForm(v) {

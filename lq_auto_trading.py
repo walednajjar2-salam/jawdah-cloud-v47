@@ -82,8 +82,8 @@ COMPANY_PROFILE: Dict[str, Any] = {
         },
     ],
     "platforms": [
-        {"id": "america", "label_ar": "أمريكا", "icon": "🇺🇸", "kind": "auctions", "tags": ["Copart", "IAAI"]},
-        {"id": "salam", "label_ar": "سلام أوتو كار", "icon": "🚗", "kind": "partner"},
+        {"id": "america", "label_ar": "USA", "icon": "🇺🇸", "kind": "auctions", "tags": ["Copart", "IAAI"]},
+        {"id": "salam", "label_ar": "SALAM TRADING", "icon": "🚗", "kind": "partner"},
         {"id": "oman", "label_ar": "عُمان", "icon": "🇴🇲", "kind": "inventory"},
         {"id": "dubai", "label_ar": "دبي", "icon": "🇦🇪", "kind": "import"},
         {"id": "jordan", "label_ar": "الأردن", "icon": "🇯🇴", "kind": "import"},
@@ -98,7 +98,7 @@ EDITABLE_VEHICLE_FIELDS = (
     "status", "list_price", "purchase_cost", "plate_no", "license_valid_until",
     "insurance_company", "insurance_policy", "insurance_type", "buyer_name", "buyer_phone",
     "import_ref", "origin_country", "notes", "reserved_by", "reserved_until",
-    "seller_name", "seller_phone", "seller_id", "purchase_date",
+    "seller_name", "seller_phone", "seller_id", "purchase_date", "photos",
 )
 LOCKED_VEHICLE_FIELDS = ("stock_no", "make", "model", "variant", "vin", "engine_no", "year")
 EXPENSE_CATEGORIES = (
@@ -697,6 +697,38 @@ def public_showroom(db: sqlite3.Connection) -> List[Dict[str, Any]]:
     return out
 
 
+def _vehicle_photos_list(raw: Any) -> List[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [str(p).strip() for p in raw if str(p).strip()]
+    if isinstance(raw, str) and raw.strip():
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                return [str(p).strip() for p in parsed if str(p).strip()]
+        except json.JSONDecodeError:
+            return [raw.strip()]
+    return []
+
+
+def _photos_json(raw: Any) -> str:
+    return json.dumps(_vehicle_photos_list(raw), ensure_ascii=False)
+
+
+def _save_vehicle_photo_file(vehicle_id: int, payload: Dict[str, Any]) -> str:
+    from server import MAX_PROPERTY_PHOTO_BYTES, decode_upload_payload, save_named_image_upload
+
+    file_bytes, content_type = decode_upload_payload(payload)
+    return save_named_image_upload(
+        "auto-trading/vehicles",
+        f"vehicle-{vehicle_id}",
+        file_bytes,
+        content_type,
+        MAX_PROPERTY_PHOTO_BYTES,
+    )
+
+
 def handle_api(
     db: sqlite3.Connection,
     method: str,
@@ -814,6 +846,8 @@ def handle_api(
                     return send_json({"ok": False, "error": "حالة غير صالحة"}, 400) or True
                 if field in ("list_price", "purchase_cost"):
                     val = float(val or 0)
+                if field == "photos":
+                    val = _photos_json(val)
                 updates[field] = val
         if not updates:
             return send_json({"ok": False, "error": "لا توجد حقول للتحديث"}, 400) or True
@@ -826,6 +860,55 @@ def handle_api(
         db.commit()
         row = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
         return send_json({"ok": True, "vehicle": dict(row)}) or True
+
+    if head == "vehicles" and len(parts) == 3 and parts[2] == "photos" and method == "POST":
+        try:
+            vehicle_id = int(parts[1])
+        except ValueError:
+            return send_json({"ok": False, "error": "رقم المركبة غير صحيح"}, 400) or True
+        current = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
+        if not current:
+            return send_json({"ok": False, "error": "المركبة غير موجودة"}, 404) or True
+        upload = payload.get("upload") or payload
+        if not isinstance(upload, dict) or not (upload.get("image") or upload.get("data") or upload.get("base64")):
+            return send_json({"ok": False, "error": "لم يتم إرسال صورة"}, 400) or True
+        try:
+            url = _save_vehicle_photo_file(vehicle_id, upload)
+        except ValueError as exc:
+            return send_json({"ok": False, "error": str(exc)}, 400) or True
+        photos = _vehicle_photos_list(dict(current).get("photos"))
+        if url not in photos:
+            photos.append(url)
+        db.execute(
+            "UPDATE at_vehicles SET photos=?, updated_at=? WHERE id=?",
+            (_photos_json(photos), now_iso(), vehicle_id),
+        )
+        _audit(db, user, "vehicle_photo_added", "vehicle", str(vehicle_id), {"url": url})
+        db.commit()
+        row = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
+        return send_json({"ok": True, "vehicle": dict(row), "url": url}) or True
+
+    if head == "vehicles" and len(parts) == 2 and method == "DELETE":
+        try:
+            vehicle_id = int(parts[1])
+        except ValueError:
+            return send_json({"ok": False, "error": "رقم المركبة غير صحيح"}, 400) or True
+        current = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
+        if not current:
+            return send_json({"ok": False, "error": "المركبة غير موجودة"}, 404) or True
+        cur = dict(current)
+        if cur.get("status") == "مباعة":
+            return send_json({"ok": False, "error": "لا يمكن حذف مركبة مباعة"}, 400) or True
+        sale = db.execute("SELECT id FROM at_sales WHERE vehicle_id=? LIMIT 1", (vehicle_id,)).fetchone()
+        if sale:
+            return send_json({"ok": False, "error": "لا يمكن حذف مركبة لها سجل بيع"}, 400) or True
+        stock_no = str(cur.get("stock_no") or "")
+        db.execute("DELETE FROM at_purchases WHERE vehicle_id=?", (vehicle_id,))
+        db.execute("DELETE FROM at_expenses WHERE vehicle_id=?", (vehicle_id,))
+        db.execute("DELETE FROM at_vehicles WHERE id=?", (vehicle_id,))
+        _audit(db, user, "vehicle_deleted", "vehicle", str(vehicle_id), {"stock_no": stock_no})
+        db.commit()
+        return send_json({"ok": True, "deleted": vehicle_id, "stock_no": stock_no}) or True
 
     if head == "vehicles" and method == "POST" and len(parts) == 1:
         stock_no = str(payload.get("stock_no") or "").strip()
@@ -843,14 +926,15 @@ def handle_api(
         seller_id = str(payload.get("seller_id") or "").strip()
         purchase_date = str(payload.get("purchase_date") or "").strip()
         purchase_cost = float(payload.get("purchase_cost") or 0)
+        photos_json = _photos_json(payload.get("photos") or [])
         db.execute(
             """INSERT INTO at_vehicles(
                 stock_no, make, model, variant, vehicle_type, color, year, vin, engine_no,
                 engine_cc, seats, axles, origin_country, import_ref, purchase_cost, list_price,
                 status, plate_no, license_valid_until, insurance_company, insurance_policy, notes,
-                seller_name, seller_phone, seller_id, purchase_date,
+                seller_name, seller_phone, seller_id, purchase_date, photos,
                 created_at, updated_at
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 stock_no, make, model,
                 str(payload.get("variant") or ""),
@@ -872,7 +956,7 @@ def handle_api(
                 str(payload.get("insurance_company") or ""),
                 str(payload.get("insurance_policy") or ""),
                 str(payload.get("notes") or ""),
-                seller_name, seller_phone, seller_id, purchase_date,
+                seller_name, seller_phone, seller_id, purchase_date, photos_json,
                 now_iso(), now_iso(),
             ),
         )

@@ -352,6 +352,28 @@ body.section-dashboard .content.dashboard-page {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
 }
 
+.theme-autotrading .btn.danger,
+.nt-btn.danger {
+  background: linear-gradient(135deg, #6b1515, #c0392b) !important;
+  color: #fff !important;
+  border: 1px solid rgba(0, 0, 0, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.vehicle-crud-bar { flex-wrap: wrap; gap: 8px; }
+.vehicle-card.selected {
+  outline: 2px solid #caa14a;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(202, 161, 74, 0.18);
+}
+.nt-vcard-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.photo-upload-block .nt-photo-thumbs { margin-bottom: 10px; }
+
 /* Glassy icon buttons in the topbar (refresh, menu, version chip) — golden crystal edge */
 .theme-autotrading .icon-btn,
 .theme-autotrading .mobile-menu,
