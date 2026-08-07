@@ -220,7 +220,7 @@
         <img src="${LOGO}" alt="NAJJAR & AL SAMOOM">
         <div class="brand-center">
           <h1>NAJJAR &amp; AL SAMOOM TRADING</h1>
-          <h2>النجار والسموم للتجارة</h2>
+          <h2>USED &amp; IMPORTED CARS</h2>
           <p>USED &amp; IMPORTED CARS · ${esc(company.address_ar || 'نزوى — الفلج')} · سلطنة عُمان</p>
           <div class="badge">${esc(docTitleAr)}${docTitleEn ? ' · ' + esc(docTitleEn) : ''}</div>
         </div>

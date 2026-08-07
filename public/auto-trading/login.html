@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Sign in | NAJJAR & AL SAMOOM TRADING</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at42">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at44">
 </head>
 <body class="nt-login">
   <div class="nt-watermark" aria-hidden="true"></div>
@@ -16,16 +16,23 @@
       <p class="nt-login-loc">محافظة الداخلية — ولاية نزوى</p>
     </section>
     <section class="nt-login-card">
-      <h2>تسجيل الدخول</h2>
-      <p class="nt-login-hint">بعد الدخول تنتقل إلى صفحة المنصات حسب الدول</p>
+      <h2>Sign in</h2>
+      <p class="nt-login-hint">Passwords are easy numbers 1–5 for the team accounts below</p>
       <label class="nt-field">
-        <span>اسم المستخدم</span>
-        <input id="loginUser" autocomplete="username" placeholder="مثال: waleed.najjar">
+        <span>Username</span>
+        <input id="loginUser" autocomplete="username" placeholder="waleed.najjar">
       </label>
       <label class="nt-field">
-        <span>كلمة المرور</span>
-        <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••">
+        <span>Password</span>
+        <input id="loginPass" type="password" autocomplete="current-password" placeholder="1">
       </label>
+      <div class="nt-login-creds" aria-label="Team logins">
+        <div><code>waleed.najjar</code> / <strong>1</strong> · Board</div>
+        <div><code>hamad.sumoom</code> / <strong>2</strong> · Board</div>
+        <div><code>sara</code> / <strong>3</strong> · Operations</div>
+        <div><code>sales</code> / <strong>4</strong> · Sales</div>
+        <div><code>accounting</code> / <strong>5</strong> · Accounting</div>
+      </div>
       <button class="nt-btn primary" type="button" id="loginBtn">دخول → المنصات</button>
       <p id="loginErr" class="nt-err" hidden></p>
       <div class="nt-login-links">
@@ -40,7 +47,7 @@
       </div>
     </section>
   </main>
-  <script src="/auto-trading/car-3d.js?v=at16"></script>
+  <script src="/auto-trading/car-3d.js?v=at17"></script>
   <script>
     document.getElementById('loginBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'login' });
 

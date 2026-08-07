@@ -345,7 +345,7 @@
         ${opts.hero !== false ? renderHero(sorted) : ''}
         <section class="nt-cust-intro">
           <div>
-            <h2>المعروض الآن</h2>
+            <h2>Available now</h2>
             <p>صور حقيقية · أسعار واضحة · تواصل واتساب مباشر</p>
           </div>
           <div class="nt-show-controls">
@@ -378,7 +378,7 @@
         </div>
         <div class="nt-cinema-copy">
           <p class="nt-kicker">NAJJAR &amp; AL SAMOOM TRADING</p>
-          <h2>مستوردة ومختارة بعناية</h2>
+          <h2>Imported & carefully selected</h2>
           <p>تصفّح بالصور والأسعار، وتواصل معنا مباشرة للحجز أو الاستفسار.</p>
           <div class="nt-cinema-actions">
             <a class="nt-btn primary" href="#custRoot">استكشف التشكيلة</a>
