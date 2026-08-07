@@ -40,6 +40,12 @@
       accountingDesc: "الفواتير، التحصيل، القيود، والتقارير المالية",
       enter: "دخول",
       language: "اللغة",
+      showPassword: "إظهار",
+      capsLockOn: "يبدو أن زر Caps Lock مفعّل",
+      hidePassword: "إخفاء",
+      passwordVisibility: "إظهار أو إخفاء كلمة المرور",
+      saveCredentials: "حفظ البيانات وتعبئة تلقائية عند الدخول",
+      installApp: "تثبيت التطبيق",
       executiveOverview: "نظرة تنفيذية",
       goodMorning: "مرحباً {name}. هذا ملخص أعمالك اليوم.",
       revenue: "الإيرادات",
@@ -99,6 +105,12 @@
       accountingDesc: "Invoices, collection, ledgers, and finance reports",
       enter: "Enter",
       language: "Language",
+      showPassword: "Show",
+      capsLockOn: "Caps Lock appears to be on",
+      hidePassword: "Hide",
+      passwordVisibility: "Show or hide the password",
+      saveCredentials: "Save my details and fill them in next time",
+      installApp: "Install app",
       executiveOverview: "Executive Overview",
       goodMorning: "Hello {name}. Here's what's happening today.",
       revenue: "Revenue",
@@ -158,6 +170,12 @@
       accountingDesc: "चालान, संग्रह, खाते और वित्तीय रिपोर्ट",
       enter: "प्रवेश",
       language: "भाषा",
+      showPassword: "दिखाएँ",
+      capsLockOn: "लगता है Caps Lock चालू है",
+      hidePassword: "छिपाएँ",
+      passwordVisibility: "पासवर्ड दिखाएँ या छिपाएँ",
+      saveCredentials: "मेरा विवरण सहेजें और अगली बार भर दें",
+      installApp: "ऐप इंस्टॉल करें",
       executiveOverview: "कार्यकारी अवलोकन",
       goodMorning: "नमस्ते {name}. आज का सारांश यहाँ है.",
       revenue: "राजस्व",
@@ -217,6 +235,12 @@
       accountingDesc: "চালান, আদায়, খাতা ও আর্থিক প্রতিবেদন",
       enter: "প্রবেশ",
       language: "ভাষা",
+      showPassword: "দেখান",
+      capsLockOn: "মনে হচ্ছে Caps Lock চালু আছে",
+      hidePassword: "লুকান",
+      passwordVisibility: "পাসওয়ার্ড দেখান বা লুকান",
+      saveCredentials: "আমার তথ্য সংরক্ষণ করে পরেরবার বসিয়ে দিন",
+      installApp: "অ্যাপ ইনস্টল করুন",
       executiveOverview: "নির্বাহী সংক্ষিপ্তসার",
       goodMorning: "হ্যালো {name}. আজকের সারাংশ এখানে.",
       revenue: "আয়",
@@ -276,6 +300,12 @@
       accountingDesc: "بل، وصولی، کھاتہ اور مالیاتی رپورٹس",
       enter: "داخلہ",
       language: "زبان",
+      showPassword: "دکھائیں",
+      capsLockOn: "ایسا لگتا ہے Caps Lock آن ہے",
+      hidePassword: "چھپائیں",
+      passwordVisibility: "پاس ورڈ دکھائیں یا چھپائیں",
+      saveCredentials: "میری تفصیلات محفوظ کر کے اگلی بار بھر دیں",
+      installApp: "ایپ انسٹال کریں",
       executiveOverview: "انتظامی جائزہ",
       goodMorning: "ہیلو {name}. آج کا خلاصہ یہ ہے.",
       revenue: "آمدنی",
@@ -352,6 +382,9 @@
     });
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
       el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
+    });
+    document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+      el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria")));
     });
     return html.dir;
   }
@@ -435,8 +468,10 @@
       ["bn", "বাংলা"],
       ["ur", "اردو"],
     ];
-    return `<label class="lq-lang-switch" for="${id}"><span>${t("language")}</span>
-      <select id="${id}" aria-label="${t("language")}">
+    /* The switcher outlives a language change — rebuilding it would destroy the
+       <select> mid-event — so its own caption is tagged for the next pass. */
+    return `<label class="lq-lang-switch" for="${id}"><span data-i18n="language">${t("language")}</span>
+      <select id="${id}" data-i18n-aria="language" aria-label="${t("language")}">
         ${opts.map(([c, l]) => `<option value="${c}" ${c === lang ? "selected" : ""}>${l}</option>`).join("")}
       </select></label>`;
   }

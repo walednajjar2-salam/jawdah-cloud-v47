@@ -4321,11 +4321,18 @@ function initLoginUx(){
   if(user && !user.value) user.value = localStorage.getItem('jawdah_last_user') || '';
   if(remember) remember.checked = (localStorage.getItem('jawdah_last_remember') || '1') === '1';
   if(toggle && pass){
-    toggle.onclick = ()=> {
-      const show = pass.type === 'password';
-      pass.type = show ? 'text' : 'password';
-      toggle.textContent = show ? 'إخفاء' : 'إظهار';
+    // The key travels with the button so a later language switch relabels it
+    // in whichever state the user left it.
+    const label = ()=>{
+      const key = pass.type === 'password' ? 'showPassword' : 'hidePassword';
+      toggle.setAttribute('data-i18n', key);
+      toggle.textContent = (window.LQ_I18N && LQ_I18N.t) ? LQ_I18N.t(key) : toggle.textContent;
     };
+    toggle.onclick = ()=> {
+      pass.type = pass.type === 'password' ? 'text' : 'password';
+      label();
+    };
+    label();
   }
   if(pass && caps){
     const syncCaps = (ev)=>{

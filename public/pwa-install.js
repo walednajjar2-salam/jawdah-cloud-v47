@@ -2,13 +2,18 @@
   var deferredPrompt = null;
   var installButton = null;
 
+  function t(key, fallback) {
+    return window.LQ_I18N && window.LQ_I18N.t ? window.LQ_I18N.t(key) : fallback;
+  }
+
   function createInstallButton() {
     if (installButton || window.matchMedia("(display-mode: standalone)").matches) return;
     installButton = document.createElement("button");
     installButton.type = "button";
     installButton.id = "lqInstallAppBtn";
-    installButton.textContent = "تثبيت التطبيق";
-    installButton.setAttribute("aria-label", "تثبيت تطبيق Launch Quality ERP");
+    installButton.setAttribute("data-i18n", "installApp");
+    installButton.textContent = t("installApp", "تثبيت التطبيق");
+    installButton.setAttribute("aria-label", installButton.textContent);
     installButton.style.cssText = [
       "position:fixed",
       "left:18px",

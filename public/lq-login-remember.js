@@ -33,8 +33,14 @@
     if (!pane || document.getElementById("lqRememberLogin")) return;
     const row = document.createElement("label");
     row.className = "lq-remember-row";
+    const caption =
+      window.LQ_I18N && window.LQ_I18N.t
+        ? window.LQ_I18N.t("saveCredentials")
+        : "حفظ البيانات وتعبئة تلقائية عند الدخول";
     row.innerHTML =
-      '<input type="checkbox" id="lqRememberLogin"> حفظ البيانات وتعبئة تلقائية عند الدخول';
+      '<input type="checkbox" id="lqRememberLogin"> ' +
+      '<span data-i18n="saveCredentials"></span>';
+    row.querySelector("span").textContent = caption;
     const btn = document.getElementById("loginBtn");
     if (btn) pane.insertBefore(row, btn);
     else pane.appendChild(row);

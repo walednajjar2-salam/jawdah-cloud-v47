@@ -112,10 +112,18 @@ body.login-ultra #loginScreen .login-shell{
   justify-items:stretch !important;
   animation:lqLoginRise .75s ease both;
 }
-body.login-ultra #loginScreen .login-stage,
-body.login-ultra #loginScreen .login-top-logo,
-body.login-ultra #loginScreen .login-glass-card{
+/* The shell above is pinned to a physical LTR grid so the brand always sits
+   beside the form. Its children must therefore be told the direction again,
+   and it has to be the document's, otherwise English stays right-aligned. */
+html[dir="rtl"] body.login-ultra #loginScreen .login-stage,
+html[dir="rtl"] body.login-ultra #loginScreen .login-top-logo,
+html[dir="rtl"] body.login-ultra #loginScreen .login-glass-card{
   direction:rtl !important;
+}
+html[dir="ltr"] body.login-ultra #loginScreen .login-stage,
+html[dir="ltr"] body.login-ultra #loginScreen .login-top-logo,
+html[dir="ltr"] body.login-ultra #loginScreen .login-glass-card{
+  direction:ltr !important;
 }
 
 body.login-ultra #loginScreen .login-top-logo{
@@ -305,7 +313,7 @@ body.login-ultra #loginScreen .login-card-head{
   margin:0 0 14px !important;
   padding:0 0 12px !important;
   border-bottom:1px solid var(--lq-atm-line, rgba(16,32,51,.12)) !important;
-  text-align:right !important;
+  text-align:start !important;
 }
 body.login-ultra #loginScreen .login-card-brand{display:none !important}
 body.login-ultra #loginScreen .login-card-title{
@@ -317,7 +325,7 @@ body.login-ultra #loginScreen .login-card-title{
   line-height:1.3 !important;
   background:none !important;
   -webkit-text-fill-color:var(--lq-login-ink) !important;
-  text-align:right !important;
+  text-align:start !important;
 }
 body.login-ultra #loginScreen .login-card-sub{
   color:var(--lq-login-muted) !important;
@@ -325,7 +333,7 @@ body.login-ultra #loginScreen .login-card-sub{
   margin:4px 0 0 !important;
   -webkit-text-fill-color:var(--lq-login-muted) !important;
   font-weight:600 !important;
-  text-align:right !important;
+  text-align:start !important;
 }
 
 body.login-ultra #loginScreen .ev-auth-tabs{
@@ -358,7 +366,7 @@ body.login-ultra #loginScreen .login-field{
   position:relative !important;
   display:block !important;
   margin:0 0 12px !important;
-  text-align:right !important;
+  text-align:start !important;
 }
 body.login-ultra #loginScreen .login-field-label{
   display:block !important;
@@ -367,7 +375,7 @@ body.login-ultra #loginScreen .login-field-label{
   font-size:.8rem !important;
   font-weight:800 !important;
   margin-bottom:5px !important;
-  text-align:right !important;
+  text-align:start !important;
 }
 body.login-ultra #loginScreen .login-field-icon{display:none !important;}
 body.login-ultra #loginScreen .login-form input:not(.ev-otp-input):not([type="checkbox"]):not([type="radio"]),
@@ -389,7 +397,7 @@ body.login-ultra #loginScreen input[type="password"]{
   font-weight:700 !important;
   font-family:var(--lq-login-font) !important;
   min-height:44px !important;
-  text-align:right !important;
+  text-align:start !important;
   box-shadow:
     0 1px 0 rgba(255,255,255,.95) inset,
     0 6px 14px rgba(15,42,74,.05) !important;
@@ -423,7 +431,7 @@ body.login-ultra #loginScreen #loginPass:-webkit-autofill{
 body.login-ultra #loginScreen .login-pass-toggle{
   position:absolute !important;
   inset-inline-end:8px !important;
-  left:auto !important;
+  inset-inline-start:auto !important;
   top:28px !important;
   border:0 !important;
   background:transparent !important;
