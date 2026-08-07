@@ -1,10 +1,10 @@
-Launch Quality LLC v70.4-finish-remaining — Production
+نجار & سموم 2026 — Production
 
 Repo: https://github.com/walednajjar2-salam/jawdah-cloud-v47
-Live: https://web-production-08d73.up.railway.app/fresh
+Live: https://web-production-08d73.up.railway.app/
 Health: https://web-production-08d73.up.railway.app/api/health
-Expected version: Launch-Quality-LLC-v70.4-finish-remaining
-Stable tag: v70.4-complete
+Expected version: Najjar-Sumoom-2026-v72.0
+Stable tag: v72.0-najjar-sumoom-2026
 
 1) Deploy from GitHub branch `main`
 2) Railway Volume mounted at:
@@ -23,13 +23,11 @@ Stable tag: v70.4-complete
    DATABASE_URL or LQ_DATABASE_URL (Postgres shadow only)
    LQ_OFFSITE_BACKUP_URL (webhook on top of local Volume mirror)
 5) Verify:
-   /api/health  -> version contains v70.4, ok=true, platform_ready=true
-   /fresh       -> clear cache then login
-   /get-windows -> EXE + portable ZIP
-   /get-android -> staff APK
+   /api/health  -> version contains Najjar-Sumoom-2026, ok=true
+   /            -> معرض نجار & سموم 2026
+   /najjar/login -> دخول الموظفين
 6) Smoke flow:
-   portal select -> estate / majlis / accounting hubs
-   majlis event book OR estate contract -> invoice -> payment -> backup
+   customer showroom -> staff login -> platforms -> stock / sale / capital
 
 Start command: python server.py
 Health check: /api/health

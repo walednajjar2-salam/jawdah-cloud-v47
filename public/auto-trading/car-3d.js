@@ -1,4 +1,4 @@
-/* NAJJAR & AL SAMOOM TRADING — Car showroom: photos · prices · specs */
+/* نجار & سموم 2026 — Car showroom: photos · prices · specs */
 (function (global) {
   const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
@@ -101,7 +101,7 @@
   function renderGlassLogo(opts = {}) {
     const size = opts.size || 'hero';
     const src = opts.src || '/auto-trading/assets/logo-official-clear.png?v=at13';
-    const alt = opts.alt || 'NAJJAR & AL SAMOOM TRADING';
+    const alt = opts.alt || 'نجار & سموم 2026';
     return `
       <div class="nt-glass-logo-float nt-glass-logo-float--${esc(size)}" role="img" aria-label="${esc(alt)}">
         <div class="nt-glass-logo-glow"></div>
@@ -201,7 +201,7 @@
     const omr = v.price_on_request ? 0 : priceOMR(v);
     const priceLine = omr > 0 ? `السعر: ${fmtNum(omr, 3)} ر.ع` : 'السعر: عند الطلب';
     return `https://wa.me/96871924089?text=${encodeURIComponent([
-      'مرحباً NAJJAR & AL SAMOOM TRADING',
+      'مرحباً نجار & سموم 2026',
       'أرغب بالاستفسار عن السيارة التالية:',
       `${v.make} ${v.model} ${v.variant || ''}`.trim(),
       v.year ? `السنة: ${v.year}` : '',
@@ -377,7 +377,7 @@
           ${stage}
         </div>
         <div class="nt-cinema-copy">
-          <p class="nt-kicker">NAJJAR &amp; AL SAMOOM TRADING</p>
+          <p class="nt-kicker">نجار &amp; سموم 2026</p>
           <h2>مستوردة ومختارة بعناية</h2>
           <p>تصفّح بالصور والأسعار، وتواصل معنا مباشرة للحجز أو الاستفسار.</p>
           <div class="nt-cinema-actions">

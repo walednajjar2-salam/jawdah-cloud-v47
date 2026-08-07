@@ -1,4 +1,4 @@
-"""Al-Najjar & Al-Sumoom Auto Trading — النجار والسموم لتجارة واستيراد السيارات."""
+"""نجار & سموم 2026 — تجارة واستيراد السيارات."""
 from __future__ import annotations
 
 import json
@@ -17,8 +17,10 @@ if not SEED_PATH.exists() and _LEGACY_SEED_PATH.exists():
     SEED_PATH = _LEGACY_SEED_PATH
 
 COMPANY_PROFILE: Dict[str, Any] = {
-    "name_ar": "النجار والسموم للتجارة — سيارات مستعملة ومستوردة",
-    "name_en": "NAJJAR & AL SAMOOM TRADING",
+    "name_ar": "نجار & سموم 2026",
+    "name_en": "NAJJAR & SUMOOM 2026",
+    "legal_name_ar": "النجار والسموم للتجارة",
+    "legal_name_en": "NAJJAR & AL SAMOOM TRADING",
     "tagline_en": "USED & IMPORTED CARS",
     "bank_account_name_en": "Al Najjar Trading",
     "activity_ar": "تجارة واستيراد السيارات — مستعمل ومستورد",

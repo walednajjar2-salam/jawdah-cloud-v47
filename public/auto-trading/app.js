@@ -1,4 +1,4 @@
-/* النجار والسموم — تجارة واستيراد السيارات */
+/* نجار & سموم 2026 — تجارة واستيراد السيارات */
 const NAJJAR_WEB = '/najjar';
 const API_BASE = '/api/auto-trading';
 const content = document.getElementById('content');
@@ -29,7 +29,7 @@ function vehicleWhatsAppText(v, c) {
   const co = c || companyProfile || {};
   const priceLine = Number(v.list_price) > 0 ? `السعر: ${money(v.list_price)}` : 'السعر: حسب الاتفاق';
   return [
-    'NAJJAR & AL SAMOOM TRADING — USED & IMPORTED CARS',
+    'نجار & سموم 2026 — USED & IMPORTED CARS',
     `${v.make} ${v.model} ${v.variant || ''}`.trim(),
     v.vehicle_type ? `النوع: ${v.vehicle_type}` : '',
     `السنة: ${v.year || '—'} · اللون: ${v.color || '—'}`,
@@ -109,9 +109,9 @@ async function printVehicleOffer(v) {
   const c = await ensureCompany();
   const bank = c.bank || {};
   const priceCell = Number(v.list_price) > 0 ? `<b>${money(v.list_price)}</b>` : 'حسب الاتفاق';
-  openPrintWindow('عرض سيارة — NAJJAR & AL SAMOOM TRADING', `
+  openPrintWindow('عرض سيارة — نجار & سموم 2026', `
     <div class="head">
-      <h1>NAJJAR & AL SAMOOM TRADING</h1>
+      <h1>نجار & سموم 2026</h1>
       <p>USED & IMPORTED CARS · ${e(c.address_ar || '')}</p>
       <p>${e(c.address_en || '')}</p>
     </div>
@@ -143,7 +143,7 @@ async function printVehicleOffer(v) {
       رمز السويفت: <span dir="ltr">${e(bank.swift || '')}</span>
     </div>
     <p>واتساب: <span dir="ltr">+968 71924089</span> · <span dir="ltr">+968 93391994</span></p>
-    <div class="foot">NAJJAR & AL SAMOOM TRADING · Nizwa · Falaj · ${e(v.license_source ? 'بيانات الرخصة: ' + v.license_source : '')}</div>`);
+    <div class="foot">نجار & سموم 2026 · Nizwa · Falaj · ${e(v.license_source ? 'بيانات الرخصة: ' + v.license_source : '')}</div>`);
 }
 
 function printSaleReceipt(sale, c) {
@@ -351,7 +351,7 @@ function pill(s, label = s) {
 
 function setTitle(title, subtitle = '') {
   document.getElementById('pageTitle').textContent = title;
-  document.getElementById('pageSubtitle').textContent = subtitle || 'النجار والسموم — تجارة واستيراد السيارات';
+  document.getElementById('pageSubtitle').textContent = subtitle || 'نجار & سموم 2026 — تجارة واستيراد السيارات';
 }
 
 function openDrawer(html) {
@@ -406,9 +406,9 @@ function renderCompanyCard(c) {
   const contacts = c.contacts || [];
   return `
     <div class="company-hero-wide">
-      <img class="sign-banner" src="${e(c.logo_card_url || LOGO_CARD)}" alt="${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}">
+      <img class="sign-banner" src="${e(c.logo_card_url || LOGO_CARD)}" alt="${e(c.name_en || 'NAJJAR & SUMOOM 2026')}">
       <div>
-        <h2 style="margin:0;color:var(--navy)">${e(c.name_en || 'NAJJAR & AL SAMOOM TRADING')}</h2>
+        <h2 style="margin:0;color:var(--navy)">${e(c.name_en || 'NAJJAR & SUMOOM 2026')}</h2>
         <p class="mini" style="letter-spacing:1px">${e(c.tagline_en || 'USED & IMPORTED CARS')}</p>
         <p class="mini">${e(c.name_ar || '')}</p>
         <p class="mini">${e(c.address_ar || '')} · ${e(c.address_en || '')}</p>
@@ -439,7 +439,7 @@ function renderCompanyCard(c) {
         </div>
       </section>
     </div>
-    <p class="mini" style="margin-top:12px">الشعار مطابق للافتة الخارجية — NAJJAR & AL SAMOOM TRADING · Nizwa · Falaj</p>`;
+    <p class="mini" style="margin-top:12px">الشعار مطابق للافتة الخارجية — نجار & سموم 2026 · Nizwa · Falaj</p>`;
 }
 
 function bindCopyButtons(root) {
@@ -484,12 +484,12 @@ async function loadSection(section) {
 }
 
 async function loadStaff() {
-  setTitle('الموظفون', 'فريق NAJJAR & AL SAMOOM TRADING — صلاحيات الدخول');
+  setTitle('الموظفون', 'فريق نجار & سموم 2026 — صلاحيات الدخول');
   const c = await ensureCompany();
   const staff = c.staff || [];
   content.innerHTML = `
     <div class="nt-dash-banner nt-dash-banner--logo">
-      <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
+      <img src="${e(c.logo_url || LOGO_URL)}" alt="نجار و سموم 2026">
       <div>
         <h2>فريق العمل</h2>
         <p>ملاك · مبيعات · مستخدمون — صلاحيات المنصة</p>
@@ -540,9 +540,9 @@ async function loadDashboard() {
   const netCls = Number(s.net_profit) >= 0 ? 'highlight' : '';
   content.innerHTML = `
     <div class="nt-dash-banner nt-dash-banner--logo">
-      <img src="${e(c.logo_url || LOGO_URL)}" alt="NAJJAR & AL SAMOOM TRADING">
+      <img src="${e(c.logo_url || LOGO_URL)}" alt="نجار و سموم 2026">
       <div>
-        <span class="nt-dash-kicker">NAJJAR & AL SAMOOM · USED & IMPORTED CARS</span>
+        <span class="nt-dash-kicker">نجار & سموم 2026 · USED & IMPORTED CARS</span>
         <h2>لوحة التحكم</h2>
         <p>${e(c.address_ar || 'نزوى — الفلج')} · شريكان: وليد النجار · حمد السموم</p>
       </div>
@@ -601,7 +601,7 @@ async function loadDashboard() {
       </section>
     </div>
     <section class="card" style="margin-top:16px">
-      <div class="card-header"><h3>فريق NAJJAR & AL SAMOOM TRADING</h3></div>
+      <div class="card-header"><h3>فريق نجار & سموم 2026</h3></div>
       <div class="card-body">
         <div class="nt-staff-grid">
           ${staff.map(x => `

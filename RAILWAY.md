@@ -1,4 +1,4 @@
-# Launch Quality LLC — Railway Deploy (Live)
+# نجار & سموم 2026 — Railway Deploy (Live)
 
 > دليل النشر الحي — جاهزية المنصة على الإنتاج.
 
@@ -15,7 +15,7 @@
 | 📸 **خلفية الدخول** | https://web-production-08d73.up.railway.app/assets/login-portal-bg.png |
 | 📸 **أيقونة** | https://web-production-08d73.up.railway.app/assets/app-icon-512.png |
 
-الإصدار الحالي: **`Launch-Quality-LLC-v70.4-finish-remaining`**
+الإصدار الحالي: **`Najjar-Sumoom-2026-v72.0`**
 
 ## Health check
 
@@ -30,11 +30,11 @@ GET https://web-production-08d73.up.railway.app/api/health
   "ok": true,
   "status": "healthy",
   "service": "production",
-  "version": "Launch-Quality-LLC-v70.4-finish-remaining",
+  "version": "Najjar-Sumoom-2026-v72.0",
   "platform_ready": true,
   "database_engine": "sqlite",
   "stable": true,
-  "stable_tag": "v70.4-complete",
+  "stable_tag": "v72.0-najjar-sumoom-2026",
   "offsite": { "enabled": true, "mode": "local-volume" }
 }
 ```

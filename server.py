@@ -100,13 +100,12 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v71.0-stock-integrity"
-# Production baseline family: v71.0 = live showroom feed, protected stock records,
-# cost-of-sales profit. v72 retires the Launch Quality ERP shell — NAJJAR is the
-# only staff-facing product; old /app.html entry points redirect here.
+APP_VERSION = "Najjar-Sumoom-2026-v72.0"
+# Production baseline: نجّار & سموم 2026. v72 retires the Launch Quality ERP shell —
+# NAJJAR is the only staff-facing product; old /app.html entry points redirect here.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
-STABLE_TAG = "v71.0-stock-integrity"
+STABLE_TAG = "v72.0-najjar-sumoom-2026"
 # A device that installed an earlier build keeps serving that build from its own
 # service worker cache, so shipping a release never reaches it — the old shell
 # answers before the network does. Bumping this generation makes the next page
@@ -114,7 +113,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v76-najjar-ui-at42").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v77-najjar-sumoom-2026").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -4586,7 +4585,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
     def serve_static(self, path: str, head_only: bool = False) -> None:
         # Short stable aliases so old/cached 404 bookmarks still fail less often.
         download_name: Optional[str] = None
-        # Public site face = NAJJAR & AL SAMOOM TRADING (Launch Quality ERP entry points stay hidden).
+        # Public site face = نجار & سموم 2026 (Launch Quality ERP entry points stay hidden).
         if path in ("/go", "/دخول", "/start"):
             path = "/go.html"
         if path in ("/fresh", "/تحديث", "/clear-cache"):
@@ -14224,7 +14223,7 @@ def main() -> None:
             "invoices_cols": len(db.execute("PRAGMA table_info(invoices)").fetchall()),
         }
     print(f"Schema overview: {schema_overview}")
-    print(f"Launch Quality LLC {APP_VERSION} [{APP_EDITION_LABEL}] running on http://{HOST}:{PORT}")
+    print(f"نجار & سموم 2026 · {APP_VERSION} [{APP_EDITION_LABEL}] running on http://{HOST}:{PORT}")
     print(f"Database: {DB_PATH}")
     print(f"Data dir: {DATA_DIR} | Backup dir: {BACKUP_DIR}")
     print("Health check: /api/health")
