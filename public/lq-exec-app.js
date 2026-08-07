@@ -53,7 +53,11 @@
       card.insertBefore(mount, card.firstChild);
     }
     if (window.LQ_I18N) {
-      mount.innerHTML = window.LQ_I18N.langSwitcherHtml("loginLang");
+      // Rebuilding the markup would tear down the very <select> whose change
+      // event brought us here; bindSwitcher re-syncs the value on its own.
+      if (!document.getElementById("loginLang")) {
+        mount.innerHTML = window.LQ_I18N.langSwitcherHtml("loginLang");
+      }
       window.LQ_I18N.bindSwitcher("loginLang");
     }
     const title = card.querySelector(".login-card-title");

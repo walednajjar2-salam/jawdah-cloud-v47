@@ -1,6 +1,10 @@
 /* Launch Quality · 4-zone workspace (commands, org, flow, today) */
 (function () {
   const $ = (s) => document.querySelector(s);
+  function signedIn() {
+    const login = document.getElementById("loginScreen");
+    return !login || login.classList.contains("hidden");
+  }
   const SECTION_LABELS = {
     dashboard: "لوحة التحكم",
     properties: "العقارات",
@@ -312,6 +316,9 @@
   }
 
   async function refreshTodayList() {
+    // Mounted on DOMContentLoaded, so the login screen may still be up; the
+    // dashboard render after sign-in calls back in with a usable session.
+    if (!signedIn()) return;
     const sync = $("#lqTodaySync");
     if (sync) sync.textContent = "جاري التحميل…";
     try {

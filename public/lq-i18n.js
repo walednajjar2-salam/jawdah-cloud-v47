@@ -334,7 +334,7 @@
   /* Digits appropriate to each language script */
   const NUM_SYS = { ar: "arab", en: "latn", hi: "latn", bn: "beng", ur: "arab" };
 
-  function applyDocument() {
+  function translatePass() {
     const html = document.documentElement;
     html.lang = lang;
     html.dir = RTL.has(lang) ? "rtl" : "ltr";
@@ -353,7 +353,30 @@
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
       el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
     });
-    document.dispatchEvent(new CustomEvent("lq:langchange", { detail: { lang, dir: html.dir, num: NUM_SYS[lang] || "latn" } }));
+    return html.dir;
+  }
+
+  /* Several screens rebuild their own markup on "lq:langchange" and then ask for
+     another pass, so an unguarded dispatch here recurses until the stack blows.
+     A re-entrant call is collapsed into a single extra pass that translates the
+     freshly injected markup without announcing the change a second time. */
+  let applying = false;
+  let passQueued = false;
+
+  function applyDocument() {
+    if (applying) {
+      passQueued = true;
+      return;
+    }
+    applying = true;
+    try {
+      const dir = translatePass();
+      document.dispatchEvent(new CustomEvent("lq:langchange", { detail: { lang, dir, num: NUM_SYS[lang] || "latn" } }));
+      if (passQueued) translatePass();
+    } finally {
+      passQueued = false;
+      applying = false;
+    }
   }
 
   function setLang(next) {

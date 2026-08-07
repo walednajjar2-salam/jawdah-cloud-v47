@@ -253,6 +253,10 @@
     const batchesBox = root.querySelector("#lqPiBatches");
     const attBox = root.querySelector("#lqPiAttendance");
     if (!batchesBox) return;
+    // Mounted on DOMContentLoaded, so the login screen may still be up;
+    // renderFinanceSuite re-mounts this panel once a session exists.
+    const login = document.getElementById("loginScreen");
+    if (login && !login.classList.contains("hidden")) return;
     try {
       const [batchesRes, attRes] = await Promise.all([
         api("payroll/import_batches?limit=12"),
