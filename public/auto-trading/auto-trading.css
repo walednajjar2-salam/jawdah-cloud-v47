@@ -4,6 +4,7 @@
   /* Light luxury glass — NAJJAR & AL SAMOOM TRADING */
   --nt-font: Arial, Helvetica, "Segoe UI", sans-serif;
   --nt-size: 12px;
+  --nt-size-heading: 14px;
   --nt-weight: 700;
   --gold: #b8892a;
   --gold2: #e8c96a;
@@ -2100,7 +2101,7 @@ body.app-body.theme-autotrading ::-webkit-scrollbar-track {
   }
 }
 
-/* ——— Typography: Arial Bold 12px ——— */
+/* ——— Typography: Arial Bold — text 12px · headings 14px ——— */
 body.app-body.theme-autotrading,
 body.nt-login,
 body.nt-hub,
@@ -2112,21 +2113,33 @@ body.nt-customer {
 }
 
 body.app-body.theme-autotrading :where(
-  h1, h2, h3, h4, h5, h6,
-  p, span, label, a, li, small, strong, em,
+  p, span, label, a, li, small, em,
   button, input, select, textarea, option,
   th, td, .label, .mini, .nav-label, .pill,
   .btn, .nt-btn, .field span, .detail-row,
+  .stat-card strong
+),
+.nt-login :where(p, span, label, a, button, input),
+.nt-hub :where(p, span, label, a, button),
+.nt-customer :where(p, span, label, a, button) {
+  font-family: var(--nt-font) !important;
+  font-size: var(--nt-size) !important;
+  font-weight: var(--nt-weight) !important;
+}
+
+body.app-body.theme-autotrading :where(
+  h1, h2, h3, h4, h5, h6,
   .card-header h3, .drawer-title h2, .modal-panel h2,
   .page-head h2, .nt-dash-banner h2, .nt-plat h2,
   .nt-hub-head h1, .nt-cust-hero h1, .nt-login-card h2,
-  .stat-card strong, .nt-vcard h4, .nt-vcard h3
+  .nt-vcard h3, .nt-vcard h4, .nt-cust-intro h2,
+  .theme-autotrading .topbar h1
 ),
-.nt-login :where(h1, h2, h3, p, span, label, a, button, input),
-.nt-hub :where(h1, h2, h3, p, span, label, a, button),
-.nt-customer :where(h1, h2, h3, p, span, label, a, button) {
+.nt-login :where(h1, h2, h3),
+.nt-hub :where(h1, h2, h3),
+.nt-customer :where(h1, h2, h3) {
   font-family: var(--nt-font) !important;
-  font-size: var(--nt-size) !important;
+  font-size: var(--nt-size-heading) !important;
   font-weight: var(--nt-weight) !important;
 }
 
