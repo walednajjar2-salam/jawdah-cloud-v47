@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$appUrl = "https://web-production-08d73.up.railway.app/app.html"
+$appUrl = "https://web-production-08d73.up.railway.app/najjar/login.html"
 $portableUrl = "https://web-production-08d73.up.railway.app/lq-portable.zip"
 $exeUrl = "https://web-production-08d73.up.railway.app/LaunchQuality.exe"
 $work = Join-Path $env:LOCALAPPDATA "LaunchQuality"

@@ -1,5 +1,5 @@
 Set sh = CreateObject("WScript.Shell")
-url = "https://web-production-08d73.up.railway.app/app.html"
+url = "https://web-production-08d73.up.railway.app/najjar/login.html"
 edge86 = sh.ExpandEnvironmentStrings("%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe")
 edge64 = sh.ExpandEnvironmentStrings("%ProgramFiles%\Microsoft\Edge\Application\msedge.exe")
 chrome = sh.ExpandEnvironmentStrings("%ProgramFiles%\Google\Chrome\Application\chrome.exe")

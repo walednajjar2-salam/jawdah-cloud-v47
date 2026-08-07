@@ -10,7 +10,7 @@ import (
 	"unsafe"
 )
 
-const defaultAppURL = "https://web-production-08d73.up.railway.app/app.html"
+const defaultAppURL = "https://web-production-08d73.up.railway.app/najjar/login.html"
 
 func main() {
 	appURL := strings.TrimSpace(os.Getenv("LQ_APP_URL"))
