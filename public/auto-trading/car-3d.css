@@ -105,7 +105,7 @@ body.nt-lock { overflow: hidden; }
 .nt-cinema-copy h2 {
   margin: 6px 0 10px;
   font-family: var(--nt-font);
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-size: var(--nt-size-heading);
   color: var(--gold-dark, #8a6520);
 }
 .nt-cinema-copy p { margin: 0; color: var(--muted, #8a7d68); line-height: 1.7; }

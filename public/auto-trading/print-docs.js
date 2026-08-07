@@ -120,7 +120,8 @@
       *{box-sizing:border-box}
       body{
         margin:0; padding:0;
-        font-family:"Cairo","Tajawal",Tahoma,Arial,sans-serif;
+        font-family:Arial,Helvetica,"Segoe UI",sans-serif;
+        font-size:12px; font-weight:700;
         color:var(--ink); background:#efe6d2;
         -webkit-print-color-adjust:exact; print-color-adjust:exact;
       }
@@ -144,11 +145,11 @@
       .brand img{width:96px; height:auto; object-fit:contain}
       .brand-center{text-align:center}
       .brand-center h1{
-        margin:0; font-size:20px; letter-spacing:.04em; color:#111;
-        font-family:"Playfair Display","Cairo",serif;
+        margin:0; font-size:14px; letter-spacing:.04em; color:#111;
+        font-family:Arial,Helvetica,sans-serif; font-weight:700;
       }
-      .brand-center h2{margin:4px 0 0; font-size:14px; color:var(--gold); font-weight:800}
-      .brand-center p{margin:4px 0 0; font-size:11px; color:var(--muted)}
+      .brand-center h2{margin:4px 0 0; font-size:14px; color:var(--gold); font-weight:700}
+      .brand-center p{margin:4px 0 0; font-size:12px; color:var(--muted); font-weight:700}
       .badge{
         display:inline-block; margin-top:8px; padding:4px 12px; border-radius:999px;
         background:linear-gradient(135deg,#1a1408,#3a2a10); color:var(--gold2);
@@ -160,11 +161,11 @@
       }
       .meta-row strong{color:var(--ink)}
       h3.sec{
-        margin:16px 0 8px; font-size:14px; color:#111;
+        margin:16px 0 8px; font-size:14px; color:#111; font-weight:700;
         border-right:4px solid var(--gold); padding-right:8px;
       }
       table{width:100%; border-collapse:collapse; margin:8px 0 12px}
-      th,td{border:1px solid var(--line); padding:8px 10px; text-align:right; font-size:12.5px; vertical-align:top}
+      th,td{border:1px solid var(--line); padding:8px 10px; text-align:right; font-size:12px; vertical-align:top; font-weight:700}
       th{width:32%; background:linear-gradient(180deg,#fff6df,#f7ecd0); color:#3a2a10; font-weight:800}
       /* An itemised table heads its columns, so the label-column width does not apply. */
       table.items th{width:auto}
@@ -307,8 +308,6 @@
     ].filter(Boolean).join(' · ');
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
       <title>${esc(title)}</title>
-      <link rel="preconnect" href="https://fonts.googleapis.com">
-      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
       <style>${docStyles()}</style></head>
       <body><div class="sheet">${innerHtml}
         <div class="foot">NAJJAR &amp; AL SAMOOM TRADING${footReg ? ' · ' + footReg : ''} · Nizwa Falaj · Sultanate of Oman<br>

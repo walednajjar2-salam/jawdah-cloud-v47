@@ -2163,4 +2163,19 @@ body.app-body.theme-autotrading :where(
   font-variant-numeric: tabular-nums;
 }
 
+.theme-autotrading .mini,
+.theme-autotrading .nt-sub,
+.theme-autotrading .nt-login-hint,
+.theme-autotrading .nt-vcard-var,
+.theme-autotrading .empty-state,
+.nt-sub,
+.nt-login-hint {
+  font-size: var(--nt-size) !important;
+}
+
+.theme-autotrading .topbar p,
+.theme-autotrading .page-head p {
+  font-size: var(--nt-size) !important;
+}
+
 } /* end @layer nt_theme */

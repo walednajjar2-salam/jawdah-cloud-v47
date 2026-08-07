@@ -47,6 +47,15 @@ function vehicleWhatsAppText(v, c) {
   ].filter(Boolean).join('\n');
 }
 
+function uploadUrl(url) {
+  const u = String(url || '').trim();
+  if (!u || !u.startsWith('/uploads/')) return u;
+  const token = readToken();
+  if (!token) return u;
+  const sep = u.includes('?') ? '&' : '?';
+  return u + sep + 'token=' + encodeURIComponent(token);
+}
+
 function vehicleDocLink(v) {
   if (!v.license_source) return '';
   let href = String(v.license_source).startsWith('/') ? v.license_source : '/' + v.license_source;
@@ -962,7 +971,7 @@ async function uploadVehiclePhotos(vehicleId, files) {
 function renderPhotoGallery(photos, idPrefix = 'veh') {
   if (!photos.length) return '<p class="mini">لا توجد صور — حمّل صوراً من الأسفل</p>';
   return `<div class="nt-photo-thumbs">${photos.map((p, i) => `
-    <div class="nt-photo-thumb${i === 0 ? ' active' : ''}"><img src="${e(p)}" alt="صورة ${i + 1}" loading="lazy"></div>
+    <div class="nt-photo-thumb${i === 0 ? ' active' : ''}"><img src="${e(uploadUrl(p))}" alt="صورة ${i + 1}" loading="lazy"></div>
   `).join('')}</div>`;
 }
 
@@ -1036,7 +1045,7 @@ function vehicleCard(v) {
   const price = Number(v.list_price) > 0 ? money(v.list_price) : 'حسب الاتفاق';
   const photos = vehiclePhotos(v);
   const media = photos[0]
-    ? `<div class="nt-show-media"><img class="nt-photo-main" src="${e(photos[0])}" alt="${e(v.make)} ${e(v.model)}" loading="lazy"></div>`
+    ? `<div class="nt-show-media"><img class="nt-photo-main" src="${e(uploadUrl(photos[0]))}" alt="${e(v.make)} ${e(v.model)}" loading="lazy"></div>`
     : '';
   const usd = Number(v.price_usd || 0) > 0
     ? `<span class="nt-price-fx" dir="ltr">${Number(v.price_usd).toLocaleString('en-US')} USD</span>`
