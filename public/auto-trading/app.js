@@ -127,11 +127,11 @@ async function printVehicleOffer(v) {
     </table>
     <div class="bank">
       <b>للتحويل البنكي — ${e(bank.name_ar || '')}</b><br>
-      ${e(bank.account_name_en || '')}<br>
-      IBAN: <span dir="ltr">${e(bank.iban || '')}</span><br>
-      SWIFT: <span dir="ltr">${e(bank.swift || '')}</span>
+      <span dir="ltr">${e(bank.account_name_en || '')}</span><br>
+      رقم الحساب الدولي: <span dir="ltr">${e(bank.iban || '')}</span><br>
+      رمز السويفت: <span dir="ltr">${e(bank.swift || '')}</span>
     </div>
-    <p>واتساب: +968 71924089 · +968 93391994</p>
+    <p>واتساب: <span dir="ltr">+968 71924089</span> · <span dir="ltr">+968 93391994</span></p>
     <div class="foot">NAJJAR & AL SAMOOM TRADING · Nizwa · Falaj · ${e(v.license_source ? 'بيانات الرخصة: ' + v.license_source : '')}</div>`);
 }
 
