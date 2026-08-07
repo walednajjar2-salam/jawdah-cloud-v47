@@ -106,6 +106,23 @@ APP_VERSION = "Launch-Quality-LLC-v71.0-stock-integrity"
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
 STABLE_TAG = "v71.0-stock-integrity"
+# A device that installed an earlier build keeps serving that build from its own
+# service worker cache, so shipping a release never reaches it — the old shell
+# answers before the network does. Bumping this generation makes the next page
+# load from each device hand back Clear-Site-Data once, which is the only lever
+# that deletes a worker the page's own scripts can no longer reach. The marker
+# cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
+# the very response that purges the device also records that it was purged.
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v71-retire-old-pwa").strip()
+CLIENT_PURGE_COOKIE = "lq_purge"
+# "cookies" is deliberately absent, for two reasons: it would take the marker
+# cookie with it and re-purge on every navigation, and it would drop lq_token,
+# which is what carries a signed-in user across the purge.
+# "executionContexts" is absent because Chrome does not implement it — measured,
+# not assumed: adding it changed nothing about when the fresh build appeared, and
+# a directive that only takes effect in some other browser is a reload risk with
+# no benefit here.
+CLIENT_PURGE_DIRECTIVES = '"cache", "storage"'
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -4328,6 +4345,8 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
         self.send_cors_headers()
+        if self.client_needs_purge():
+            self.send_purge_headers()
         self.end_headers()
         self.wfile.write(raw)
 
@@ -4353,6 +4372,27 @@ class JawdahHandler(BaseHTTPRequestHandler):
             if part.startswith("lq_token="):
                 return urllib.parse.unquote(part[9:].strip())
         return ""
+
+    def client_needs_purge(self) -> bool:
+        """True until this device has been told to drop an older installed build."""
+        if not CLIENT_PURGE_GENERATION:
+            return False
+        cookie = self.headers.get("Cookie", "") or ""
+        for part in cookie.split(";"):
+            part = part.strip()
+            if part.startswith(CLIENT_PURGE_COOKIE + "="):
+                return urllib.parse.unquote(part.split("=", 1)[1].strip()) != CLIENT_PURGE_GENERATION
+        return True
+
+    def send_purge_headers(self) -> None:
+        """Wipe the stale worker, its caches and its stored shell — once per device."""
+        self.send_header("Clear-Site-Data", CLIENT_PURGE_DIRECTIVES)
+        self.send_header(
+            "Set-Cookie",
+            "{}={}; Path=/; Max-Age=31536000; SameSite=Lax".format(
+                CLIENT_PURGE_COOKIE, urllib.parse.quote(CLIENT_PURGE_GENERATION)
+            ),
+        )
 
     def current_user(self, db: sqlite3.Connection, query: str = "") -> Optional[Dict[str, Any]]:
         token = self.token_from_request(query)
@@ -4439,6 +4479,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
             path = "/go.html"
         if path in ("/fresh", "/تحديث", "/clear-cache"):
             path = "/fresh.html"
+        # Short enough to read down a phone line to a branch, because reaching every
+        # device is the only way the installed icon actually leaves them.
+        if path in ("/remove", "/remove-old-app", "/حذف-التطبيق", "/حذف", "/old-app"):
+            path = "/remove-old-app.html"
         if path in ("/lq-setup.exe", "/windows-setup.exe", "/LaunchQuality-Setup.exe", "/LaunchQuality.exe", "/app-windows.exe", "/windows.exe"):
             download_name = "LaunchQuality.exe"
             path = "/releases/windows/LaunchQuality-Setup.exe"
@@ -4461,6 +4505,10 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Disposition", disposition)
             if cache:
                 self.send_header("Cache-Control", cache)
+            # Carried on page loads only: an asset or API response arrives while the
+            # app is mid-flight, and wiping storage under it would strand the tab.
+            if ctype.startswith("text/html") and self.client_needs_purge():
+                self.send_purge_headers()
             self.end_headers()
             if not head_only:
                 self.wfile.write(raw)

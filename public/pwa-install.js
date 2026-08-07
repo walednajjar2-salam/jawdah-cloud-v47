@@ -50,10 +50,13 @@
     }
   }
 
-  // Kill every stale PWA cache hard (old shells were hiding UI updates).
+  // Nothing here is ever registered again. Registering /sw.js and then sweeping
+  // every registration — as this did — unregistered the brand-new worker before
+  // it could activate and purge, so the stale shell it was sent to remove stayed
+  // put. Devices still carrying a worker pick up /sw.js on their next update
+  // check and it deletes itself; this sweep clears the rest.
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("/sw.js?v=kill51").catch(function(){});
       navigator.serviceWorker.getRegistrations().then(function (regs) {
         return Promise.all((regs || []).map(function (reg) { return reg.unregister(); }));
       }).catch(function () {});
