@@ -198,6 +198,14 @@ def _is_auto_trading_asset(safe: str) -> bool:
     return not leaf.endswith(".html")
 
 
+def _is_najjar_brand_asset(safe: str) -> bool:
+    """Allow /assets/* brand media while the old ERP site face stays closed."""
+    if not safe.startswith("assets/"):
+        return False
+    leaf = safe.rsplit("/", 1)[-1].lower()
+    return leaf.endswith((".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico", ".gif"))
+
+
 def _najjar_api_allowed(parts: list) -> bool:
     return bool(parts) and parts[0] in NAJJAR_API_ROOTS
 # DB seed policy stays "official" by default (no sample seed in production).
@@ -4433,7 +4441,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     cache="no-store, no-cache, must-revalidate, max-age=0",
                 )
                 return True
-            if _is_najjar_public_path(path) or _is_auto_trading_asset(safe):
+            if _is_najjar_public_path(path) or _is_auto_trading_asset(safe) or _is_najjar_brand_asset(safe):
                 return False
             if path == "/manifest.webmanifest":
                 manifest = (PUBLIC_DIR / "manifest.webmanifest").read_bytes()
