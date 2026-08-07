@@ -23,7 +23,6 @@
       <div class="nt-hub-actions">
         <a class="nt-btn ghost" href="/auto-trading/customer.html">بوابة الزبائن</a>
         <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب</a>
-        <a class="nt-btn ghost" id="btnErp" href="/portal-select.html" hidden>منصات الإدارة</a>
         <button class="nt-btn primary" type="button" id="btnLogout">خروج</button>
       </div>
     </header>
@@ -141,15 +140,6 @@
         if (!res.ok) {
           localStorage.removeItem('jawdah_cloud_token');
           location.replace('/auto-trading/login.html');
-          return;
-        }
-        // Owners also run the estates and accounting side, so give them the way across.
-        const data = await res.json().catch(() => ({}));
-        const role = String((data.user || {}).role || '').toLowerCase();
-        if (role === 'owner' || role === 'admin') {
-          const erp = document.getElementById('btnErp');
-          erp.href = withToken('/portal-select.html');
-          erp.hidden = false;
         }
       }).catch(() => {});
     }

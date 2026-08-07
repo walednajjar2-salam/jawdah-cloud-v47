@@ -102,7 +102,8 @@ CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
 APP_VERSION = "Launch-Quality-LLC-v71.0-stock-integrity"
 # Production baseline family: v71.0 = live showroom feed, protected stock records,
-# cost-of-sales profit, and restored ERP access alongside the NAJJAR public face.
+# cost-of-sales profit. v72 retires the Launch Quality ERP shell — NAJJAR is the
+# only staff-facing product; old /app.html entry points redirect here.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
 STABLE_TAG = "v71.0-stock-integrity"
@@ -113,7 +114,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v71-retire-old-pwa").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v72-erp-shutdown").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -4339,6 +4340,15 @@ class JawdahHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def send_redirect(self, location: str, *, permanent: bool = False) -> None:
+        """302 (or 301) with the same one-shot purge headers HTML pages carry."""
+        self.send_response(301 if permanent else 302)
+        self.send_header("Location", location)
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        if self.client_needs_purge():
+            self.send_purge_headers()
+        self.end_headers()
+
     def send_html(self, html: str, status: int = 200) -> None:
         raw = html.encode("utf-8")
         self.send_response(status)
@@ -4530,16 +4540,34 @@ class JawdahHandler(BaseHTTPRequestHandler):
                 self.send_header("Location", NAJJAR_LOGIN)
                 self.end_headers()
                 return
-        # Launch Quality ERP: unadvertised on the public face, still reachable for staff.
-        if path in ("/app", "/app/", "/app/app.html"):
-            self.send_response(302)
-            self.send_header("Location", "/app.html")
-            self.end_headers()
+        # Launch Quality ERP — fully retired. Every bookmark, installed icon, and
+        # cached shell entry lands on NAJJAR instead of opening the old seven-portal UI.
+        ERP_STAFF_LOGIN = NAJJAR_LOGIN
+        ERP_STAFF_HOME = "/auto-trading/platforms.html"
+        erp_login = {
+            "/app.html", "/app", "/app/", "/app/app.html",
+            "/Launch_Quality_LLC.html", "/Launch Quality LLC.html",
+            "/install.html", "/download.html", "/docs.html",
+            "/quick-estate.html", "/reset-cache.html",
+        }
+        erp_portal = {
+            "/portal-select.html", "/portal-select",
+            "/erp", "/erp.html", "/إدارة", "/منصات", "/platforms",
+        }
+        if path in erp_login:
+            return self.send_redirect(ERP_STAFF_LOGIN)
+        if path in erp_portal:
+            return self.send_redirect(ERP_STAFF_HOME)
+        if path == "/app.js":
+            _send_bytes(
+                b"location.replace('/auto-trading/login.html');",
+                "application/javascript; charset=utf-8",
+                cache="no-store, no-cache, must-revalidate, max-age=0",
+            )
             return
-        if path in ("/portal-select", "/erp", "/erp.html", "/إدارة", "/منصات", "/platforms"):
-            self.send_response(302)
-            self.send_header("Location", "/portal-select.html")
-            self.end_headers()
+        if path == "/app.css":
+            _send_bytes(b"/* Launch Quality ERP retired */", "text/css; charset=utf-8",
+                        cache="no-store, no-cache, must-revalidate, max-age=0")
             return
         if path in ("/najjar-platforms", "/najjar/platforms", "/منصات-النجار"):
             self.send_response(302)
@@ -4636,18 +4664,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     cache = "public, max-age=86400"
             _send_bytes(raw, ctype, disposition=disposition, cache=cache)
             return
-        # Safe fallback for serving the main interface.
+        # Safe fallback — ERP shell assets are retired; send browsers to NAJJAR.
         if path == "/app.html":
-            raw = FALLBACK_APP_HTML.encode("utf-8")
-            _send_bytes(raw, "text/html; charset=utf-8", cache="no-cache, must-revalidate")
-            return
+            return self.send_redirect("/auto-trading/login.html")
+        if path == "/portal-select.html":
+            return self.send_redirect("/auto-trading/platforms.html")
         if path == "/app.css":
-            raw = FALLBACK_CSS.encode("utf-8")
-            _send_bytes(raw, "text/css; charset=utf-8")
+            raw = b"/* retired */"
+            _send_bytes(raw, "text/css; charset=utf-8", cache="no-store")
             return
         if path == "/app.js":
-            raw = FALLBACK_JS.encode("utf-8")
-            _send_bytes(raw, "application/javascript; charset=utf-8")
+            raw = b"location.replace('/auto-trading/login.html');"
+            _send_bytes(raw, "application/javascript; charset=utf-8", cache="no-store")
             return
         self.send_error(404, "File not found")
 
@@ -9344,9 +9372,9 @@ button{{border:0;background:#0b1220;color:#f5d76e;padding:10px 14px;border-radiu
             "manifest": {
                 "version": STAFF_APP_VERSION,
                 "production_url": PRODUCTION_URL,
-                "download_page": f"{PRODUCTION_URL}/download.html",
-                "install_page": f"{PRODUCTION_URL}/install.html",
-                "app_url": f"{PRODUCTION_URL}/app.html?field=1",
+                "download_page": f"{PRODUCTION_URL}/auto-trading/login.html",
+                "install_page": f"{PRODUCTION_URL}/remove",
+                "app_url": f"{PRODUCTION_URL}/auto-trading/platforms.html",
                 "apk_url": STAFF_DOWNLOAD_APK,
                 "windows_zip_url": STAFF_DOWNLOAD_ZIP,
                 "features": [

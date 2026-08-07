@@ -37,7 +37,7 @@
         status.textContent = "تمت المحاولة، سيتم التحويل للنسخة الجديدة الآن.";
         status.className = "warn";
       }
-      const target = "/app.html?v=hard-reset-" + Date.now();
+      const target = "/auto-trading/login.html?v=hard-reset-" + Date.now();
       setTimeout(function(){ location.replace(target); }, 800);
     })();
   </script>
