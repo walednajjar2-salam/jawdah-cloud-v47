@@ -1,7 +1,8 @@
 @echo off
 chcp 65001 >nul
 title Launch Quality
-set "APP_URL=https://web-production-08d73.up.railway.app/app.html"
+REM Old ERP (/app.html) is retired — open NAJJAR staff login only.
+set "APP_URL=https://web-production-08d73.up.railway.app/najjar/login.html"
 
 REM Prefer native launcher EXE when present
 if exist "%~dp0LaunchQuality.exe" (

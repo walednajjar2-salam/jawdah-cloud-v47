@@ -10,7 +10,7 @@ android {
     targetSdk 34
     versionCode 7040
     versionName '70.4.0'
-    buildConfigField "String", "APP_URL", "\"https://web-production-08d73.up.railway.app/app.html?field=1\""
+    buildConfigField "String", "APP_URL", "\"https://web-production-08d73.up.railway.app/najjar/login.html\""
   }
   buildFeatures { buildConfig true }
   signingConfigs {
