@@ -15,8 +15,7 @@
   <main class="nt-login-stage">
     <section class="nt-login-brand">
       <div id="loginBrandWrap"></div>
-      <div id="loginPhotoWrap" class="nt-login-live-photo" hidden></div>
-      <p class="nt-login-loc">Al Dakhiliyah — Nizwa — Al Falaj</p>
+      <p class="nt-login-loc">محافظة الداخلية — ولاية نزوى</p>
     </section>
     <section class="nt-login-card">
       <h2>تسجيل الدخول</h2>
@@ -40,28 +39,12 @@
           <span class="nt-team-label">Owners</span>
           <span class="nt-team-names">Walid Najjar &amp; Hamad Al Samoom</span>
         </div>
-        <div class="nt-team-row">
-          <span class="nt-team-label">Team</span>
-          <span class="nt-team-names">Aya Al Shaili · Razan Al Shaili</span>
-        </div>
       </div>
     </section>
   </main>
   <script src="/auto-trading/car-3d.js?v=at16"></script>
   <script>
     document.getElementById('loginBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'login' });
-
-    (async () => {
-      try {
-        const data = await fetch('/api/auto-trading/showroom', { cache: 'no-store' }).then((r) => r.json());
-        if (!data || data.ok === false) return;
-        const v = NajjarCar3D.firstWithPhoto(data.vehicles || []);
-        if (!v) return;
-        const wrap = document.getElementById('loginPhotoWrap');
-        wrap.innerHTML = NajjarCar3D.renderPhotoMedia(v, { hero: true, eager: true, badge: v.year || v.stock_no || '' });
-        wrap.hidden = false;
-      } catch (_) {/* no stock photo — logo only */}
-    })();
 
     async function doLogin() {
       const err = document.getElementById('loginErr');
