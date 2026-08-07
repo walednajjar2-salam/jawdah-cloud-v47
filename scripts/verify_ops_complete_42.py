@@ -2,6 +2,7 @@
 """Verify critical ops-complete (42-item) requirements against local codebase + DB."""
 from __future__ import annotations
 
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -22,10 +23,23 @@ def ok(name: str, cond: bool, detail: str = "") -> bool:
 def main() -> int:
     fails = 0
 
-    # 1) Version / env label
-    fails += not ok("APP_VERSION v70", "v70" in server.APP_VERSION, server.APP_VERSION)
+    # 1) Version / env label — the release marker must be present and consistent,
+    # so a new release does not need this file edited to keep passing.
+    app_release = re.search(r"v(\d+)\.(\d+)", server.APP_VERSION)
+    tag_release = re.search(r"v(\d+)\.(\d+)", str(server.STABLE_TAG))
+    fails += not ok("APP_VERSION release marker", bool(app_release), server.APP_VERSION)
+    fails += not ok("STABLE_TAG release marker", bool(tag_release), str(server.STABLE_TAG))
+    fails += not ok(
+        "version and stable tag agree",
+        bool(app_release and tag_release and app_release.groups() == tag_release.groups()),
+        f"{server.APP_VERSION} / {server.STABLE_TAG}",
+    )
+    fails += not ok(
+        "release at least v70",
+        bool(app_release) and int(app_release.group(1)) >= 70,
+        server.APP_VERSION,
+    )
     fails += not ok("STAFF_APP_VERSION 70.x", server.STAFF_APP_VERSION.startswith("70."), server.STAFF_APP_VERSION)
-    fails += not ok("STABLE_TAG v70", str(server.STABLE_TAG).startswith("v70"), server.STABLE_TAG)
     fails += not ok("env label present", bool(server.APP_ENV_LABEL_AR), server.APP_ENV_LABEL_AR)
     fails += not ok("official label Arabic", "رسمية" in server.APP_ENV_LABEL_AR or server.APP_ENV_MODE == "trial")
 

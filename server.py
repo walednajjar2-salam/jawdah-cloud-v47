@@ -100,11 +100,12 @@ HOST = os.environ.get("JAWDAH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT") or os.environ.get("JAWDAH_PORT", "8765"))
 CORS_ORIGIN = os.environ.get("JAWDAH_CORS_ORIGIN", "*").strip()
 LIVE_STREAM_INTERVAL_SEC = max(1, int(os.environ.get("LQ_LIVE_STREAM_INTERVAL_SEC", "2") or "2"))
-APP_VERSION = "Launch-Quality-LLC-v70.9-oman-contracts-vouchers"
-# Production baseline family: v70.9 = Omani sale/purchase contracts + invoices + vouchers.
+APP_VERSION = "Launch-Quality-LLC-v71.0-stock-integrity"
+# Production baseline family: v71.0 = live showroom feed, protected stock records,
+# cost-of-sales profit, and restored ERP access alongside the NAJJAR public face.
 RELEASE_CHANNEL = "stable"
 STABLE_RELEASE = True
-STABLE_TAG = "v70.9-oman-contracts"
+STABLE_TAG = "v71.0-stock-integrity"
 # DB seed policy stays "official" by default (no sample seed in production).
 APP_EDITION = os.environ.get("LQ_EDITION", "official").strip().lower() or "official"
 # Product base edition — التطوير المؤسسي is the default foundation for UI + health.
@@ -4508,6 +4509,18 @@ class JawdahHandler(BaseHTTPRequestHandler):
             return
         # Decode URL-encoded paths (e.g. %20) so files with spaces can be served.
         safe = Path(urllib.parse.unquote(path).lstrip("/")).as_posix()
+        # Vehicle paperwork carries landed costs and the names of previous owners.
+        if safe.startswith("auto-trading/documents/"):
+            with connect() as db:
+                doc_user = self.current_user(db, urllib.parse.urlparse(self.path).query)
+            if not doc_user:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_cors_headers()
+                self.end_headers()
+                if not head_only:
+                    self.wfile.write(json.dumps({"ok": False, "error": "Authentication required"}).encode("utf-8"))
+                return
         if safe.startswith("uploads/"):
             # Secure contract and sensitive uploads behind authenticated sessions.
             protected_prefixes = (

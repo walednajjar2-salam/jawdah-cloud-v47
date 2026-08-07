@@ -1185,12 +1185,17 @@ body.section-dashboard .content.dashboard-page {
 
 .nt-price-block { display: grid; gap: 4px; }
 .nt-price-fx {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--muted);
   letter-spacing: 0.01em;
 }
+.nt-price-fx b { font-weight: 700; }
+.nt-price-fx i { font-style: normal; opacity: 0.55; }
 .nt-price-fx-list {
   list-style: none;
   margin: 4px 0 0;

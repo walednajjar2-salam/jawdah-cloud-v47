@@ -45,12 +45,16 @@
     const usd = Number(v.price_usd || 0) > 0 ? Number(v.price_usd) : omr * FX.USD;
     const sar = omr * FX.SAR;
     const aed = omr * FX.AED;
+    // Each amount keeps its own left-to-right run, otherwise the Arabic page
+    // reorders the row and a figure ends up read against another currency.
+    const pairs = [['USD', usd], ['SAR', sar], ['AED', aed]];
     const compact = opts.compact
-      ? `<span class="nt-price-fx">${fmtNum(usd)} USD · ${fmtNum(sar)} SAR · ${fmtNum(aed)} AED</span>`
+      ? `<span class="nt-price-fx">${pairs
+          .map(([code, value]) => `<b dir="ltr">${fmtNum(value)} ${code}</b>`)
+          .join('<i aria-hidden="true">·</i>')}</span>`
       : `<ul class="nt-price-fx-list">
-          <li><span>USD</span><b dir="ltr">${fmtNum(usd)}</b></li>
-          <li><span>SAR</span><b dir="ltr">${fmtNum(sar)}</b></li>
-          <li><span>AED</span><b dir="ltr">${fmtNum(aed)}</b></li>
+          ${pairs.map(([code, value]) => `
+          <li><span>${code}</span><b dir="ltr">${fmtNum(value)}</b></li>`).join('')}
         </ul>`;
     return `
       <div class="nt-price-block">

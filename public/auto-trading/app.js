@@ -47,7 +47,12 @@ function vehicleWhatsAppText(v, c) {
 
 function vehicleDocLink(v) {
   if (!v.license_source) return '';
-  const href = String(v.license_source).startsWith('/') ? v.license_source : '/' + v.license_source;
+  let href = String(v.license_source).startsWith('/') ? v.license_source : '/' + v.license_source;
+  // Paperwork is served to signed-in staff only, so carry the session on the link.
+  const token = readToken();
+  if (token && href.startsWith('/auto-trading/documents/')) {
+    href += (href.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
+  }
   const label = href.includes('bill-of-sale') ? 'عرض Bill of Sale'
     : href.includes('port-shipment') ? 'عرض بيانات الشحن'
     : href.includes('license') ? 'عرض رخصة المركبة'
@@ -519,11 +524,12 @@ async function loadDashboard() {
     <div class="stats-grid">
       ${kpi(ICO('car'), 'إجمالي المركبات', s.total_vehicles)}
       ${kpi(ICO('ok'), 'متاحة للبيع', s.available, 'highlight')}
-      ${kpi(ICO('buy'), 'إجمالي المشتريات', money(s.purchases_total))}
       ${kpi(ICO('sale'), 'إجمالي المبيعات', money(s.sales_total))}
+      ${kpi(ICO('buy'), 'تكلفة المبيعات', money(s.cost_of_sales || 0))}
       ${kpi(ICO('exp'), 'إجمالي المصاريف', money(s.expenses_total))}
       ${kpi(ICO('chart'), 'صافي الربح', money(s.net_profit), netCls)}
     </div>
+    <p class="mini" style="margin-top:8px">صافي الربح = المبيعات − تكلفة السيارات المباعة ومصاريفها − المصاريف العامة. تكلفة السيارات التي لم تُبع بعد تبقى في قيمة المخزون.</p>
     <div class="stats-grid" style="margin-top:14px">
       ${kpi(ICO('chart'), 'رأس المال الحالي', money(s.total_capital || 0), 'highlight')}
       ${kpi(ICO('sale'), 'توزيعات معتمدة', money(s.total_distributed || 0))}
@@ -534,7 +540,9 @@ async function loadDashboard() {
       ${stat('محجوزة', s.reserved)}
       ${stat('مباعة', s.sold)}
       ${stat('قيد الاستيراد', s.importing)}
-      ${stat('قيمة المخزون الحالي', money(s.stock_value))}
+      ${stat('قيمة المخزون بسعر البيع', money(s.stock_value))}
+      ${stat('قيمة المخزون بالتكلفة', money(s.inventory_cost || 0))}
+      ${stat('إجمالي المشتريات', money(s.purchases_total))}
       ${stat('حركات اليوم', (Number(s.today_purchases) + Number(s.today_sales) + Number(s.today_expenses)))}
       ${stat('طلبات استيراد نشطة', s.pending_imports)}
     </div>
@@ -644,6 +652,11 @@ async function loadCapital() {
       ${kpi(ICO('sale'), 'توزيعات معتمدة', money(summary.total_distributed || 0))}
       ${kpi(ICO('ok'), 'صافي الربح', money(summary.net_profit || 0))}
       ${kpi(ICO('ledger'), 'قابل للتوزيع', money(summary.distributable_estimate || 0))}
+    </div>
+    <div class="stats-grid" style="margin-top:14px">
+      ${kpi(ICO('sale'), 'الربح الإجمالي', money(summary.gross_profit || 0))}
+      ${kpi(ICO('buy'), 'تكلفة المبيعات', money(summary.cost_of_sales || 0))}
+      ${kpi(ICO('car'), 'المخزون بالتكلفة', money(summary.inventory_cost || 0))}
     </div>
     <div class="nt-staff-grid" style="margin-top:14px">
       ${partners.map(p => `

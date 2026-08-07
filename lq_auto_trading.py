@@ -541,6 +541,47 @@ def _partner_distributions_total(db: sqlite3.Connection, partner_id: int) -> flo
     return float(row["tot"] if row else 0)
 
 
+def _profit_summary(db: sqlite3.Connection) -> Dict[str, Any]:
+    """Trading result on a cost-of-sales basis.
+
+    Subtracting every purchase from every sale reports a loss for each car still
+    standing in the showroom, and pure profit for a car bought last season. Only
+    the cost of the cars actually sold belongs against their sale price; what is
+    spent on unsold stock stays in inventory until it leaves the yard.
+    """
+    sales_total = float(db.execute("SELECT COALESCE(SUM(sale_price),0) FROM at_sales").fetchone()[0])
+    cost_of_sales = float(db.execute(
+        """SELECT COALESCE(SUM(v.purchase_cost),0) FROM at_vehicles v
+           WHERE v.id IN (SELECT vehicle_id FROM at_sales WHERE vehicle_id IS NOT NULL)"""
+    ).fetchone()[0])
+    expenses_on_sold = float(db.execute(
+        """SELECT COALESCE(SUM(amount),0) FROM at_expenses
+           WHERE vehicle_id IN (SELECT vehicle_id FROM at_sales WHERE vehicle_id IS NOT NULL)"""
+    ).fetchone()[0])
+    overhead = float(db.execute(
+        "SELECT COALESCE(SUM(amount),0) FROM at_expenses WHERE vehicle_id IS NULL"
+    ).fetchone()[0])
+    inventory_cost = float(db.execute(
+        """SELECT COALESCE(SUM(v.purchase_cost),0) FROM at_vehicles v
+           WHERE v.id NOT IN (SELECT vehicle_id FROM at_sales WHERE vehicle_id IS NOT NULL)"""
+    ).fetchone()[0])
+    inventory_expenses = float(db.execute(
+        """SELECT COALESCE(SUM(amount),0) FROM at_expenses
+           WHERE vehicle_id IS NOT NULL
+             AND vehicle_id NOT IN (SELECT vehicle_id FROM at_sales WHERE vehicle_id IS NOT NULL)"""
+    ).fetchone()[0])
+    gross_profit = sales_total - cost_of_sales - expenses_on_sold
+    return {
+        "sales_total": sales_total,
+        "cost_of_sales": cost_of_sales,
+        "expenses_on_sold": expenses_on_sold,
+        "overhead": overhead,
+        "gross_profit": gross_profit,
+        "net_profit": gross_profit - overhead,
+        "inventory_cost": inventory_cost + inventory_expenses,
+    }
+
+
 def _capital_summary(db: sqlite3.Connection) -> Dict[str, Any]:
     partners = [dict(r) for r in db.execute(
         "SELECT * FROM at_partners WHERE active=1 ORDER BY id ASC"
@@ -560,18 +601,18 @@ def _capital_summary(db: sqlite3.Connection) -> Dict[str, Any]:
     total_distributed = float(db.execute(
         "SELECT COALESCE(SUM(total_amount),0) FROM at_capital_distributions WHERE status IN ('معتمد','مدفوع')"
     ).fetchone()[0])
-    sales_total = float(db.execute("SELECT COALESCE(SUM(sale_price),0) FROM at_sales").fetchone()[0])
-    purchases_total = float(db.execute("SELECT COALESCE(SUM(purchase_price),0) FROM at_purchases").fetchone()[0])
-    expenses_total = float(db.execute("SELECT COALESCE(SUM(amount),0) FROM at_expenses").fetchone()[0])
-    net_profit = sales_total - purchases_total - expenses_total
+    profit = _profit_summary(db)
     return {
         "partners": partners,
         "total_capital": total_capital,
         "total_contributions": total_contrib,
         "total_withdrawals": total_withdrawals,
         "total_distributed": total_distributed,
-        "net_profit": net_profit,
-        "distributable_estimate": max(0.0, net_profit - total_distributed),
+        "gross_profit": profit["gross_profit"],
+        "net_profit": profit["net_profit"],
+        "cost_of_sales": profit["cost_of_sales"],
+        "inventory_cost": profit["inventory_cost"],
+        "distributable_estimate": max(0.0, profit["net_profit"] - total_distributed),
         "entry_types": CAPITAL_ENTRY_TYPES,
     }
 
@@ -670,7 +711,12 @@ def handle_api(
             "expenses_count": db.execute("SELECT COUNT(*) FROM at_expenses").fetchone()[0],
             "expenses_total": db.execute("SELECT COALESCE(SUM(amount),0) FROM at_expenses").fetchone()[0],
         }
-        stats["net_profit"] = float(stats["sales_total"]) - float(stats["purchases_total"]) - float(stats["expenses_total"])
+        profit = _profit_summary(db)
+        stats["cost_of_sales"] = profit["cost_of_sales"]
+        stats["gross_profit"] = profit["gross_profit"]
+        stats["net_profit"] = profit["net_profit"]
+        stats["overhead"] = profit["overhead"]
+        stats["inventory_cost"] = profit["inventory_cost"]
         capital = _capital_summary(db)
         stats["total_capital"] = capital["total_capital"]
         stats["total_distributed"] = capital["total_distributed"]
