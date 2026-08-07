@@ -945,3 +945,20 @@ body.nt-lock { overflow: hidden; }
   .car3d-car { width: 200px; height: 100px; }
   .ig-post { border-radius: 16px; }
 }
+
+/* Match NAJJAR typography: Arial Bold 12 / 14 */
+.nt-customer,
+.nt-customer :where(p, span, label, a, button, li, td, th) {
+  font-family: Arial, Helvetica, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+.nt-customer :where(h1, h2, h3, h4, .ig-toolbar h2) {
+  font-family: Arial, Helvetica, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+.ig-user strong { font-size: 12px; }
+.ig-user span { font-size: 12px; }
+.ig-toolbar p { font-size: 12px; }
+.ig-toolbar h2 { font-size: 14px; }

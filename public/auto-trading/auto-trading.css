@@ -692,7 +692,7 @@ body.section-dashboard .content.dashboard-page {
 .nt-vcard h3 {
   margin: 8px 0 4px;
   color: var(--navy);
-  font-size: 1.15rem;
+  font-size: var(--nt-size-heading);
   font-family: var(--nt-font);
 }
 
@@ -895,19 +895,19 @@ body.section-dashboard .content.dashboard-page {
   font-family: var(--nt-font);
   letter-spacing: 0.04em;
   color: var(--gold-dark);
-  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-size: var(--nt-size-heading);
 }
 
-.nt-dash-banner p { margin: 6px 0 0; color: var(--muted); font-size: 0.92rem; line-height: 1.6; }
+.nt-dash-banner p { margin: 6px 0 0; color: var(--muted); font-size: var(--nt-size); line-height: 1.6; }
 .nt-dash-banner > * { position: relative; z-index: 1; }
 
 .nt-dash-kicker {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.72rem;
+  font-size: var(--nt-size);
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--gold-dark);
   background: rgba(245, 230, 196, 0.65);
@@ -1042,7 +1042,7 @@ body.section-dashboard .content.dashboard-page {
 .nt-hub-head h1, .nt-cust-hero h1, .nt-login-brand h1 {
   margin: 4px 0;
   font-family: var(--nt-font);
-  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-size: var(--nt-size-heading);
 }
 
 .nt-sub { margin: 0; color: var(--muted); }
@@ -1107,8 +1107,8 @@ body.section-dashboard .content.dashboard-page {
   box-shadow: var(--shadow-lg);
 }
 
-.nt-plat h2 { margin: 10px 0 6px; font-size: 1.2rem; color: var(--navy); }
-.nt-plat p { margin: 0; color: var(--muted); font-size: 0.9rem; min-height: 2.6em; }
+.nt-plat h2 { margin: 10px 0 6px; font-size: var(--nt-size-heading); color: var(--navy); }
+.nt-plat p { margin: 0; color: var(--muted); font-size: var(--nt-size); min-height: 2.6em; }
 
 .nt-plat-icon {
   width: 78px;
@@ -1668,7 +1668,7 @@ body.section-dashboard .content.dashboard-page {
   margin: 10px 0 6px;
   color: var(--navy);
   font-family: var(--nt-font);
-  font-size: 1.45rem;
+  font-size: var(--nt-size-heading);
 }
 .nt-vehicle-sheet-body h3 em {
   font-style: normal;
@@ -1899,14 +1899,14 @@ body.nt-lock { overflow: hidden; }
   border-color: rgba(184, 137, 42, 0.38) !important;
 }
 .theme-autotrading .stat-card .label {
-  font-size: 0.82rem;
+  font-size: var(--nt-size);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 .theme-autotrading .stat-card strong {
   display: block;
   margin-top: 8px;
-  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-size: var(--nt-size);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
 }
@@ -1927,7 +1927,7 @@ body.nt-lock { overflow: hidden; }
 }
 .page-head h2 {
   margin: 0;
-  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+  font-size: var(--nt-size-heading);
   position: relative;
   padding-bottom: 6px;
 }
@@ -1941,7 +1941,7 @@ body.nt-lock { overflow: hidden; }
   border-radius: 999px;
   background: linear-gradient(90deg, #d4ad4a, #e8c96a);
 }
-.page-head p { margin: 6px 0 0; }
+.page-head p { margin: 6px 0 0; font-size: var(--nt-size); }
 
 .vehicle-card::after,
 .nt-vcard:not(.nt-show-card)::after {
