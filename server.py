@@ -114,7 +114,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v79-english-titles").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v80-najjar-en-url").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -130,7 +130,15 @@ CLIENT_PURGE_DIRECTIVES = '"cache", "storage"'
 SITE_PUBLISHED = os.environ.get("LQ_SITE_PUBLISHED", "0").strip().lower() in ("1", "true", "yes", "on")
 SITE_CLOSED_URL = "/closed"
 # NAJJAR lives under its own URL prefix — not / and not /auto-trading/*.html.
-NAJJAR_BASE = (os.environ.get("LQ_NAJJAR_BASE", "/najjar").strip().rstrip("/") or "/najjar")
+NAJJAR_BASE = (
+    os.environ.get("LQ_NAJJAR_BASE", "/najjar-al-samoom-used-imported-cars").strip().rstrip("/")
+    or "/najjar-al-samoom-used-imported-cars"
+)
+# Older short prefix — 301 to NAJJAR_BASE so bookmarks keep working.
+NAJJAR_LEGACY_BASES = (
+    "/najjar",
+    "/najjar-al-samoom",
+)
 NAJJAR_PUBLISHED = os.environ.get("LQ_NAJJAR_PUBLISHED", "1").strip().lower() in ("1", "true", "yes", "on")
 # Launch Quality ERP is retired — NAJJAR is the only live product. Set LQ_ERP_PUBLISHED=1
 # only for emergency maintenance of legacy data (never on public Railway).
@@ -171,8 +179,21 @@ _NAJJAR_DOWNLOAD_PAGES = frozenset({
 })
 
 
+def _najjar_legacy_redirect(path: str) -> Optional[str]:
+    """Map legacy /najjar/* URLs to the canonical English NAJJAR_BASE."""
+    for legacy in NAJJAR_LEGACY_BASES:
+        if path == legacy or path == legacy + "/":
+            return NAJJAR_HOME
+        if path.startswith(legacy + "/"):
+            suffix = path[len(legacy):]
+            if suffix in ("/login", "/platforms", "/staff"):
+                suffix += ".html"
+            return NAJJAR_BASE + suffix
+    return None
+
+
 def _najjar_page_file(path: str) -> Optional[str]:
-    """Map a public /najjar/* URL to a file under public/."""
+    """Map a public NAJJAR URL to a file under public/."""
     mapping = {
         NAJJAR_BASE: "auto-trading/customer.html",
         NAJJAR_BASE + "/": "auto-trading/customer.html",
@@ -4684,6 +4705,12 @@ class JawdahHandler(BaseHTTPRequestHandler):
         safe_peek = Path(urllib.parse.unquote(path).lstrip("/")).as_posix()
         original_path = path
         original_safe = safe_peek
+
+        if NAJJAR_PUBLISHED:
+            legacy_target = _najjar_legacy_redirect(path)
+            if legacy_target:
+                return self.send_redirect(legacy_target, permanent=True)
+
         if self._site_closed_gate(path, safe_peek, _send_bytes):
             return
 
@@ -4925,7 +4952,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     if not user:
                         return None
                     payload = {}
-                    if method in ("POST", "PUT", "PATCH"):
+                    if method in ("POST", "PUT", "PATCH", "DELETE"):
                         payload = self.read_json() or {}
                     qmap = urllib.parse.parse_qs(query or "")
                     return lq_auto_trading.handle_api(
@@ -4938,6 +4965,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                         "service": "najjar",
                         "erp_published": ERP_PUBLISHED,
                         "najjar_published": NAJJAR_PUBLISHED,
+                        "najjar_base": NAJJAR_BASE,
                         "version": APP_VERSION,
                         "release_channel": RELEASE_CHANNEL,
                         "stable": STABLE_RELEASE,

@@ -803,6 +803,7 @@ def handle_api(
     if head == "vehicles" and method == "GET" and len(parts) == 1:
         status_filter = (query.get("status") or [""])[0].strip()
         make_filter = (query.get("make") or [""])[0].strip()
+        search_q = (query.get("q") or [""])[0].strip().lower()
         sql = "SELECT * FROM at_vehicles WHERE 1=1"
         params: List[Any] = []
         if status_filter:
@@ -811,6 +812,14 @@ def handle_api(
         if make_filter:
             sql += " AND make=?"
             params.append(make_filter)
+        if search_q:
+            like = f"%{search_q}%"
+            sql += (
+                " AND (lower(stock_no) LIKE ? OR lower(make) LIKE ? OR lower(model) LIKE ?"
+                " OR lower(variant) LIKE ? OR lower(vin) LIKE ? OR lower(plate_no) LIKE ?"
+                " OR lower(notes) LIKE ? OR lower(seller_name) LIKE ? OR lower(buyer_name) LIKE ?)"
+            )
+            params.extend([like] * 9)
         sql += " ORDER BY sort_order ASC, stock_no ASC"
         rows = db.execute(sql, params).fetchall()
         makes = [r[0] for r in db.execute("SELECT DISTINCT make FROM at_vehicles ORDER BY make").fetchall()]
@@ -888,6 +897,37 @@ def handle_api(
         db.commit()
         row = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
         return send_json({"ok": True, "vehicle": dict(row), "url": url}) or True
+
+    if head == "vehicles" and len(parts) == 3 and parts[2] == "photos" and method == "DELETE":
+        try:
+            vehicle_id = int(parts[1])
+        except ValueError:
+            return send_json({"ok": False, "error": "رقم المركبة غير صحيح"}, 400) or True
+        current = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
+        if not current:
+            return send_json({"ok": False, "error": "المركبة غير موجودة"}, 404) or True
+        photo_url = str(payload.get("url") or (query.get("url") or [""])[0]).strip()
+        if not photo_url:
+            return send_json({"ok": False, "error": "حدد الصورة للحذف"}, 400) or True
+        photos = _vehicle_photos_list(dict(current).get("photos"))
+        if photo_url not in photos:
+            return send_json({"ok": False, "error": "الصورة غير موجودة في المعرض"}, 404) or True
+        photos = [p for p in photos if p != photo_url]
+        db.execute(
+            "UPDATE at_vehicles SET photos=?, updated_at=? WHERE id=?",
+            (_photos_json(photos), now_iso(), vehicle_id),
+        )
+        try:
+            from server import delete_upload_file
+
+            if photo_url.startswith("/uploads/auto-trading/vehicles/"):
+                delete_upload_file(photo_url, "auto-trading/vehicles")
+        except Exception:
+            pass
+        _audit(db, user, "vehicle_photo_removed", "vehicle", str(vehicle_id), {"url": photo_url})
+        db.commit()
+        row = db.execute("SELECT * FROM at_vehicles WHERE id=?", (vehicle_id,)).fetchone()
+        return send_json({"ok": True, "vehicle": dict(row), "removed": photo_url}) or True
 
     if head == "vehicles" and len(parts) == 2 and method == "DELETE":
         try:

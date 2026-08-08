@@ -36,8 +36,8 @@
       <button class="nt-btn primary" type="button" id="loginBtn">دخول → المنصات</button>
       <p id="loginErr" class="nt-err" hidden></p>
       <div class="nt-login-links">
-        <a href="/najjar/customer.html">بوابة الزبائن</a>
-        <a href="/najjar/platforms.html">المنصات</a>
+        <a href="/najjar-al-samoom-used-imported-cars/customer.html">بوابة الزبائن</a>
+        <a href="/najjar-al-samoom-used-imported-cars/platforms.html">المنصات</a>
       </div>
       <div class="nt-team-credits">
         <div class="nt-team-row">
@@ -47,8 +47,10 @@
       </div>
     </section>
   </main>
+  <script src="/auto-trading/najjar-path.js?v=at1"></script>
   <script src="/auto-trading/car-3d.js?v=at17"></script>
   <script>
+    const NB = window.NAJJAR_BASE || '/najjar-al-samoom-used-imported-cars';
     document.getElementById('loginBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'login' });
 
     async function doLogin() {
@@ -75,7 +77,7 @@
         if (!token) throw new Error('لم يُرجع الخادم رمز الدخول');
         localStorage.setItem('jawdah_cloud_token', token);
         localStorage.setItem('jawdah_portal_choice', 'autotrading');
-        location.replace('/najjar/platforms.html?from=login&token=' + encodeURIComponent(token));
+        location.replace(NB + '/platforms.html?from=login&token=' + encodeURIComponent(token));
       } catch (e) {
         err.textContent = e.message || 'تعذر الدخول';
         err.hidden = false;
@@ -103,7 +105,7 @@
       try {
         const res = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + saved } });
         if (res.ok) {
-          location.replace('/najjar/platforms.html');
+          location.replace(NB + '/platforms.html');
           return;
         }
       } catch (_) {

@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
-"""NAJJAR is published only under /najjar/ — legacy /auto-trading/*.html stays closed."""
+"""NAJJAR is published under the English NAJJAR_BASE — legacy /najjar/* redirects."""
 from __future__ import annotations
 
+import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+import server  # noqa: E402
 
 ORIGIN = "http://127.0.0.1:8765"
 CLOSED = "/closed"
-NAJJAR = "/najjar"
+NAJJAR = server.NAJJAR_BASE
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -50,10 +57,10 @@ def main() -> int:
             fails += 1
 
     erp_to_najjar = [
-        ("/index.html", "/najjar/login.html"),
-        ("/erp", "/najjar/login.html"),
-        ("/app.html", "/najjar/login.html"),
-        ("/portal-select.html", "/najjar/login.html"),
+        ("/index.html", NAJJAR + "/login.html"),
+        ("/erp", NAJJAR + "/login.html"),
+        ("/app.html", NAJJAR + "/login.html"),
+        ("/portal-select.html", NAJJAR + "/login.html"),
     ]
     for path, target in erp_to_najjar:
         resp = fetch(path)
@@ -64,10 +71,14 @@ def main() -> int:
             fails += 1
 
     legacy_to_najjar = [
-        ("/auto-trading/customer.html", "/najjar/customer.html"),
-        ("/auto-trading/login.html", "/najjar/login.html"),
-        ("/auto-trading/platforms.html", "/najjar/platforms.html"),
-        ("/auto-trading.html", "/najjar/staff.html"),
+        ("/auto-trading/customer.html", NAJJAR + "/customer.html"),
+        ("/auto-trading/login.html", NAJJAR + "/login.html"),
+        ("/auto-trading/platforms.html", NAJJAR + "/platforms.html"),
+        ("/auto-trading.html", NAJJAR + "/staff.html"),
+        ("/najjar/customer.html", NAJJAR + "/customer.html"),
+        ("/najjar/login.html", NAJJAR + "/login.html"),
+        ("/najjar/platforms.html", NAJJAR + "/platforms.html"),
+        ("/najjar/staff.html", NAJJAR + "/staff.html"),
     ]
     for path, target in legacy_to_najjar:
         resp = fetch(path)
@@ -78,10 +89,10 @@ def main() -> int:
             fails += 1
 
     najjar_pages = [
-        (NAJJAR + "/", "تشكيلة"),
-        (NAJJAR + "/customer.html", "تشكيلة"),
+        (NAJJAR + "/", "Featured Selection"),
+        (NAJJAR + "/customer.html", "Featured Selection"),
         (NAJJAR + "/login.html", "Walid Najjar"),
-        (NAJJAR + "/platforms.html", "المنصات"),
+        (NAJJAR + "/platforms.html", "Platforms"),
     ]
     for path, needle in najjar_pages:
         resp = fetch(path)
@@ -107,6 +118,16 @@ def main() -> int:
         fails += 1
 
     try:
+        health = urllib.request.urlopen(ORIGIN + "/api/health", timeout=5).read().decode()
+        ok = NAJJAR.strip('"') in health or NAJJAR.replace("/", "") in health
+        print(f"{'PASS' if ok else 'FAIL'}  /api/health reports najjar_base")
+        if not ok:
+            fails += 1
+    except Exception as exc:
+        print(f"FAIL  /api/health -> {exc}")
+        fails += 1
+
+    try:
         urllib.request.urlopen(ORIGIN + "/api/bootstrap", timeout=5)
         print("FAIL  /api/bootstrap still open")
         fails += 1
@@ -120,7 +141,7 @@ def main() -> int:
     if fails:
         print(f"{fails} check(s) failed")
         return 1
-    print("NAJJAR path: OK — live at /najjar/, legacy HTML closed")
+    print(f"NAJJAR path: OK — live at {NAJJAR}/, legacy /najjar/ redirects")
     return 0
 
 

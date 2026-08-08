@@ -19,7 +19,7 @@
         <p class="nt-sub">اختر الدولة أو المنصة — المزادات، الاستيراد، والمخزون المحلي</p>
       </div>
       <div class="nt-hub-actions">
-        <a class="nt-btn ghost" href="/najjar/customer.html">بوابة الزبائن</a>
+        <a class="nt-btn ghost" href="/najjar-al-samoom-used-imported-cars/customer.html">بوابة الزبائن</a>
         <a class="nt-btn ghost" href="https://wa.me/96871924089" target="_blank" rel="noopener">واتساب</a>
         <button class="nt-btn primary" type="button" id="btnLogout">خروج</button>
       </div>
@@ -92,9 +92,11 @@
     <footer class="nt-hub-foot">NAJJAR & AL SAMOOM TRADING · USED &amp; IMPORTED CARS · نزوى — الفلج</footer>
   </main>
 
+  <script src="/auto-trading/najjar-path.js?v=at1"></script>
   <script src="/auto-trading/icons.js?v=at19"></script>
   <script src="/auto-trading/car-3d.js?v=at17"></script>
   <script>
+    const NB = window.NAJJAR_BASE || '/najjar-al-samoom-used-imported-cars';
     if (window.NajjarIcons) NajjarIcons.paint(document);
 
     function readToken() {
@@ -132,12 +134,12 @@
 
     const token = readToken();
     if (!token) {
-      location.replace('/najjar/login.html');
+      location.replace(NB + '/login.html');
     } else {
       fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } }).then(async (res) => {
         if (!res.ok) {
           localStorage.removeItem('jawdah_cloud_token');
-          location.replace('/najjar/login.html');
+          location.replace(NB + '/login.html');
         }
       }).catch(() => {});
     }
@@ -151,32 +153,32 @@
         if (!NajjarCar3D.firstWithPhoto(vehicles)) return;
         document.getElementById('platHero').innerHTML = NajjarCar3D.renderHero(vehicles);
         document.querySelectorAll('#platHero [data-open-gallery], #platHero [data-view-jump]').forEach((btn) => {
-          btn.onclick = () => { location.href = withToken('/najjar/staff.html?platform=oman&view=vehicles'); };
+          btn.onclick = () => { location.href = withToken(NB + '/staff.html?platform=oman&view=vehicles'); };
         });
       } catch (_) {/* glass logo stays */}
     })();
 
     document.getElementById('btnLogout').onclick = () => {
       localStorage.removeItem('jawdah_cloud_token');
-      location.replace('/najjar/login.html');
+      location.replace(NB + '/login.html');
     };
 
     const routes = {
-      america: '/najjar/staff.html?platform=america&view=imports',
-      salam: '/najjar/staff.html?platform=salam&view=imports',
-      oman: '/najjar/staff.html?platform=oman&view=vehicles',
-      dubai: '/najjar/staff.html?platform=dubai&view=imports',
-      jordan: '/najjar/staff.html?platform=jordan&view=imports',
-      iran: '/najjar/staff.html?platform=iran&view=imports',
-      india: '/najjar/staff.html?platform=india&view=imports',
-      saudi: '/najjar/staff.html?platform=saudi&view=imports',
+      america: NB + '/staff.html?platform=america&view=imports',
+      salam: NB + '/staff.html?platform=salam&view=imports',
+      oman: NB + '/staff.html?platform=oman&view=vehicles',
+      dubai: NB + '/staff.html?platform=dubai&view=imports',
+      jordan: NB + '/staff.html?platform=jordan&view=imports',
+      iran: NB + '/staff.html?platform=iran&view=imports',
+      india: NB + '/staff.html?platform=india&view=imports',
+      saudi: NB + '/staff.html?platform=saudi&view=imports',
     };
 
     document.querySelectorAll('[data-platform]').forEach((el) => {
       el.addEventListener('click', () => {
         const key = el.getAttribute('data-platform');
         localStorage.setItem('najjar_platform', key);
-        location.href = withToken(routes[key] || '/najjar/staff.html');
+        location.href = withToken(routes[key] || NB + '/staff.html');
       });
       el.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); el.click(); }

@@ -1,5 +1,5 @@
 /* النجار والسموم — تجارة واستيراد السيارات */
-const NAJJAR_WEB = '/najjar';
+const NAJJAR_WEB = (typeof window !== 'undefined' && window.NAJJAR_BASE) || '/najjar-al-samoom-used-imported-cars';
 const API_BASE = '/api/auto-trading';
 const content = document.getElementById('content');
 const drawer = document.getElementById('drawer');
@@ -10,6 +10,7 @@ const modalContent = document.getElementById('modalContent');
 let currentSection = 'dashboard';
 let vehiclesCache = [];
 let selectedVehicleId = null;
+let vehicleSearchQ = '';
 let statusFilter = '';
 let makeFilter = '';
 let companyProfile = null;
@@ -381,15 +382,38 @@ document.getElementById('modalClose').onclick = closeModal;
 drawer.addEventListener('click', ev => { if (ev.target === drawer) closeDrawer(); });
 modal.addEventListener('click', ev => { if (ev.target === modal) closeModal(); });
 document.getElementById('refreshPage').onclick = () => loadSection(currentSection);
-document.getElementById('mobileMenu').onclick = () => document.querySelector('.sidebar').classList.toggle('open');
+function closeMobileSidebar() {
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.getElementById('sidebarBackdrop')?.classList.remove('open');
+  document.body.classList.remove('nt-sidebar-open');
+}
+
+function openMobileSidebar() {
+  document.querySelector('.sidebar')?.classList.add('open');
+  document.getElementById('sidebarBackdrop')?.classList.add('open');
+  document.body.classList.add('nt-sidebar-open');
+}
+
+function toggleMobileSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar?.classList.contains('open')) closeMobileSidebar();
+  else openMobileSidebar();
+}
+
+document.getElementById('mobileMenu').onclick = toggleMobileSidebar;
+document.getElementById('sidebarBackdrop')?.addEventListener('click', closeMobileSidebar);
 
 for (const btn of document.querySelectorAll('.nav-item')) {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelector('.sidebar').classList.remove('open');
+    closeMobileSidebar();
     loadSection(btn.dataset.section);
   });
+}
+
+if (window.matchMedia('(max-width: 820px)').matches) {
+  closeMobileSidebar();
 }
 
 function stat(label, value, cls = '') {
@@ -894,6 +918,7 @@ async function loadVehicles() {
   const qs = new URLSearchParams();
   if (statusFilter) qs.set('status', statusFilter);
   if (makeFilter) qs.set('make', makeFilter);
+  if (vehicleSearchQ) qs.set('q', vehicleSearchQ);
   const data = await api('/vehicles' + (qs.toString() ? '?' + qs.toString() : ''));
   vehiclesCache = data.vehicles || [];
   const makes = data.makes || [];
@@ -912,6 +937,10 @@ async function loadVehicles() {
       </div>
     </div>
     <div class="filters">
+      <label class="field nt-search-field">
+        <span>بحث</span>
+        <input type="search" id="vehicleSearch" placeholder="مخزون · ماركة · VIN · لوحة..." value="${e(vehicleSearchQ)}">
+      </label>
       <select id="filterStatus">
         <option value="">كل الحالات</option>
         ${['متاحة', 'محجوزة', 'مباعة', 'قيد الاستيراد', 'صيانة'].map(s => `<option value="${s}" ${statusFilter === s ? 'selected' : ''}>${s}</option>`).join('')}
@@ -963,8 +992,15 @@ async function loadVehicles() {
   document.getElementById('btnApplyFilter').onclick = () => {
     statusFilter = document.getElementById('filterStatus').value;
     makeFilter = document.getElementById('filterMake').value;
+    vehicleSearchQ = document.getElementById('vehicleSearch').value.trim();
     loadVehicles();
   };
+  const searchInput = document.getElementById('vehicleSearch');
+  if (searchInput) {
+    searchInput.onkeydown = (ev) => {
+      if (ev.key === 'Enter') document.getElementById('btnApplyFilter').click();
+    };
+  }
 }
 
 function vehiclePhotos(v) {
@@ -1004,6 +1040,41 @@ function renderPhotoGallery(photos, idPrefix = 'veh') {
   return `<div class="nt-photo-thumbs">${photos.map((p, i) => `
     <div class="nt-photo-thumb${i === 0 ? ' active' : ''}"><img src="${e(uploadUrl(p))}" alt="صورة ${i + 1}" loading="lazy"></div>
   `).join('')}</div>`;
+}
+
+function renderEditablePhotoGallery(photos, vehicleId) {
+  if (!photos.length) return '<p class="mini">لا توجد صور بعد</p>';
+  return `<div class="nt-photo-thumbs nt-photo-thumbs--edit">${photos.map((p, i) => `
+    <div class="nt-photo-thumb nt-photo-thumb--edit">
+      <img src="${e(uploadUrl(p))}" alt="صورة ${i + 1}" loading="lazy">
+      <button type="button" class="btn small danger nt-photo-del" data-photo-url="${e(p)}" data-vehicle-id="${vehicleId}" title="حذف الصورة">×</button>
+    </div>
+  `).join('')}</div>`;
+}
+
+async function deleteVehiclePhoto(vehicleId, url) {
+  if (!confirm('حذف هذه الصورة من المركبة؟')) return;
+  try {
+    await api('/vehicles/' + vehicleId + '/photos', { method: 'DELETE', body: { url } });
+    toast('تم حذف الصورة');
+    return true;
+  } catch (err) {
+    toast(err.message, 'error');
+    return false;
+  }
+}
+
+function bindPhotoDeleteButtons(root, onDone) {
+  (root || document).querySelectorAll('.nt-photo-del').forEach((btn) => {
+    btn.onclick = async (ev) => {
+      ev.stopPropagation();
+      const vid = btn.getAttribute('data-vehicle-id');
+      const url = btn.getAttribute('data-photo-url');
+      if (await deleteVehiclePhoto(vid, url)) {
+        if (typeof onDone === 'function') onDone(vid);
+      }
+    };
+  });
 }
 
 function photoUploadField(idPrefix, label = 'تحميل صور') {
@@ -1159,7 +1230,7 @@ async function openVehicleDetail(id) {
     ${licenseLink}
     <div class="photo-upload-block" style="margin:14px 0">
       <h3 style="margin:0 0 8px">صور المركبة</h3>
-      ${renderPhotoGallery(photos, 'drawer')}
+      ${renderEditablePhotoGallery(photos, v.id)}
       ${photoUploadField('drawerUpload', 'تحميل صور جديدة')}
       <button class="btn secondary" type="button" id="btnUploadDrawerPhotos">رفع الصور</button>
     </div>
@@ -1185,6 +1256,7 @@ async function openVehicleDetail(id) {
   document.getElementById('btnEditVehicle').onclick = () => showEditVehicleForm(v);
   document.getElementById('btnCancelDrawer').onclick = closeDrawer;
   bindPhotoPreview('drawerUploadPhotos', 'drawerUploadPhotoPreview');
+  bindPhotoDeleteButtons(document.getElementById('drawerContent'), (vid) => openVehicleDetail(vid));
   document.getElementById('btnUploadDrawerPhotos').onclick = async () => {
     const input = document.getElementById('drawerUploadPhotos');
     const files = input?.files;
@@ -1305,7 +1377,7 @@ function showEditVehicleForm(v) {
   const photos = vehiclePhotos(v);
   openModal(`
     <h2>Edit ${e(v.make)} ${e(v.model)}</h2>
-    ${photos.length ? `<div style="margin-bottom:12px">${renderPhotoGallery(photos, 'edit')}</div>` : ''}
+    <div id="editPhotoGallery" style="margin-bottom:12px">${renderEditablePhotoGallery(photos, v.id)}</div>
     <div class="form-grid">
       <label class="field"><span>الحالة</span>
         <select id="eStatus">${['متاحة', 'محجوزة', 'مباعة', 'قيد الاستيراد', 'صيانة'].map(s => `<option value="${s}" ${v.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
@@ -1331,6 +1403,11 @@ function showEditVehicleForm(v) {
       ${v.status !== 'مباعة' ? `<button class="btn danger" type="button" id="btnDeleteInEdit">حذف</button>` : ''}
     </div>`);
   bindPhotoPreview('fEditPhotos', 'fEditPhotoPreview');
+  bindPhotoDeleteButtons(document.getElementById('modalContent'), (vid) => {
+    const fresh = vehiclesCache.find((row) => String(row.id) === String(vid));
+    if (fresh) showEditVehicleForm(fresh);
+    else showEditVehicleForm(v);
+  });
   document.getElementById('btnUpdateVehicle').onclick = async () => {
     try {
       await api('/vehicles/' + v.id, {
