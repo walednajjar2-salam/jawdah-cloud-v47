@@ -2507,9 +2507,14 @@ function renderContracts(){
     const renewBtn = meta.renewable ? `<button class="gold-btn" onclick="renewContract('${r.id}')">تجديد</button> ` : '';
     const requestBtn = (st==='draft' || !st) ? `<button class="gold-btn" onclick="requestContractApproval('${r.id}')">طلب اعتماد</button> ` : '';
     const approveBtn = (st==='approvalrequested' && canDecideApprovals()) ? `<button class="gold-btn" onclick="approveContract('${r.id}')">اعتماد</button> ` : '';
-    const activateBtn = (st==='approved' && canActivateContracts()) ? `<button class="gold-btn" onclick="activateContract('${r.id}')">تفعيل العقد</button> ` : '';
+    const activateBtn = ((st==='approved' || st==='signed') && canActivateContracts()) ? `<button class="gold-btn" onclick="activateContract('${r.id}')">تفعيل العقد</button> ` : '';
     const invoiceBtn = (st==='active' || st==='activated') ? `<button class="ghost" onclick="invoiceFromContract('${r.id}')">فاتورة</button> ` : '';
-    return `${renewBtn}${requestBtn}${approveBtn}${activateBtn}<button class="ghost" onclick="contractDocument('${r.id}')">العقد</button> ${invoiceBtn}<button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> <button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
+    const cycleBtn = `<button class="ghost" onclick="LQ_CONTRACT_LIFECYCLE&&LQ_CONTRACT_LIFECYCLE.openForContract('${r.id}')">دورة العقد</button> `;
+    const locked = Number(r.locked||0)===1 || ['approved','active','activated','signed'].includes(st);
+    const editBtn = locked
+      ? `<button class="ghost" onclick="LQ_CONTRACT_LIFECYCLE&&LQ_CONTRACT_LIFECYCLE.openForContract('${r.id}')">تعديل بإصدار</button> `
+      : `<button class="ghost" onclick="editRecord('contracts','${r.id}')">تعديل</button> `;
+    return `${renewBtn}${requestBtn}${approveBtn}${activateBtn}${cycleBtn}<button class="ghost" onclick="contractDocument('${r.id}')">العقد</button> ${invoiceBtn}${editBtn}<button class="danger" onclick="delRecord('contracts','${r.id}')">حذف</button>`;
   });
 }
 function renderInvoices(){
@@ -3577,6 +3582,14 @@ function editRecord(table,id){
   const cfg = EDIT_CONFIG[table];
   const row = byId(table,id);
   if(!cfg || !row.id){ toastNotice('لم يتم العثور على السجل'); return; }
+  if(table==='contracts'){
+    const st=String(row.status||'').toLowerCase();
+    if(Number(row.locked||0)===1 || ['approved','active','activated','signed'].includes(st)){
+      toastNotice('العقد مغلق — أي تعديل عبر إصدار جديد من دورة العقد');
+      if(window.LQ_CONTRACT_LIFECYCLE) window.LQ_CONTRACT_LIFECYCLE.openForContract(id);
+      return;
+    }
+  }
   const fields = cfg.fields.map(([key,label,type])=>{
     const value = key === 'password' ? '' : (row[key] ?? '');
     const options = editOptions(key,row,table);
@@ -3705,7 +3718,7 @@ function printContractDocument(){
   const body = $('#contractPreview')?.innerHTML || '';
   if(!body.trim()) return toastNotice('لا يوجد عقد للمعاينة');
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><title>Print Contract</title><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>Print Contract</title><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   const w = window.open('', '_blank', 'noopener,noreferrer');
   if(!w){
     showHtmlPreview('طباعة العقد', html, `contract-${Jawdah.contractForPrint?.contract_no||Jawdah.contractForPrint?.id||'file'}.html`);
@@ -3720,16 +3733,19 @@ function downloadContractHtml(){
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
   const body = $('#contractPreview')?.innerHTML || Jawdah.contractHtmlForPrint || '';
   if(!body.trim()) return toastNotice('لا يوجد عقد للتنزيل');
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   const no = Jawdah.contractForPrint?.contract_no || Jawdah.contractForPrint?.id || 'contract';
   downloadFile(`contract-${no}.html`, html, 'text/html');
 }
 async function copyContractTerms(){
-  const terms = String(Jawdah.contractForPrint?.legal_terms || '').trim();
+  const protectedTerms = window.LQ_LEASE_PROTECTED?.protectedTermsPlainText
+    ? window.LQ_LEASE_PROTECTED.protectedTermsPlainText()
+    : '';
+  const terms = String(protectedTerms || Jawdah.contractForPrint?.legal_terms || '').trim();
   if(!terms) return toastNotice('لا توجد شروط عقد لنسخها');
   try{
     await navigator.clipboard.writeText(terms);
-    toast('تم نسخ شروط العقد');
+    toast('تم نسخ شروط العقد المحمية كاملة');
   }catch(_){
     toastNotice('تعذر النسخ التلقائي — يمكن النسخ يدويًا');
   }
@@ -3738,7 +3754,7 @@ function openContractInNewWindow(){
   const body = $('#contractPreview')?.innerHTML || Jawdah.contractHtmlForPrint || '';
   if(!body.trim()) return toastNotice('لا يوجد عقد للعرض');
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   const w = window.open('', '_blank', 'noopener,noreferrer');
   if(!w) return toastNotice('تعذر فتح نافذة جديدة');
   w.document.write(html);
@@ -3780,14 +3796,14 @@ function printInvoice(id){
 function downloadInvoice(){
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
   const body=$('#invoicePreview').innerHTML;
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   downloadFile(`invoice-${Jawdah.invoiceForPrint?.invoice_no||'file'}.html`,html,'text/html');
 }
 function openInvoiceInNewWindow(){
   const body = $('#invoicePreview')?.innerHTML || '';
   if(!body.trim()) return toastNotice('لا توجد فاتورة للعرض');
   const base=window.location.origin+(window.location.pathname.replace(/\/[^/]*$/,'/'));
-  const html='<!doctype html><html lang="ar" dir="ltr"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lq2"></head><body class="lq-print-body">'+body+'</body></html>';
+  const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="'+base+'lq-print.css?v=lease3"></head><body class="lq-print-body">'+body+'</body></html>';
   const w = window.open('', '_blank', 'noopener,noreferrer');
   if(!w) return toastNotice('تعذر فتح نافذة جديدة');
   w.document.write(html);

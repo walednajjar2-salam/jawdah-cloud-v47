@@ -40,7 +40,8 @@
   <link rel="stylesheet" href="lq-shell.css?v=shell33">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="lq-ui-unify.css?v=ui3">
-  <link rel="stylesheet" href="lq-print.css?v=lq2" media="print">
+  <link rel="stylesheet" href="lq-print.css?v=lease3">
+  <link rel="stylesheet" href="lq-contract-lifecycle.css?v=lc1">
   <link rel="stylesheet" href="lq-reference-clean.css?v=ref10">
   <link rel="stylesheet" href="lq-emergency-clean.css?v=ec15">
   <link rel="stylesheet" href="lq-edition-terrifying.css?v=td5">
@@ -685,10 +686,14 @@
           <img src="assets/brand-logo-gold.png?v=12" alt="Launch Quality logo">
           <div>
             <b>نماذج العقود الرسمية — Launch Quality</b>
-            <p class="mini">صيغة عقد احترافية مع الشروط القانونية، الطباعة، PDF، وتنزيل نسخة HTML.</p>
+            <p class="mini">دورة عقد كاملة: عميل ووحدة → مالية → ملف استلام ومرفقات → اعتماد → توقيع → تفعيل → إنهاء/إخلاء، مع إصدارات وسجل إجراءات.</p>
           </div>
         </div>
-        <div class="card contract-engine-card"><h3>إنشاء عقد إيجار محمي</h3><div class="form"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><select id="contractPaymentCycle"><option value="monthly">شهري</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option><option value="once">مرة واحدة</option></select><div id="contractPropertyWarning" class="lq-inline-warning hidden"></div><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة المؤجرة"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="30"><input id="contractAttachments" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" aria-label="مرفقات العقد"><textarea id="contractLegalTerms" placeholder="الشروط القانونية وحماية الشركة"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button></div>
+        <div id="lqContractLifecycle"></div>
+        <details class="card contract-engine-card" id="legacyContractForm">
+          <summary><h3 style="display:inline">إنشاء سريع (مسودة كلاسيكية)</h3></summary>
+          <div class="form" style="margin-top:12px"><select id="contractType"><option>Residential</option><option>Commercial</option><option>Short-Term</option><option>Hospitality</option></select><select id="contractProperty"></select><select id="contractClient"></select><select id="contractPaymentCycle"><option value="monthly">شهري</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option><option value="once">مرة واحدة</option></select><div id="contractPropertyWarning" class="lq-inline-warning hidden"></div><input id="tenantNationality" placeholder="جنسية المستأجر"><input id="tenantIdNo" placeholder="رقم الهوية / السجل"><textarea id="unitDetails" placeholder="تفاصيل الوحدة المؤجرة"></textarea><input id="contractStart" type="date"><input id="contractEnd" type="date"><input id="contractRent" placeholder="الإيجار الشهري OMR"><input id="contractLateFee" placeholder="غرامة التأخير OMR"><input id="contractGraceDays" placeholder="مهلة السداد بالأيام" value="5"><input id="contractRenewalDays" placeholder="تنبيه التجديد قبل كم يوم" value="30"><input id="contractAttachments" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" aria-label="مرفقات العقد"><textarea id="contractLegalTerms" placeholder="الشروط القانونية وحماية الشركة"></textarea><textarea id="contractNotes" placeholder="ملاحظات داخلية"></textarea></div><button class="gold-btn" onclick="createContract()">حفظ مسودة العقد</button>
+        </details>
         <div class="card"><div class="toolbar"><button class="ghost" onclick="exportCsv('contracts')">تصدير CSV</button><button class="ghost" onclick="exportFilteredContractsCsv()">تصدير نتائج الفلتر</button></div><div id="contractsTable"></div></div>
       </section>
 
@@ -917,7 +922,9 @@
   <div id="kpiInsightPanel" class="kpi-insight-panel" aria-hidden="true"></div>
   </div>
 
-  <script src="lq-print-templates.js?v=lq2" defer></script>
+  <script src="lq-lease-protected.js?v=lease3" defer></script>
+  <script src="lq-print-templates.js?v=lease3" defer></script>
+  <script src="lq-contract-lifecycle.js?v=lc1" defer></script>
   <script src="lq-accountant-reports.js?v=ar1" defer></script>
   <script src="lq-bank-close.js?v=bc1" defer></script>
   <script src="lq-approvals.js?v=ap1" defer></script>
