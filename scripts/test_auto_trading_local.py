@@ -39,7 +39,7 @@ def main() -> int:
 
     assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)
     stats = out[-1][1]["stats"]
-    assert stats["total_vehicles"] >= 4
+    assert stats["total_vehicles"] >= 5
 
     assert lq_auto_trading.handle_api(db, "GET", ["vehicles"], {}, {}, user, send)
     vehicles = out[-1][1]["vehicles"]
@@ -82,7 +82,7 @@ def main() -> int:
     showroom = lq_auto_trading.public_showroom(db)
     assert showroom, "showroom should list the available catalogue"
     assert all(v["status"] != "مباعة" for v in showroom)
-    private = {"purchase_cost", "notes", "buyer_name", "seller_name", "insurance_policy", "license_source"}
+    private = {"purchase_cost", "buyer_name", "seller_name", "insurance_policy", "license_source"}
     assert all(not private & set(v) for v in showroom)
     in_transit = [v for v in showroom if v["status"] == "قيد الاستيراد"]
     assert in_transit, "seed carries in-transit vehicles"

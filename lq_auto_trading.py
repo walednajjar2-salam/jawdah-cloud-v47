@@ -653,7 +653,7 @@ def with_doc_vehicle(row: Dict[str, Any], vehicle: Optional[Dict[str, Any]]) -> 
 PUBLIC_VEHICLE_FIELDS = (
     "id", "stock_no", "make", "model", "variant", "vehicle_type", "color", "year",
     "vin", "engine_cc", "seats", "axles", "origin_country", "status", "sort_order",
-    "first_registration", "license_valid_until",
+    "first_registration", "license_valid_until", "plate_no", "import_ref", "notes",
 )
 PUBLIC_STATUSES = ("متاحة", "محجوزة", "قيد الاستيراد")
 
