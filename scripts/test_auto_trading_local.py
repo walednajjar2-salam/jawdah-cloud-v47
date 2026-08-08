@@ -39,23 +39,27 @@ def main() -> int:
 
     assert lq_auto_trading.handle_api(db, "GET", ["dashboard"], {}, {}, user, send)
     stats = out[-1][1]["stats"]
-    assert stats["total_vehicles"] >= 5
+    assert stats["total_vehicles"] >= 6
 
     assert lq_auto_trading.handle_api(db, "GET", ["vehicles"], {}, {}, user, send)
     vehicles = out[-1][1]["vehicles"]
-    assert [v["stock_no"] for v in vehicles[:4]] == [
-        "NT-LR-001", "NT-MB-002", "NT-MB-003", "NT-BMW-004"
+    assert [v["stock_no"] for v in vehicles[:6]] == [
+        "NT-LC-006", "NT-LR-001", "NT-MB-005", "NT-MB-002", "NT-MB-003", "NT-BMW-004"
     ]
-    assert vehicles[0]["vin"] == "SALEA7BW5S2123456"
-    assert vehicles[1]["vin"] == "4JGFD6BB1TB591167"
-    assert vehicles[1]["status"] == "قيد الاستيراد"
-    assert vehicles[2]["variant"] == "G63 AMG"
-    assert vehicles[2]["license_doc_no"] == "72863679"
-    assert vehicles[3]["vin"] == "WBAFR9C55DD226932"
-    assert vehicles[3]["plate_no"] == "61265 / د د"
+    lr = next(v for v in vehicles if v["stock_no"] == "NT-LR-001")
+    mb2 = next(v for v in vehicles if v["stock_no"] == "NT-MB-002")
+    mb3 = next(v for v in vehicles if v["stock_no"] == "NT-MB-003")
+    bmw = next(v for v in vehicles if v["stock_no"] == "NT-BMW-004")
+    assert lr["vin"] == "SALEA7BW5S2123456"
+    assert mb2["vin"] == "4JGFD6BB1TB591167"
+    assert mb2["status"] == "قيد الاستيراد"
+    assert mb3["variant"] == "G63 AMG"
+    assert mb3["license_doc_no"] == "72863679"
+    assert bmw["vin"] == "WBAFR9C55DD226932"
+    assert bmw["plate_no"] == "61265 / د د"
 
     # Staff edits to catalogue vehicles must survive the next request's seed sync.
-    seeded_id = vehicles[0]["id"]
+    seeded_id = lr["id"]
     assert lq_auto_trading.handle_api(
         db, "POST", ["vehicles", str(seeded_id)], {},
         {"status": "محجوزة", "list_price": 31000, "notes": "محجوزة لعميل"}, user, send,

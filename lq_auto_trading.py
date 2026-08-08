@@ -215,7 +215,7 @@ def _vehicle_row_from_seed(item: Dict[str, Any]) -> Dict[str, Any]:
 SEED_REFRESHABLE_COLUMNS = (
     "stock_no", "make", "model", "variant", "vehicle_type", "color", "year", "vin",
     "engine_no", "engine_cc", "seats", "axles", "first_registration", "license_doc_no",
-    "license_source", "photos", "sort_order",
+    "license_source", "photos", "sort_order", "notes",
 )
 
 
@@ -254,6 +254,11 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
                     now_iso(), existing[0],
                 ),
             )
+            if item.get("pin_price"):
+                db.execute(
+                    "UPDATE at_vehicles SET list_price=?, price_usd=?, updated_at=? WHERE id=?",
+                    (row["list_price"], row["price_usd"], now_iso(), existing[0]),
+                )
         else:
             db.execute(
                 """INSERT INTO at_vehicles(
