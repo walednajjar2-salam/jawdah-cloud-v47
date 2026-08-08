@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Sign in | NAJJAR & AL SAMOOM TRADING</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at44">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at49">
 </head>
 <body class="nt-login">
   <div class="nt-watermark" aria-hidden="true"></div>
@@ -17,7 +17,7 @@
     </section>
     <section class="nt-login-card">
       <h2>Sign in</h2>
-      <p class="nt-login-hint">Passwords are easy numbers 1–5 for the team accounts below</p>
+      <p class="nt-login-hint">كلمات المرور أرقام 1–5 — اضغط على الحساب لملء الحقول تلقائياً</p>
       <label class="nt-field">
         <span>Username</span>
         <input id="loginUser" autocomplete="username" placeholder="waleed.najjar">
@@ -26,12 +26,27 @@
         <span>Password</span>
         <input id="loginPass" type="password" autocomplete="current-password" placeholder="1">
       </label>
-      <div class="nt-login-creds" aria-label="Team logins">
-        <div><code>waleed.najjar</code> / <strong>1</strong> · Board</div>
-        <div><code>hamad.sumoom</code> / <strong>2</strong> · Board</div>
-        <div><code>sara</code> / <strong>3</strong> · Operations</div>
-        <div><code>sales</code> / <strong>4</strong> · Sales</div>
-        <div><code>accounting</code> / <strong>5</strong> · Accounting</div>
+      <div class="nt-login-creds" aria-label="حسابات الفريق">
+        <button type="button" class="nt-login-creds-row" data-user="waleed.najjar" data-pass="1">
+          <span class="nt-cred-name">وليد النجار</span>
+          <span class="nt-cred-meta"><code>waleed.najjar</code> / <strong>1</strong> · مجلس إدارة</span>
+        </button>
+        <button type="button" class="nt-login-creds-row" data-user="hamad.sumoom" data-pass="2">
+          <span class="nt-cred-name">حمد السموم</span>
+          <span class="nt-cred-meta"><code>hamad.sumoom</code> / <strong>2</strong> · مجلس إدارة</span>
+        </button>
+        <button type="button" class="nt-login-creds-row" data-user="sara" data-pass="3">
+          <span class="nt-cred-name">ساره</span>
+          <span class="nt-cred-meta"><code>sara</code> / <strong>3</strong> · تشغيل</span>
+        </button>
+        <button type="button" class="nt-login-creds-row" data-user="sales" data-pass="4">
+          <span class="nt-cred-name">مبيعات</span>
+          <span class="nt-cred-meta"><code>sales</code> / <strong>4</strong> · مبيعات</span>
+        </button>
+        <button type="button" class="nt-login-creds-row" data-user="accounting" data-pass="5">
+          <span class="nt-cred-name">محاسبة</span>
+          <span class="nt-cred-meta"><code>accounting</code> / <strong>5</strong> · محاسبة</span>
+        </button>
       </div>
       <button class="nt-btn primary" type="button" id="loginBtn">دخول → المنصات</button>
       <p id="loginErr" class="nt-err" hidden></p>
@@ -85,6 +100,13 @@
         btn.disabled = false;
       }
     }
+    document.querySelectorAll('.nt-login-creds-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        document.getElementById('loginUser').value = row.dataset.user || '';
+        document.getElementById('loginPass').value = row.dataset.pass || '';
+        document.getElementById('loginPass').focus();
+      });
+    });
     document.getElementById('loginBtn').onclick = doLogin;
     document.getElementById('loginPass').addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') doLogin();
