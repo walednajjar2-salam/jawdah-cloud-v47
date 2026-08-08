@@ -1,5 +1,5 @@
 /* النجار والسموم — تجارة واستيراد السيارات */
-const NAJJAR_WEB = '/najjar';
+const NAJJAR_WEB = (typeof window !== 'undefined' && window.NAJJAR_BASE) || '/najjar-al-samoom-used-imported-cars';
 const API_BASE = '/api/auto-trading';
 const content = document.getElementById('content');
 const drawer = document.getElementById('drawer');
