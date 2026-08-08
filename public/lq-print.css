@@ -258,10 +258,128 @@
   line-height: 1.6;
 }
 
+.lq-doc-banner {
+  height: 10px;
+  margin: -6px 0 18px;
+  background: linear-gradient(90deg, #0b1220 0%, #0b1220 62%, #c9a227 62%, #f5d76e 100%);
+  border-radius: 0 0 10px 10px;
+}
+
+.lq-doc-type-ar {
+  display: block;
+  color: #8f631b;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.lq-doc-contactbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #0b1220;
+  color: #f5d76e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 0 0 8px 8px;
+}
+
+.lq-doc-seal {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border-radius: 50% !important;
+  min-height: 110px !important;
+  aspect-ratio: 1;
+  max-width: 140px;
+  margin: 0 auto;
+  background: radial-gradient(circle at 40% 35%, #fff8e1, #fff) !important;
+  border: 2px solid #c9a227 !important;
+  color: #8f631b;
+  font-weight: 800;
+}
+
+/* Multi-page protected lease */
+.lq-doc-lease {
+  direction: rtl;
+}
+.lq-lease-page {
+  page-break-after: always;
+  break-after: page;
+  padding: 4px 0 18px;
+  min-height: 240mm;
+}
+.lq-lease-page:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
+.lq-lease-page-top,
+.lq-lease-page-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  color: #6b7280;
+  border-bottom: 1px solid #e5d39a;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+.lq-lease-page-foot {
+  border-bottom: 0;
+  border-top: 1px solid #e5d39a;
+  margin-top: 22px;
+  padding-top: 10px;
+  margin-bottom: 0;
+}
+.lq-lease-cover h2 {
+  margin: 8px 0;
+  color: #0b1220;
+  font-size: 1.5rem;
+}
+.lq-lease-h {
+  margin: 0 0 12px;
+  color: #8f631b;
+  font-size: 1.05rem;
+  border-right: 4px solid #c9a227;
+  padding-right: 10px;
+}
+.lq-lease-article {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #efe2b8;
+  border-radius: 12px;
+  background: #fffdf7;
+}
+.lq-lease-article h4 {
+  margin: 0 0 8px;
+  color: #0b1220;
+  font-size: 0.95rem;
+}
+.lq-lease-article p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.85;
+  color: #1f2937;
+  white-space: pre-wrap;
+}
+.lq-lease-annex {
+  margin: 8px 0 0;
+  padding-right: 22px;
+  line-height: 1.9;
+  font-size: 0.9rem;
+}
+.lq-lease-sign strong {
+  margin-bottom: 18px;
+}
+
 /* Modal preview inherits */
 .invoice-paper.lq-print-paper,
-.lq-print-paper .lq-doc {
-  padding: 0;
+.lq-print-paper.lq-doc {
+  padding: 8px;
 }
 
 /* Print only invoice modal content (fallback when popup blocked) */
