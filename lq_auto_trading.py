@@ -206,7 +206,7 @@ def _vehicle_row_from_seed(item: Dict[str, Any]) -> Dict[str, Any]:
         "mortgage": item.get("mortgage", ""),
         "notes": item.get("notes", ""),
         "photos": photos_json,
-        "sort_order": int(item.get("sort_order") or 999),
+        "sort_order": int(item["sort_order"]) if item.get("sort_order") is not None else 999,
     }
 
 
@@ -234,7 +234,7 @@ def sync_seed_vehicles(db: sqlite3.Connection) -> None:
     for idx, item in enumerate(rows, start=1):
         if not item.get("stock_no") or not item.get("make") or not item.get("model"):
             continue
-        if not item.get("sort_order"):
+        if item.get("sort_order") is None:
             item["sort_order"] = idx
         row = _vehicle_row_from_seed(item)
         existing = None
