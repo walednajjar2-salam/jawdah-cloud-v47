@@ -114,7 +114,7 @@ STABLE_TAG = "v71.0-stock-integrity"
 # that deletes a worker the page's own scripts can no longer reach. The marker
 # cookie is what keeps it to once: Clear-Site-Data "storage" spares cookies, so
 # the very response that purges the device also records that it was purged.
-CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v76-najjar-ui-at42").strip()
+CLIENT_PURGE_GENERATION = os.environ.get("LQ_CLIENT_PURGE", "v77-najjar-dev-at43").strip()
 CLIENT_PURGE_COOKIE = "lq_purge"
 # "cookies" is deliberately absent, for two reasons: it would take the marker
 # cookie with it and re-purge on every navigation, and it would drop lq_token,
@@ -4858,7 +4858,7 @@ class JawdahHandler(BaseHTTPRequestHandler):
                     if not user:
                         return None
                     payload = {}
-                    if method in ("POST", "PUT", "PATCH"):
+                    if method in ("POST", "PUT", "PATCH", "DELETE"):
                         payload = self.read_json() or {}
                     qmap = urllib.parse.parse_qs(query or "")
                     return lq_auto_trading.handle_api(

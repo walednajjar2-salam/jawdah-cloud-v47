@@ -367,6 +367,26 @@ def main() -> int:
     photos = json.loads(uploaded["vehicle"]["photos"]) if isinstance(uploaded["vehicle"]["photos"], str) else uploaded["vehicle"]["photos"]
     assert uploaded["url"] in photos
 
+    # Vehicle search by stock_no, VIN, make.
+    assert lq_auto_trading.handle_api(db, "GET", ["vehicles"], {"q": ["nt-lr-001"]}, {}, user, send)
+    found = out[-1][1]["vehicles"]
+    assert len(found) == 1 and found[0]["stock_no"] == "NT-LR-001"
+    assert lq_auto_trading.handle_api(db, "GET", ["vehicles"], {"q": ["SALEA7BW"]}, {}, user, send)
+    assert any(v["vin"].startswith("SALEA7BW") for v in out[-1][1]["vehicles"])
+    assert lq_auto_trading.handle_api(db, "GET", ["vehicles"], {"q": ["zzzznotfound"]}, {}, user, send)
+    assert out[-1][1]["vehicles"] == []
+
+    # Photo delete removes URL from gallery.
+    photo_url = uploaded["url"]
+    assert lq_auto_trading.handle_api(
+        db, "DELETE", ["vehicles", str(photo_vehicle), "photos"], {},
+        {"url": photo_url}, user, send,
+    )
+    assert out[-1][1]["ok"] is True
+    assert out[-1][1]["removed"] == photo_url
+    after = json.loads(out[-1][1]["vehicle"]["photos"]) if isinstance(out[-1][1]["vehicle"]["photos"], str) else out[-1][1]["vehicle"]["photos"]
+    assert photo_url not in after
+
     print("auto-trading API smoke test: OK")
     return 0
 
