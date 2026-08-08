@@ -1222,13 +1222,26 @@ body.nt-sidebar-open {
 /* Login */
 .nt-login-stage {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 28px;
-  align-items: center;
-  min-height: 100vh;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: stretch;
+  max-width: min(460px, 100%);
+  min-height: auto;
+  padding-top: 24px;
+  padding-bottom: 32px;
+  box-sizing: border-box;
 }
 
-.nt-login-brand { text-align: center; }
+.nt-login-brand {
+  text-align: center;
+  width: 100%;
+  align-self: stretch;
+}
+
+#loginBrandWrap {
+  width: 100%;
+  display: block;
+}
 .nt-login-sign {
   width: min(100%, 520px);
   border-radius: 0;
@@ -1241,6 +1254,8 @@ body.nt-sidebar-open {
 .nt-login-loc { color: var(--muted); }
 
 .nt-login-card {
+  width: 100%;
+  box-sizing: border-box;
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72));
   border: 1px solid rgba(184, 137, 42, 0.25);
   border-radius: 28px;
@@ -1309,9 +1324,32 @@ body.nt-sidebar-open {
   animation: nt-glass-float 5.5s ease-in-out infinite;
 }
 .nt-glass-logo-float--login {
-  width: min(100%, 360px);
-  aspect-ratio: 1.15;
-  margin-bottom: 8px;
+  display: block;
+  width: 100%;
+  max-width: none;
+  aspect-ratio: unset;
+  min-height: 132px;
+  margin-bottom: 0;
+  align-self: stretch;
+  justify-self: stretch;
+  animation: none;
+  box-sizing: border-box;
+}
+.nt-glass-logo-float--login .nt-glass-logo-ring {
+  border-radius: 28px;
+  inset: 0;
+}
+.nt-glass-logo-float--login .nt-glass-logo-glow {
+  inset: 4% 6%;
+  border-radius: 28px;
+}
+.nt-glass-logo-float--login .nt-glass-logo-pane {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 14px 18px 12px;
+  box-sizing: border-box;
+  border-radius: 22px;
 }
 .nt-glass-logo-float--hero {
   width: min(100%, 420px);
@@ -1781,8 +1819,17 @@ body.nt-sidebar-open {
 body.nt-lock { overflow: hidden; }
 
 @media (max-width: 860px) {
-  .nt-login-stage { grid-template-columns: 1fr; padding-top: 20px; }
-  .nt-glass-logo-float--login { width: min(100%, 300px); }
+  .nt-login-stage {
+    grid-template-columns: 1fr;
+    max-width: min(460px, calc(100% - 36px));
+    padding-top: 16px;
+    gap: 14px;
+  }
+  .nt-glass-logo-float--login {
+    width: 100%;
+    max-width: none;
+    min-height: 120px;
+  }
   .nt-dash-banner { grid-template-columns: 1fr; text-align: center; }
   .nt-dash-banner img { margin: 0 auto; }
   .nt-vehicle-sheet-panel { grid-template-columns: 1fr; }
