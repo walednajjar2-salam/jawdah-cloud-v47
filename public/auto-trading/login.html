@@ -5,14 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Sign in | NAJJAR & AL SAMOOM TRADING</title>
   <link rel="icon" href="/assets/app-icon-192.png">
-  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at47">
+  <link rel="stylesheet" href="/auto-trading/auto-trading.css?v=at48">
+  <link rel="stylesheet" href="/auto-trading/cinema-lux.css?v=cl1">
 </head>
-<body class="nt-login">
+<body class="nt-login nt-cinema-lux">
+  <canvas id="ntCinemaCanvas" class="nt-cinema-canvas" aria-hidden="true"></canvas>
+  <div class="nt-cinema-vignette" aria-hidden="true"></div>
+  <div class="nt-cinema-grid" aria-hidden="true"></div>
+  <div class="nt-cinema-beams" aria-hidden="true"></div>
   <div class="nt-watermark" aria-hidden="true"></div>
   <div class="nt-lux-bg" aria-hidden="true"></div>
   <main class="nt-login-stage">
     <section class="nt-login-brand">
       <div id="loginBrandWrap"></div>
+      <p class="nt-cinema-kicker">NAJJAR &amp; AL SAMOOM TRADING</p>
+      <p class="nt-cinema-tag">USED &amp; IMPORTED CARS · GCC</p>
       <p class="nt-login-loc">محافظة الداخلية — ولاية نزوى</p>
     </section>
     <section class="nt-login-card">
@@ -49,6 +56,7 @@
   </main>
   <script src="/auto-trading/najjar-path.js?v=at1"></script>
   <script src="/auto-trading/car-3d.js?v=at17"></script>
+  <script src="/auto-trading/login-fx.js?v=cl1"></script>
   <script>
     const NB = window.NAJJAR_BASE || '/najjar-al-samoom-used-imported-cars';
     document.getElementById('loginBrandWrap').innerHTML = NajjarCar3D.renderGlassLogo({ size: 'login' });
